@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Financial year — Business Document</title>
+    <style>
+      :root {
+        --bg: #f7f6f3;
+        --ink: #1c1b19;
+        --muted: #5c574f;
+        --line: #d9d4cb;
+        --accent: #0f5c4c;
+        --warn: #8a4b00;
+        --card: #fffefb;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+        color: var(--ink);
+        background: linear-gradient(180deg, #eef3f1 0%, var(--bg) 40%);
+        line-height: 1.55;
+      }
+      main { max-width: 52rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+      h1 { font-size: 1.85rem; margin: 0 0 0.35rem; color: var(--accent); }
+      .meta { color: var(--muted); font-size: 0.95rem; margin-bottom: 0.75rem; }
+      .badge {
+        display: inline-block; font-size: 0.75rem; letter-spacing: 0.02em;
+        background: #e2ece8; color: var(--accent); border: 1px solid var(--line);
+        border-radius: 999px; padding: 0.1rem 0.6rem; margin: 0 0.3rem 1.5rem 0;
+      }
+      h2 {
+        font-size: 1.15rem; margin: 2rem 0 0.65rem; padding-bottom: 0.35rem;
+        border-bottom: 1px solid var(--line);
+      }
+      h3 { font-size: 1rem; margin: 1.1rem 0 0.4rem; }
+      ul { padding-left: 1.2rem; }
+      table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 0.92rem; }
+      th, td { border: 1px solid var(--line); padding: 0.55rem 0.65rem; text-align: left; vertical-align: top; }
+      th { background: #e8efec; }
+      code { font-family: ui-monospace, Consolas, monospace; font-size: 0.86em; background: #eceae4; padding: 0.05rem 0.3rem; border-radius: 3px; }
+      .src { color: var(--muted); font-size: 0.85rem; }
+      .warn { color: var(--warn); }
+
+      .tc { background: #f2f7f5; }
+      .tc td:first-child { font-weight: 600; white-space: nowrap; }
+      .scenarios-nav { margin: 0.5rem 0 1rem; font-size: 0.9rem; }
+      .scenarios-nav a { color: var(--accent, #0f5c4c); }
+
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Financial year</h1>
+      <p class="meta">Domain: finance · Entity: financial year</p>
+      <span class="badge">Implementation-independent · reconciled against backend + frontend</span>
+
+      <h2>1. Purpose</h2>
+      <p>
+        Each organisation keeps its books, receipts and record numbers by financial year. The organisation chooses the month its
+        financial year starts in (Indian NGOs usually start on 1 April, which is the default). Everything that is counted or closed
+        "per year" follows that choice: which year a payment is booked into, when receipt numbers start again from 1, when
+        record numbers such as donation numbers start again, and how totals are grouped by year on dashboards. Once the
+        organisation has started using its years, the start month is fixed so that closed years and issued receipt numbers never change.
+      </p>
+
+      <h2>2. Actors</h2>
+      <ul>
+        <li><strong>Organisation administrator</strong> (with the organisation-settings permission) — sees the start month and may change it while the organisation has not yet opened a financial year or issued a receipt. Every change is recorded in the audit log with the old and new month.</li>
+        <li><strong>Finance staff</strong> — record payments, which are booked into the open financial year containing the payment date, and receive numbered receipts that restart each year.</li>
+        <li><strong>Platform operator / setup</strong> — opens, closes and reopens financial years for an organisation. Opening the first year fixes the start month. When an organisation is onboarded, the operator's request sets its start month and opens the requested year, in that order.</li>
+        <li><strong>Dashboard viewers</strong> — see totals grouped by the organisation's own financial year.</li>
+      </ul>
+
+      <h2>3. Domain model</h2>
+      <table>
+        <thead><tr><th>Concept</th><th>Business meaning</th></tr></thead>
+        <tbody>
+          <tr><td>Financial year start month</td><td>The calendar month (January to December) on whose first day each financial year of the organisation begins. April unless the organisation chose otherwise.</td></tr>
+          <tr><td>Financial year</td><td>Twelve consecutive months from the first day of the start month to the last day of the month before it. Each organisation has its own years.</td></tr>
+          <tr><td>Year label</td><td>How a year is named in the books, receipt numbers and record numbers. A year that starts in January is named by its calendar year (<code>2026</code>). A year that starts in any other month spans two calendar years and is named by the year it starts in and the last two digits of the next year (<code>2026-27</code> for April 2026 to March 2027, or for July 2026 to June 2027).</td></tr>
+          <tr><td>Financial period</td><td>A financial year opened in the books. It is open (entries may be booked into it) or closed (nothing can be booked until it is reopened with a reason).</td></tr>
+          <tr><td>Receipt series</td><td>A numbered sequence of receipts. A series that restarts per year numbers receipts within each financial year, with the year label in the number (<code>RCPT/2026-27/00001</code>).</td></tr>
+          <tr><td>Record numbering</td><td>A record type's numbering may restart per financial year and may show the year label (<code>DON/2026-27/00001</code>).</td></tr>
+        </tbody>
+      </table>
+
+      <h2>4. Business rules</h2>
+      <ul>
+        <li>The financial year start month is a per-organisation setting from January to December; it is April unless changed. Two organisations on the platform may use different start months, and each one's years are independent of the other's.</li>
+        <li>A payment or other ledger entry is booked into the financial year that contains its date, by the organisation's start month. If that year has not been opened the entry is refused ("Financial year 2027-28 is not open"); if it is closed the entry is refused ("Financial year 2026 is closed").</li>
+        <li>A financial year can only be opened under the label that matches the organisation's start month: an organisation starting in January opens <code>2026</code>, never <code>2026-27</code>, and the other way round. The year's first and last days follow from the label and the start month.</li>
+        <li>Receipts in a series that restarts per year are numbered from 1 again on the first day of each of the organisation's financial years; the number carries that year's label. Numbers are gap-free and never reused.</li>
+        <li>Record numbers that restart per financial year use the organisation's current financial year on the day the record is created.</li>
+        <li>Totals grouped "by financial year" on pages and widgets group by the organisation's own years and are labelled "FY &lt;year label&gt;".</li>
+        <li><strong>History is protected:</strong> the start month cannot change once the organisation has opened any financial year or issued any receipt. The change is refused with the message that closed years and receipt numbers must stay as they are. Saving the same month again is not a change and is accepted.</li>
+        <li>Opening a year or issuing a receipt and changing the start month cannot overlap: whichever happens first wins, so a change can never slip in between the check and the first year being opened.</li>
+      </ul>
+
+      <h2>5. User flows</h2>
+      <h3>Find / view</h3>
+      <p>The organisation settings screen shows "Financial year starts in" with the month name in the person's language. Once the start month is fixed it is shown read-only with an explanation of why.</p>
+      <h3>Create</h3>
+      <p>Every organisation starts with April. Nothing needs to be created.</p>
+      <h3>Update</h3>
+      <p>Before the books are started, an administrator chooses another month and saves the settings. The change is audited. After a year has been opened or a receipt issued, the screen no longer offers the choice and the organisation refuses any attempt to change it.</p>
+      <h3>Other actions</h3>
+      <p>Opening, closing and reopening years, booking entries, issuing receipts and numbering records all follow the start month as described in the business rules.</p>
+
+      <h2>6. Fields &amp; validation</h2>
+      <table>
+        <thead><tr><th>Field</th><th>Rules</th><th>Visibility / conditions</th></tr></thead>
+        <tbody>
+          <tr><td>Financial year starts in</td><td>Required; a whole month number from 1 (January) to 12 (December); default 4 (April). Any other value is refused with a field message.</td><td>Editable while no financial year has been opened and no receipt issued; read-only afterwards, with the reason shown.</td></tr>
+          <tr><td>Financial year (when opening one)</td><td>Must be the label of a year for the organisation's start month: four digits for a January start, otherwise "start year - next year's two digits" (for example 2026-27).</td><td>Used when setting up the books.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>7. Out of scope / non-goals</h2>
+      <ul>
+        <li>Moving an organisation to a different start month after it has started its books (re-dating closed years, renumbering receipts or records). The rule is to refuse; any such move would be a separate, audited migration.</li>
+        <li>Short or long transitional years (for example a nine-month year when changing the start month).</li>
+        <li>Financial years that start on a day other than the first of a month, or follow a 52/53-week calendar.</li>
+        <li>A screen to open, close or reopen financial years; today this is done during setup.</li>
+      </ul>
+
+      <h2>8. Testable scenarios (for test generation)</h2>
+      <p class="src">Given / When / Then acceptance criteria. Each row seeds one or more test cases. "BE" = backend-enforced, "FE" = frontend-enforced, "E2E" = end-to-end.</p>
+      <table>
+        <thead><tr><th>ID</th><th>Given</th><th>When</th><th>Then (expected)</th><th>Layer</th></tr></thead>
+        <tbody class="tc">
+          <tr><td>FY-01</td><td>A new organisation</td><td>An administrator views the settings</td><td>The financial year starts in April and can be changed</td><td>BE / FE</td></tr>
+          <tr><td>FY-02</td><td>Organisation A starts in April, B in January, neither has started its books</td><td>Receipts are issued on 31 Mar 2027 and 1 Apr 2027 in A, and on 31 Dec 2026 and 1 Jan 2027 in B</td><td>A gets RCPT/2026-27/00001 then RCPT/2027-28/00001; B gets RCPT/2026/00001 then RCPT/2027/00001</td><td>BE</td></tr>
+          <tr><td>FY-03</td><td>A has year 2025-26 open; B has 2025 and 2026 open</td><td>B closes 2025; both book an entry dated 31 Dec 2025</td><td>A's entry is booked into 2025-26; B's is refused because 2025 is closed</td><td>BE</td></tr>
+          <tr><td>FY-04</td><td>B starts in January</td><td>Someone opens year 2025-26 for B</td><td>Refused: the label does not match B's start month</td><td>BE</td></tr>
+          <tr><td>FY-05</td><td>A has issued a receipt (or opened a year)</td><td>An administrator changes the start month to July</td><td>Refused with the message that closed years and receipt numbers must stay as they are; the month stays April</td><td>BE / FE</td></tr>
+          <tr><td>FY-06</td><td>A starts in April, B in January; both number donations per financial year</td><td>A donation is created in each today</td><td>Numbers carry each organisation's current year label (for example DON/2026-27/00001 and DON/2026/00001)</td><td>BE</td></tr>
+          <tr><td>FY-07</td><td>Paid donations in both organisations</td><td>A dashboard groups donation counts by financial year of the payment date</td><td>Each organisation's buckets follow its own years (FY 2025-26 for A, FY 2026 for B)</td><td>BE</td></tr>
+          <tr><td>FY-08</td><td>The start month is fixed</td><td>An administrator opens the settings screen</td><td>The month is shown read-only with the reason; saving does not send a change</td><td>FE</td></tr>
+        </tbody>
+      </table>
+
+      <h2>9. Discrepancies (backend vs frontend)</h2>
+      <p class="src">Where the two implementations disagree. Backend enforcement is authoritative for correctness.</p>
+      <table>
+        <thead><tr><th>Topic</th><th>Backend behavior</th><th>Frontend behavior</th><th>Resolution</th></tr></thead>
+        <tbody>
+          <tr><td class="warn">Offline sample data</td><td>Uses the organisation's start month.</td><td>The in-browser demo data source (used for the offline demo and screen tests) always labels the year from April (<code>web/src/app/core/testing/memory-gateway.ts</code>).</td><td>Backend is authoritative; the demo data only affects the offline demo.</td></tr>
+          <tr><td>Changing a fixed start month</td><td>Refused (<code>src/engines/admin/administration-service.ts</code>).</td><td>Field is read-only and no change is sent (<code>web/src/app/core/admin/settings.ts</code>).</td><td>Agree.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>10. Revision history</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Change (why)</th><th>Side</th><th>Code drivers</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>2026-10-25</td>
+            <td>Created. The financial year start month becomes a per-organisation setting (default April) instead of a fixed April; ledger periods, receipt numbering, record numbering and financial-year totals follow it; the month is fixed once a year is opened or a receipt issued.</td>
+            <td>both</td>
+            <td class="src"><code>src/kernel/number-format.ts</code>, <code>src/kernel/sequences.ts</code>, <code>src/domain/ledger.ts</code>, <code>src/domain/receipts.ts</code>, <code>src/engines/records/record-service.ts</code>, <code>src/engines/records/aggregates.ts</code>, <code>src/engines/builder/builder-support.ts</code>, <code>src/engines/admin/administration-service.ts</code>, <code>web/src/app/admin/settings/</code>, <code>web/src/app/core/admin/settings.ts</code>, <code>web/src/app/builder/editors/record-type/record-type-store.ts</code></td>
+          </tr>
+          <tr>
+            <td>2026-10-26</td>
+            <td>Onboarding a new organisation sets the requested start month before opening the requested year, so the first year already follows the organisation's own start month (see the organisation business document).</td>
+            <td>backend</td>
+            <td class="src"><code>src/application/organisations/onboarding-service.ts</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>11. Learning log</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Learning</th><th>How it was inferred</th></tr></thead>
+        <tbody>
+          <tr><td>2026-10-25</td><td>Before this change every organisation's year started in April, in four separate places (labels, period bounds, dashboard grouping, builder number preview).</td><td>Backend: fixed default start month in <code>fiscalYearKey</code>, <code>fiscalYearBounds</code> and the financial-year grouping in <code>src/engines/records/aggregates.ts</code>; frontend: number preview computed the label in the browser.</td></tr>
+          <tr><td>2026-10-25</td><td>Receipt numbering does not need an open year, so an organisation can issue receipts before opening any year; issuing one fixes the start month just as opening a year does.</td><td>Backend: receipts are numbered by the receipt date's year label without looking up a period (<code>src/domain/receipts.ts</code>).</td></tr>
+          <tr><td>2026-10-25</td><td>There is no screen or public endpoint to open or close financial years; they are opened during setup.</td><td>Backend: no route calls the ledger's open/close period operations (<code>src/http/server.ts</code>).</td></tr>
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

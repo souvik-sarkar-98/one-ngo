@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Payment gateway set-up — Business Document</title>
+    <style>
+      :root {
+        --bg: #f7f6f3;
+        --ink: #1c1b19;
+        --muted: #5c574f;
+        --line: #d9d4cb;
+        --accent: #0f5c4c;
+        --warn: #8a4b00;
+        --card: #fffefb;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+        color: var(--ink);
+        background: linear-gradient(180deg, #eef3f1 0%, var(--bg) 40%);
+        line-height: 1.55;
+      }
+      main { max-width: 52rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+      h1 { font-size: 1.85rem; margin: 0 0 0.35rem; color: var(--accent); }
+      .meta { color: var(--muted); font-size: 0.95rem; margin-bottom: 0.75rem; }
+      .badge {
+        display: inline-block; font-size: 0.75rem; letter-spacing: 0.02em;
+        background: #e2ece8; color: var(--accent); border: 1px solid var(--line);
+        border-radius: 999px; padding: 0.1rem 0.6rem; margin: 0 0.3rem 1.5rem 0;
+      }
+      h2 {
+        font-size: 1.15rem; margin: 2rem 0 0.65rem; padding-bottom: 0.35rem;
+        border-bottom: 1px solid var(--line);
+      }
+      h3 { font-size: 1rem; margin: 1.1rem 0 0.4rem; }
+      ul { padding-left: 1.2rem; }
+      table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 0.92rem; }
+      th, td { border: 1px solid var(--line); padding: 0.55rem 0.65rem; text-align: left; vertical-align: top; }
+      th { background: #e8efec; }
+      code { font-family: ui-monospace, Consolas, monospace; font-size: 0.86em; background: #eceae4; padding: 0.05rem 0.3rem; border-radius: 3px; }
+      .src { color: var(--muted); font-size: 0.85rem; }
+      .warn { color: var(--warn); }
+      .tc { background: #f2f7f5; }
+      .tc td:first-child { font-weight: 600; white-space: nowrap; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Payment gateway set-up</h1>
+      <p class="meta">Domain: finance · Entity: payment gateway</p>
+      <span class="badge">Implementation-independent · reconciled against backend (no screen yet)</span>
+
+      <h2>1. Purpose</h2>
+      <p>
+        An organisation can take online payments through a payment gateway (Razorpay or Cashfree) in addition to direct UPI
+        payments into its own account. Before a gateway can be used, the organisation stores its own account details with that
+        gateway: the public key and the secrets used to create payment orders and to prove that payment notifications really come
+        from the gateway. Each organisation uses its own gateway account; the platform never shares one between organisations.
+      </p>
+
+      <h2>2. Actors</h2>
+      <ul>
+        <li><strong>Payment administrator</strong> (with the payment-configuration permission) — saves or replaces an organisation's gateway details and sees which gateways are set up. Every save is recorded in the audit log with who made it.</li>
+        <li><strong>Finance staff</strong> — create payment requests that use a set-up gateway.</li>
+        <li><strong>Payment gateway</strong> — sends payment notifications, which the organisation accepts only when they are signed with the organisation's stored secret.</li>
+      </ul>
+
+      <h2>3. Domain model</h2>
+      <table>
+        <thead><tr><th>Concept</th><th>Business meaning</th></tr></thead>
+        <tbody>
+          <tr><td>Gateway</td><td>An external payment service the organisation has an account with. Two are supported: Razorpay and Cashfree.</td></tr>
+          <tr><td>Key ID</td><td>The gateway account's public identifier (for Cashfree, the client ID). Safe to show.</td></tr>
+          <tr><td>Key secret</td><td>The gateway account's private key, used to create payment orders. For Cashfree it also signs payment notifications. Never shown after it is saved.</td></tr>
+          <tr><td>Notification secret</td><td>The secret a gateway uses to sign payment notifications (Razorpay's webhook secret). Never shown after it is saved.</td></tr>
+          <tr><td>Environment</td><td>Cashfree only: <em>sandbox</em> for test payments, <em>production</em> for real payments. Sandbox unless chosen otherwise.</td></tr>
+          <tr><td>Gateway summary</td><td>What the organisation can see about each gateway: whether it is set up, whether it is enabled, its key ID and, for Cashfree, its environment.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>4. Business rules</h2>
+      <ul>
+        <li>Only people with the payment-configuration permission may save gateway details or see the gateway summary.</li>
+        <li>Saving details for a gateway replaces any details saved before and enables that gateway for the organisation.</li>
+        <li>Secrets are stored encrypted and are never returned to anyone, including administrators. The summary only says whether a gateway is set up.</li>
+        <li>The summary always lists both gateways; one that has never been saved shows as not set up and not enabled.</li>
+        <li>A payment request through a gateway is refused when that gateway is not set up and enabled for the organisation.</li>
+        <li>A payment notification is accepted only when its signature matches the organisation's stored secret; otherwise it is rejected and nothing changes.</li>
+        <li>Cashfree payments go to the test environment unless the organisation chose production.</li>
+        <li>Gateways other than Razorpay and Cashfree cannot be set up.</li>
+      </ul>
+
+      <h2>5. User flows</h2>
+      <h3>Find / view</h3>
+      <p>A payment administrator asks for the gateway summary and sees, for Razorpay and Cashfree, whether each is set up and enabled, its key ID and Cashfree's environment.</p>
+      <h3>Create / update</h3>
+      <p>A payment administrator enters the gateway's details and saves. The details replace any earlier ones, the gateway becomes enabled, and the save is audited.</p>
+      <h3>Other actions</h3>
+      <p>Once set up, finance staff can create payment requests through the gateway, and the gateway's payment notifications confirm those payments.</p>
+
+      <h2>6. Fields &amp; validation</h2>
+      <table>
+        <thead><tr><th>Field</th><th>Rules</th><th>Visibility / conditions</th></tr></thead>
+        <tbody>
+          <tr><td>Key ID</td><td>Required, not empty.</td><td>Both gateways; shown in the summary.</td></tr>
+          <tr><td>Key secret</td><td>Required, not empty.</td><td>Both gateways; never shown.</td></tr>
+          <tr><td>Notification secret</td><td>Required and not empty for Razorpay; optional for Cashfree (Cashfree signs with the key secret).</td><td>Never shown.</td></tr>
+          <tr><td>Environment</td><td>Sandbox or production; sandbox when not given.</td><td>Cashfree only; shown in the summary.</td></tr>
+          <tr><td>Anything else</td><td>Unknown fields are refused, as is a missing or malformed set of details.</td><td>—</td></tr>
+        </tbody>
+      </table>
+
+      <h2>7. Out of scope / non-goals</h2>
+      <ul>
+        <li>A screen to set up gateways; today it is done by an administrator through the platform's interface for integrations.</li>
+        <li>Disabling a gateway without replacing its details, or deleting them.</li>
+        <li>Gateways other than Razorpay and Cashfree.</li>
+        <li>Showing or exporting stored secrets.</li>
+      </ul>
+
+      <h2>8. Testable scenarios (for test generation)</h2>
+      <table>
+        <thead><tr><th>ID</th><th>Given</th><th>When</th><th>Then (expected)</th><th>Layer</th></tr></thead>
+        <tbody class="tc">
+          <tr><td>PG-01</td><td>A person without the payment-configuration permission</td><td>They save gateway details or ask for the summary</td><td>Refused</td><td>BE</td></tr>
+          <tr><td>PG-02</td><td>No gateway set up</td><td>An administrator asks for the summary</td><td>Both gateways listed as not set up and not enabled</td><td>BE</td></tr>
+          <tr><td>PG-03</td><td>An administrator saves Razorpay details</td><td>They ask for the summary</td><td>Razorpay is set up and enabled with its key ID; no secret appears; the save is in the audit log</td><td>BE</td></tr>
+          <tr><td>PG-04</td><td>Razorpay details without a notification secret, or with an empty field or unknown field</td><td>They are saved</td><td>Refused as malformed</td><td>BE</td></tr>
+          <tr><td>PG-05</td><td>Cashfree saved without an environment</td><td>A payment request is created</td><td>It goes to the test environment; choosing production sends it to the live one</td><td>BE</td></tr>
+          <tr><td>PG-06</td><td>A gateway is set up</td><td>A notification arrives signed with the stored secret, then one with a forged signature</td><td>The first is accepted; the second is rejected</td><td>BE</td></tr>
+          <tr><td>PG-07</td><td>Any organisation</td><td>Someone tries to set up a gateway other than Razorpay or Cashfree</td><td>Not found</td><td>BE</td></tr>
+        </tbody>
+      </table>
+
+      <h2>9. Discrepancies (backend vs frontend)</h2>
+      <table>
+        <thead><tr><th>Topic</th><th>Backend behavior</th><th>Frontend behavior</th><th>Resolution</th></tr></thead>
+        <tbody>
+          <tr><td class="warn">Gateway set-up screen</td><td>Saving and listing gateways is available (<code>src/http/plugins/payments.ts</code>, <code>src/domain/payments/payment-service.ts</code>).</td><td>No screen exists.</td><td>Backend is authoritative; a screen is future work.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>10. Revision history</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Change (why)</th><th>Side</th><th>Code drivers</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>2026-10-26</td>
+            <td>Created. Administrators can now save Razorpay and Cashfree details and see a summary without secrets, closing a gap listed in the DevOps handover.</td>
+            <td>backend</td>
+            <td class="src"><code>src/http/contracts/gateways.ts</code>, <code>src/http/plugins/payments.ts</code>, <code>src/domain/payments/payment-service.ts</code>, <code>test/payment-gateways.test.ts</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>11. Learning log</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Learning</th><th>How it was inferred</th></tr></thead>
+        <tbody>
+          <tr><td>2026-10-26</td><td>Saving details always re-enables the gateway; there is no separate disable action.</td><td>Backend: the save replaces the stored details and sets the gateway enabled (<code>saveGatewayCredentials</code>).</td></tr>
+          <tr><td>2026-10-26</td><td>Cashfree signs notifications with the key secret, so its notification secret is optional; Razorpay uses a separate notification secret.</td><td>Backend: request contracts and provider signature checks (<code>src/http/contracts/gateways.ts</code>, <code>src/domain/payments/providers.ts</code>).</td></tr>
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

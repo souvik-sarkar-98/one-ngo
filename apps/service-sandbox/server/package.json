@@ -1,0 +1,23 @@
+{
+  "name": "@onengo/service-sandbox",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local-only stand-ins for Razorpay, Cashfree, Google sign-in, Cloud Storage, SMTP, connector targets and the breached-password service. Test use only.",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "dev": "tsx src/main.ts",
+    "test": "vitest run --config vitest.config.ts",
+    "check": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "jose": "^6.2.13",
+    "selfsigned": "^5.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3",
+    "vitest": "^5.0.5"
+  }
+}

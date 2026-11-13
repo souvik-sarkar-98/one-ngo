@@ -1,0 +1,13 @@
+{
+  "name": "@onengo/e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:journeys": "playwright test specs/journeys",
+    "test:rbac": "playwright test specs/journeys/rbac"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1"
+  }
+}

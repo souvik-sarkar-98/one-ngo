@@ -1,0 +1,187 @@
+{
+  "$id": "listView",
+  "title": "List view",
+  "description": "Configures the list dashboard for a record type: chips, filters, row layout, detail sections, and create and edit forms.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["key", "recordType"],
+  "properties": {
+    "key": { "$ref": "#/definitions/key", "description": "Stable name of the list view", "x-order": 1 },
+    "recordType": { "$ref": "#/definitions/key", "description": "The record type listed", "x-ref": "recordType", "x-order": 2 },
+    "label": { "type": "string", "description": "Name of the list; the record type's plural name when not set", "x-order": 3 },
+    "pageSize": { "type": "integer", "minimum": 5, "maximum": 100, "description": "Rows loaded at a time", "x-group": "layout", "x-order": 4 },
+    "layout": { "enum": ["cards", "table"], "description": "Default layout on wide screens (table when not set); each person can switch. Phones always use cards", "x-group": "layout", "x-order": 5 },
+    "columns": { "type": "array", "maxItems": 12, "items": { "type": "string" }, "description": "Columns for the table layout", "x-ref": "field", "x-group": "layout", "x-order": 6 },
+    "compactColumns": { "type": "array", "maxItems": 6, "items": { "type": "string" }, "description": "Columns for tablet-width tables; without it tablets show the title, the first subtitle field, and the status", "x-ref": "field", "x-group": "layout", "x-order": 7 },
+    "chips": {
+      "type": "array",
+      "maxItems": 8,
+      "description": "Quick filters above the list, left to right",
+      "x-order": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,30}$", "description": "Stable name of the chip, used in the address" },
+          "label": { "type": "string", "minLength": 1, "description": "Chip text" },
+          "statusIn": { "type": "array", "items": { "type": "string" }, "description": "Records in any of these statuses" },
+          "workflowState": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["workflow", "in"],
+            "description": "Records in these states of another workflow of the record type",
+            "properties": {
+              "workflow": { "type": "string", "description": "Workflow key", "x-ref": "workflow" },
+              "in": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "States of that workflow" }
+            }
+          },
+          "owner": { "enum": ["me"], "description": "Only the person's own records" },
+          "shared": { "type": "boolean", "description": "Records shared with the person or their roles, not their own; restricted record types get this chip automatically" },
+          "filters": {
+            "type": "object",
+            "description": "Filters by field, the same as the list's; 'me' in a person field's values is the signed-in person",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "in": { "type": "array", "items": { "type": ["string", "number", "boolean"] }, "description": "Any of these values" },
+                "eq": { "type": ["string", "number", "boolean", "null"], "description": "Exactly this value" },
+                "from": { "type": ["string", "number", "null"], "description": "From this value" },
+                "to": { "type": ["string", "number", "null"], "description": "Up to this value" }
+              }
+            }
+          },
+          "permission": { "type": "string", "description": "Chip shown only to people with this permission", "x-ref": "permission" }
+        }
+      }
+    },
+    "defaultChip": { "type": "string", "description": "Chip selected when the list opens; the first when not set", "x-order": 11 },
+    "filters": { "type": "array", "items": { "type": "string" }, "description": "Field keys offered in the filter sheet", "x-ref": "field", "x-order": 12 },
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "What each card or row shows",
+      "x-order": 13,
+      "properties": {
+        "title": { "type": "string", "description": "Field shown as the title; the record type's title field when not set", "x-ref": "field" },
+        "subtitle": { "type": "array", "items": { "type": "string" }, "description": "Fields shown under the title", "x-ref": "field" },
+        "meta": { "type": "string", "description": "Field shown on the right, for example the amount", "x-ref": "field" },
+        "badge": { "type": "string", "description": "Field shown as a badge; the status when not set", "x-ref": "field" }
+      }
+    },
+    "detail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sections"],
+      "description": "The record panel",
+      "x-order": 14,
+      "properties": {
+        "sections": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Sections of the record panel, top to bottom",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["label", "fields"],
+                "description": "Fields of the record",
+                "properties": {
+                  "id": { "type": "string", "description": "Stable name of the section" },
+                  "label": { "type": "string", "description": "Section heading" },
+                  "permission": { "$ref": "#/definitions/sectionPermission" },
+                  "fields": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "Fields shown, in order", "x-ref": "field" }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["label", "related"],
+                "description": "Records of another type that point at this one through a reference field",
+                "properties": {
+                  "id": { "type": "string", "description": "Stable name of the section" },
+                  "label": { "type": "string", "description": "Section heading" },
+                  "permission": { "$ref": "#/definitions/sectionPermission" },
+                  "related": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["recordType", "field"],
+                    "description": "The records listed",
+                    "properties": {
+                      "recordType": { "$ref": "#/definitions/key", "description": "Record type of the related records", "x-ref": "recordType" },
+                      "field": { "type": "string", "description": "The reference field on that record type" },
+                      "total": { "type": "string", "description": "A number or money field to add up" }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "create": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The form for a new record: one page of fields, or steps",
+      "x-order": 15,
+      "properties": {
+        "fields": { "type": "array", "items": { "type": "string" }, "description": "Fields on a one-page form, in order", "x-ref": "field" },
+        "columns": { "enum": [1, 2, 3], "description": "Columns on wide screens (1 on phones); default 1. Steps use the same columns" },
+        "fullWidth": { "type": "array", "uniqueItems": true, "items": { "type": "string" }, "description": "Fields that take a whole row, whatever the column count", "x-ref": "field" },
+        "steps": {
+          "type": "array",
+          "description": "Pages of the form, in order",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "label", "fields"],
+            "properties": {
+              "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_]{0,40}$", "description": "Stable name of the step" },
+              "label": { "type": "string", "description": "Step heading" },
+              "fields": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "Fields on this step, in order", "x-ref": "field" }
+            }
+          }
+        },
+        "presets": {
+          "type": "array",
+          "description": "Fields filled from the address, for example New donation for this donor",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["param", "field"],
+            "properties": {
+              "param": { "type": "string", "description": "Name in the address" },
+              "field": { "type": "string", "description": "Field it fills", "x-ref": "field" }
+            }
+          }
+        },
+        "chips": { "type": "array", "items": { "type": "string" }, "description": "Create is offered only on these chips" }
+      }
+    },
+    "edit": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The edit form",
+      "x-order": 16,
+      "properties": {
+        "fields": { "type": "array", "items": { "type": "string" }, "description": "Fields that can be edited, in order", "x-ref": "field" },
+        "columns": { "enum": [1, 2, 3], "description": "Columns on wide screens (1 on phones); default 1" },
+        "fullWidth": { "type": "array", "uniqueItems": true, "items": { "type": "string" }, "description": "Fields that take a whole row, whatever the column count", "x-ref": "field" },
+        "chips": { "type": "array", "items": { "type": "string" }, "description": "Edit is offered only on these chips" }
+      }
+    }
+  },
+  "definitions": {
+    "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,62}$" },
+    "sectionPermission": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Section shown only to people with this permission",
+      "x-ref": "permission"
+    }
+  }
+}

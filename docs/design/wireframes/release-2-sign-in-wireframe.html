@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Release 2 sign-in wireframe — OneNGO</title>
+  <style>
+    :root {
+      --font-body: Arial, "Helvetica Neue", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Liberation Sans", sans-serif;
+      --font-mono: "Cascadia Code", "Cascadia Mono", "SF Mono", "Segoe UI Mono", Consolas, "Ubuntu Mono", "Liberation Mono", monospace;
+      --font-display: Georgia, "Times New Roman", "Liberation Serif", "Noto Serif", serif;
+      --pwc-orange: #DB4E18;
+      --pwc-orange-light: #E88D14;
+      --pwc-yellow: #F3BE26;
+      --pwc-black: #2D2D2D;
+      --bg: #FAF8F6;
+      --surface: #FFFFFF;
+      --surface-elevated: #FFFFFF;
+      --border: rgba(0, 0, 0, 0.08);
+      --border-bright: rgba(0, 0, 0, 0.15);
+      --text: #2D2D2D;
+      --text-dim: #6B6B6B;
+      --accent: #DB4E18;
+      --accent-dim: rgba(219, 78, 24, 0.10);
+      --node-a: #DB4E18;
+      --node-b: #E88D14;
+      --node-c: #F3BE26;
+      --ok: #1d7a46;
+      --app: #1f5f8b;
+      --app-bg: #f5f7fa;
+      --app-ink: #1d2733;
+      --app-muted: #5b6878;
+      --app-line: #d8dee6;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1A1208;
+        --surface: #261A10;
+        --surface-elevated: #2E2014;
+        --border: rgba(255, 255, 255, 0.06);
+        --border-bright: rgba(255, 255, 255, 0.12);
+        --text: #F0EBE4;
+        --text-dim: #A89880;
+        --accent: #E8602A;
+        --accent-dim: rgba(232, 96, 42, 0.15);
+        --node-a: #E8602A;
+        --node-b: #F0A830;
+        --node-c: #F3BE26;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: var(--font-body);
+      color: var(--text);
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(ellipse at 0% 0%, var(--accent-dim) 0%, transparent 42%),
+        radial-gradient(circle, var(--border) 1px, transparent 1px);
+      background-size: auto, 22px 22px;
+      line-height: 1.5;
+    }
+    a { color: var(--accent); }
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+      background: var(--accent-dim);
+      padding: 0.05em 0.35em;
+      border-radius: 4px;
+    }
+
+    .wrap {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 28px 40px 80px;
+      display: grid;
+      grid-template-columns: 188px minmax(0, 1fr);
+      gap: 0 36px;
+    }
+    .main { min-width: 0; }
+
+    .toc {
+      position: sticky;
+      top: 24px;
+      align-self: start;
+      padding: 14px 0;
+      grid-row: 1 / -1;
+      max-height: calc(100dvh - 48px);
+      overflow-y: auto;
+    }
+    .toc-title {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-dim);
+      padding: 0 0 10px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .toc a {
+      display: block;
+      font-size: 12px;
+      color: var(--text-dim);
+      text-decoration: none;
+      padding: 5px 8px;
+      border-radius: 5px;
+      border-left: 2px solid transparent;
+      line-height: 1.4;
+      margin-bottom: 2px;
+    }
+    .toc a:hover { color: var(--text); background: var(--surface); }
+    .toc a.active { color: var(--text); border-left-color: var(--accent); background: var(--surface); }
+
+    .kicker {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 0 0 10px;
+    }
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.1rem, 4vw, 3.4rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+      margin: 0 0 14px;
+    }
+    .lead {
+      font-size: 1.12rem;
+      max-width: 68ch;
+      margin: 0 0 18px;
+      color: var(--text);
+    }
+    .quote {
+      margin: 0 0 28px;
+      padding: 0 0 0 16px;
+      border-left: 3px solid var(--pwc-yellow);
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      line-height: 1.35;
+      max-width: 36ch;
+    }
+
+    .sec-head {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin: 56px 0 8px;
+      scroll-margin-top: 24px;
+    }
+    .sec-num {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--accent);
+    }
+    h2 {
+      font-family: var(--font-display);
+      font-size: 1.7rem;
+      margin: 0;
+      letter-spacing: -0.015em;
+    }
+    .sec-lead { max-width: 72ch; margin: 0 0 18px; color: var(--text-dim); }
+
+    .ve-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+      min-width: 0;
+    }
+    .ve-card--hero {
+      background: color-mix(in srgb, var(--surface) 90%, var(--accent) 10%);
+      border-color: color-mix(in srgb, var(--border) 45%, var(--accent) 55%);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
+    }
+    .ve-card--recessed {
+      background: color-mix(in srgb, var(--bg) 72%, var(--surface) 28%);
+    }
+    .ve-card__label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .ve-card p { margin: 0; }
+    .ve-card p + p { margin-top: 8px; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px 22px;
+      margin: 8px 0 22px;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 8px; }
+    .swatch {
+      width: 18px; height: 14px; border-radius: 3px; display: inline-block;
+      border: 1px solid var(--border-bright);
+    }
+    .swatch.hit { outline: 3px solid var(--pwc-yellow); outline-offset: 1px; background: var(--app); }
+    .swatch.pri { background: var(--app); border-color: var(--app); }
+    .swatch.alt { background: #fff; }
+
+    .compare {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.15fr);
+      gap: 22px;
+      align-items: start;
+    }
+    .compare .col { min-width: 0; padding: 16px 16px 20px; }
+    .frame-cap {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin: 0 0 10px;
+      min-width: 0;
+    }
+    .frame-cap b { font-size: 14px; }
+    .frame-cap code { align-self: flex-start; overflow-wrap: anywhere; }
+
+    .pair {
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr);
+      gap: 28px;
+      align-items: start;
+      margin-top: 8px;
+    }
+    .notes { min-width: 0; }
+    .notes ol, .bounds { margin: 0; padding: 0 0 0 1.2rem; }
+    .notes li, .bounds li { margin: 0 0 10px; }
+    .notes li:last-child, .bounds li:last-child { margin-bottom: 0; }
+
+    .rail { display: grid; gap: 0; margin: 18px 0 8px; }
+    .rail .stop {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr);
+      gap: 12px;
+    }
+    .rail .stem {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .rail .dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      background: var(--accent); margin-top: 4px; flex: 0 0 auto;
+    }
+    .rail .line { width: 2px; flex: 1; background: color-mix(in srgb, var(--accent) 45%, var(--border)); min-height: 16px; }
+    .rail .stop:last-child .line { display: none; }
+    .rail .body { padding-bottom: 14px; min-width: 0; }
+    .rail .body strong { display: block; }
+    .rail .body span { color: var(--text-dim); font-size: 14px; }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 28px 22px;
+      align-items: start;
+    }
+    figure.shot { margin: 0; min-width: 0; }
+    figure.shot figcaption { margin-bottom: 8px; }
+    figure.shot figcaption b { display: block; font-size: 15px; }
+    figure.shot .blurb { margin: 8px 0 0; font-size: 14px; color: var(--text-dim); max-width: 36ch; }
+
+    .call {
+      margin-top: 18px;
+      border-left: 3px solid var(--node-b);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .table-wrap { overflow-x: auto; border-radius: 10px; }
+    thead th {
+      position: sticky; top: 0;
+      text-align: left;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: color-mix(in srgb, var(--surface) 86%, var(--accent) 14%);
+      color: var(--text);
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:last-child td { border-bottom: 0; }
+    tr:nth-child(even) td { background: color-mix(in srgb, var(--surface) 94%, var(--bg) 6%); }
+    tr:hover td { background: var(--accent-dim); }
+    td.num { text-align: left; font-variant-numeric: tabular-nums; }
+
+    .tag {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      white-space: nowrap;
+    }
+    .tag.keep { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); }
+    .tag.new { background: var(--accent-dim); color: var(--accent); }
+
+    /* Product frames — light, matching the app wireframes */
+    .phone {
+      width: min(330px, 100%);
+      border-radius: 34px;
+      background: #0f141a;
+      padding: 10px;
+      box-shadow: 0 16px 34px rgba(15, 23, 42, 0.18);
+    }
+    .scr {
+      border-radius: 26px;
+      overflow: hidden;
+      background: var(--app-bg);
+      color: var(--app-ink);
+      font-family: "Segoe UI", Roboto, "Noto Sans", "Noto Sans Devanagari", Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      min-height: 620px;
+      display: flex;
+      flex-direction: column;
+    }
+    .status {
+      height: 26px;
+      flex: 0 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 18px;
+      font-weight: 600;
+      font-size: 11px;
+      background: var(--app-bg);
+      color: var(--app-ink);
+    }
+    .stage { flex: 1; padding: 8px 16px 18px; }
+    .signin { width: min(380px, 100%); margin: 18px auto 0; }
+    .mark {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--app);
+      margin: 0 0 10px;
+    }
+    .logo {
+      width: 72px; height: 72px; margin: 0 auto 10px;
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    }
+    .logo svg { display: block; width: 72px; height: 72px; }
+    .orgname {
+      text-align: center;
+      font-size: 1.28rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin: 0 0 12px;
+      line-height: 1.2;
+    }
+    .orgname.solo { font-size: 1.45rem; margin-top: 8px; }
+    .mode {
+      text-align: center;
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin: -4px 0 12px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    .tabs {
+      display: flex;
+      margin: -2px -2px 12px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+    }
+    .tabs span {
+      flex: 1;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: #5b6878;
+      padding: 4px 6px 10px;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+    .tabs span.on { color: #1f5f8b; border-bottom-color: #1f5f8b; }
+    .tabs span.hit { border-radius: 6px 6px 0 0; }
+    .sso { margin: 12px 0 0; }
+    .mf { margin-bottom: 12px; }
+    .mf .l { font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 5px; }
+    .mf .o {
+      border: 1px solid #79747e;
+      border-radius: 4px;
+      height: 40px;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      font-size: 0.85rem;
+      background: #fff;
+    }
+    .mf .o.ph { color: #8a8590; }
+    .notice {
+      border-radius: 12px;
+      padding: 9px 12px;
+      font-size: 0.75rem;
+      line-height: 1.45;
+      margin-bottom: 12px;
+    }
+    .notice.info { background: #eef5fb; border: 1px solid #c6d9e8; color: var(--app); }
+    .notice.ok { background: #eef9f2; border: 1px solid #b7e0c6; color: var(--ok); }
+    .acts {
+      border-top: 1px solid rgba(148, 163, 184, 0.2);
+      margin-top: 4px;
+      padding-top: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .btn {
+      display: block;
+      text-align: center;
+      font-size: 13px;
+      line-height: 1.45;
+      padding: 0.45rem 0.8rem;
+      border-radius: 6px;
+      border: 1px solid var(--app-line);
+      background: #fff;
+      color: var(--app-ink);
+    }
+    .btn.p { background: var(--app); border-color: var(--app); color: #fff; }
+    .hit { outline: 3px solid #f3be26; outline-offset: 2px; }
+    .more, .switchorg { text-align: center; margin: 10px 0 0; }
+    .more span, .switchorg span {
+      color: var(--app);
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .switchorg { margin-top: 16px; }
+    .hint {
+      text-align: center;
+      color: var(--app-muted);
+      font-size: 12.5px;
+      line-height: 1.45;
+      margin: 12px 4px 0;
+    }
+    .help { font-size: 12px; color: var(--app-muted); margin-top: 4px; }
+    .gone {
+      margin: 0 0 12px;
+      border: 1px dashed #c4b4a4;
+      border-radius: 8px;
+      color: #8a6a52;
+      font-size: 12px;
+      text-align: center;
+      padding: 8px;
+      background: #fff8f3;
+    }
+
+    .browser {
+      border-radius: 10px;
+      background: #fff;
+      border: 1px solid #d5dbe2;
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+      overflow: hidden;
+      min-width: 0;
+      margin-top: 22px;
+    }
+    .chrome {
+      height: 38px;
+      background: #e9edf1;
+      border-bottom: 1px solid #d5dbe2;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 12px;
+    }
+    .tabname {
+      font-size: 12px;
+      font-weight: 700;
+      color: #1d2733;
+      white-space: nowrap;
+    }
+    .url {
+      flex: 1;
+      min-width: 0;
+      height: 22px;
+      border-radius: 6px;
+      background: #fff;
+      color: #536171;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .browser .scr {
+      min-height: 0;
+      height: 520px;
+      border-radius: 0;
+    }
+    .browser .stage { display: flex; justify-content: center; }
+
+    .source {
+      margin-top: 48px;
+      font-size: 12px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+    .hero, .sec-head, .compare, .pair, .gallery, .rail, .table-wrap, .browser {
+      animation: fadeUp 0.45s ease both;
+    }
+    .gallery figure:nth-child(2) { animation-delay: 0.05s; }
+    .gallery figure:nth-child(3) { animation-delay: 0.08s; }
+    .gallery figure:nth-child(4) { animation-delay: 0.11s; }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+
+    @media (max-width: 1000px) {
+      .wrap { grid-template-columns: 1fr; padding: 0 20px 64px; }
+      .toc {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        max-height: none;
+        display: flex;
+        gap: 4px;
+        overflow-x: auto;
+        background: var(--bg);
+        border-bottom: 1px solid var(--border);
+        margin: 0 -20px;
+        padding: 10px 20px;
+        grid-row: auto;
+      }
+      .toc-title { display: none; }
+      .toc a {
+        white-space: nowrap;
+        flex-shrink: 0;
+        border-left: 0;
+        border-bottom: 2px solid transparent;
+        border-radius: 4px 4px 0 0;
+      }
+      .toc a.active { border-left: 0; border-bottom-color: var(--accent); }
+      .main { padding-top: 8px; }
+      .sec-head { scroll-margin-top: 52px; }
+      .compare, .pair, .gallery { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="toc" id="toc" aria-label="Contents">
+    <div class="toc-title">Contents</div>
+    <a href="#overview">Overview</a>
+    <a href="#canonical">Canonical screen</a>
+    <a href="#ways">Code, reset, second step</a>
+    <a href="#password">Set a password</a>
+    <a href="#fallback">Code fallback</a>
+    <a href="#copy">Copy</a>
+    <a href="#bounds">Kept off this screen</a>
+  </nav>
+
+  <div class="main">
+    <header class="hero" id="overview">
+      <p class="kicker">Release 2 · OneNGO · O11</p>
+      <h1>The organisation is the address</h1>
+      <p class="lead">Sign-in moves to <code>/o/&lt;organisation-code&gt;/sign-in</code>. The page resolves an active NGO, shows OneNGO with that NGO’s display name and logo, and asks only for the person’s credentials. The generic <code>/sign-in</code> page remembers the last organisation or asks for a code, then opens the organisation’s own screen.</p>
+      <p class="quote">Helping Hands has a front door. The person brings an email and a password.</p>
+      <div class="legend" aria-label="Legend">
+        <span><i class="swatch pri"></i> Primary action</span>
+        <span><i class="swatch alt"></i> Other way to sign in</span>
+        <span><i class="swatch hit"></i> The action this frame is about</span>
+      </div>
+    </header>
+
+    <div class="sec-head" id="change">
+      <span class="sec-num">01</span>
+      <h2>What changes on the credential screen</h2>
+    </div>
+    <p class="sec-lead">Both frames are the same phone, the same person, and the same NGO. Today the organisation is a field on the form. In Release 2 it is the address, the name, and the logo.</p>
+
+    <div class="compare">
+      <div class="col ve-card ve-card--recessed">
+        <div class="ve-card__label">Today</div>
+        <div class="frame-cap">
+          <b>Tab · Sign in</b>
+          <code>/sign-in</code>
+        </div>
+        <div class="phone" aria-hidden="true">
+          <div class="scr">
+            <div class="status"><span>9:41</span><span>100%</span></div>
+            <div class="stage">
+              <div class="signin">
+                <div class="orgname" style="font-size:1.15rem">Sign in</div>
+                <div class="card">
+                  <div class="mf"><div class="l">Organisation</div><div class="o">helpinghands</div></div>
+                  <div class="mf"><div class="l">Email</div><div class="o">asha@helpinghands.org</div></div>
+                  <div class="mf"><div class="l">Password</div><div class="o">••••••••</div></div>
+                  <div class="acts">
+                    <span class="btn p">Sign in</span>
+                    <span class="btn">Email me a code</span>
+                  </div>
+                  <p class="more"><span>Forgot password?</span></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col ve-card ve-card--hero">
+        <div class="ve-card__label">Release 2</div>
+        <div class="frame-cap">
+          <b>Tab · Helping Hands | OneNGO</b>
+          <code>/o/helpinghands/sign-in</code>
+        </div>
+        <div class="phone">
+          <div class="scr">
+            <div class="status"><span>9:41</span><span>100%</span></div>
+            <div class="stage">
+              <div class="signin">
+                <div class="mark">OneNGO</div>
+                <div class="logo" title="Helping Hands logo">
+                  <svg viewBox="0 0 72 72" aria-hidden="true">
+                    <rect width="72" height="72" fill="#1f5f8b"/>
+                    <path d="M14 44 V30 L36 16 L58 30 V44" fill="none" stroke="#fff" stroke-width="3.5" stroke-linejoin="round"/>
+                    <rect x="30" y="36" width="12" height="16" rx="1" fill="#fff"/>
+                    <circle cx="28" cy="30" r="2.2" fill="#F3BE26"/>
+                    <circle cx="44" cy="30" r="2.2" fill="#F3BE26"/>
+                  </svg>
+                </div>
+                <div class="orgname">Helping Hands</div>
+                <div class="card">
+                  <div class="tabs" role="tablist"><span class="on" role="tab">Password</span><span role="tab">Email code</span></div>
+                  <div class="mf"><div class="l">Email</div><div class="o">asha@helpinghands.org</div></div>
+                  <div class="mf"><div class="l">Password</div><div class="o">••••••••</div></div>
+                  <div class="acts">
+                    <span class="btn p hit">Sign in</span>
+                  </div>
+                  <p class="more"><span>Forgot password?</span></p>
+                </div>
+                <p class="sso"><span class="btn">Sign in with Ministry SSO</span></p>
+                <p class="switchorg"><span>Use another organisation</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rail" aria-label="How a person arrives">
+      <div class="stop"><div class="stem"><i class="dot"></i><i class="line"></i></div><div class="body"><strong>Invitation, bookmark, or a code they typed</strong><span>The link already contains <code>helpinghands</code>. The code is an address, and it is not a secret.</span></div></div>
+      <div class="stop"><div class="stem"><i class="dot"></i><i class="line"></i></div><div class="body"><strong>Active organisation</strong><span>The screen shows OneNGO, the display name, the stored logo, and that NGO’s sign-in methods.</span></div></div>
+      <div class="stop"><div class="stem"><i class="dot"></i><i class="line"></i></div><div class="body"><strong>Any other outcome</strong><span>Unknown, still provisioning, provisioning failed, suspended, and closed share one unavailable screen. The tab stays “Sign in | OneNGO”.</span></div></div>
+      <div class="stop"><div class="stem"><i class="dot"></i></div><div class="body"><strong>Use another organisation</strong><span>Clears only the organisation remembered in this browser and opens the code form.</span></div></div>
+    </div>
+
+    <div class="sec-head" id="canonical">
+      <span class="sec-num">02</span>
+      <h2>Canonical screen</h2>
+    </div>
+    <p class="sec-lead">This is the screen invitations, reset links, and bookmarks open. A wide window keeps the same narrow column. There is no app bar and no breadcrumb, matching sign-in today.</p>
+
+    <div class="pair">
+      <div>
+        <div class="frame-cap">
+          <b>With a stored logo</b>
+          <code>/o/helpinghands/sign-in</code>
+        </div>
+        <div class="phone" aria-hidden="true">
+          <div class="scr">
+            <div class="status"><span>9:41</span><span>100%</span></div>
+            <div class="stage">
+              <div class="signin">
+                <div class="mark">OneNGO</div>
+                <div class="logo">
+                  <svg viewBox="0 0 72 72" aria-hidden="true">
+                    <rect width="72" height="72" fill="#1f5f8b"/>
+                    <path d="M14 44 V30 L36 16 L58 30 V44" fill="none" stroke="#fff" stroke-width="3.5" stroke-linejoin="round"/>
+                    <rect x="30" y="36" width="12" height="16" rx="1" fill="#fff"/>
+                  </svg>
+                </div>
+                <div class="orgname">Helping Hands</div>
+                <div class="card">
+                  <div class="tabs" role="tablist"><span class="on" role="tab">Password</span><span role="tab">Email code</span></div>
+                  <div class="mf"><div class="l">Email</div><div class="o">asha@helpinghands.org</div></div>
+                  <div class="mf"><div class="l">Password</div><div class="o">••••••••</div></div>
+                  <div class="acts">
+                    <span class="btn p">Sign in</span>
+                  </div>
+                  <p class="more"><span>Forgot password?</span></p>
+                </div>
+                <p class="sso"><span class="btn">Sign in with Ministry SSO</span></p>
+                <p class="switchorg"><span>Use another organisation</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="notes">
+        <ol>
+          <li><strong>OneNGO</strong> is the product name. It is fixed, and an NGO administrator cannot edit it or replace it with their own wordmark.</li>
+          <li><strong>Helping Hands</strong> is <code>tenant.name</code>, the display name. The legal name stays off this screen.</li>
+          <li>The logo is the NGO’s stored file, served from the same origin. The house mark above is a stand-in for that file. When no logo is stored, the slot is omitted. The screen does not invent initials and does not load a remote image.</li>
+          <li>Email and password sit in the <strong>Password</strong> tab. <strong>Email code</strong> is the other tab. The organisation code is absent because the address already resolved it.</li>
+          <li><strong>Sign in with Ministry SSO</strong> sits under the tab container, outside it. The label is that NGO’s provider. It appears after the organisation has resolved, and it is omitted when that NGO has no provider.</li>
+          <li><strong>Use another organisation</strong> sits below the SSO button. It clears the remembered code in this browser and opens <code>/sign-in</code>.</li>
+          <li>A wrong password stays on this screen. The notice is the server’s message. Reset and email-code notices still avoid saying whether the address is a member.</li>
+          <li>After a successful sign-in, Home’s title is Helping Hands and the shell keeps OneNGO beside that name.</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="browser" aria-label="Desktop canonical sign-in">
+      <div class="chrome">
+        <div class="tabname">Helping Hands | OneNGO</div>
+        <div class="url">/o/helpinghands/sign-in</div>
+      </div>
+      <div class="scr">
+        <div class="stage">
+          <div class="signin">
+            <div class="mark">OneNGO</div>
+            <div class="logo">
+              <svg viewBox="0 0 72 72" aria-hidden="true">
+                <rect width="72" height="72" fill="#1f5f8b"/>
+                <path d="M14 44 V30 L36 16 L58 30 V44" fill="none" stroke="#fff" stroke-width="3.5" stroke-linejoin="round"/>
+                <rect x="30" y="36" width="12" height="16" rx="1" fill="#fff"/>
+              </svg>
+            </div>
+            <div class="orgname">Helping Hands</div>
+            <div class="card">
+              <div class="tabs" role="tablist"><span class="on" role="tab">Password</span><span role="tab">Email code</span></div>
+              <div class="mf"><div class="l">Email</div><div class="o">asha@helpinghands.org</div></div>
+              <div class="mf"><div class="l">Password</div><div class="o">••••••••</div></div>
+              <div class="acts">
+                <span class="btn p">Sign in</span>
+              </div>
+              <p class="more"><span>Forgot password?</span></p>
+            </div>
+            <p class="sso"><span class="btn">Sign in with Ministry SSO</span></p>
+            <p class="switchorg"><span>Use another organisation</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="sec-lead" style="margin-top:10px">Desktop is the same column, centered. The form does not stretch into a dashboard.</p>
+
+    <div class="gallery" style="margin-top:22px">
+      <figure class="shot">
+        <figcaption>
+          <b>No logo stored</b>
+          <code>/o/helpinghands/sign-in</code>
+        </figcaption>
+        <div class="phone" aria-hidden="true">
+          <div class="scr">
+            <div class="status"><span>9:41</span><span>100%</span></div>
+            <div class="stage">
+              <div class="signin">
+                <div class="mark">OneNGO</div>
+                <div class="orgname solo">Helping Hands</div>
+                <div class="card">
+                  <div class="tabs" role="tablist"><span class="on" role="tab">Password</span><span role="tab">Email code</span></div>
+                  <div class="mf"><div class="l">Email</div><div class="o">asha@helpinghands.org</div></div>
+                  <div class="mf"><div class="l">Password</div><div class="o">••••••••</div></div>
+                  <div class="acts">
+                    <span class="btn p">Sign in</span>
+                  </div>
+                  <p class="more"><span>Forgot password?</span></p>
+                </div>
+                <p class="switchorg"><span>Use another organisation</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="blurb">The display name carries the identity. There is no empty image box and no generated monogram.</p>
+      </figure>
+      <figure class="shot">
+        <figcaption>
+          <b>Providers only when this NGO has them</b>
+          <code>/o/helpinghands/sign-in</code>
+        </figcaption>
+        <div class="ve-card" style="margin-top:8px">
+          <p>The no-logo frame also shows an NGO with no identity provider: the button under the tabs is gone. Providers load only after an active organisation resolves, and only that organisation’s providers are offered. They stay outside the tab container.</p>
+          <p style="margin-top:8px">A provider that still needs an authenticator returns to this same address for the second step. The one-time ticket is removed from the address bar, as it is today.</p>
+        </div>
+      </figure>
+    </div>
+
+    <div class="sec-head" id="ways">
+      <span class="sec-num">03</span>
+      <h2>Code, reset, and the authenticator</h2>
+    </div>
+    <p class="sec-lead">Password and email code are tabs in one container. The organisation’s SSO button stays under that container on every tab. Sample NGO: Helping Hands, with its logo.</p>
+
+    <div class="gallery">
+      <figure class="shot">
+        <figcaption>
+          <b>Ask for an email code</b>
+          <code>/o/helpinghands/sign-in</code>
+        </figcaption>
+        <div class="phone" aria-hidden="true">
+          <div class="scr">
+            <div class="status"><span>9:41</span><span>100%</span></div>
+            <div class="stage">
+              <div class="signin">
+                <div class="mark">OneNGO</div>
+                <div class="logo"><svg viewBox="0 0 72 72" aria-hidden="true"><rect width="72" height="72" fill="#1f5f8b"/><path d="M14 44 V30 L36 16 L58 30 V44" fill="none" stroke="#fff" stroke-width="3.5"/><rect x="30" y="36" width="12" height="16" fill="#fff"/></svg></div>
+                <div class="orgname">Helping Hands</div>
+                <div class="card">
+                  <div class="tabs" role="tablist"><span role="tab">Password</span><span class="on hit" role="tab">Email code</span></div>
+                  <div class="mf"><div class="l">Email</div><div class="o">asha@helpinghands.org</div></div>
+                  <div class="acts">
+                    <span class="btn p hit">Email me a code</span>
+                  </div>
+                </div>
+                <p class="sso"><span class="btn">Sign in with Ministry SSO</span></p>
+                <p class="switchorg"><span>Use another organisation</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="blurb">The Email code tab hides the password. The button sends the code. SSO stays under the tabs.</p>
+      </figure>
+
+      <figure class="shot">
+        <figcaption>
+          <b>Enter the code</b>
+          <code>/o/helpinghands/sign-in</code>
+        </figcaption>
+        <div class="phone" aria-hidden="true">
+          <div class="scr">
+            <div class="status"><span>9:41</span><span>100%</span></div>
+            <div class="stage">
+              <div class="signin">
+                <div class="mark">OneNGO</div>
+                <div class="logo"><svg viewBox="0 0 72 72" aria-hidden="true"><rect width="72" height="72" fill="#1f5f8b"/><path d="M14 44 V30 L36 16 L58 30 V44" fill="none" stroke="#fff" stroke-width="3.5"/><rect x="30" y="36" width="12" height="16" fill="#fff"/></svg></div>
+                <div class="orgname">Helping Hands</div>
+                <div class="card">
+                  <div class="tabs" role="tablist"><span role="tab">Password</span><span class="on" role="tab">Email code</span></div>
+                  <div class="notice info">If that address belongs to a member, a code is on its way. It expires in 10 minutes.</div>
+                  <div class="mf"><div class="l">Email</div><div class="o">asha@helpinghands.org</div></div>
+                  <div class="mf"><div class="l">Code from your email</div><div class="o ph">6 digits</div></div>
+                  <div class="acts">
+                    <span class="btn p hit">Sign in</span>
+                  </div>
+                </div>
+                <p class="sso"><span class="btn">Sign in with Ministry SSO</span></p>
+                <p class="switchorg"><span>Use another organisation</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="blurb">The notice is the same whether or not the address is a member. The code field appears only after the send.</p>
+      </figure>
+
+      <figure class="shot">
+        <figcaption>
+          <b>Forgot password</b>
+          <code>/o/helpinghands/sign-in</code>
+        </figcaption>
+        <div class="phone" aria-hidden="true">
+          <div class="scr">
+            <div class="status"><span>9:41</span><span>100%</span></div>
+            <div class="stage">
+              <div class="signin">
+                <div class="mark">OneNGO</div>
+                <div class="logo"><svg viewBox="0 0 72 72" aria-hidden="true"><rect width="72" height="72" fill="#1f5f8b"/><path d="M14 44 V30 L36 16 L58 30 V44" fill="none" stroke="#fff" stroke-width="3.5"/><rect x="30" y="36" width="12" height="16" fill="#fff"/></svg></div>
+                <div class="orgname">Helping Hands</div>
+                <div class="card">
+                  <div class="tabs" role="tablist"><span class="on" role="tab">Password</span><span role="tab">Email code</span></div>
+                  <div class="mode" style="margin-top:4px">Reset your password</div>
+                  <div class="mf"><div class="l">Email</div><div class="o">asha@helpinghands.org</div></div>
+                  <div class="acts">
+                    <span class="btn p hit">Email me a reset link</span>
+                  </div>
+                  <p class="more"><span>Back to password</span></p>
+                </div>
+                <p class="sso"><span class="btn">Sign in with Ministry SSO</span></p>
+                <p class="switchorg"><span>Use another organisation</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="blurb">After send: “If that address belongs to a member, a reset link is on its way. It works once and expires in 30 minutes.” The link returns here.</p>
+      </figure>
+
+      <figure class="shot">
+        <figcaption>
+          <b>Authenticator</b>
+          <code>/o/helpinghands/sign-in</code>
+        </figcaption>
+        <div class="phone" aria-hidden="true">
+          <div class="scr">
+            <div class="status"><span>9:41</span><span>100%</span></div>
+            <div class="stage">
+              <div class="signin">
+                <div class="mark">OneNGO</div>
+                <div class="logo"><svg viewBox="0 0 72 72" aria-hidden="true"><rect width="72" height="72" fill="#1f5f8b"/><path d="M14 44 V30 L36 16 L58 30 V44" fill="none" stroke="#fff" stroke-width="3.5"/><rect x="30" y="36" width="12" height="16" fill="#fff"/></svg></div>
+                <div class="orgname">Helping Hands</div>
+                <div class="card">
+                  <div class="tabs" role="tablist"><span class="on" role="tab">Password</span><span role="tab">Email code</span></div>
+                  <div class="notice info">Enter the code from your authenticator app to finish signing in.</div>
+                  <div class="mf"><div class="l">Email</div><div class="o">asha@helpinghands.org</div></div>
+                  <div class="mf"><div class="l">Password</div><div class="o">••••••••</div></div>
+                  <div class="mf"><div class="l">Authenticator code</div><div class="o ph">6 digits</div></div>
+                  <div class="acts">
+                    <span class="btn p hit">Sign in</span>
+                  </div>
+                </div>
+                <p class="sso"><span class="btn">Sign in with Ministry SSO</span></p>
+                <p class="switchorg"><span>Use another organisation</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="blurb">Shown when this NGO requires a second step. A provider ticket shows the authenticator field alone: email and password stay hidden.</p>
+      </figure>
+    </div>
+
+    <div class="sec-head" id="password">
+      <span class="sec-num">04</span>
+      <h2>Set a password, then return here</h2>
+    </div>
+    <p class="sec-lead">The first administrator, and anyone who resets, still sets a password on the existing one-time page. Release 2 puts the NGO on that page and sends them back to the organisation’s sign-in. No initial password is included in the invitation.</p>
+
+    <div class="gallery">
+      <figure class="shot">
+        <figcaption>
+          <b>Invitation · set your password</b>
+          <code>/reset-password</code>
+        </figcaption>
+        <div class="phone" aria-hidden="true">
+          <div class="scr">
+            <div class="status"><span>9:41</span><span>100%</span></div>
+            <div class="stage">
+              <div class="signin">
+                <div class="mark">OneNGO</div>
+                <div class="logo"><svg viewBox="0 0 72 72" aria-hidden="true"><rect width="72" height="72" fill="#1f5f8b"/><path d="M14 44 V30 L36 16 L58 30 V44" fill="none" stroke="#fff" stroke-width="3.5"/><rect x="30" y="36" width="12" height="16" fill="#fff"/></svg></div>
+                <div class="orgname">Helping Hands</div>
+                <div class="mode">Set your password</div>
+                <div class="card">
+                  <div class="mf">
+                    <div class="l">New password</div>
+                    <div class="o">••••••••••</div>
+                    <div class="help">At least 10 characters. A short sentence is easy to remember and hard to guess.</div>
+                  </div>
+                  <div class="mf"><div class="l">Type it again</div><div class="o">••••••••••</div></div>
+                  <div class="acts">
+                    <span class="btn p hit">Save password</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="blurb">The email says “You have been invited to Helping Hands on OneNGO” and opens this page. The one-time token is dropped from the address, as it is today. A reset uses the heading “Choose a new password”.</p>
+      </figure>
+
+      <figure class="shot">
+        <figcaption>
+          <b>Password saved</b>
+          <code>/reset-password</code>
+        </figcaption>
+        <div class="phone" aria-hidden="true">
+          <div class="scr">
+            <div class="status"><span>9:41</span><span>100%</span></div>
+            <div class="stage">
+              <div class="signin">
+                <div class="mark">OneNGO</div>
+                <div class="logo"><svg viewBox="0 0 72 72" aria-hidden="true"><rect width="72" height="72" fill="#1f5f8b"/><path d="M14 44 V30 L36 16 L58 30 V44" fill="none" stroke="#fff" stroke-width="3.5"/><rect x="30" y="36" width="12" height="16" fill="#fff"/></svg></div>
+                <div class="orgname">Helping Hands</div>
+                <div class="card">
+                  <div class="notice ok">Your password is set. Sign in with it now.</div>
+                  <div class="acts">
+                    <span class="btn p hit">Go to sign in</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="blurb">Go to sign in opens <code>/o/helpinghands/sign-in</code>. Today this button opens the generic <code>/sign-in</code> page.</p>
+      </figure>
+    </div>
+
+    <div class="sec-head" id="fallback">
+      <span class="sec-num">05</span>
+      <h2>Code fallback and the unavailable screen</h2>
+    </div>
+    <p class="sec-lead"><code>/sign-in</code> is no longer where someone types a password. If this browser last signed in to an active organisation, it opens that organisation’s screen immediately. Otherwise it asks for a code.</p>
+
+    <div class="gallery">
+      <figure class="shot">
+        <figcaption>
+          <b>Sign in using organisation code</b>
+          <code>/sign-in</code>
+        </figcaption>
+        <div class="phone">
+          <div class="scr">
+            <div class="status"><span>9:41</span><span>100%</span></div>
+            <div class="stage">
+              <div class="signin">
+                <div class="mark">OneNGO</div>
+                <div class="mode" style="margin-top:18px">Sign in using organisation code</div>
+                <div class="card">
+                  <div class="mf"><div class="l">Organisation code</div><div class="o">helpinghands</div></div>
+                  <div class="acts">
+                    <span class="btn p hit">Continue</span>
+                  </div>
+                </div>
+                <p class="hint">Use the code from your invitation or administrator. OneNGO does not list organisations.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="blurb">Continue opens <code>/o/helpinghands/sign-in</code>. This page has no email, password, or provider button, and the field does not search or suggest.</p>
+      </figure>
+
+      <figure class="shot">
+        <figcaption>
+          <b>Unavailable · one screen for every refusal</b>
+          <code>/o/helpinghands/sign-in</code>
+        </figcaption>
+        <div class="phone">
+          <div class="scr">
+            <div class="status"><span>9:41</span><span>100%</span></div>
+            <div class="stage">
+              <div class="signin">
+                <div class="mark">OneNGO</div>
+                <div class="mode" style="margin-top:28px">This organisation is not available for sign-in.</div>
+                <div class="card">
+                  <div class="acts" style="border-top:0;margin-top:0;padding-top:0">
+                    <span class="btn p hit">Sign in with an organisation code</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="blurb">Same words, same tab title “Sign in | OneNGO”, whether the code is unknown or the organisation is provisioning, failed, suspended, or closed. The display name and logo stay hidden. The address is not repeated on the screen.</p>
+      </figure>
+    </div>
+
+    <div class="ve-card call">
+      <div class="ve-card__label">Remembered organisation</div>
+      <p>The last successful code is stored in this browser. Opening <code>/sign-in</code> with <code>helpinghands</code> remembered, and that NGO still active, goes straight to <code>/o/helpinghands/sign-in</code>.</p>
+      <p>If the remembered code is missing, unknown, or no longer active, it is dropped and the code form is shown. Choosing <strong>Use another organisation</strong> clears that memory only. It does not end a session on the server, because this person is not signed in yet.</p>
+    </div>
+
+    <div class="sec-head" id="copy">
+      <span class="sec-num">06</span>
+      <h2>Copy on the screen</h2>
+    </div>
+    <p class="sec-lead">Existing sentences stay. New lines are the product name, the organisation heading, the code form, and the single unavailable sentence.</p>
+
+    <div class="table-wrap">
+      <table>
+        <colgroup>
+          <col style="width:22%" />
+          <col style="width:46%" />
+          <col style="width:16%" />
+          <col style="width:16%" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Place</th>
+            <th>Copy</th>
+            <th>Where</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Product mark</td><td>OneNGO</td><td>Every sign-in screen</td><td><span class="tag new">New</span></td></tr>
+          <tr><td>Heading</td><td>Helping Hands</td><td>Active organisation only</td><td><span class="tag new">Display name</span></td></tr>
+          <tr><td>Browser title</td><td>Helping Hands | OneNGO</td><td>Active organisation</td><td><span class="tag new">New</span></td></tr>
+          <tr><td>Browser title</td><td>Sign in | OneNGO</td><td>Code form and unavailable</td><td><span class="tag new">New</span></td></tr>
+          <tr><td>Field</td><td>Email</td><td>Credentials</td><td><span class="tag keep">Existing</span></td></tr>
+          <tr><td>Field</td><td>Password</td><td>Password method</td><td><span class="tag keep">Existing</span></td></tr>
+          <tr><td>Button</td><td>Sign in</td><td>Primary</td><td><span class="tag keep">Existing</span></td></tr>
+          <tr><td>Tab</td><td>Password</td><td>Holds email and password</td><td><span class="tag new">New</span></td></tr>
+          <tr><td>Tab</td><td>Email code</td><td>The other credential tab</td><td><span class="tag new">New</span></td></tr>
+          <tr><td>Button</td><td>Email me a code</td><td>Inside the Email code tab</td><td><span class="tag keep">Existing</span></td></tr>
+          <tr><td>Button</td><td>Sign in with {provider}</td><td>Under the tab container</td><td><span class="tag new">Moved out</span></td></tr>
+          <tr><td>Link</td><td>Forgot password?</td><td>Password method</td><td><span class="tag keep">Existing</span></td></tr>
+          <tr><td>Link</td><td>Sign in with my password</td><td>Code and reset</td><td><span class="tag keep">Existing</span></td></tr>
+          <tr><td>Notice</td><td>If that address belongs to a member, a code is on its way. It expires in 10 minutes.</td><td>After send</td><td><span class="tag keep">Existing</span></td></tr>
+          <tr><td>Field</td><td>Code from your email</td><td>After send</td><td><span class="tag keep">Existing</span></td></tr>
+          <tr><td>Heading</td><td>Reset your password</td><td>Forgot</td><td><span class="tag keep">Existing</span></td></tr>
+          <tr><td>Button</td><td>Email me a reset link</td><td>Forgot</td><td><span class="tag keep">Existing</span></td></tr>
+          <tr><td>Notice</td><td>If that address belongs to a member, a reset link is on its way. It works once and expires in 30 minutes.</td><td>After reset send</td><td><span class="tag keep">Existing</span></td></tr>
+          <tr><td>Notice</td><td>Enter the code from your authenticator app to finish signing in.</td><td>Second step</td><td><span class="tag keep">Existing</span></td></tr>
+          <tr><td>Field</td><td>Authenticator code</td><td>Second step</td><td><span class="tag keep">Existing</span></td></tr>
+          <tr><td>Heading</td><td>Set your password</td><td>Invitation</td><td><span class="tag keep">Existing</span></td></tr>
+          <tr><td>Heading</td><td>Choose a new password</td><td>Reset link</td><td><span class="tag keep">Existing</span></td></tr>
+          <tr><td>Notice</td><td>Your password is set. Sign in with it now.</td><td>After save</td><td><span class="tag keep">Existing</span></td></tr>
+          <tr><td>Button</td><td>Go to sign in</td><td>Opens this NGO’s sign-in</td><td><span class="tag new">Target changes</span></td></tr>
+          <tr><td>Link</td><td>Use another organisation</td><td>Below the credential card</td><td><span class="tag new">New</span></td></tr>
+          <tr><td>Heading</td><td>Sign in using organisation code</td><td><code>/sign-in</code></td><td><span class="tag new">New</span></td></tr>
+          <tr><td>Field</td><td>Organisation code</td><td>Code form only</td><td><span class="tag new">Moved</span></td></tr>
+          <tr><td>Button</td><td>Continue</td><td>Opens the organisation screen</td><td><span class="tag new">New</span></td></tr>
+          <tr><td>Hint</td><td>Use the code from your invitation or administrator. OneNGO does not list organisations.</td><td>Code form</td><td><span class="tag new">New</span></td></tr>
+          <tr><td>Heading</td><td>This organisation is not available for sign-in.</td><td>Every non-active result</td><td><span class="tag new">New</span></td></tr>
+          <tr><td>Button</td><td>Sign in with an organisation code</td><td>Unavailable</td><td><span class="tag new">New</span></td></tr>
+          <tr><td>Invitation email</td><td>You have been invited to Helping Hands on OneNGO</td><td>Email, then the set-password page</td><td><span class="tag new">New</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sec-head" id="bounds">
+      <span class="sec-num">07</span>
+      <h2>Kept off this screen</h2>
+    </div>
+    <div class="ve-card">
+      <ul class="bounds">
+        <li>Legal name, registrations, address, phone, and email of the NGO. The public lookup returns the display name and the same-origin logo of an active NGO, and it is rate-limited.</li>
+        <li>An organisation directory, autocomplete, or “find my NGO by email”. Email-first discovery waits for a later release.</li>
+        <li>A remote logo address. A missing logo leaves the name on its own.</li>
+        <li>A distinct sentence for suspended, closed, provisioning, or unknown. One unavailable screen covers all of them, and the tab does not reveal the display name.</li>
+        <li>An initial password. The invitation is a single-use set-password link, valid for seven days, sent after the organisation is created.</li>
+        <li>The operator’s provisioning command, the setup checklist, and receipt identity. Those are Release 2, and they are separate screens.</li>
+        <li>The app bar, navigation, and breadcrumb. Sign-in and set-password stay bare, as they are today.</li>
+      </ul>
+    </div>
+
+    <p class="source">Source: Release 2 checkpoint O11, 24 Oct 2026. Frames follow the current sign-in column and the phone wireframes in the navigation flows. Sample organisation: Helping Hands, code helpinghands.</p>
+  </div>
+</div>
+<script>
+(function () {
+  const toc = document.getElementById('toc');
+  const links = toc.querySelectorAll('a');
+  const sections = [];
+  links.forEach(link => {
+    const id = link.getAttribute('href').slice(1);
+    const el = document.getElementById(id);
+    if (el) sections.push({ id, el, link });
+  });
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      links.forEach(l => l.classList.remove('active'));
+      const match = sections.find(s => s.el === entry.target);
+      if (!match) return;
+      match.link.classList.add('active');
+      if (window.innerWidth <= 1000) {
+        match.link.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  sections.forEach(s => observer.observe(s.el));
+  links.forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const id = link.getAttribute('href').slice(1);
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      history.replaceState(null, '', '#' + id);
+    });
+  });
+})();
+</script>
+</body>
+</html>

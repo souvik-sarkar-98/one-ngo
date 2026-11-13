@@ -1,0 +1,53 @@
+{
+  "name": "@onengo/workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --config vitest.config.ts",
+    "test:e2e": "npm test --prefix tests/e2e",
+    "test:watch": "vitest",
+    "test:contract": "vitest run --config vitest.config.ts packages/platform/test/postgres-contract.test.ts",
+    "start": "npm run start --workspace @onengo/server",
+    "start:dev": "npm run start:dev --workspace @onengo/server",
+    "build": "npm run build --workspaces --if-present",
+    "build:server": "npm run build --workspace @onengo/server",
+    "deploy:prepare": "npm run deploy:prepare --workspace @onengo/server",
+    "deploy:prepare:dev": "npm run deploy:prepare:dev --workspace @onengo/server",
+    "fields:reencrypt": "npm run fields:reencrypt --workspace @onengo/server",
+    "fields:reencrypt:dev": "npm run fields:reencrypt:dev --workspace @onengo/server",
+    "measure": "node utilities/measure.mjs",
+    "measure:web": "node utilities/measure.mjs web",
+    "measure:db": "node utilities/measure.mjs db",
+    "measure:footprint": "node utilities/measure.mjs footprint",
+    "measure:bundle": "node utilities/measure.mjs bundle",
+    "dev": "node utilities/sandbox/dev.mjs",
+    "dev:setup": "node utilities/sandbox/dev-setup.mjs",
+    "db:types": "npm run db:types --workspace @onengo/platform",
+    "web:build": "npm run build --workspace @onengo/web",
+    "operator:web:build": "npm run build --workspace @onengo-console/web",
+    "guide:web:build": "npm run build --workspace @onengo-guide/web",
+    "operator:server:build": "npm run build --workspace @onengo-console/server",
+    "ci": "npm run typecheck && npm run build:server && npm run web:build && npm run operator:web:build && npm run guide:web:build && npm run operator:server:build && npm test",
+    "ci:audit": "npm audit --omit=dev --audit-level=high",
+    "demo:integrations": "npm run start --workspace @onengo/service-sandbox"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/nodemailer": "^8.0.2",
+    "@types/pg": "^8.23.1",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3",
+    "vite": "^7.0.0",
+    "vitest": "^5.0.5"
+  }
+}

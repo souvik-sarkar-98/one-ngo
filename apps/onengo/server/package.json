@@ -1,0 +1,31 @@
+{
+  "name": "@onengo/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "tsx ../../../packages/common/build-app.ts onengo --production",
+    "build:dev": "tsx ../../../packages/common/build-app.ts onengo --development",
+    "start": "node --enable-source-maps dist/server.js",
+    "start:dev": "tsx src/main.ts",
+    "dev": "node scripts/dev.mjs",
+    "deploy:prepare": "node --enable-source-maps dist/deploy.js",
+    "deploy:prepare:dev": "tsx src/deploy.ts",
+    "fields:reencrypt": "node --enable-source-maps dist/deploy.js --reencrypt-sensitive-fields",
+    "fields:reencrypt:dev": "tsx src/deploy.ts --reencrypt-sensitive-fields"
+  },
+  "dependencies": {
+    "@fastify/static": "^10.1.6",
+    "@onengo/kernel": "0.1.0",
+    "@onengo/platform": "0.1.0",
+    "fastify": "^5.12.7"
+  },
+  "devDependencies": {
+    "@onengo/web-kit": "0.1.0",
+    "@types/node": "^22.20.5",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3"
+  }
+}

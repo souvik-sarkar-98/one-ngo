@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Install app — workflow on develop</title>
+<style>
+  :root {
+    --fg: #1d2733; --muted: #5b6878; --line: #d8dee6; --bg: #f5f7fa; --card: #fff;
+    --brand: #1f5f8b; --ok: #1d7a46; --warn: #9a6200; --bad: #b3261e;
+    --page: #eef1f5; --ink: #18212b;
+    --font: 'Segoe UI', Roboto, 'Noto Sans', Helvetica, Arial, sans-serif;
+    --mono: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font); color: var(--ink); background: linear-gradient(180deg, #f6f8fa, var(--page)); }
+  header.page, main.page { max-width: 1100px; margin: 0 auto; padding: 36px 32px 0; }
+  main.page { padding-bottom: 72px; }
+  h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -.01em; }
+  header.page p { margin: 0 0 10px; max-width: 820px; line-height: 1.55; color: #36414d; }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 16px; }
+  .facts div { background: #fff; border: 1px solid #dfe5eb; border-radius: 10px; padding: 12px 14px; font-size: 13.5px; line-height: 1.5; }
+  .facts b { display: block; color: var(--brand); margin-bottom: 3px; }
+  .bug { margin-top: 14px; background: #fff8ee; border: 1px solid #f0d9b5; border-radius: 10px; padding: 12px 16px; font-size: 13.5px; line-height: 1.55; }
+  .bug b { color: #8a4b0f; }
+  h2 { margin: 36px 0 6px; font-size: 20px; }
+  .lead { margin: 0 0 16px; color: #3a4552; line-height: 1.5; max-width: 820px; }
+  code { font-family: var(--mono); font-size: 0.92em; }
+  .flow { display: flex; flex-direction: column; align-items: center; gap: 0; }
+  .node { width: min(640px, 100%); background: #fff; border: 1px solid #d5dbe2; border-radius: 12px; padding: 14px 16px; box-shadow: 0 8px 20px rgba(15, 23, 42, .05); }
+  .node h3 { margin: 0 0 4px; font-size: 15px; }
+  .node p { margin: 0; color: #3a4552; font-size: 13.5px; line-height: 1.5; }
+  .node .where { display: inline-block; margin-bottom: 6px; font: 700 11px var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--brand); }
+  .arrow { width: 2px; height: 22px; background: #b7c2cd; position: relative; }
+  .arrow::after { content: ''; position: absolute; left: -4px; bottom: -1px; border: 5px solid transparent; border-top-color: #8ea0b0; }
+  .split { width: min(980px, 100%); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 800px) { .split { grid-template-columns: 1fr; } }
+  .choice { background: #fff; border: 1px solid #d5dbe2; border-top: 4px solid var(--brand); border-radius: 12px; padding: 14px; }
+  .choice h3 { margin: 0 0 6px; font-size: 15px; }
+  .choice p, .choice li { color: #3a4552; font-size: 13.5px; line-height: 1.45; }
+  .choice ol { margin: 8px 0 0; padding-left: 18px; }
+  .choice.end { border-top-color: var(--ok); }
+  .tag { display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 700; color: var(--ok); }
+  .mini { margin-top: 10px; border: 1px solid #e3e8ee; border-radius: 10px; overflow: hidden; background: var(--bg); }
+  .mini .bar { background: var(--brand); color: #fff; font-size: 12px; font-weight: 700; padding: 7px 10px; }
+  .mini .row { display: flex; justify-content: space-between; gap: 8px; padding: 9px 10px; background: #fff; border-top: 1px solid #e6ebf0; font-size: 13px; }
+  .mini .row b { font-weight: 650; }
+  .mini .row span { color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #d5dbe2; border-radius: 10px; overflow: hidden; font-size: 13.5px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid #e6ebf0; vertical-align: top; }
+  th { background: #f7f9fb; color: #3a4a5a; font-size: 12px; }
+  tr:last-child td { border-bottom: 0; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Install app</h1>
+  <p>How a person installs one organisation as its own app, as built on <code>develop</code>. There is no install page. Settings installs in place. The installed app opens that organisation’s sign-in page.</p>
+  <div class="facts">
+    <div><b>Where</b>More → Settings → Install app. The sign-in page does not offer it.</div>
+    <div><b>Name</b>The organisation’s display name. Each organisation is a separate installed app.</div>
+    <div><b>Opens</b><code>/o/&lt;code&gt;/sign-in</code>, in its own window.</div>
+    <div><b>Icon</b>The organisation logo when one is set. The shared heart when it is not.</div>
+  </div>
+  <div class="bug"><b>Known bug.</b> On Windows, Chrome’s shortcut and taskbar still show a letter (the first letter of the name) instead of the logo. The icon file is a square PNG. Removing the app and installing it again does not replace the letter.</div>
+</header>
+<main class="page">
+  <h2>1. The page prepares the install</h2>
+  <p class="lead">This happens on a full page load, before anyone taps Install app. The browser needs the manifest while the person is still on the site.</p>
+  <div class="flow">
+    <article class="node">
+      <span class="where">Address or last organisation</span>
+      <h3>Find the organisation code</h3>
+      <p>The inline script in <code>index.html</code> reads <code>/o/&lt;code&gt;/…</code>. If the path has no code, it uses <code>ngo.lastOrganisation</code> from local storage when that value is a sign-in code.</p>
+    </article>
+    <div class="arrow"></div>
+    <article class="node">
+      <span class="where">Same page load</span>
+      <h3>Attach the organisation manifest</h3>
+      <p>It adds <code>&lt;link rel="manifest"&gt;</code> pointing at <code>/api/auth/organisations/&lt;code&gt;/manifest.webmanifest</code>, and points the Apple touch icon at <code>/api/auth/organisations/&lt;code&gt;/icon/180</code>. No code means the shared heart stays in place and no organisation manifest is attached.</p>
+    </article>
+    <div class="arrow"></div>
+    <article class="node">
+      <span class="where">Startup</span>
+      <h3>Wait for the browser’s install offer</h3>
+      <p><code>watchInstall()</code> stores <code>beforeinstallprompt</code> and hides the browser’s own banner. It also notices when the window is already the installed app (<code>display-mode: standalone</code>).</p>
+    </article>
+  </div>
+
+  <h2>2. What the manifest tells the browser</h2>
+  <p class="lead">The public manifest route builds this for an active organisation. A missing organisation is the same 404 as the sign-in lookup.</p>
+  <table>
+    <thead><tr><th>Field</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td><code>name</code></td><td>Display name</td></tr>
+      <tr><td><code>short_name</code></td><td>The name when it is 12 characters or fewer, otherwise the code</td></tr>
+      <tr><td><code>id</code></td><td><code>/o/&lt;code&gt;/</code> so two organisations do not replace each other</td></tr>
+      <tr><td><code>start_url</code></td><td><code>/o/&lt;code&gt;/sign-in</code></td></tr>
+      <tr><td><code>scope</code></td><td><code>/</code> so the signed-in app stays in the same window</td></tr>
+      <tr><td><code>display</code></td><td><code>standalone</code></td></tr>
+      <tr><td>Icons</td><td>Square PNGs of the logo at 192, 512, and 180 when the stored logo is PNG, JPEG, or WebP. Otherwise the shared heart in <code>/icons/</code>. A WebP file is requested as a logo but cannot be drawn, so that install uses the heart.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. The person installs from Settings</h2>
+  <p class="lead">Install app is shown only after sign-in, and only when the session’s organisation has a sign-in code and the window is not already the installed app. The click stays on Settings.</p>
+  <div class="flow">
+    <article class="node">
+      <span class="where">More → Settings → Help</span>
+      <h3>Install app</h3>
+      <p>Hint: “Add this organisation to your home screen. It opens on the sign-in page.”</p>
+      <div class="mini" aria-hidden="true">
+        <div class="bar">Settings</div>
+        <div class="row"><b>Install app</b><span>›</span></div>
+        <div class="row"><span>Add this organisation to your home screen. It opens on the sign-in page.</span></div>
+      </div>
+    </article>
+    <div class="arrow"></div>
+  </div>
+  <div class="split">
+    <article class="choice">
+      <h3>Chrome or Edge has offered a prompt</h3>
+      <p>The button calls the stored install prompt. The browser’s own dialog appears. Dismissing it does not open a second sheet.</p>
+      <p class="tag">No navigation</p>
+    </article>
+    <article class="choice">
+      <h3>iPhone or iPad</h3>
+      <p>There is no prompt. A sheet on Settings lists:</p>
+      <ol>
+        <li>In Safari, tap Share</li>
+        <li>Tap Add to Home Screen</li>
+      </ol>
+    </article>
+    <article class="choice">
+      <h3>Any other browser</h3>
+      <p>A sheet on Settings says: open the browser menu and choose Install app, or Add to Home screen.</p>
+    </article>
+  </div>
+  <div class="flow" style="margin-top: 18px;">
+    <div class="arrow"></div>
+    <article class="node">
+      <span class="where">After the person accepts</span>
+      <h3>The installed app is that organisation</h3>
+      <p>The shortcut is named with the display name. Opening it loads <code>/o/&lt;code&gt;/sign-in</code>. Once the window is the installed app, Settings hides Install app. An organisation with no logo uses the shared heart. An organisation with a logo is meant to use that logo.</p>
+    </article>
+  </div>
+
+  <h2>4. What does not happen</h2>
+  <table>
+    <thead><tr><th>Not part of the flow</th><th>What happens instead</th></tr></thead>
+    <tbody>
+      <tr><td><code>/o/&lt;code&gt;/install</code></td><td>Removed. Nothing navigates there.</td></tr>
+      <tr><td>Install app on the sign-in page</td><td>Not shown. Sign-in still attaches the manifest and the Apple icon for the organisation in the address.</td></tr>
+      <tr><td>Install with no organisation code</td><td>The Settings row stays hidden.</td></tr>
+      <tr><td>Already installed</td><td>The Settings row stays hidden.</td></tr>
+    </tbody>
+  </table>
+</main>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "description": "NGO platform: background jobs (imports, bulk operations, rebuilds, clean-up) that stopped with an error. Applied by a person with gcloud; see docs/operations/monitoring/README.md.",
+  "filter": "jsonPayload.alert=\"job.failed\"",
+  "metricDescriptor": {
+    "metricKind": "DELTA",
+    "valueType": "INT64",
+    "unit": "1",
+    "labels": [{ "key": "kind", "valueType": "STRING", "description": "Job kind, for example import or files.cleanup." }]
+  },
+  "labelExtractors": { "kind": "EXTRACT(jsonPayload.kind)" }
+}

@@ -1,0 +1,28 @@
+{
+  "key": "donationPaidReceipt",
+  "recordType": "donation",
+  "whenStatus": "paid",
+  "series": "donation-receipt",
+  "amount": "record.amount",
+  "date": "record.paidOn",
+  "layout": {
+    "title": "Donation acknowledgement",
+    "statement": "Received with thanks from {{ record.donorName }} the sum of {{ receipt.amount }} towards Donation.",
+    "thanks": "Thank you for your generous support.",
+    "rows": [
+      { "label": "Donor name", "field": "donorName" },
+      { "label": "Amount", "field": "amount" },
+      { "label": "For Donation", "value": "record.number" },
+      { "label": "Donor email", "field": "donorEmail" },
+      { "label": "Donor phone", "field": "donorPhone" },
+      { "label": "Payment method", "field": "method" },
+      { "label": "Paid on", "field": "paidOn" },
+      { "label": "Payment reference", "field": "reference" },
+      { "label": "Processing fee", "field": "fee" },
+      { "label": "Net amount", "field": "netAmount" }
+    ],
+    "clauses": [
+      { "registration": "80g", "text": "This organisation holds 80G registration {{ registration.number }}." }
+    ]
+  }
+}

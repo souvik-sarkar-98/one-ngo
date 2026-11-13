@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NGO Platform — Builder screens (everything configurable)</title>
+<style>
+  :root {
+    --fg: #1d2733; --muted: #5b6878; --line: #d8dee6; --bg: #f5f7fa; --brand: #1f5f8b; --ok: #1d7a46; --warn: #9a6200; --bad: #b3261e;
+    --b50: color-mix(in srgb, var(--brand) 6%, #fff); --b100: color-mix(in srgb, var(--brand) 12%, #fff); --b200: color-mix(in srgb, var(--brand) 25%, #fff);
+    --font: 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Devanagari', Helvetica, Arial, sans-serif;
+    --mono: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font); color: #18212b; background: linear-gradient(180deg, #f6f8fa, #eef1f5); }
+  header.page { max-width: 1480px; margin: 0 auto; padding: 34px 40px 14px; }
+  header.page h1 { margin: 0 0 8px; font-size: 28px; }
+  header.page p { margin: 0 0 8px; max-width: 1040px; line-height: 1.55; color: #36414d; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 14px; }
+  .rules div { background: #fff; border: 1px solid #dfe5eb; border-radius: 10px; padding: 12px 14px; font-size: 13.5px; line-height: 1.5; }
+  .rules b { display: block; color: var(--brand); margin-bottom: 3px; }
+  nav.toc { position: sticky; top: 0; z-index: 20; background: rgba(238,241,245,.94); backdrop-filter: blur(6px); border-bottom: 1px solid #dbe1e7; }
+  nav.toc div { max-width: 1480px; margin: 0 auto; padding: 9px 40px; display: flex; gap: 4px; overflow-x: auto; }
+  nav.toc a { font: 600 12px var(--mono); color: #3a4a5a; text-decoration: none; padding: 6px 10px; border-radius: 6px; white-space: nowrap; }
+  nav.toc a:hover { background: #fff; }
+  main.page { max-width: 1480px; margin: 0 auto; padding: 0 40px 80px; }
+  section.scr { margin-top: 38px; }
+  .flabel { font: 700 12px var(--mono); color: var(--brand); text-transform: uppercase; letter-spacing: .06em; display: flex; gap: 8px; align-items: center; }
+  .flabel::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+  section.scr > h2 { margin: 4px 0 4px; font-size: 22px; }
+  section.scr > p { margin: 0 0 14px; color: #3a4552; max-width: 1040px; line-height: 1.5; }
+  .stage { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 20px; align-items: start; }
+  @media (max-width: 1250px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+  .notes { background: #fff; border: 1px solid #e1e6ec; border-radius: 10px; padding: 14px 16px; font-size: 13.5px; line-height: 1.5; }
+  .notes h3 { margin: 0 0 6px; font-size: 14px; }
+  .notes ul { margin: 0 0 8px; padding-left: 18px; } .notes li + li { margin-top: 5px; }
+  .notes code, .browser code { font: 11.5px var(--mono); background: #f1f4f7; padding: 1px 5px; border-radius: 4px; }
+  .tag { display: inline-block; font: 700 10px var(--mono); padding: 2px 7px; border-radius: 999px; letter-spacing: .03em; }
+  .tag.new { background: #e5f5ee; color: #0f6b4c; } .tag.has { background: #e8edf3; color: var(--muted); }
+
+  /* frame */
+  .browser { border-radius: 10px; background: #fff; border: 1px solid #d5dbe2; box-shadow: 0 14px 30px rgba(15,23,42,.12); overflow: hidden; min-width: 0; }
+  .chrome { height: 30px; background: #e9edf1; border-bottom: 1px solid #d5dbe2; display: flex; align-items: center; padding: 0 10px; }
+  .url { flex: 1; height: 20px; border-radius: 6px; background: #fff; font: 11.5px var(--mono); color: #536171; display: flex; align-items: center; padding: 0 9px; overflow: hidden; white-space: nowrap; }
+  .scr-in { height: var(--h, 640px); background: var(--bg); position: relative; overflow: hidden; display: flex; flex-direction: column; color: var(--fg); font-size: 14px; }
+  .appbar { height: 50px; flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 12px; background: var(--brand); color: #fff; }
+  .appbar .brand { font-weight: 700; font-size: 15px; }
+  .appbar .org { font-weight: 600; font-size: 13px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.4); }
+  .ib { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; position: relative; }
+  .ib.av { background: rgba(255,255,255,.2); font: 700 12px var(--font); }
+  .ib .dot { position: absolute; top: 3px; right: 2px; min-width: 15px; height: 15px; border-radius: 8px; background: #fdf1dc; color: var(--warn); font: 700 9.5px/15px var(--font); text-align: center; }
+  .fb-body { flex: 1; display: flex; min-height: 0; }
+  .rail { width: 84px; flex: 0 0 auto; background: #fff; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; padding-top: 10px; }
+  .nv { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10.5px; color: var(--muted); padding: 6px 0; }
+  .nv .g { width: 44px; height: 26px; border-radius: 13px; display: grid; place-items: center; }
+  .nv.on { color: var(--brand); font-weight: 600; } .nv.on .g { background: var(--b100); }
+  .nv svg { width: 20px; height: 20px; fill: currentColor; }
+  .main { flex: 1; min-width: 0; padding: 14px 18px 0; overflow: hidden; position: relative; }
+
+  /* builder chrome */
+  .bhead { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .bhead .crumb { font-size: 12.5px; color: var(--muted); }
+  .bhead .crumb a { color: var(--brand); text-decoration: none; }
+  .crumb ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; }
+  .crumb li + li::before { content: '›'; margin: 0 6px; color: #94a3b8; }
+  .crumb li[aria-current] { color: var(--fg); font-weight: 600; }
+  .bhead h1 { margin: 0; font-size: 1.15rem; line-height: 1.25; }
+  .back { width: 32px; height: 32px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 16px; flex: 0 0 auto; }
+  .sp { flex: 1; }
+  .bdg { font-size: .58rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; border-radius: 999px; padding: 4px 8px; line-height: 1; white-space: nowrap; display: inline-block; }
+  .bdg.s { background: #e3f4ea; color: var(--ok); } .bdg.w { background: #fdf1dc; color: var(--warn); } .bdg.p { background: var(--b100); color: var(--brand); } .bdg.n { background: #eef1f5; color: var(--muted); } .bdg.e { background: #fdecea; color: var(--bad); }
+  .btn { font: inherit; font-size: 12.5px; padding: .38rem .75rem; border-radius: 6px; border: 1px solid var(--line); background: #fff; color: var(--fg); white-space: nowrap; display: inline-block; }
+  .btn.p { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn.d { color: var(--bad); border-color: var(--bad); }
+  .btn.sm { padding: .22rem .55rem; font-size: 11.5px; }
+  .tabs2 { display: flex; gap: 8px; padding-bottom: 10px; }
+  .chip { border: 1px solid rgba(148,163,184,.35); background: #fff; border-radius: 999px; padding: 7px 12px; font-size: .68rem; font-weight: 700; line-height: 1; white-space: nowrap; }
+  .chip.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .ftb { display: flex; gap: 8px; padding-bottom: 10px; }
+  .ftb .search { flex: 1; display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid rgba(148,163,184,.35); border-radius: 12px; padding: 0 10px; min-height: 36px; font-size: .76rem; color: #94a3b8; }
+  .ftb .fb { display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(148,163,184,.35); background: #fff; border-radius: 12px; padding: 0 11px; min-height: 36px; font-size: .7rem; font-weight: 700; }
+  .panel { background: #fff; border-radius: 14px; border: 1px solid rgba(148,163,184,.22); box-shadow: 0 1px 2px #0f172a0d, 0 4px 14px #0f172a12; overflow: hidden; }
+  table.rows { width: 100%; border-collapse: collapse; font-size: .74rem; }
+  table.rows th { text-align: left; font-size: .6rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: #64748b; padding: 9px 11px; border-bottom: 1px solid rgba(148,163,184,.25); background: #f8fafc; white-space: nowrap; }
+  table.rows td { padding: 8px 11px; border-bottom: 1px solid rgba(148,163,184,.18); vertical-align: middle; }
+  table.rows tr.sel td { background: var(--b100); }
+  .t { font-weight: 700; } .cs { font-size: .7rem; color: #64748b; } .mono { font: 11px var(--mono); color: #4a5866; }
+  .grip { color: #a3afbd; cursor: grab; }
+  .cols { display: grid; gap: 14px; min-height: 0; }
+  .sec-h { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border: 1px solid var(--b200); border-radius: 10px; background: var(--b100); font-size: .66rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--brand); margin-bottom: 8px; }
+  .box { background: #fff; border: 1px solid rgba(148,163,184,.25); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+  .mf { margin-bottom: 10px; }
+  .mf .l { font-size: .74rem; font-weight: 500; color: #374151; margin-bottom: 4px; }
+  .mf .l i { color: #f97316; font-style: normal; }
+  .mf .o { border: 1px solid #79747e; border-radius: 4px; min-height: 34px; padding: 6px 10px; display: flex; align-items: center; justify-content: space-between; font-size: .8rem; background: #fff; gap: 6px; }
+  .mf .o.ph { color: #8a8590; } .mf .o.code { font: 11.5px var(--mono); color: #1d2733; } .mf .o.err { border-color: #ba1a1a; } .mf .o.ok { border-color: var(--ok); }
+  .mf .h { font-size: .68rem; color: #64748b; margin-top: 3px; } .mf .e { font-size: .68rem; color: #ba1a1a; margin-top: 3px; } .mf .g { font-size: .68rem; color: var(--ok); margin-top: 3px; }
+  .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; } .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 12px; }
+  .chk { display: flex; align-items: center; gap: 7px; font-size: .76rem; margin: 4px 0; } .chk span.b { width: 15px; height: 15px; border: 2px solid #79747e; border-radius: 3px; display: inline-grid; place-items: center; font-size: 10px; } .chk span.b.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .tog { display: inline-block; width: 30px; height: 16px; border-radius: 8px; background: #cbd5e1; position: relative; vertical-align: middle; } .tog::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; } .tog.on { background: var(--brand); } .tog.on::after { left: 16px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pills span { border: 1px solid var(--b200); background: var(--b50); color: var(--brand); border-radius: 999px; padding: 4px 9px; font-size: .64rem; font-weight: 600; }
+  .pills span.add { border-style: dashed; background: #fff; }
+  .issue { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 8px; font-size: .72rem; margin-bottom: 6px; }
+  .issue.e { background: #fdf0ef; color: var(--bad); } .issue.w { background: #fdf6e8; color: var(--warn); } .issue.ok { background: #eef9f2; color: var(--ok); }
+  .scrim { position: absolute; inset: 0; background: #0f172a59; z-index: 4; }
+  .sheet { position: absolute; z-index: 5; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(640px, 88%); max-height: 92%; overflow: hidden; background: #fff; border-radius: 18px; box-shadow: 0 18px 48px #0f172a33; padding: 14px 22px 16px; display: flex; flex-direction: column; }
+  .sheet .ttl { text-align: center; font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 12px; position: relative; padding: 0 34px; }
+  .sheet .ttl .x { position: absolute; right: 0; top: -5px; width: 28px; height: 28px; border-radius: 50%; background: #f1f5f9; display: grid; place-items: center; font-size: 12px; color: #475569; }
+  .acts { border-top: 1px solid rgba(148,163,184,.2); padding-top: 10px; display: flex; gap: 8px; margin-top: 8px; } .acts .btn { flex: 1; text-align: center; }
+  .foot { position: absolute; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--line); padding: 9px 18px; display: flex; gap: 8px; align-items: center; z-index: 3; }
+  .menu { position: absolute; z-index: 6; background: #fff; border-radius: 6px; box-shadow: 0 6px 22px rgba(15,23,42,.22); padding: 6px 0; min-width: 190px; font-size: 12.5px; }
+  .menu div { padding: 8px 16px; } .menu div.on { background: #eef3f8; } .menu .sep { border-top: 1px solid #eee; margin: 4px 0; padding: 0; }
+  .diagram { position: relative; height: 210px; background: #fbfcfd; border: 1px dashed #d3dae2; border-radius: 12px; }
+  .st { position: absolute; padding: 9px 14px; border-radius: 10px; background: #fff; border: 2px solid var(--b200); font-size: .76rem; font-weight: 700; box-shadow: 0 2px 6px #0f172a12; }
+  .st.init { border-color: var(--brand); } .st.fin { border-color: var(--ok); }
+  .st small { display: block; font-weight: 500; color: #64748b; font-size: .62rem; }
+  .preview { background: #eef2f6; border-radius: 12px; padding: 10px; }
+  .mini { background: #fff; border-radius: 10px; border: 1px solid #dfe5eb; overflow: hidden; font-size: .7rem; }
+  .mini .ab { background: var(--brand); color: #fff; padding: 7px 10px; font-weight: 600; }
+  .mini .lr { display: flex; gap: 8px; padding: 8px 10px; border-bottom: 1px solid #eef1f4; }
+  .mini .ico { width: 24px; height: 24px; border-radius: 7px; background: #ffedd5; color: #c2410c; display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: 0 0 auto; }
+  .codebox { background: #0f1720; color: #d7e1ea; border-radius: 10px; padding: 10px 12px; font: 11.5px/1.55 var(--mono); white-space: pre; overflow: hidden; }
+  .codebox .k { color: #8fc1ff; } .codebox .s { color: #b9e39b; } .codebox .c { color: #7f8b98; }
+  .diff .add { background: #e8f6ee; } .diff .del { background: #fdeeee; text-decoration: line-through; color: #8c3a35; }
+  .swatch { width: 26px; height: 26px; border-radius: 6px; border: 1px solid #0002; display: inline-block; vertical-align: middle; }
+  .hit { outline: 3px solid #f3be26; outline-offset: 2px; border-radius: 8px; }
+
+  /* first-release additions (screens 20–27) */
+  .link { color: var(--brand); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+  .cell { border: 1px solid #79747e; border-radius: 4px; padding: 5px 8px; background: #fff; min-height: 28px; font-size: .74rem; }
+  .cell.ph { color: #8a8590; border-style: dashed; } .cell.on { border: 2px solid var(--brand); }
+  .wmini { background: #fff; border: 1px solid #dfe5eb; border-radius: 9px; padding: 8px 10px; margin-bottom: 7px; font-size: .68rem; }
+  .wmini .wl { font-size: .56rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #64748b; }
+  .wmini .wv { font-size: .95rem; font-weight: 700; }
+  .secret { background: #fff8e6; border: 1px solid #f0d9b5; border-radius: 10px; padding: 10px 12px; font: 12.5px var(--mono); word-break: break-all; }
+  .thumbd { position: relative; height: 70px; background: #fbfcfd; border: 1px dashed #d3dae2; border-radius: 10px; margin-bottom: 6px; }
+  .thumbd .st { padding: 4px 8px; font-size: .6rem; border-width: 1.5px; }
+  tr.dim td { opacity: .55; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Builder — every screen, everything configurable</h1>
+  <p>What an administrator uses to set up the organisation without code. The Builder uses the same controls as the rest of the app: chips, search, Sort, Filters, section headers, Material fields, panels, pills, the ⋮ menu. Every editor shares one frame: a <b>Visual</b> tab, a <b>JSON</b> tab, a <b>Changes</b> tab and a <b>History</b> tab, with Discard, Check and Publish. Editors are for tablet and desktop; phones see the catalogue and published settings read-only.</p>
+  <div class="rules">
+    <div><b>Draft, check, publish</b>Changes are saved as a draft automatically. "Check" runs every validation and cross-reference check; "Publish" is enabled only when there are no errors and shows a plain-language summary first.</div>
+    <div><b>Module definitions stay upgradable</b>Editing something a module ships saves only the organisation's differences as a patch. The Changes tab shows them, and "Revert to module version" removes them.</div>
+    <div><b>Expressions with help</b>Every expression field (conditions, calculated fields, guards, amounts) has field and function suggestions, a live syntax check, and "Try it" against a sample record.</div>
+    <div><b>Live previews</b>List views, templates and the theme show a live preview on phone and desktop while editing.</div>
+  </div>
+  <div class="rules" style="margin-top:12px"><div style="grid-column:1/-1"><b>First-release additions — screens 20 to 23 (approved 2026-10-24)</b>Page editor, action editor, translations grid, and the workflows of one record type (Design §13a). Connectors and API keys are not Builder screens: they are in Administration in the app (app Journey 23). Pages and translations are hand-built editors; actions and connector settings are the generic visual editor generated from their rules, shown here with the controls it produces.</div></div>
+  <div class="rules" style="margin-top:12px"><div style="grid-column:1/-1"><b>Breadcrumb (added 2026-10-24)</b>Every Builder screen starts with the same breadcrumb as the rest of the app: Builder › kind › definition › tab or selection, for example Builder › Record types › Donation › Field: Donor name, or Builder › Workflows › Donation workflow › Step: Mark as paid. It is built from the screen's address by one helper; earlier items link back, the last is the current page. Drawn here at the top of each screen; in the app it is the shell's single breadcrumb line under the app bar, so the editor header does not repeat it.</div></div>
+  <div class="rules" style="margin-top:12px"><div style="grid-column:1/-1"><b>Access and profiles — screens 24 to 27 (approved 2026-10-24)</b>The Builder keeps only definitions. People, role assignment and the operational settings are in Administration in the app (app Journeys 21 and 23). Screen 18 defines what each role allows. Screen 24 is the Access map (what each part of the app requires and who holds it), 25 its role view ("What can Viewer see?"), 26 the permissions on fields, sections, widgets and links with the permission autocomplete, and 27 the profile record type <code>person</code>.</div></div>
+  <div class="rules" style="margin-top:12px"><div style="grid-column:1/-1"><b>Shell chrome (updated 2026-10-25)</b>The blue bar is the same as the rest of the app: <b>NGOOne</b>, the organisation name, the inbox and the account initials. It does not say "Builder" and it has no back arrow. Back sits on the same row as the screen heading (Builder, or the definition being edited).</div></div>
+  <p style="margin-top:12px;font-size:13px"><span class="tag has">EXISTS</span> already in the product, redesigned here &nbsp; <span class="tag new">NEW</span> not built yet</p>
+</header>
+<nav class="toc"><div id="toc"></div></nav>
+<main class="page" id="screens"></main>
+
+<script>
+const ICON = {
+  home: '<svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>',
+  records: '<svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>',
+  inbox: '<svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 12h-4a3 3 0 0 1-6 0H5V5h14v10z"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><path d="M6 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm12 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>',
+};
+const rail = () => `<div class="rail">${[['home', 'Home'], ['records', 'Records'], ['inbox', 'Inbox'], ['more', 'More']].map(([k, l]) => `<div class="nv${k === 'more' ? ' on' : ''}"><span class="g">${ICON[k]}</span>${l}</div>`).join('')}</div>`;
+const frame = (url, inner, h = 640) => `<div class="browser"><div class="chrome"><div class="url">${url}</div></div><div class="scr-in" style="--h:${h}px"><div class="appbar"><span class="brand">NGOOne</span><span class="org">Demo Foundation</span><span class="sp"></span><span class="ib">🔔<span class="dot">4</span></span><span class="ib av">AS</span></div><div class="fb-body">${rail()}<div class="main">${inner}</div></div></div></div>`;
+const back = '<span class="back" aria-hidden="true">←</span>';
+const mf = (l, v, o = {}) => `<div class="mf"><div class="l">${l}${o.req ? ' <i>*</i>' : ''}</div><div class="o${v ? '' : ' ph'}${o.code ? ' code' : ''}${o.err ? ' err' : ''}${o.ok ? ' ok' : ''}">${v || o.ph || '&nbsp;'}${o.icon ? `<span>${o.icon}</span>` : ''}</div>${o.h ? `<div class="h">${o.h}</div>` : ''}${o.err ? `<div class="e">${o.err}</div>` : ''}${o.ok ? `<div class="g">${o.ok}</div>` : ''}</div>`;
+const chk = (l, on) => `<div class="chk"><span class="b${on ? ' on' : ''}">${on ? '✓' : ''}</span>${l}</div>`;
+const pills = (xs, add) => `<div class="pills">${xs.map((x) => `<span>${x} ×</span>`).join('')}${add ? `<span class="add">+ ${add}</span>` : ''}</div>`;
+const sec = (t, right = '⌃') => `<div class="sec-h"><span>${t}</span><span>${right}</span></div>`;
+const sheet = (title, content, actions) => `<div class="scrim"></div><div class="sheet"><div class="ttl">${title}<span class="x">✕</span></div><div style="overflow:hidden">${content}</div><div class="acts">${actions}</div></div>`;
+/** The shared editor frame. */
+/** Breadcrumb for every Builder screen: Builder › kind › definition › tab or selection. The last item is the current page. */
+const bcrumb = (items) => {
+  const all = ['Builder', ...items];
+  return `<nav class="crumb" aria-label="Breadcrumb"><ol>${all.map((l, i) => (i === all.length - 1 ? `<li aria-current="page">${l}</li>` : `<li><a>${l}</a></li>`)).join('')}</ol></nav>`;
+};
+let currentUrl = '';
+const SEL_LABELS = { donorName: 'Donor name', netAmount: 'Net amount', donorPan: 'Donor PAN', phone: 'Phone', markPaid: 'Mark as paid', donations: 'Donations', raised: 'Raised this month' };
+/** The selection or tab named in the screen's address, as breadcrumb items. */
+function selectionCrumbs(url) {
+  const q = new URLSearchParams(url.split('?')[1] || '');
+  const out = [];
+  if (q.get('tab')) out.push({ rules: 'Rules', changes: 'Changes', history: 'History', json: 'JSON', workflows: 'Workflows' }[q.get('tab')] || q.get('tab'));
+  if (q.get('field')) out.push(`Field: ${SEL_LABELS[q.get('field')] || q.get('field')}`);
+  if (q.get('expr')) out.push('Calculated value');
+  if (q.get('step')) out.push(`Step: ${SEL_LABELS[q.get('step')] || q.get('step')}`);
+  if (q.get('section')) out.push(`Section: ${SEL_LABELS[q.get('section')] || q.get('section')}`);
+  if (q.has('create')) out.push('Create form');
+  if (q.get('widget')) out.push(`Widget: ${SEL_LABELS[q.get('widget')] || q.get('widget')}`);
+  return out;
+}
+function editor({ crumb, title, badges, tab = 'Visual', body, issues = '', footNote = 'Draft saved 10:42' }) {
+  const [kind, definition = title] = crumb.split(' › ');
+  const trail = [kind, ...(definition === kind ? [] : [definition]), ...selectionCrumbs(currentUrl)];
+  return `<div class="bhead"><div><div class="crumb">${bcrumb(trail)}</div><div class="row" style="display:flex;gap:8px;align-items:center;margin-top:3px">${back}<h1>${title}</h1>${badges}</div></div><span class="sp"></span><span class="btn">⋮</span></div>
+  <div class="tabs2">${['Visual', 'JSON', 'Changes', 'History'].map((t) => `<span class="chip${t === tab ? ' on' : ''}">${t}</span>`).join('')}</div>
+  <div style="height:calc(100% - 140px);overflow:hidden">${body}</div>
+  <div class="foot"><span class="cs">${footNote}</span>${issues}<span class="sp"></span><span class="btn">Discard draft</span><span class="btn">Check</span><span class="btn p">Publish…</span></div>`;
+}
+const status = (v, d, owner) => `<span class="bdg s">Published v${v}</span>${d ? `<span class="bdg w">Draft v${d}</span>` : ''}${owner ? `<span class="bdg p">${owner}</span>` : ''}`;
+
+/* ---------------------------------------------------------------- screens */
+const SCREENS = [
+  {
+    id: 'catalogue', tag: 'has', title: 'Builder home — the catalogue', lead: 'Everything that can be configured, in one list. Chips filter by kind; search finds by name or key; the table shows who owns each definition and its state.',
+    url: '/builder', h: 600,
+    body: () => `<div class="bhead"><div><div class="crumb">${bcrumb([])}</div><div class="row" style="display:flex;align-items:center;gap:2px">${back}<h1>Builder</h1></div></div><span class="sp"></span><span class="btn">Modules</span><span class="btn">Roles &amp; access</span><span class="btn p">+ New</span></div>
+      <div class="tabs2" style="flex-wrap:wrap">${['All 24', 'Record types 5', 'Workflows 4', 'List views 5', 'Record groups 3', 'Templates 3', 'Automations 2', 'Posting rules 1', 'Receipt rules 1', 'Scripts 0', 'Theme 1'].map((c, i) => `<span class="chip${i === 0 ? ' on' : ''}">${c}</span>`).join('')}</div>
+      <div class="ftb"><span class="search">⌕ Search by name or key…</span><span class="fb">↕ Sort</span><span class="fb">≡ Filters</span></div>
+      <div class="panel"><table class="rows"><thead><tr><th>Name</th><th>Kind</th><th>Key</th><th>From</th><th>State</th><th>Changed</th><th></th></tr></thead><tbody>
+        ${[
+          ['Donation', 'Record type', 'donation', 'Donations module · patched', '<span class="bdg s">v4</span> <span class="bdg w">draft v5</span>', 'Asha · 10:42'],
+          ['Donor', 'Record type', 'donor', 'Donations module', '<span class="bdg s">v1</span>', 'module · 2 days'],
+          ['Donation workflow', 'Workflow', 'donation', 'Donations module', '<span class="bdg s">v2</span>', 'module · 2 days'],
+          ['Donations', 'List view', 'donations', 'Donations module · patched', '<span class="bdg s">v3</span>', 'Asha · yesterday'],
+          ['Fundraising', 'Record group', 'fundraising', 'Donations module', '<span class="bdg s">v1</span>', 'module · 2 days'],
+          ['Thank the donor', 'Automation', 'donation-thanks', 'Donations module', '<span class="bdg s">v1</span>', 'module · 2 days'],
+          ['Beneficiary', 'Record type', 'beneficiary', 'Organisation', '<span class="bdg w">draft v1</span>', 'Ravi · 09:15'],
+          ['Organisation theme', 'Theme', 'organisation', 'Organisation', '<span class="bdg s">v2</span>', 'Asha · last week'],
+        ].map((r, i) => `<tr${i === 0 ? ' class="sel"' : ''}><td class="t">${r[0]}</td><td>${r[1]}</td><td class="mono">${r[2]}</td><td class="cs">${r[3]}</td><td>${r[4]}</td><td class="cs">${r[5]}</td><td>⋮</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="menu" style="right:18px;top:46px"><div class="on">Record type</div><div>Workflow</div><div>List view</div><div>Record group</div><div>Template</div><div>Automation</div><div>Posting rule</div><div>Receipt rule</div><div>Script</div><div class="sep"></div><div>Start from a starter…</div></div>`,
+    notes: `<h3>What it does</h3><ul><li>Chips per kind with counts; "From" shows module or organisation, and "patched" when the organisation changed a module's definition.</li><li>Row ⋮: Open, Duplicate, History, Revert to module version, Delete draft.</li><li><b>+ New</b> offers every kind and "Start from a starter" (record type templates such as Beneficiary, Expense, Asset).</li><li>Top buttons open <b>Modules</b> and <b>Roles &amp; access</b>.</li></ul><h3>Address</h3><code>/builder?kind=recordType&amp;q=…</code>`,
+  },
+  {
+    id: 'record-type', tag: 'has', title: 'Record type — general and fields', lead: 'What a record is: its names, numbering, title, and fields. Fields are a reorderable table; selecting one opens its panel.',
+    url: '/builder/recordType/donation', h: 680,
+    body: () => editor({ crumb: 'Record types', title: 'Donation', badges: status(4, 5, 'Donations module · patched'),
+      body: `<div class="cols" style="grid-template-columns:300px 1fr">
+        <div>${sec('General')}<div class="box">${mf('Name', 'Donation', { req: true })}${mf('Plural name', 'Donations')}${mf('Description', 'Record donations from raised to paid.')}${mf('Title field', 'Donor name', { icon: '▾', h: 'Shown as the record title in lists and panels' })}</div>
+        ${sec('Numbering')}<div class="box">${mf('Format', 'DON/{fy}/{seq:5}', { code: true, ok: 'Next: DON/2026-27/00045' })}${mf('Restart', 'Every financial year', { icon: '▾' })}</div></div>
+        <div>${sec('Fields · 14', '+ Add field')}<div class="panel"><table class="rows"><thead><tr><th></th><th>Label</th><th>Key</th><th>Type</th><th>Required</th><th>Rules</th><th></th></tr></thead><tbody>
+          ${[
+            ['Donor', 'donor', 'Reference → Donor', '', '<span class="bdg p">picker</span>'],
+            ['Donor name', 'donorName', 'Text', '✓', '<span class="bdg n">copied from donor</span> <span class="bdg n">locked when donor set</span>'],
+            ['Donor email', 'donorEmail', 'Email', '', '<span class="bdg n">copied</span>'],
+            ['Donor PAN', 'donorPan', 'Text', '', '<span class="bdg e">sensitive</span> <span class="bdg n">copied</span>'],
+            ['Amount', 'amount', 'Money', '✓', '<span class="bdg n">editable while raised</span>'],
+            ['Fee', 'fee', 'Money', '', ''],
+            ['Net amount', 'netAmount', 'Money', '', '<span class="bdg p">calculated</span>'],
+            ['Method', 'method', 'Choice · 4', '', '<span class="bdg n">shown when paid</span>'],
+            ['Paid on', 'paidOn', 'Date', '', '<span class="bdg n">shown when paid</span>'],
+          ].map((r, i) => `<tr${i === 1 ? ' class="sel"' : ''}><td class="grip">⠿</td><td class="t">${r[0]}</td><td class="mono">${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td><td>⋮</td></tr>`).join('')}
+        </tbody></table></div>
+        <div class="cs" style="margin-top:8px">Drag ⠿ to reorder. Badges summarise each field's rules; select a row to edit it. The field's panel stays open until its ✕ is clicked, even after double-clicking a value in it. Tabs at the top of the record type: <b>Fields</b>, <b>Rules</b>, <b>Used by</b>.</div></div></div>` }),
+    notes: `<h3>Configurable</h3><ul><li>Name, plural, description, title field.</li><li>Numbering format with tokens <code>{seq}</code> <code>{seq:5}</code> <code>{fy}</code> <code>{period}</code>, restart rule, and a live "Next number" preview.</li><li>Fields: add, reorder, duplicate, remove (removal is blocked while list views, workflows, rules or templates use the field; "Used by" lists them).</li></ul><h3>Checks</h3><ul><li>Keys are generated from labels and can't change after first publish; until then the key follows the label as it is typed.</li><li>A field always has a label: clearing the Label box changes nothing (the table and the key keep the current name) until text is typed, and leaving the box empty puts the current label back.</li><li>Unknown title field, duplicate keys, and bad numbering formats are errors.</li></ul>`,
+  },
+  {
+    id: 'field', tag: 'has', title: 'Field panel', lead: 'Everything about one field, in the same panel component the app uses for records. Sections collapse; only the ones that apply to the type are shown.',
+    url: '/builder/recordType/donation?field=donorName', h: 700,
+    body: () => editor({ crumb: 'Record types › Donation', title: 'Donation', badges: status(4, 5, 'Donations module · patched'), body: '<div class="panel" style="height:420px;opacity:.5"></div>' })
+      + sheet('Field: Donor name', `<div class="g2"><div>${sec('Basics')}${mf('Label', 'Donor name', { req: true })}${mf('Key', 'donorName', { code: true, h: 'Fixed after first publish' })}${mf('Type', 'Text', { icon: '▾' })}${mf('Help text', '', { ph: 'Shown under the field' })}
+        ${sec('Rules')}${chk('Required', true)}${chk('Searchable', true)}${chk('Sensitive (masked unless allowed)', false)}${mf('Maximum length', '200')}</div>
+        <div>${sec('Copy from a chosen record')}${mf('Reference field', 'Donor', { icon: '▾' })}${mf('Field on Donor', 'Name', { icon: '▾', h: 'Filled when the donor is chosen or changed; kept as it was afterwards' })}
+        ${sec('Conditions')}${mf('Show when', '', { code: true, ph: 'Always shown', icon: 'ƒx' })}${mf('Can change when', 'isEmpty(record.donor)', { code: true, icon: 'ƒx', ok: 'Valid · Try it: true for a new donation, false once a donor is chosen' })}
+        ${sec('Calculated', '⌄')}</div></div>`, `<span class="btn">Cancel</span><span class="btn d" style="flex:0 0 auto">Remove field</span><span class="btn p">Done</span>`),
+    notes: `<h3>Sections by type</h3><ul><li><b>Basics</b>: label, key, type, help.</li><li><b>Rules</b>: required, searchable, sensitive; minimum/maximum (numbers, money), maximum length (text), choices list with reorder (choice).</li><li><b>Reference</b>: which record type it points to (reference fields).</li><li><b>Copy from a chosen record</b> <span class="tag new">NEW</span>: reference field and source field; only compatible fields are offered.</li><li><b>Conditions</b>: "Show when" and "Can change when" expressions.</li><li><b>Calculated</b>: an expression instead of an input; turns off required and conditions.</li></ul><h3>Changing a type</h3><p>Allowed only before first publish or when every stored value converts; otherwise a clear message says which records block it.</p>`,
+  },
+  {
+    id: 'expression', tag: 'new', title: 'Expression editor', lead: 'Used by every expression: conditions, calculated fields, rules, guards, approval conditions, automation values, posting amounts and dates, template placeholders.',
+    url: '/builder/recordType/donation?field=netAmount&expr=calculated', h: 640,
+    body: () => editor({ crumb: 'Record types › Donation', title: 'Donation', badges: status(4, 5), body: '<div class="panel" style="height:420px;opacity:.5"></div>' })
+      + sheet('Calculated value: Net amount', `${mf('Expression', 'record.amount - (record.fee ?? 0)', { code: true, ok: 'Valid · result type: number' })}
+        <div class="g2"><div>${sec('Insert a field')}<div class="pills"><span>record.amount</span><span>record.fee</span><span>record.donorName</span><span>status</span><span>user.roles</span><span>previous.amount</span></div>
+        ${sec('Functions')}<div class="cs" style="line-height:1.8"><code>isEmpty(x)</code> <code>round(x, 2)</code> <code>today()</code> <code>daysBetween(a, b)</code> <code>contains(list, x)</code> <code>upper(text)</code> …</div></div>
+        <div>${sec('Try it')}${mf('Sample record', 'DON/2026-27/00040 · Ravi Kumar', { icon: '▾', h: 'Pick a real record or edit sample values' })}<div class="box" style="font-size:.74rem"><div>amount = <b>5000</b>, fee = <b>50</b></div><div style="margin-top:6px">Result: <b>4950</b></div></div></div></div>`, `<span class="btn">Cancel</span><span class="btn p">Use this</span>`),
+    notes: `<h3>Help while typing</h3><ul><li>Suggestions for fields of the record (and of the previous version, status, the person), plus functions with short descriptions.</li><li>Live check with the exact problem and position, e.g. "unknown field 'fees' — did you mean 'fee'?".</li><li><b>Try it</b> runs the expression on a real record or edited sample values, using the same evaluator as the server.</li></ul>`,
+  },
+  {
+    id: 'record-rules', tag: 'has', title: 'Record type — rules', lead: 'Checks that must hold for a record to save, with the message people see.',
+    url: '/builder/recordType/donation?tab=rules', h: 470,
+    body: () => editor({ crumb: 'Record types › Donation', title: 'Donation · Rules', badges: status(4, 5),
+      body: `${sec('Rules · 2', '+ Add rule')}<div class="panel"><table class="rows"><thead><tr><th></th><th>Rule</th><th>Applies when</th><th>Must be true</th><th>Message</th><th></th></tr></thead><tbody>
+        <tr><td class="grip">⠿</td><td class="t">feeBelowAmount</td><td class="mono">always</td><td class="mono">(record.fee ?? 0) &lt;= record.amount</td><td>The fee cannot be more than the amount.</td><td>⋮</td></tr>
+        <tr><td class="grip">⠿</td><td class="t">panForLargeGifts</td><td class="mono">record.amount &gt;= 50000</td><td class="mono">not isEmpty(record.donorPan)</td><td>PAN is needed for donations of ₹50,000 or more.</td><td>⋮</td></tr></tbody></table></div>` }),
+    notes: `<ul><li>Each rule: key, optional "applies when", the condition, and the message.</li><li>Rules run on the server on every save; the message appears in the form.</li></ul>`,
+  },
+  {
+    id: 'workflow', tag: 'has', title: 'Workflow — states and steps', lead: 'The life of a record: its states, and the steps that move it between them. The diagram is drawn from the definition and updates as you edit.',
+    url: '/builder/workflow/donation', h: 700,
+    body: () => editor({ crumb: 'Workflows', title: 'Donation workflow', badges: status(2, 0, 'Donations module'),
+      body: `<div class="diagram"><div class="st init" style="left:40px;top:80px">Raised<small>start</small></div><div class="st fin" style="left:340px;top:30px">Paid<small>final · locked</small></div><div class="st fin" style="left:340px;top:140px">Cancelled<small>final</small></div>
+        <svg width="100%" height="210" style="position:absolute;inset:0"><path d="M130 92 C 220 70, 260 50, 338 50" stroke="#1f5f8b" stroke-width="2" fill="none" marker-end="url(#a)"/><path d="M130 104 C 220 130, 260 155, 338 160" stroke="#8a97a6" stroke-width="2" fill="none" marker-end="url(#a)"/><defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#1f5f8b"/></marker></defs></svg>
+        <span class="bdg p" style="position:absolute;left:190px;top:40px">Mark as paid · approval</span><span class="bdg n" style="position:absolute;left:200px;top:150px">Cancel</span></div>
+        <div class="cols" style="grid-template-columns:1fr 1.4fr;margin-top:12px"><div>${sec('States · 3', '+ Add state')}<div class="panel"><table class="rows"><thead><tr><th>State</th><th>Start</th><th>Final</th><th>Locked</th></tr></thead><tbody><tr><td class="t">Raised</td><td>●</td><td></td><td></td></tr><tr><td class="t">Paid</td><td></td><td>✓</td><td>✓</td></tr><tr><td class="t">Cancelled</td><td></td><td>✓</td><td></td></tr></tbody></table></div></div>
+        <div>${sec('Steps · 2', '+ Add step')}<div class="panel"><table class="rows"><thead><tr><th>Step</th><th>From → to</th><th>Asks for</th><th>Who</th><th>Approval</th></tr></thead><tbody><tr class="sel"><td class="t">Mark as paid</td><td>Raised → Paid</td><td>Method, Paid on</td><td>Finance</td><td><span class="bdg p">1 of Treasurer</span></td></tr><tr><td class="t">Cancel</td><td>Raised → Cancelled</td><td>—</td><td>Finance</td><td>—</td></tr></tbody></table></div></div></div>` }),
+    notes: `<h3>Configurable</h3><ul><li>States: label, start state (one), final, locked (no edits).</li><li>Steps: open the step panel (next screen).</li><li>Diagram: read-only picture of the definition; click a state or step to edit it.</li></ul><h3>Checks</h3><ul><li>One start state; every step's states exist; unreachable states are warnings.</li></ul>`,
+  },
+  {
+    id: 'step', tag: 'has', title: 'Workflow step panel', lead: 'One step: where it goes, what it asks for, who may run it, and whether it needs approval.',
+    url: '/builder/workflow/donation?step=markPaid', h: 700,
+    body: () => editor({ crumb: 'Workflows › Donation workflow', title: 'Donation workflow', badges: status(2, 3), body: '<div class="panel" style="height:420px;opacity:.5"></div>' })
+      + sheet('Step: Mark as paid', `<div class="g2"><div>${sec('Movement')}${mf('Label', 'Mark as paid', { req: true })}${mf('From states', 'Raised', { icon: '▾' })}${mf('To state', 'Paid', { icon: '▾' })}${mf('Asks for these fields', 'Method, Paid on, Reference', { icon: '▾', h: 'Required before the step runs' })}
+        ${sec('Allowed when')}${mf('Condition', 'record.amount > 0', { code: true, icon: 'ƒx' })}${mf('Message when not allowed', 'Enter an amount first.')}</div>
+        <div>${sec('Who can run it')}${mf('Permission', 'record:donation:transition:markPaid', { code: true, h: 'Granted through roles (Roles & access)' })}
+        ${sec('Approval')}${chk('Needs approval', true)}${mf('Approvers', 'Treasurer (role)', { icon: '▾' })}${mf('Approvals needed', '1')}${mf('Only when', 'record.amount >= 25000', { code: true, icon: 'ƒx', h: 'Leave empty to always ask' })}<div class="cs">People never approve their own requests.</div></div></div>`, `<span class="btn">Cancel</span><span class="btn d" style="flex:0 0 auto">Remove step</span><span class="btn p">Done</span>`),
+    notes: `<ul><li>From (several), to, required fields, guard and its message.</li><li>Permission key shown so roles can grant it.</li><li>Approval: roles or named people, how many, and an optional condition.</li></ul>`,
+  },
+  {
+    id: 'list-view', tag: 'has', title: 'List view — with live preview', lead: 'How a record type looks in the app: chips, filters, rows, columns, the record panel, and the create and edit forms. A live preview shows phone and desktop.',
+    url: '/builder/listView/donations', h: 760,
+    body: () => editor({ crumb: 'List views', title: 'Donations', badges: status(3, 4, 'Donations module · patched'),
+      body: `<div class="cols" style="grid-template-columns:1fr 300px"><div style="overflow:hidden">
+        ${sec('Chips · 3', '+ Add chip')}<div class="panel" style="margin-bottom:10px"><table class="rows"><thead><tr><th></th><th>Label</th><th>Shows</th><th>Only for</th><th>Default</th></tr></thead><tbody><tr><td class="grip">⠿</td><td class="t">Mine</td><td>Created by me</td><td>—</td><td></td></tr><tr><td class="grip">⠿</td><td class="t">Outstanding</td><td>Raised</td><td>—</td><td>●</td></tr><tr><td class="grip">⠿</td><td class="t">Closed</td><td>Paid, Cancelled</td><td class="mono">donation:closed:read</td><td></td></tr></tbody></table></div>
+        <div class="g2"><div>${sec('Filters')}${pills(['Method', 'Paid on', 'Amount'], 'Add filter')}<div style="height:10px"></div>${sec('Rows (cards)')}${mf('Title', 'Donor name', { icon: '▾' })}${mf('Subtitle', 'Amount · Method', { icon: '▾' })}<div class="g2">${mf('Meta', 'Number', { icon: '▾' })}${mf('Badge', 'Status', { icon: '▾' })}</div></div>
+        <div>${sec('Table')}<div class="l" style="font-size:.74rem;margin-bottom:4px">Columns</div>${pills(['Number', 'Donor name', 'Amount', 'Method', 'Paid on', 'Status'], 'Add')}<div style="height:8px"></div><div class="l" style="font-size:.74rem;margin-bottom:4px">Tablet columns</div>${pills(['Donor name', 'Amount', 'Status'], 'Add')}<div style="height:8px"></div><div class="g2">${mf('Default layout', 'Table', { icon: '▾' })}${mf('Rows per page', '12')}</div></div></div>
+        ${sec('Record panel sections · 4', '+ Add section')}<div class="panel" style="margin-bottom:10px"><table class="rows"><tbody><tr><td class="grip">⠿</td><td class="t">Donation</td><td>Number, Status, Amount, Fee, Net, Method, Paid on, Reference</td></tr><tr><td class="grip">⠿</td><td class="t">Donor</td><td>Donor name, Email, Phone, PAN</td></tr><tr><td class="grip">⠿</td><td class="t">Notes</td><td>Notes</td></tr></tbody></table></div>
+        <div class="g2"><div>${sec('Create')}${mf('Form', 'Steps: Donor (5 fields) · Details (3 fields)', { icon: '✎' })}${mf('Offered on chips', 'Mine, Outstanding', { icon: '▾' })}${mf('Prefill from the address', 'donor → Donor', { icon: '✎' })}</div><div>${sec('Edit')}${mf('Fields', 'Donor, Donor name, Email, Phone, PAN, Amount, Fee, Notes', { icon: '▾' })}${mf('Allowed on chips', 'Mine, Outstanding', { icon: '▾' })}</div></div>
+        </div>
+        <div class="preview"><div class="tabs2"><span class="chip on">Phone</span><span class="chip">Desktop</span><span class="chip">Record panel</span><span class="chip">Create</span></div>
+          <div class="mini"><div class="ab">Donations</div><div style="padding:8px 10px;display:flex;gap:5px"><span class="chip">Mine</span><span class="chip on">Outstanding</span><span class="chip">Closed</span></div>
+          ${['Asha Rao', 'Ravi Kumar', 'Meera Iyer', 'Sunita Devi'].map((n, i) => `<div class="lr"><span class="ico">$</span><div style="flex:1"><b>${n}</b><div class="cs">₹${[1500, 5000, 750, 2100][i].toLocaleString('en-IN')}.00 · UPI</div><div class="cs">DON/2026-27/0004${1 - i}</div></div><span class="bdg w">Raised</span></div>`).join('')}</div>
+          <div class="cs" style="margin-top:8px">Preview uses real records the administrator can see, or sample data.</div></div></div>` }),
+    notes: `<h3>Configurable</h3><ul><li>Chips: label, statuses, "created by me", visible only with a permission, default chip, order.</li><li>Filters: which fields (filterable types only; sensitive fields refused).</li><li>Rows (cards): title, subtitle fields, meta, badge.</li><li>Table: columns and tablet columns, default layout, rows per page.</li><li>Record panel sections: field sections or a <b>related section</b> (next screen).</li><li>Create: one form or steps, chips that offer it, prefill parameters. Edit: fields, chips.</li></ul>`,
+  },
+  {
+    id: 'section', tag: 'new', title: 'Record panel section — related records', lead: 'A section that lists records of another type pointing at this one, for example a donor\'s donations.',
+    url: '/builder/listView/donors?section=donations', h: 600,
+    body: () => editor({ crumb: 'List views', title: 'Donors', badges: status(1, 2, 'Donations module'), body: '<div class="panel" style="height:380px;opacity:.5"></div>' })
+      + sheet('Section: Donations', `<div class="tabs2"><span class="chip">Fields of this record</span><span class="chip on">Related records</span></div>${mf('Section title', 'Donations', { req: true })}<div class="g2">${mf('Record type', 'Donation', { icon: '▾' })}${mf('Linked through', 'Donor (reference to Donor)', { icon: '▾', h: 'Only reference fields that point to Donor are offered' })}</div><div class="g2">${mf('Add up', 'Amount', { icon: '▾', h: 'Optional; number or money fields' })}${mf('Show', 'Latest 10', { icon: '▾' })}</div>${chk('Offer "New donation for this donor"', true)}`, `<span class="btn">Cancel</span><span class="btn p">Done</span>`),
+    notes: `<ul><li>Switch between a field section and a related-records section.</li><li>The section shows the count, the total, and the latest records; each opens in its own list.</li><li>"New … for this donor" uses the create prefill of the related list view.</li></ul>`,
+  },
+  {
+    id: 'create-form', tag: 'has', title: 'Create form — steps', lead: 'Arrange the create form as one page or as steps. Fields are dragged into steps; required fields not on any step are flagged.',
+    url: '/builder/listView/donations?create', h: 560,
+    body: () => editor({ crumb: 'List views', title: 'Donations', badges: status(3, 4), body: '<div class="panel" style="height:380px;opacity:.5"></div>' })
+      + sheet('Create form', `<div class="tabs2"><span class="chip">One page</span><span class="chip on">Steps</span></div><div class="g2"><div class="box">${mf('Step 1', 'Donor', { req: true })}${pills(['Donor', 'Donor name', 'Donor email', 'Donor phone', 'Donor PAN'], 'Add field')}</div><div class="box">${mf('Step 2', 'Details', { req: true })}${pills(['Amount', 'Fee', 'Notes'], 'Add field')}</div></div><div class="issue ok">✓ Every required field is on a step.</div><span class="btn sm">+ Add step</span>`, `<span class="btn">Cancel</span><span class="btn p">Done</span>`),
+    notes: `<ul><li>One page or steps; drag fields between steps; calculated fields are not offered.</li><li>Warning when a required field is missing from every step.</li></ul>`,
+  },
+  {
+    id: 'groups', tag: 'new', title: 'Record groups', lead: 'How record types are grouped on Home and the Records screen.',
+    url: '/builder/recordGroup', h: 560,
+    body: () => editor({ crumb: 'Record groups', title: 'Record groups', badges: '<span class="bdg s">3 published</span>', footNote: 'Groups from modules can be renamed or reordered; changes are kept as patches',
+      body: `<div class="cols" style="grid-template-columns:1fr 280px"><div>${[['Fundraising', 'Donations module', ['Donors', 'Donations']], ['Programmes', 'Organisation', ['Beneficiaries', 'Visits']], ['Operations', 'Organisation', ['Expenses', 'Assets']]].map(([g, from, ts]) => `<div class="box"><div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="grip">⠿</span><b>${g}</b><span class="bdg p">${from}</span><span class="sp"></span><span class="btn sm">Rename</span><span class="btn sm">⋮</span></div>${pills(ts, 'Add record type')}</div>`).join('')}<span class="btn">+ New group</span></div>
+      <div>${sec('Not in a group')}<div class="box"><div class="cs" style="margin-bottom:6px">Listed under "Other"</div>${pills(['Volunteers'])}</div><div class="preview"><div class="mini"><div class="ab">Records</div><div style="padding:8px 10px"><b class="cs" style="text-transform:uppercase">Fundraising</b><div>Donors</div><div>Donations</div><b class="cs" style="text-transform:uppercase;display:block;margin-top:6px">Programmes</b><div>Beneficiaries · Visits</div></div></div></div></div></div>` }),
+    notes: `<ul><li>Drag groups to reorder; drag a record type between groups (one group each).</li><li>Rename, remove (its record types move to "Other").</li><li>Live preview of the Records screen.</li></ul>`,
+  },
+  {
+    id: 'template', tag: 'has', title: 'Message template', lead: 'Email and in-app messages with placeholders, previewed with a real record.',
+    url: '/builder/template/donationThanks', h: 560,
+    body: () => editor({ crumb: 'Templates', title: 'Thank the donor', badges: status(1, 0, 'Donations module'),
+      body: `<div class="cols" style="grid-template-columns:1fr 1fr"><div>${mf('Subject', 'Thank you for your donation, {{ record.donorName }}', { code: true })}<div class="mf"><div class="l">Message</div><div class="o code" style="min-height:170px;align-items:flex-start;white-space:pre-wrap">Dear {{ record.donorName }},
+
+We have received your donation of Rs. {{ record.amount }} (reference {{ record.number }}). Thank you for supporting our work.
+
+This is an acknowledgement, not a tax receipt.</div><div class="h">Insert: ${['record.donorName', 'record.amount', 'record.number', 'organisation.name'].map((x) => `<code>{{ ${x} }}</code>`).join(' ')}</div></div></div>
+      <div class="preview"><div class="cs" style="margin-bottom:6px">Preview with DON/2026-27/00040</div><div class="mini" style="padding:12px;font-size:.78rem"><b>Thank you for your donation, Ravi Kumar</b><p style="white-space:pre-wrap;margin:8px 0 0">Dear Ravi Kumar,
+
+We have received your donation of Rs. 5000 (reference DON/2026-27/00040). Thank you for supporting our work.</p></div><div style="margin-top:8px"><span class="btn sm">Send a test to me</span></div></div></div>` }),
+    notes: `<ul><li>Subject and message with <code>{{ … }}</code> placeholders (same expression language).</li><li>Preview with any record; "Send a test to me" uses the organisation's email connection.</li></ul>`,
+  },
+  {
+    id: 'automation', tag: 'has', title: 'Automation', lead: 'When something happens to a record, do something: set fields, move it along, create a record, or notify people.',
+    url: '/builder/automation/donation-thanks', h: 640,
+    body: () => editor({ crumb: 'Automations', title: 'Thank the donor when a donation is paid', badges: status(1, 0, 'Donations module') + ' <span class="tog on"></span>',
+      body: `<div class="cols" style="grid-template-columns:1fr 1fr"><div>${sec('When')}<div class="box">${mf('Record type', 'Donation', { icon: '▾' })}${mf('Event', 'Status changes', { icon: '▾' })}<div class="g2">${mf('From', 'Any', { icon: '▾' })}${mf('To', 'Paid', { icon: '▾' })}</div>${mf('Only if', 'not isEmpty(record.donorEmail)', { code: true, icon: 'ƒx' })}</div>
+        <div class="cs">Other events: created, updated, on a schedule ("every day at 9:00", "first Monday of the month") with the plain-language reading of the schedule shown.</div></div>
+        <div>${sec('Do', '+ Add action')}<div class="box"><div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="grip">⠿</span><b>1. Notify</b><span class="sp"></span><span class="btn sm">⋮</span></div>${mf('Message', 'Thank the donor', { icon: '▾' })}${mf('To', 'Email: record.donorEmail', { icon: '✎' })}${mf('Channels', 'Email', { icon: '▾' })}</div>
+        <div class="menu" style="position:static;box-shadow:none;border:1px dashed #cbd5e1"><div>Set fields</div><div>Move to a step</div><div>Create a record</div><div class="on">Notify</div></div></div></div>` }),
+    notes: `<ul><li>Triggers: created, updated, status changed (from/to), schedule.</li><li>Condition expression; ordered actions with their own settings.</li><li>On/off switch; loops are prevented (no self-retrigger, depth limit).</li></ul>`,
+  },
+  {
+    id: 'money-rules', tag: 'has', title: 'Posting rule and receipt rule', lead: 'What goes into the books, and when a receipt is issued. Both run when a record enters a status.',
+    url: '/builder/postingRule/donation-paid', h: 600,
+    body: () => editor({ crumb: 'Posting rules', title: 'Donation paid → books', badges: status(1, 0, 'Donations module'),
+      body: `<div class="cols" style="grid-template-columns:1fr 1fr"><div>${sec('When')}<div class="box"><div class="g2">${mf('Record type', 'Donation', { icon: '▾' })}${mf('Enters status', 'Paid', { icon: '▾' })}</div>${mf('Only if', '', { code: true, ph: 'Always', icon: 'ƒx' })}<div class="g2">${mf('Date', 'record.paidOn', { code: true, icon: 'ƒx' })}${mf('Memo', "'Donation ' + record.number", { code: true, icon: 'ƒx' })}</div></div></div>
+        <div>${sec('Lines', '+ Add line')}<div class="panel"><table class="rows"><thead><tr><th>Side</th><th>Account</th><th>Amount</th><th>Fund</th></tr></thead><tbody><tr><td><span class="bdg p">Debit</span></td><td>record.method == 'cash' ? CASH : BANK</td><td class="mono">record.amount</td><td>—</td></tr><tr><td><span class="bdg n">Credit</span></td><td>DONATION_INCOME</td><td class="mono">record.amount</td><td>—</td></tr></tbody></table></div><div class="issue ok" style="margin-top:8px">✓ Balanced on a sample record: debit ₹5,000.00 = credit ₹5,000.00</div>
+        ${sec('Receipt rule')}<div class="box"><div class="g2">${mf('Series', 'Donation acknowledgement (RCPT)', { icon: '▾' })}${mf('Amount', 'record.amount', { code: true, icon: 'ƒx' })}</div></div></div></div>` }),
+    notes: `<ul><li>Posting: trigger status, condition, date and memo expressions, debit/credit lines with an account (or account expression), amount and fund.</li><li>A balance check runs on a sample record before publish.</li><li>Receipt rule: status, series, amount, date, condition.</li><li>Changing money rules needs the publish permission and is recorded in the audit log.</li></ul>`,
+  },
+  {
+    id: 'script', tag: 'has', title: 'Script (advanced)', lead: 'For what configuration cannot express: a before-save script in a sandbox with time and memory limits.',
+    url: '/builder/script/normalisePan', h: 560,
+    body: () => editor({ crumb: 'Scripts', title: 'Tidy PAN before saving', badges: '<span class="bdg w">Draft v1</span> <span class="bdg e">needs script permission</span>',
+      body: `<div class="cols" style="grid-template-columns:1.3fr 1fr"><div><div class="g3">${mf('Record type', 'Donation', { icon: '▾' })}${mf('Runs', 'Before save', { icon: '▾' })}${mf('Order', '10')}</div><div class="codebox"><span class="c">// record, previous, status and user are available</span>
+<span class="k">if</span> (record.donorPan) {
+  record.donorPan = record.donorPan.toUpperCase().replace(<span class="s">/\\s+/g</span>, <span class="s">''</span>);
+}
+<span class="k">return</span> record;</div></div>
+      <div>${sec('Try it')}${mf('Sample record', 'DON/2026-27/00040', { icon: '▾' })}<div class="issue ok">✓ Ran in 4 ms · donorPan: "abcde 1234 f" → "ABCDE1234F"</div>${sec('Limits')}<div class="g2">${mf('Time limit', '200 ms')}${mf('Memory', '16 MB')}</div><div class="cs">Scripts cannot reach the database or the internet. Publishing needs the script permission.</div></div></div>` }),
+    notes: `<ul><li>Record type, hook, order, enabled, code, limits.</li><li>"Try it" runs in the same sandbox as the server and shows changed fields and logs.</li></ul>`,
+  },
+  {
+    id: 'theme', tag: 'has', title: 'Theme', lead: 'The organisation\'s colours and corner radius, with a live preview of the real controls and a contrast check.',
+    url: '/builder/theme/organisation', h: 560,
+    body: () => editor({ crumb: 'Theme', title: 'Organisation theme', badges: status(2, 0, 'Organisation'),
+      body: `<div class="cols" style="grid-template-columns:1fr 1.1fr"><div>${[['Brand', '#1f5f8b'], ['Text on brand', '#ffffff'], ['Background', '#f5f7fa'], ['Surface', '#ffffff'], ['Text', '#1d2733'], ['Muted text', '#5b6878'], ['Lines', '#d8dee6']].map(([l, c]) => `<div class="mf"><div class="l">${l}</div><div class="o code"><span><span class="swatch" style="background:${c}"></span> ${c}</span><span>▾</span></div></div>`).join('')}${mf('Corner radius', '6px')}<div class="issue ok">✓ Text on brand: contrast 7.1 : 1 (AA)</div></div>
+      <div class="preview"><div class="mini"><div class="ab">Donations</div><div style="padding:8px 10px;display:flex;gap:5px"><span class="chip">Mine</span><span class="chip on">Outstanding</span></div><div class="lr"><span class="ico">$</span><div style="flex:1"><b>Ravi Kumar</b><div class="cs">₹5,000.00 · UPI</div></div><span class="bdg w">Raised</span></div><div style="padding:10px;display:flex;gap:6px"><span class="btn p">Mark as paid</span><span class="btn">Edit</span></div></div></div></div>` }),
+    notes: `<ul><li>Colour tokens (not a stylesheet) and radius.</li><li>Contrast check for text on brand and text on background; publishing with failing contrast needs a confirmation.</li></ul>`,
+  },
+  {
+    id: 'changes', tag: 'has', title: 'Changes, publish and history', lead: 'Every editor has the same review and publish steps. For module definitions, the organisation\'s differences are shown separately and can be reverted.',
+    url: '/builder/listView/donations?tab=changes', h: 620,
+    body: () => editor({ crumb: 'List views', title: 'Donations', badges: status(3, 4, 'Donations module · patched'), tab: 'Changes',
+      body: `<div class="tabs2"><span class="chip on">Draft vs published</span><span class="chip">Organisation vs module</span></div><div class="box diff" style="font-size:.78rem;line-height:1.9">
+        <div class="add">+ Chip "Closed" is now shown only to people with <code>donation:closed:read</code></div>
+        <div class="add">+ Table: tablet columns Donor name, Amount, Status</div>
+        <div class="del">− Filter "Amount"</div>
+        <div>~ Create step "Donor": added field "Donor"</div></div>`,
+      issues: '<span class="issue w" style="margin:0 0 0 10px">1 warning</span>' })
+      + sheet('Publish "Donations" v4', `<div style="font-size:.8rem;line-height:1.7"><b>What changes for people</b><ul style="margin:4px 0 10px;padding-left:18px"><li>The Closed chip disappears for people without the new permission.</li><li>Tablets show three columns.</li><li>The Amount filter is removed; saved links with <code>amountFrom</code> keep working without it.</li></ul><div class="issue w">⚠ The Amount filter is used in 2 shared links in notifications; they will open without that filter.</div>${mf('Note for the history (optional)', 'Simplify the donations list for tablets')}</div>`, `<span class="btn">Back</span><span class="btn p">Publish</span>`),
+    notes: `<ul><li><b>Check</b> lists errors and warnings with links to the field at fault.</li><li><b>Publish</b> shows a plain-language summary and what it affects; people see the change on their next screen load.</li><li><b>History</b>: every version with who, when and note; "Restore this version" creates a new draft.</li><li><b>Organisation vs module</b> and <b>Revert to module version</b> for patched definitions.</li></ul>`,
+  },
+  {
+    id: 'roles', tag: 'new', title: 'Roles — what each role allows', lead: 'The definition side of roles: name, two-step requirement and the permission grid. Who has a role is not managed here: that is Administration › Roles in the app. Today roles come only from modules.',
+    url: '/builder/roles/finance', h: 640,
+    body: () => `<div class="bhead"><div><div class="crumb">${bcrumb(['Roles', 'Finance'])}</div><div class="row" style="display:flex;align-items:center;gap:2px">${back}<h1>Finance</h1></div></div><span class="sp"></span><span class="cs">6 members · <span class="link">Administration › Roles ↗</span></span><span class="btn">What can Finance see?</span><span class="btn p">Save</span></div>
+      <div class="tabs2"><span class="chip on">Permissions</span></div>
+      <div class="box"><div class="g3">${mf('Role name', 'Finance', { req: true })}${mf('From', 'Donations module · changed', {})}<div class="mf"><div class="l">Two-step sign-in</div><div class="o">Required <span class="tog on"></span></div></div></div></div>
+      <div class="panel"><table class="rows"><thead><tr><th>Record type</th><th>See</th><th>Create</th><th>Edit</th><th>See sensitive</th><th>Steps</th></tr></thead><tbody>
+        <tr><td class="t">Donation</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>${pills(['Mark as paid', 'Cancel'])}</td></tr>
+        <tr><td class="t">Donor</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td class="cs">no workflow</td></tr>
+        <tr><td class="t">Expense</td><td>✓</td><td></td><td></td><td></td><td>${pills(['Approve claim'])}</td></tr>
+        <tr><td class="t">Beneficiary</td><td></td><td></td><td></td><td></td><td class="cs">—</td></tr></tbody></table></div>
+      <div class="g2" style="margin-top:10px"><div class="box">${sec('Money')}${chk('See money accounts', true)}${chk('Create payments', true)}${chk('Confirm payments', true)}</div><div class="box">${sec('Setup')}${chk('Use the Builder', false)}${chk('Publish definitions', false)}${chk('Publish scripts', false)}</div></div>`,
+    notes: `<ul><li>Roles: name, two-step requirement, permissions as a grid per record type (see, create, edit, see sensitive, each workflow step) plus money and setup permissions.</li><li>No members tab: the member count is read-only and links to Administration › Roles in the app (<code>/admin/roles/finance</code>, app Journey 21), where people are given or removed from the role.</li><li>Custom permission strings used on chips, steps, actions, sections, fields, widgets and links appear as extra rows in the grid, so they can be granted here.</li><li>"What can Finance see?" opens the Access map's role view (Builder 25).</li><li>"See people" (<code>people:read</code>) is a setup permission in this grid; it gives the read-only directory. It is not given to every role by default; the Donations module gives it to Finance and Viewer.</li><li>Module roles can be changed; the role is marked as changed and kept when the module is updated.</li></ul><p><span class="tag new">NEW</span> Roles API exists (permission catalogue, roles, members); screen still to build. Address: <code>/builder/roles/:key</code>.</p>`,
+  },
+  {
+    id: 'modules', tag: 'has', title: 'Modules', lead: 'Turn ready-made modules on or off and keep them up to date.',
+    url: '/builder/modules', h: 460,
+    body: () => `<div class="bhead"><div><div class="crumb">${bcrumb(['Modules'])}</div><div class="row" style="display:flex;align-items:center;gap:2px">${back}<h1>Modules</h1></div></div></div>
+      <div class="panel"><table class="rows"><thead><tr><th>Module</th><th>What it adds</th><th>Version</th><th>State</th><th></th></tr></thead><tbody>
+        <tr><td class="t">Donations</td><td class="cs">Donors, donations, receipts, posting to the books, thank-you emails, Fundraising group, Finance and Viewer roles</td><td>0.2.0 <span class="bdg w">0.3.0 available</span></td><td><span class="bdg s">On</span></td><td><span class="btn sm">Review update</span></td></tr>
+        <tr><td class="t">Programmes</td><td class="cs">Beneficiaries, visits, Programmes group</td><td>—</td><td><span class="bdg n">Off</span></td><td><span class="btn sm p">Turn on</span></td></tr></tbody></table></div>
+      <div class="issue w" style="margin-top:10px">Updating keeps the organisation's patches; any patch that no longer fits is listed for review before the update is applied.</div>`,
+    notes: `<ul><li>Turn on (installs definitions, accounts, receipt series, roles), turn off (hides, keeps data).</li><li>Review update: what the new module version changes, and which organisation patches need attention.</li></ul>`,
+  },
+];
+
+/* ------------------------------------------- first-release additions (screens 20–27) */
+const tog = (on) => `<span class="tog${on ? ' on' : ''}"></span>`;
+const flex = (inner, style = '') => `<div style="display:flex;gap:8px;align-items:center;${style}">${inner}</div>`;
+const miniBars = (vals) => `<svg viewBox="0 0 ${vals.length * 20} 50" width="100%" height="46" aria-label="Bar chart">${vals.map((v, i) => `<rect x="${i * 20 + 3}" y="${48 - v}" width="13" height="${v}" rx="2" fill="#1f5f8b" opacity="${i === vals.length - 1 ? 1 : 0.55}"/>`).join('')}</svg>`;
+const thumb = (name, key, states, o = {}) => `<div class="box" style="padding:8px 10px;margin-bottom:8px">${flex(`<b style="font-size:.74rem">${name}</b><span class="mono">${key}</span><span class="sp"></span><span class="link" style="font-size:.68rem">Open diagram</span>`, 'margin-bottom:6px')}<div class="thumbd"><svg width="100%" height="70" style="position:absolute;inset:0"><defs><marker id="t${key}" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#8a97a6"/></marker></defs>${states.slice(1).map((_, i) => `<line x1="${i * 92 + 78}" y1="35" x2="${(i + 1) * 92 + 8}" y2="35" stroke="#8a97a6" stroke-width="1.5" marker-end="url(#t${key})"/>`).join('')}</svg>${states.map((s, i) => `<div class="st${i === 0 ? ' init' : i === states.length - 1 ? ' fin' : ''}" style="left:${i * 92 + 8}px;top:22px">${s}</div>`).join('')}</div>${o.note ? `<div class="cs">${o.note}</div>` : ''}</div>`;
+
+SCREENS.push(
+  {
+    id: 'page-editor', tag: 'new', title: 'Page editor — widgets with a live preview', lead: 'Home and the extra pages in More: who sees the page, where it appears, and its widgets in order. Selecting a widget opens its settings below the list; the preview draws the real widgets with real figures.',
+    url: '/builder/page/home?widget=raised', h: 720,
+    body: () => editor({ crumb: 'Pages', title: 'Home', badges: status(2, 3, 'Organisation'),
+      body: `<div class="cols" style="grid-template-columns:1fr 280px"><div>
+        ${sec('Page')}<div class="box"><div class="g3">${mf('Label', 'Home', { req: true })}${mf('Appears as', 'The Home destination', { icon: '▾', h: 'Or "A page in More"' })}${mf('Audience', 'Everyone', { icon: '▾', h: 'Roles; empty means everyone' })}</div></div>
+        ${sec('Widgets · 6', '+ Add widget')}<div class="panel" style="margin-bottom:10px"><table class="rows"><thead><tr><th></th><th>Widget</th><th>Label</th><th>Shows</th><th></th></tr></thead><tbody>
+          ${[
+            ['Stat', 'Raised this month', 'Sum of Amount · Donations · status Paid, paid on this month'],
+            ['Stat', 'Outstanding donations', 'Count · Donations · chip Outstanding'],
+            ['Chart', 'Donations by month', 'Sum of Amount by month of the financial year · bars'],
+            ['List', 'Waiting the longest', 'Donations list view · chip Outstanding · oldest first · 2 rows'],
+            ['Links', 'Quick links', '3 links inside the app'],
+            ['Groups', 'Record groups', 'Every group the person can see'],
+          ].map((r, i) => `<tr${i === 0 ? ' class="sel"' : ''}><td class="grip">⠿</td><td><span class="bdg p">${r[0]}</span></td><td class="t">${r[1]}</td><td class="cs">${r[2]}</td><td>⋮</td></tr>`).join('')}
+        </tbody></table></div>
+        ${sec('Widget: Raised this month')}<div class="box"><div class="g3">${mf('Type', 'Stat', { icon: '▾' })}${mf('Label', 'Raised this month', { req: true })}${mf('Record type', 'Donation', { icon: '▾' })}</div><div class="g3">${mf('Measure', 'Sum', { icon: '▾', h: 'Count or sum' })}${mf('Field', 'Amount', { icon: '▾', h: 'Number and money fields' })}${mf('Which records', 'Status Paid · Paid on this month', { icon: '✎', h: 'A chip, filters, or "created by me"' })}</div></div>
+      </div>
+      <div class="preview"><div class="tabs2"><span class="chip on">Phone</span><span class="chip">Desktop</span></div><div class="mini"><div class="ab">Demo Foundation</div><div style="padding:8px">
+        <div class="wmini hit"><div class="wl">Raised this month</div><div class="wv">₹1,24,500.00</div><div class="cs">Paid donations, October 2026</div></div>
+        <div class="wmini"><div class="wl">Outstanding donations</div><div class="wv">18</div></div>
+        <div class="wmini"><div class="wl">Donations by month · 2026-27</div>${miniBars([30, 24, 34, 28, 40, 36, 21])}</div>
+        <div class="wmini"><div class="wl">Waiting the longest</div><div>Farah Khan · ₹1,000.00</div><div>Kiran Shah · ₹300.00</div></div>
+      </div></div><div class="cs" style="margin-top:8px">Figures use the administrator's own access, or sample data.</div></div></div>` }),
+    notes: `<h3>Configurable</h3><ul><li><b>Page</b>: label, whether it is Home or a page in More (key <code>home</code> is Home), audience by role.</li><li><b>Widgets</b>, reorderable: <b>stat</b> (count or sum), <b>chart</b> (bar or line; by a field, or by day, week, month or financial year), <b>list</b> (a list view with a chip or filters and a row count), <b>links</b> (in-app routes only), <b>groups</b>.</li><li>Widget labels are translatable (<code>page.home.widgets.raised.label</code>, Builder 22).</li><li>Each widget and each link can also require a permission, in addition to the page audience (Builder 26).</li></ul><h3>Pins</h3><ul><li>"Pin to everyone's Home" in the app adds a list widget to this draft; it shows after publishing. People's own pins are not edited here.</li></ul><h3>Checks</h3><ul><li>Only readable fields can be summed or grouped; an unknown list view or field is an error.</li></ul><h3>Address</h3><code>/builder/page/:key?widget=…</code>`,
+  },
+  {
+    id: 'action-editor', tag: 'new', title: 'Action editor', lead: 'A button people can press on a record: where it appears, when, what it asks for, what it does, and what it says. Shown here as the generic visual editor produces it: sections from the action\'s rules, tables for form fields and steps, and expression fields with help.',
+    url: '/builder/action/sendReminder', h: 720,
+    body: () => editor({ crumb: 'Actions', title: 'Send reminder', badges: status(1, 2, 'Donations module · patched'),
+      body: `<div class="cols" style="grid-template-columns:1fr 1.15fr"><div>
+        ${sec('General')}<div class="box"><div class="g2">${mf('Label', 'Send reminder', { req: true })}${mf('Record type', 'Donation', { icon: '▾' })}</div><div class="l" style="font-size:.74rem;margin-bottom:4px">Shown in</div>${pills(['Record panel', 'Row menu'], 'Bulk bar')}<div style="height:8px"></div>${mf('Permission', 'record:donation:action:sendReminder', { code: true, h: 'The default; grant it in Roles & access' })}</div>
+        ${sec('Shown when')}<div class="box">${mf('Condition', 'status == "raised" and not isEmpty(record.donorPhone)', { code: true, icon: 'ƒx', ok: 'Valid · Try it: true for DON/2026-27/00041' })}</div>
+        ${sec('Confirm and message')}<div class="box">${mf('Confirmation', 'Send a payment reminder to {{ record.donorName }} on {{ input.channel }}?', { code: true, h: 'Shown in the panel before it runs. Leave empty to run at once.' })}${mf('Message after it runs', 'Reminder sent to {{ record.donorName }} on {{ input.channel }}.', { code: true })}</div>
+      </div><div>
+        ${sec('Form fields · 2', '+ Add field')}<div class="panel" style="margin-bottom:10px"><table class="rows"><thead><tr><th></th><th>Key</th><th>Label</th><th>Type</th><th>Required</th><th>Choices</th></tr></thead><tbody><tr><td class="grip">⠿</td><td class="mono">channel</td><td class="t">Send by</td><td>Choice</td><td>✓</td><td class="cs">WhatsApp, SMS, Email</td></tr><tr><td class="grip">⠿</td><td class="mono">note</td><td class="t">Note to add</td><td>Text</td><td></td><td class="cs">—</td></tr></tbody></table></div>
+        ${sec('Steps · 2', '+ Add step')}<div class="panel" style="margin-bottom:10px"><table class="rows"><thead><tr><th></th><th>#</th><th>Step</th><th>Settings</th></tr></thead><tbody><tr class="sel"><td class="grip">⠿</td><td>1</td><td class="t">Notify</td><td class="cs">Template "Payment reminder" · to <code>record.donorPhone</code> · by <code>input.channel</code></td></tr><tr><td class="grip">⠿</td><td>2</td><td class="t">Set fields</td><td class="cs"><code>lastReminderOn = today()</code> · <code>lastReminderBy = input.channel</code></td></tr></tbody></table></div>
+        <div class="menu" style="position:static;box-shadow:none;border:1px dashed #cbd5e1"><div class="cs" style="padding:4px 16px">Kinds of step</div><div>Set fields</div><div>Run a workflow step</div><div>Create a record</div><div class="on">Notify</div><div>Call a webhook (connector)</div><div>Create a payment</div><div>Open the receipt print view</div></div>
+      </div></div>` }),
+    notes: `<h3>Configurable</h3><ul><li>Label, record type, where it is shown (record panel, row menu, bulk bar), permission.</li><li>"Shown when" expression; the form's values are <code>input.&lt;key&gt;</code> in later steps.</li><li>Optional confirmation and the message shown afterwards, with placeholders.</li><li>Steps run in order in one save; webhooks and messages are sent afterwards, so a delivery failure never undoes the record change.</li></ul><h3>Shipped by the Donations module</h3><ul><li>Send reminder (notify), Pay now (create a payment: provider, amount, account, and the step to run when paid), Print receipt (open the print view).</li></ul><h3>Checks</h3><ul><li>Unknown fields, templates, connectors or steps are errors; a webhook step needs a connector that is set up.</li></ul>`,
+  },
+  {
+    id: 'translations', tag: 'new', title: 'Translations grid', lead: 'Every label and message the organisation has set up, plus the app\'s own screen text, with the English text beside its translation. Choose a language, show only what is missing, and type translations straight into the grid.',
+    url: '/builder/translations?locale=hi&q=', h: 700,
+    body: () => editor({ crumb: 'Translations › हिन्दी Hindi', title: 'Translations · हिन्दी Hindi', badges: status(3, 4, 'Organisation'),
+      issues: '<span class="issue w" style="margin:0 0 0 10px">2 warnings</span>',
+      body: `<div class="tabs2" style="flex-wrap:wrap">${['हिन्दी Hindi · 82%', 'தமிழ் Tamil · 64%', 'తెలుగు Telugu · 60%', 'বাংলা Bengali · 58%', 'मराठी Marathi · 71%'].map((c, i) => `<span class="chip${i === 0 ? ' on' : ''}">${c}</span>`).join('')}</div>
+        <div class="ftb"><span class="search">⌕ Search paths or text…</span><span class="fb">Missing only ${tog(false)}</span><span class="fb">↕ Sort</span><span class="fb">≡ Filters</span></div>
+        <div class="issue w">⚠ 2 entries point to things that no longer exist (a removed chip and a removed field). <span class="link">Review</span></div>
+        <div class="panel"><table class="rows"><thead><tr><th>Path</th><th>English</th><th style="width:34%">Hindi</th><th>From</th></tr></thead><tbody>
+          ${[
+            ['recordType.donation.label', 'Donation', 'दान', 'o'],
+            ['recordType.donation.fields.amount.label', 'Amount', 'राशि', 'o'],
+            ['workflow.donation.transitions.markPaid.label', 'Mark as paid', '', 'm'],
+            ['listView.donations.chips.outstanding.label', 'Outstanding', 'बकाया', 'o'],
+            ['page.home.widgets.raised.label', 'Raised this month', 'इस महीने प्राप्त|', 'e'],
+            ['action.sendReminder.label', 'Send reminder', 'अनुस्मारक भेजें', 'o'],
+            ['template.donationThanks.subject', 'Thank you for your donation, {{ record.donorName }}', 'आपके दान के लिए धन्यवाद, {{ record.donorName }}', 'o'],
+            ['ui.list.loadingMore', 'Loading more…', 'और लोड हो रहा है…', 's'],
+            ['ui.inbox.empty', 'Nothing is waiting for you.', 'आपके लिए कुछ भी प्रतीक्षा में नहीं है।', 's'],
+          ].map(([p, en, hi, from]) => `<tr${from === 'e' ? ' class="sel"' : ''}><td class="mono">${p}</td><td>${en}</td><td><div class="cell${hi ? '' : ' ph'}${from === 'e' ? ' on' : ''}">${hi || 'Missing — falls back to English'}</div></td><td>${{ o: '<span class="bdg p">Organisation</span>', m: '<span class="bdg w">Missing</span>', e: '<span class="bdg w">Editing</span>', s: '<span class="bdg n">App</span>' }[from]}</td></tr>`).join('')}
+        </tbody></table></div>` }),
+    notes: `<h3>What is listed</h3><ul><li>Every translatable path in the published definitions (record types, fields, steps, chips, pages, actions, templates) and the app's screen text (<code>ui.*</code>).</li><li><b>App</b> rows come with the app's own translation; typing over one keeps the organisation's wording instead.</li></ul><h3>Working with it</h3><ul><li>Language chips with how much is translated; "Missing only"; search over paths and both texts; Filters by area.</li><li>Placeholders such as <code>{{ record.donorName }}</code> must be kept; a missing one is an error.</li><li>Saved as the language's translation draft; Check and Publish as usual. Missing entries fall back to English.</li></ul><h3>Address</h3><code>/builder/translations?locale=hi&amp;missing=true&amp;q=…</code>`,
+  },
+  {
+    id: 'workflows-list', tag: 'new', title: 'Workflows of a record type', lead: 'A record type can have several workflows. Primary workflows are alternatives: one is chosen for each record when it is created. Parallel workflows run beside the primary one. This list sets which is which and when each applies, and opens each one\'s diagram.',
+    url: '/builder/recordType/beneficiary?tab=workflows', h: 700,
+    body: () => editor({ crumb: 'Record types', title: 'Beneficiary', badges: status(3, 4, 'Organisation'),
+      body: `<div class="tabs2"><span class="chip">Fields</span><span class="chip">Rules</span><span class="chip on">Workflows</span><span class="chip">Used by</span></div>
+        ${sec('Workflows · 3', '+ Add workflow')}<div class="panel" style="margin-bottom:12px"><table class="rows"><thead><tr><th>Workflow</th><th>Role</th><th>Chosen when / starts when</th><th>States</th><th>Steps</th><th>Records</th><th></th></tr></thead><tbody>
+          <tr><td><div class="t">Programme intake</div><div class="mono">beneficiaryIntake</div></td><td><span class="bdg p">Primary · default</span></td><td class="cs">Every new beneficiary that no other primary workflow takes</td><td>4</td><td>5</td><td class="cs">118 following</td><td>⋮</td></tr>
+          <tr class="sel"><td><div class="t">Scholarship intake</div><div class="mono">scholarshipIntake</div></td><td><span class="bdg p">Primary</span></td><td class="mono">record.programme == 'scholarship'</td><td>5</td><td>6</td><td class="cs">41 following</td><td>⋮</td></tr>
+          <tr><td><div class="t">Case closure</div><div class="mono">caseClosure</div></td><td><span class="bdg n">Parallel</span></td><td class="mono">status == 'enrolled'</td><td>3</td><td>3</td><td class="cs">96 running</td><td>⋮</td></tr>
+        </tbody></table></div>
+        <div class="cols" style="grid-template-columns:1fr 1fr"><div>${sec('Applies to')}<div class="box" style="font-size:.76rem;line-height:1.6">A new beneficiary follows <b>Scholarship intake</b> when its programme is Scholarship; otherwise <b>Programme intake</b>. The choice is made once, when the record is created.<br><b>Case closure</b> starts beside it when the intake state becomes Enrolled.</div>
+          <div class="issue ok">✓ Exactly one primary workflow without a condition (the default).</div><div class="issue ok">✓ Step keys are unique across all three workflows.</div><div class="issue w">⚠ Conditions apply to new records only; the 159 existing beneficiaries keep their workflow.</div></div>
+          <div>${sec('Diagrams')}${thumb('Scholarship intake', 'scholarshipIntake', ['Applied', 'Screening', 'Enrolled'], { note: '+ Suspended, Withdrawn' })}${thumb('Case closure', 'caseClosure', ['Open', 'Closure req.', 'Closed'])}</div></div>` }),
+    notes: `<h3>Configurable</h3><ul><li>Add a workflow; set it <b>primary</b> or <b>parallel</b>.</li><li>Primary: "chosen when" condition, checked in key order when a record is created; exactly one may have none and is the default.</li><li>Parallel: "starts when" condition (or on create when empty).</li><li>Each workflow opens its own diagram, states and steps (Builder 6–7).</li></ul><h3>Elsewhere</h3><ul><li>Chips, filters, table columns, posting and receipt rules and automation triggers can name the workflow whose state they use; without one they use the primary.</li></ul><h3>Address</h3><code>/builder/recordType/:key?tab=workflows</code>; a diagram is <code>/builder/workflow/:key</code>`,
+  },
+  {
+    id: 'access-map', tag: 'new', title: 'Access map — what each part of the app requires', lead: 'One read-mostly list of everything whose visibility depends on a permission: record types and their functions, fields, panel sections, chips, workflow steps, record actions, page widgets and links, and the app areas. Each row shows the permission it requires and the roles that hold it. The ones that can be overridden (fields, sections, chips, steps, actions, widgets and links) are changed inline with the permission autocomplete; the change is saved as a draft of the definition it belongs to.',
+    url: '/builder/access?recordType=donation', h: 760,
+    body: () => `<div class="bhead"><div><div class="crumb">${bcrumb(['Access map'])}</div><div class="row" style="display:flex;align-items:center;gap:2px">${back}<h1>Access map</h1></div></div><span class="sp"></span><span class="btn">What can a role see? ▾</span></div>
+      <div class="tabs2" style="flex-wrap:wrap">${['All', 'Record types', 'Fields', 'Sections', 'Chips', 'Steps and actions', 'Pages and widgets', 'App areas'].map((c, i) => `<span class="chip${i === 0 ? ' on' : ''}">${c}</span>`).join('')}</div>
+      <div class="ftb"><span class="search">⌕ Search elements or permissions…</span><span class="fb">Record type: Donation ▾</span><span class="fb">Role: any ▾</span><span class="fb">Only problems ${tog(false)}</span></div>
+      <div class="issue w">⚠ 1 permission is required but no role holds it: <code>donation:closed:read</code> (chip "Closed" on Donations). Nobody sees that chip.</div>
+      <div class="panel"><table class="rows"><thead><tr><th>Element</th><th>Where</th><th style="width:30%">Requires</th><th>Held by roles</th></tr></thead><tbody>
+        ${[
+          ['g', 'Donation · record type'],
+          ['See, create, edit', 'Record type', '<span class="mono">record:donation:read · :create · :update</span> <span class="cs">fixed</span>', 'Finance, Viewer (see)'],
+          ['Import · Export · Select and bulk', 'List toolbar', '<span class="mono">record:donation:import · :export · :bulk</span> <span class="cs">fixed</span>', 'Finance'],
+          ['Share · See all', 'Record panel ⋮', '<span class="cs">Not used: Donation is visible to the whole organisation</span>', '—'],
+          ['g', 'Fields'],
+          ['Donor PAN · see', 'Field', '<div class="cell">record:donation:sensitive ▾</div><span class="cs">from "Sensitive"</span>', 'Finance'],
+          ['Fee · change', 'Field', '<div class="cell">donation:fees:edit ▾</div>', 'Finance'],
+          ['g', 'Sections, chips, steps and actions'],
+          ['Notes', 'Section · Donations list view', '<div class="cell">donation:notes:read ▾</div>', 'Finance'],
+          ['Closed', 'Chip · Donations list view', '<div class="cell on">donation:closed:read ▾</div>', '<span class="bdg w">No role</span>'],
+          ['Mark as paid', 'Workflow step', '<div class="cell">record:donation:transition:markPaid ▾</div><span class="cs">default</span>', 'Finance'],
+          ['Send reminder', 'Record action', '<div class="cell">record:donation:action:sendReminder ▾</div><span class="cs">default</span>', 'Finance'],
+          ['g', 'Pages and widgets'],
+          ['Raised this month', 'Home widget', '<div class="cell">record:donation:read ▾</div><span class="cs">audience: everyone</span>', 'Finance, Viewer'],
+          ['g', 'App areas'],
+          ['People list (API only)', 'API', '<span class="mono">people:read</span> <span class="cs">fixed</span>', 'Finance, Viewer'],
+          ['Administration › People, Roles', 'More', '<span class="mono">members:manage</span> or <span class="mono">admin:roles</span>', 'Admin'],
+          ['Builder', 'More', '<span class="mono">config:read</span> · editing <span class="mono">config:publish</span>', 'Admin'],
+        ].map((r) => (r[0] === 'g' ? `<tr><td colspan="4" style="background:#f8fafc;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#64748b">${r[1]}</td></tr>` : `<tr${r[0] === 'Closed' ? ' class="sel"' : ''}><td class="t">${r[0]}</td><td class="cs">${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`)).join('')}
+      </tbody></table></div>
+      <div class="box" style="margin-top:10px;max-width:520px">${mf('Chip "Closed" requires', 'donation:clo', { icon: '⌕' })}<div class="menu" style="position:static;box-shadow:0 2px 10px #0f172a1f;margin-top:-6px"><div class="on">donation:closed:read <span class="cs">· used by 1 chip · no role</span></div><div>record:donation:read <span class="cs">· generated</span></div><div>record:donation:transition:cancel <span class="cs">· generated</span></div><div class="sep"></div><div>Use "donation:clo" as a new permission</div></div></div>
+      <div class="foot"><span class="cs">1 draft: Donations list view</span><span class="sp"></span><span class="btn">Discard</span><span class="btn">Check</span><span class="btn p">Publish…</span></div>`,
+    notes: `<h3>What is listed</h3><ul><li>Record types: see, create, edit, see sensitive, see all, share, import, export, bulk (fixed, generated).</li><li>Fields: who can see (<code>readPermission</code>; "Sensitive" sets <code>record:&lt;type&gt;:sensitive</code>) and who can change (<code>editPermission</code>).</li><li>Record panel sections, list chips, workflow steps, record actions, page widgets and links: their <code>permission</code>.</li><li>App areas: Administration areas, Builder, money screens (fixed). people:read is API only and does not add a screen.</li></ul><h3>Working with it</h3><ul><li>Filters by area, record type and role; "Only problems".</li><li>Warnings: a permission no role holds; a permission typed once and never granted.</li><li>Inline changes use the permission autocomplete (generated permissions plus every permission string already used), still allowing a new one. They are saved as drafts of the owning definitions and published together.</li><li>Granting a permission to a role is done in Roles (Builder 18), linked from "Held by roles".</li></ul><h3>Address</h3><code>/builder/access?area=&amp;recordType=&amp;role=&amp;q=</code>`,
+  },
+  {
+    id: 'access-preview', tag: 'new', title: 'Access map — what can a role see?', lead: 'The same access map turned around: choose a role and see, in plain words and in a live preview, what people with that role see and can do. Here Viewer: donations read-only, PAN masked, no steps, no import or export, no Administration.',
+    url: '/builder/access?role=viewer', h: 640,
+    body: () => `<div class="bhead"><div><div class="crumb">${bcrumb(['Access map', 'Viewer'])}</div><div class="row" style="display:flex;align-items:center;gap:2px">${back}<h1>What can Viewer see?</h1></div></div><span class="sp"></span><span class="btn">Edit role Viewer</span></div>
+      <div class="tabs2">${['Admin', 'Finance', 'Viewer', 'Programme staff', 'Field volunteer'].map((r) => `<span class="chip${r === 'Viewer' ? ' on' : ''}">${r}</span>`).join('')}</div>
+      <div class="cols" style="grid-template-columns:1fr 280px"><div>
+        ${sec('Records')}<div class="box" style="font-size:.76rem;line-height:1.75"><b>Donations</b>: see · chips Mine, Outstanding (not Closed) · fields: Donor PAN masked · sections: Notes hidden · no steps, actions, import, export or bulk<br><b>Donors</b>: see · PAN masked<br><b>Beneficiaries</b>: <span class="cs">not visible</span></div>
+        ${sec('Pages')}<div class="box" style="font-size:.76rem;line-height:1.75">Home: all widgets except "Waiting the longest" (needs <code>record:donation:update</code>) · Fundraising dashboard: <span class="cs">not in its audience</span></div>
+        ${sec('App areas')}<div class="box" style="font-size:.76rem;line-height:1.75">People list (API only) ✓ · Administration ✗ · Builder ✗ · Money screens ✗</div>
+      </div>
+      <div class="preview"><div class="tabs2"><span class="chip on">List</span><span class="chip">Record panel</span></div><div class="mini"><div class="ab">Donations</div><div style="padding:8px 10px;display:flex;gap:5px"><span class="chip">Mine</span><span class="chip on">Outstanding</span></div>
+        ${['Asha Rao', 'Ravi Kumar', 'Meera Iyer'].map((n, i) => `<div class="lr"><span class="ico">$</span><div style="flex:1"><b>${n}</b><div class="cs">₹${[1500, 5000, 750][i].toLocaleString('en-IN')}.00 · UPI</div></div><span class="bdg w">Raised</span></div>`).join('')}
+        <div style="padding:8px 10px" class="cs">PAN: *** · no + button, no ⋮ steps</div></div><div class="cs" style="margin-top:8px">Drawn with the real list and panel, applying Viewer's permissions to sample records.</div></div></div>`,
+    notes: `<ul><li>Pick a role (or several, as a person with two roles would have).</li><li>Plain-language summary by area, then a live preview of the list and record panel as that role sees them.</li><li>Read-only; "Edit role" opens Roles (Builder 18).</li></ul><h3>Address</h3><code>/builder/access?role=viewer</code>`,
+  },
+  {
+    id: 'field-permissions', tag: 'new', title: 'Section, field, widget and link permissions', lead: 'Where a permission is set on a part of a screen, the Builder offers the same autocomplete: generated permissions plus every permission string already used, still allowing a new one. Fields get "Who can see" and "Who can change"; record panel sections, page widgets and links get "Shown to people with".',
+    url: '/builder/recordType/donation?field=donorPan', h: 640,
+    body: () => editor({ crumb: 'Record types', title: 'Donation', badges: status(4, 5, 'Donations module · patched'),
+      body: `<div class="cols" style="grid-template-columns:1fr 1fr"><div>
+        ${sec('Field: Donor PAN · who can see and change')}<div class="box">${chk('Sensitive (masked unless allowed)', true)}${mf('Who can see', 'record:donation:sensitive', { icon: '⌕', h: 'Set by "Sensitive". Without it the value is masked in lists, panels, exports and totals.' })}<div class="mf" style="position:relative"><div class="l">Who can change</div><div class="o" style="border:2px solid var(--brand)">donation:pan<span>⌕</span></div><div class="menu" style="position:static;margin-top:4px;box-shadow:0 2px 10px #0f172a1f"><div class="on">donation:pan:verify <span class="cs">· used by 1 step</span></div><div>record:donation:update <span class="cs">· generated</span></div><div>record:donation:sensitive <span class="cs">· generated</span></div><div class="sep"></div><div>Use "donation:pan" as a new permission</div></div><div class="h">Empty: anyone who can edit the record. Without it the field is read-only, and the server refuses changes.</div></div></div>
+      </div><div>
+        ${sec('Record panel section (Donations list view)')}<div class="box">${mf('Section', 'Notes')}${mf('Shown to people with', 'donation:notes:read', { icon: '⌕', h: 'Empty: everyone who can see the record.' })}</div>
+        ${sec('Home page widget and link')}<div class="box">${mf('Widget "Waiting the longest" · shown to people with', 'record:donation:update', { icon: '⌕' })}${mf('Link "Receipts issued this week" · shown to people with', 'money:receipts:read', { icon: '⌕', h: 'In addition to the page audience.' })}</div>
+        <div class="issue w">⚠ A new permission does nothing until a role holds it: grant it in Roles (Builder 18).</div>
+      </div></div>` }),
+    notes: `<h3>Rules</h3><ul><li><code>readPermission</code> on a field generalises "Sensitive": without it the server shows the same mask as sensitive fields (<code>***</code>, no partial characters) in get, lists and exports, leaves out files, and refuses filtering, sorting and totals on it (decided 2026-10-24).</li><li><code>editPermission</code>: the field is read-only without it, and the server refuses changes.</li><li>Sections, page widgets and links: hidden without their <code>permission</code>; runtime definitions leave them out.</li><li>Chips, steps and actions keep their existing <code>permission</code>, with the same autocomplete.</li></ul><h3>Autocomplete</h3><ul><li>Generated permissions (record types, steps, actions, money, setup) and every permission string used in the organisation's definitions, each with where it is used.</li><li>A new string is allowed; the Access map (Builder 24) warns while no role holds it.</li></ul>`,
+  },
+  {
+    id: 'profile-fields', tag: 'new', title: 'Profile fields — the person record type', lead: 'Every person has one profile, a record of the shipped record type "Person profile" (key person), created automatically when they are added. The organisation adds its own fields here like on any record type. Two extra switches on each field decide whether the person can change it on My profile and whether it is shown in the directory. A "Kind" choice field with field conditions is the suggested way to ask staff, volunteers and board members for different fields.',
+    url: '/builder/recordType/person?field=phone', h: 700,
+    body: () => editor({ crumb: 'Record types', title: 'Person profile', badges: status(1, 2, 'Platform · changed'),
+      body: `<div class="cols" style="grid-template-columns:1.25fr 1fr"><div>
+        <div class="box" style="font-size:.74rem;padding:8px 12px">Key <code>person</code> · one profile per person, created when they are added, linked by their user id · cannot be removed · numbering and workflows are not used</div>
+        ${sec('Fields · 8', '+ Add field')}<div class="panel"><table class="rows"><thead><tr><th></th><th>Label</th><th>Type</th><th>Rules</th><th>Profile</th></tr></thead><tbody>
+          ${[
+            ['Kind', 'Choice · Staff, Volunteer, Board', '<span class="bdg n">required</span>', '<span class="bdg p">In directory</span>'],
+            ['Department', 'Choice · 5', '<span class="bdg n">shown unless Board</span>', '<span class="bdg p">In directory</span>'],
+            ['Designation', 'Text', '', '<span class="bdg p">In directory</span>'],
+            ['Phone', 'Phone', '<span class="bdg e">sensitive</span>', '<span class="bdg s">Self-editable</span> <span class="bdg p">In directory</span>'],
+            ['Emergency contact', 'Text', '<span class="bdg e">sensitive</span>', '<span class="bdg s">Self-editable</span>'],
+            ['Photo', 'File · images', '<span class="bdg n">1 file, 2 MB</span>', '<span class="bdg s">Self-editable</span> <span class="bdg p">In directory</span>'],
+            ['Joining date', 'Date', '', '<span class="cs">administrator only</span>'],
+            ['Employee ID', 'Text', '<span class="bdg n">shown when Staff</span> <span class="bdg n">unique</span>', '<span class="cs">administrator only</span>'],
+          ].map((r, i) => `<tr${i === 3 ? ' class="sel"' : ''}><td class="grip">⠿</td><td class="t">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}
+        </tbody></table></div>
+        <div class="cs" style="margin-top:8px">Fields without "In directory" are seen only by administrators and the person. Fields without "Self-editable" are changed only by administrators.</div>
+      </div><div>
+        ${sec('Field: Phone')}<div class="box">${mf('Label', 'Phone', { req: true })}${mf('Type', 'Phone', { icon: '▾' })}${chk('Required', false)}${chk('Searchable', true)}${chk('Sensitive (masked unless allowed)', true)}</div>
+        ${sec('On the profile')}<div class="box"><div style="display:flex;align-items:center;gap:8px;font-size:.78rem;margin-bottom:2px">Editable by the person themselves<span class="sp"></span>${tog(true)}</div><div class="cs" style="margin-bottom:10px">Shown on My profile as a field they can change. Off: "Set by your administrator".</div><div style="display:flex;align-items:center;gap:8px;font-size:.78rem;margin-bottom:2px">Shown in the directory<span class="sp"></span>${tog(true)}</div><div class="cs">Everyone with "See people" sees it. Sensitive fields stay masked for people without the sensitive permission.</div></div>
+        <div class="issue w">⚠ Phone is sensitive and shown in the directory: most viewers will see it masked.</div>
+      </div></div>` }),
+    notes: `<h3>Configurable</h3><ul><li>Fields like any record type (Builder 2–3), plus two options on each field: <code>selfEditable</code> ("Editable by the person themselves", default off) and <code>directory</code> ("Shown in the directory", default off).</li><li>The two switches appear only on this record type.</li><li>Name and email are not profile fields; they belong to the person's account and are changed in Administration › People in the app.</li><li>Each field can also have "Who can see" and "Who can change" permissions (Builder 26).</li></ul><h3>Rules on the server</h3><ul><li>Someone without "Manage people" may change only their own profile and only self-editable fields; anything else is refused with the field named.</li><li>The directory returns only fields marked "Shown in the directory".</li></ul><h3>The "person" field type</h3><ul><li>Other record types can point at a person, e.g. Beneficiary "Case worker", Visit "Visited by", Donation "Fundraiser".</li><li>Chosen with the record picker over active people; stored as the user id and shown as the name; suspended people stay shown on old records but cannot be newly chosen.</li><li>Lists can filter by it, including "Assigned to me"; notifications can go to "the person in field Case worker"; imports match it by email.</li></ul><h3>Address</h3><code>/builder/recordType/person?field=…</code>`,
+  },
+);
+
+const toc = document.getElementById('toc');
+const root = document.getElementById('screens');
+SCREENS.forEach((s, i) => {
+  currentUrl = s.url;
+  toc.insertAdjacentHTML('beforeend', `<a href="#${s.id}">${String(i + 1).padStart(2, '0')} · ${s.title.split(' — ')[0]}</a>`);
+  root.insertAdjacentHTML('beforeend', `<section class="scr" id="${s.id}"><div class="flabel">Screen ${i + 1} <span class="tag ${s.tag}">${s.tag === 'new' ? 'NEW' : 'EXISTS'}</span></div><h2>${s.title}</h2><p>${s.lead}</p><div class="stage">${frame(s.url, s.body(), s.h)}<div class="notes">${s.notes}</div></div></section>`);
+});
+</script>
+</body>
+</html>

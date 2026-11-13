@@ -1,0 +1,11 @@
+{
+  "key": "donationPaid",
+  "recordType": "donation",
+  "whenStatus": "paid",
+  "date": "record.paidOn",
+  "memo": "'Donation ' + record.number + ' from ' + record.donorName",
+  "lines": [
+    { "side": "debit", "accountExpr": "record.method == 'cash' ? 'CASH' : 'BANK'", "amount": "record.amount" },
+    { "side": "credit", "account": "DONATION_INCOME", "amount": "record.amount" }
+  ]
+}

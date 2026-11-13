@@ -1,0 +1,12 @@
+# Guardrail rules (block G)
+
+Block G added the conformance rules of section 10 of `ngo-backend-enhancement-plan.md` to the architecture tests. The code now satisfies every rule: there are no violations, no pending list and no exceptions. A new violation fails its test; fix the code. `packages/platform/test/layer-allowlist.json` and `packages/platform/test/package-allowlist.json` stay empty (`{}`), and an entry in either fails once the block it names is Merged or Done in section 5.1 of the plan (`packages/platform/test/plan-status.ts`).
+
+## Decisions
+
+- **Runtime siblings:** `runtime/<a>` may import `runtime/<b>` only for `types.ts`, anything under `ports/`, anything under `runtime/expressions/`, and the pure helpers named in `RUNTIME_PURE_HELPERS` (`packages/platform/test/layer-graph.ts`, one reason each). Type-only imports of a sibling service class are rejected too: a type of `RecordService` still ties the capability to it.
+- **Application siblings:** `application/<a>` may not value-import a module of another capability. It receives collaborators through its constructor and imports their type only (`import type`). Ports (`ports/`) and `application/shared/` (context, errors, logger contracts) are allowed.
+- **Re-exports:** every application file http imports, every `http-api.ts` and `application/shared` may not re-export from `domain` or `runtime`, value or type-only. Type re-exports are rejected as well because http would still depend on a lower-layer type; the application declares its own alias or interface. Re-exporting an imported binding (`import { x } ...; export { x }`) is caught the same way.
+- **Port files:** a `/ports/` file holds interfaces, type aliases, `declare const` brand symbols and type-only exports. Constants, functions, classes, enums, namespaces, top-level statements, module-level `let` and value re-exports are rejected. `PORT_VALUE_EXCEPTIONS` (empty) lists exceptions.
+- **Composition:** `packages/platform/src/composition/**` is wiring only: calls to `withTenant`, `asSystem`, `asTx`, `joinTx`, `transaction`; `audit.audit` / `audit.event`; `fastify` imports and `req` / `reply` / `request` use are reported per file and kind with a count. `transactions(db)` (building the manager) is wiring and allowed.
+- **Persistence:** `packages/platform/src/domain/ports/` is no longer exempt in `packages/platform/test/persistence-architecture.test.ts`. The check now also sees imports from `ports/database.js` and declarations of the SQL executor types.

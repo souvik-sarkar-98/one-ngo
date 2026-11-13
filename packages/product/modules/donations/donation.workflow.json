@@ -1,0 +1,22 @@
+{
+  "key": "donation",
+  "recordType": "donation",
+  "initial": "raised",
+  "states": [
+    { "key": "raised", "label": "Raised" },
+    { "key": "paid", "label": "Paid", "final": true },
+    { "key": "cancelled", "label": "Cancelled", "final": true }
+  ],
+  "transitions": [
+    {
+      "key": "markPaid",
+      "label": "Mark as paid",
+      "from": ["raised"],
+      "to": "paid",
+      "requiredFields": ["method", "paidOn"],
+      "guard": "record.paidOn <= today()",
+      "guardMessage": "The payment date cannot be in the future."
+    },
+    { "key": "cancel", "label": "Cancel", "from": ["raised"], "to": "cancelled" }
+  ]
+}

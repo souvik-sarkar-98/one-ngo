@@ -1,0 +1,98 @@
+{
+  "$id": "dataFeed",
+  "title": "Data feed",
+  "description": "A named read an external app calls with an API key bound to this feed: a fixed query over records, or text the organisation writes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["key", "label", "source"],
+  "properties": {
+    "key": { "$ref": "#/definitions/key", "description": "Stable name used in the feed address", "x-order": 1 },
+    "label": { "type": "string", "minLength": 1, "maxLength": 60, "description": "Name shown to the people who configure the feed", "x-order": 2 },
+    "description": { "type": "string", "maxLength": 300, "description": "What this feed is for", "x-order": 3 },
+    "source": { "enum": ["records", "content"], "description": "Records from one record type, or text written here", "x-order": 4 },
+    "recordType": { "type": "string", "description": "Record type the feed reads", "x-ref": "recordType", "x-group": "records", "x-order": 5 },
+    "fields": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 30,
+      "uniqueItems": true,
+      "items": { "type": "string" },
+      "description": "Fields a result includes",
+      "x-ref": "field",
+      "x-group": "records",
+      "x-order": 6
+    },
+    "statusIn": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": { "type": "string" },
+      "description": "Only records in these statuses",
+      "x-group": "records",
+      "x-order": 7
+    },
+    "search": {
+      "type": "array",
+      "maxItems": 10,
+      "uniqueItems": true,
+      "items": { "type": "string" },
+      "description": "Which of the shown fields a search matches",
+      "x-ref": "field",
+      "x-group": "records",
+      "x-order": 8
+    },
+    "sort": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "direction"],
+      "description": "Order of the results. Newest first when omitted.",
+      "x-group": "records",
+      "x-order": 9,
+      "properties": {
+        "field": { "type": "string", "description": "Field to sort by", "x-ref": "field" },
+        "direction": { "enum": ["asc", "desc"], "description": "Ascending or descending" }
+      }
+    },
+    "allowFilters": {
+      "type": "array",
+      "maxItems": 10,
+      "uniqueItems": true,
+      "items": { "type": "string" },
+      "description": "Fields the caller may filter with an exact value",
+      "x-ref": "field",
+      "x-group": "records",
+      "x-order": 10
+    },
+    "entries": {
+      "type": "array",
+      "maxItems": 40,
+      "description": "Text the feed returns, in order",
+      "x-group": "content",
+      "x-order": 11,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "label", "text"],
+        "properties": {
+          "key": { "$ref": "#/definitions/key", "description": "Stable name the app reads" },
+          "label": { "type": "string", "minLength": 1, "maxLength": 60, "description": "Label shown with the text" },
+          "text": { "type": "string", "maxLength": 4000, "description": "The text" }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "source": { "const": "records" } }, "required": ["source"] },
+      "then": { "required": ["recordType", "fields", "statusIn"] }
+    },
+    {
+      "if": { "properties": { "source": { "const": "content" } }, "required": ["source"] },
+      "then": { "required": ["entries"] }
+    }
+  ],
+  "definitions": {
+    "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,62}$" }
+  }
+}

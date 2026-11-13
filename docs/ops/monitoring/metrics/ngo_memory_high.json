@@ -1,0 +1,9 @@
+{
+  "description": "NGO platform: memory checks that found an instance's resident memory above MEMORY_ALERT_MB (default 300 MB). Applied by a person with gcloud; see docs/ops/monitoring/README.md.",
+  "filter": "jsonPayload.alert=\"memory.high\"",
+  "metricDescriptor": {
+    "metricKind": "DELTA",
+    "valueType": "INT64",
+    "unit": "1"
+  }
+}

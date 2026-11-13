@@ -1,0 +1,39 @@
+{
+  "$id": "postingRule",
+  "title": "Posting rule",
+  "description": "Posts a balanced journal entry when a record enters a status. The ledger engine enforces balance and open periods.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["key", "recordType", "whenStatus", "date", "lines"],
+  "x-preview": "postingRule",
+  "properties": {
+    "key": { "$ref": "#/definitions/key", "description": "Stable name of the rule" },
+    "recordType": { "$ref": "#/definitions/key", "description": "The record type it watches", "x-ref": "recordType", "x-group": "when" },
+    "whenStatus": { "type": "string", "description": "Posts when a record enters this status", "x-group": "when" },
+    "workflow": { "type": "string", "description": "Workflow whose state whenStatus names; default the primary one", "x-ref": "workflow", "x-group": "when" },
+    "condition": { "type": "string", "description": "Posts only when this is true for the record", "x-expression": { "recordType": "/recordType" }, "x-group": "when" },
+    "date": { "type": "string", "description": "Expression returning an ISO date", "x-expression": { "recordType": "/recordType" }, "x-group": "when" },
+    "memo": { "type": "string", "description": "Expression returning text", "x-expression": { "recordType": "/recordType" }, "x-group": "when" },
+    "lines": {
+      "type": "array",
+      "minItems": 2,
+      "description": "Debits and credits of the entry; they must balance",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["side", "amount"],
+        "properties": {
+          "side": { "enum": ["debit", "credit"], "description": "Debit or credit" },
+          "account": { "type": "string", "description": "Ledger account code" },
+          "accountExpr": { "type": "string", "description": "Expression returning a ledger account code", "x-expression": { "recordType": "/recordType" } },
+          "amount": { "type": "string", "description": "Expression returning a positive amount", "x-expression": { "recordType": "/recordType" } },
+          "fund": { "type": "string", "description": "Expression returning a fund code", "x-expression": { "recordType": "/recordType" } }
+        },
+        "oneOf": [{ "required": ["account"] }, { "required": ["accountExpr"] }]
+      }
+    }
+  },
+  "definitions": {
+    "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,62}$" }
+  }
+}

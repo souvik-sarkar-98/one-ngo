@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NGO Platform — Reports</title>
+<style>
+  :root {
+    --fg: #1d2733; --muted: #5b6878; --line: #d8dee6; --bg: #f5f7fa; --card: #fff;
+    --brand: #1f5f8b; --ok: #1d7a46; --warn: #9a6200; --bad: #b3261e; --radius: 6px;
+    --b50: color-mix(in srgb, var(--brand) 6%, #fff); --b100: color-mix(in srgb, var(--brand) 12%, #fff); --b200: color-mix(in srgb, var(--brand) 25%, #fff);
+    --page: #eef1f5; --ink: #18212b;
+    --font: 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Devanagari', Helvetica, Arial, sans-serif;
+    --mono: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font); color: var(--ink); background: linear-gradient(180deg, #f6f8fa, var(--page)); }
+  header.page { max-width: 1440px; margin: 0 auto; padding: 36px 40px 18px; }
+  header.page h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -.01em; }
+  header.page p { margin: 0 0 10px; max-width: 980px; line-height: 1.55; color: #36414d; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 16px; }
+  .rules div { background: #fff; border: 1px solid #dfe5eb; border-radius: 10px; padding: 12px 14px; font-size: 13.5px; line-height: 1.5; }
+  .rules b { display: block; color: var(--brand); margin-bottom: 3px; }
+  nav.toc { position: sticky; top: 0; z-index: 20; background: rgba(238,241,245,.94); backdrop-filter: blur(6px); border-bottom: 1px solid #dbe1e7; }
+  nav.toc div { max-width: 1440px; margin: 0 auto; padding: 9px 40px; display: flex; gap: 4px; overflow-x: auto; }
+  nav.toc a { font: 600 12px var(--mono); color: #3a4a5a; text-decoration: none; padding: 6px 10px; border-radius: 6px; white-space: nowrap; }
+  nav.toc a:hover { background: #fff; }
+  main.page { max-width: 1440px; margin: 0 auto; padding: 0 40px 80px; }
+  section.flow { margin-top: 40px; }
+  .flabel { font: 700 12px var(--mono); color: var(--brand); text-transform: uppercase; letter-spacing: .06em; display: flex; gap: 8px; align-items: center; }
+  .flabel::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+  section.flow > h2 { margin: 4px 0 4px; font-size: 22px; }
+  section.flow > p { margin: 0 0 14px; color: #3a4552; max-width: 980px; line-height: 1.5; }
+  .step { display: grid; grid-template-columns: 52px 330px minmax(0, 1fr); gap: 18px; align-items: start; padding: 18px 0; border-top: 1px dashed #d3dae2; }
+  @media (max-width: 1200px) { .step { grid-template-columns: 44px minmax(0, 1fr); } .step .desk { grid-column: 2; } }
+  .num { width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 2px solid var(--brand); color: var(--brand); font: 700 15px/36px var(--font); text-align: center; }
+  .stephead { grid-column: 2 / -1; margin-bottom: -6px; }
+  .stephead b { font-size: 16px; }
+  .stephead .act { display: inline-block; margin-left: 10px; font-size: 13px; color: #3a4552; }
+  .stephead .act kbd { font: 600 12px var(--font); background: #fff; border: 1px solid #ccd5de; border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; }
+  .stephead code { display: block; margin-top: 4px; font: 12px var(--mono); color: #556373; }
+  .cap { font: 600 10.5px var(--mono); color: #6a7683; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 5px; }
+  .noteline { font-size: 13px; color: #3a4552; line-height: 1.5; margin-top: 8px; max-width: 760px; }
+
+  .phone { width: 330px; height: 640px; border-radius: 34px; background: #0f141a; padding: 10px; box-shadow: 0 14px 30px rgba(15,23,42,.18); }
+  .phone .scr { width: 100%; height: 100%; border-radius: 26px; overflow: hidden; background: var(--bg); position: relative; display: flex; flex-direction: column; color: var(--fg); font-size: 14px; }
+  .status { height: 26px; flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; font: 600 11px var(--font); background: var(--brand); color: #fff; }
+  .browser { border-radius: 10px; background: #fff; border: 1px solid #d5dbe2; box-shadow: 0 14px 30px rgba(15,23,42,.12); overflow: hidden; min-width: 0; }
+  .browser .chrome { height: 30px; background: #e9edf1; border-bottom: 1px solid #d5dbe2; display: flex; align-items: center; padding: 0 10px; }
+  .browser .url { flex: 1; height: 20px; border-radius: 6px; background: #fff; font: 11.5px var(--mono); color: #536171; display: flex; align-items: center; padding: 0 9px; overflow: hidden; white-space: nowrap; }
+  .browser .scr { height: 600px; background: var(--bg); position: relative; overflow: hidden; display: flex; flex-direction: column; color: var(--fg); font-size: 14px; }
+
+  .appbar { height: 50px; flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 12px; background: var(--brand); color: #fff; }
+  .appbar .brand { font-weight: 700; font-size: 15px; }
+  .appbar .org { font-weight: 600; font-size: 13px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pagehead { display: flex; flex-flow: row nowrap; align-items: center; gap: 2px; margin: 0 0 10px; }
+  .pagehead .h1 { margin: 0; line-height: 1.25; }
+  .pagehead .back { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; flex: 0 0 auto; }
+  .pagehead .sp { flex: 1; }
+  .ib { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; position: relative; font-size: 17px; }
+  .ib.av { background: rgba(255,255,255,.2); font: 700 12px var(--font); }
+  .ib .dot { position: absolute; top: 3px; right: 2px; min-width: 15px; height: 15px; border-radius: 8px; background: #fdf1dc; color: var(--warn); font: 700 9.5px/15px var(--font); text-align: center; }
+  .frame-body { flex: 1; display: flex; min-height: 0; }
+  .main { flex: 1; min-width: 0; overflow: auto; padding: 12px 12px 16px; position: relative; }
+  .browser .main { padding: 16px 20px 20px; }
+  .navbar { flex: 0 0 auto; display: grid; grid-template-columns: repeat(var(--nav-n, 5), minmax(0, 1fr)); background: #fff; border-top: 1px solid var(--line); height: 58px; }
+  .rail { flex: 0 0 auto; width: 84px; background: #fff; border-right: 1px solid var(--line); display: flex; flex-direction: column; padding-top: 10px; gap: 4px; overflow: auto; }
+  .nv { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 10.5px; color: var(--muted); padding: 6px 0; position: relative; min-width: 0; }
+  .nv .lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nv .g { width: 44px; height: 26px; border-radius: 13px; display: grid; place-items: center; }
+  .nv.on { color: var(--brand); font-weight: 600; }
+  .nv.on .g { background: var(--b100); }
+  .nv svg { width: 20px; height: 20px; fill: currentColor; }
+  .nv .dot { position: absolute; top: 3px; left: calc(50% + 6px); min-width: 15px; height: 15px; border-radius: 8px; background: #fdf1dc; color: var(--warn); font: 700 9.5px/15px var(--font); text-align: center; }
+  .h1 { font-size: 1.15rem; font-weight: 700; margin: 0; }
+  .hit { outline: 3px solid #f3be26; outline-offset: 2px; border-radius: 12px; }
+  .panel { background: #fff; border-radius: 16px; border: 1px solid rgba(148,163,184,.22); box-shadow: 0 1px 2px #0f172a0d, 0 4px 14px #0f172a12; overflow: hidden; }
+  .lr { display: flex; gap: 10px; padding: 11px 10px; border-bottom: 1px solid rgba(148,163,184,.18); align-items: flex-start; }
+  .lr:last-child { border-bottom: 0; }
+  .lr.sel, table.rows tr.sel td { background: var(--b100); }
+  .lr .c { flex: 1; min-width: 0; }
+  .lr .tt { font-size: .8rem; font-weight: 700; }
+  .lr .st { margin-top: 2px; font-size: .66rem; color: #64748b; }
+  .lr .mt { margin-top: 3px; font-size: .6rem; color: #64748b; }
+  .lr .aside { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .bdg { font-size: .56rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; border-radius: 999px; padding: 4px 8px; line-height: 1; white-space: nowrap; }
+  .bdg.s { background: #e3f4ea; color: var(--ok); } .bdg.p { background: var(--b100); color: var(--brand); }
+  table.rows { width: 100%; border-collapse: collapse; font-size: .76rem; }
+  table.rows th { text-align: left; font-size: .64rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: #64748b; padding: 10px 12px; border-bottom: 1px solid rgba(148,163,184,.25); background: #f8fafc; white-space: nowrap; }
+  table.rows td { padding: 8px 12px; border-bottom: 1px solid rgba(148,163,184,.32); white-space: nowrap; vertical-align: middle; }
+  table.rows td.t { font-weight: 700; }
+  .fab { position: absolute; right: 16px; bottom: 16px; width: 48px; height: 48px; border-radius: 50%; background: var(--brand); color: #fff; display: grid; place-items: center; font-size: 26px; box-shadow: 0 6px 18px #0f172a33; z-index: 3; }
+  .fab.hit { outline-offset: 3px; border-radius: 50%; }
+  .scrim { position: absolute; inset: 0; background: #0f172a59; z-index: 4; }
+  .sheet { position: absolute; z-index: 5; background: #fff; box-shadow: 0 -8px 32px #0f172a1f; padding: 10px 16px 14px; display: flex; flex-direction: column; }
+  .phone .sheet { left: 0; right: 0; bottom: 0; border-radius: 20px 20px 0 0; max-height: 92%; }
+  .browser .sheet { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, 86%); border-radius: 20px; padding: 16px 24px 18px; box-shadow: 0 18px 48px #0f172a33; }
+  .sheet .handle { width: 36px; height: 4px; border-radius: 999px; background: #cbd5e1; margin: 0 auto 10px; }
+  .browser .sheet .handle { display: none; }
+  .sheet .ttl { text-align: center; font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 12px; position: relative; padding: 0 34px; }
+  .sheet .ttl .x { position: absolute; right: 0; top: -5px; width: 28px; height: 28px; border-radius: 50%; background: #f1f5f9; display: grid; place-items: center; font-size: 12px; color: #475569; }
+  .sheet .scroll { overflow: auto; min-height: 0; }
+  .sec-h { display: flex; justify-content: space-between; padding: 9px 12px; border: 1px solid var(--b200); border-radius: 12px; background: var(--b100); font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--brand); }
+  .acts { border-top: 1px solid rgba(148,163,184,.2); padding-top: 11px; display: flex; flex-flow: row nowrap; gap: 7px; margin-top: 8px; }
+  .acts .btn { flex: 1; }
+  .btn { font: inherit; font-size: 13px; padding: .45rem .8rem; border-radius: var(--radius); border: 1px solid var(--line); background: #fff; color: var(--fg); text-align: center; display: inline-block; }
+  .btn.p { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn.sm { font-size: 12px; padding: .3rem .55rem; }
+  .btn.hit { outline: 3px solid #f3be26; outline-offset: 2px; }
+  .mf { margin-bottom: 12px; }
+  .mf .l { font-size: .8rem; font-weight: 500; color: #374151; margin-bottom: 5px; }
+  .mf .l i { color: #f97316; font-style: normal; }
+  .mf .o { border: 1px solid #79747e; border-radius: 4px; height: 40px; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; font-size: .85rem; background: #fff; }
+  .grid2 { display: grid; grid-template-columns: 1fr; gap: 0 14px; }
+  .browser .grid2 { grid-template-columns: 1fr 1fr; }
+  .toast { position: absolute; z-index: 7; left: 12px; right: 12px; bottom: 74px; background: #1d2733; color: #fff; border-radius: 10px; padding: 10px 14px; font-size: 12.5px; }
+  .browser .toast { left: auto; right: 24px; bottom: 24px; width: 360px; }
+  .listrow { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid rgba(148,163,184,.18); font-size: .82rem; }
+  .listrow:last-child { border-bottom: 0; }
+  .cs { font-size: .74rem; color: #64748b; }
+  .note { background: #eef5fb; border: 1px solid #c6d9e8; color: var(--brand); border-radius: 12px; padding: 9px 12px; font-size: .72rem; margin-bottom: 10px; }
+  .note.ok { background: #eef9f2; border-color: #bfe3cd; color: var(--ok); }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .sp { flex: 1; }
+  .crumbs { flex: 0 0 auto; position: relative; z-index: 8; background: #fff; border-bottom: 1px solid var(--line); padding: 0 12px; height: 26px; display: flex; align-items: center; font-size: 11.5px; }
+  .browser .crumbs { padding-left: 100px; height: 30px; font-size: 12.5px; }
+  .crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; min-width: 0; overflow: hidden; white-space: nowrap; }
+  .crumbs li { display: flex; align-items: center; flex: 0 0 auto; color: var(--muted); }
+  .crumbs li + li::before { content: '›'; margin: 0 6px; color: #94a3b8; }
+  .crumbs a { color: var(--brand); font-weight: 600; text-decoration: none; }
+  .crumbs li[aria-current] { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg); font-weight: 600; }
+  .printbar { display: flex; gap: 8px; align-items: center; padding: 4px 0 12px; flex-wrap: wrap; }
+  .paper { background: #fff; margin: 0 auto; box-shadow: 0 2px 10px #0f172a1f; padding: 24px 28px; font-size: .74rem; color: #1d2733; max-width: 600px; border-radius: 2px; }
+  .phone .paper { padding: 14px; font-size: .64rem; }
+  .paper .ptitle { text-align: center; font-size: .9rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin: 16px 0 10px; padding: 6px 0; border-top: 1px solid #d8dee6; border-bottom: 1px solid #d8dee6; }
+  .paper table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  .paper th, .paper td { text-align: left; padding: 4px 0; border-bottom: 1px dotted #d8dee6; font-weight: 400; }
+  .paper th { color: #475569; font-size: .9em; }
+  .paper td.num, .paper th.num { text-align: right; }
+  .sheet-tab { display: inline-block; background: #fff; border: 1px solid #d5dbe2; border-bottom: 0; border-radius: 6px 6px 0 0; padding: 4px 10px; font-size: .72rem; font-weight: 700; }
+  .intro { margin: -4px 0 10px; font-size: .75rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Reports — the same screens as records</h1>
+  <p>Reports is its own destination, beside Records. It uses the same app bar, breadcrumb, groups, list, create panel and print page. A report is one format, PDF or Excel, taken from its definition. Names and amounts on the pages are sample layout.</p>
+  <div class="rules">
+    <div><b>Groups, like Records</b>One column on every size. A section header per report group, collapsible. A report the person cannot run is left out, and an empty group is hidden. No counts.</div>
+    <div><b>One format</b>The definition chooses PDF or Excel. The list, the preview and the download are that one file. There is no second button for the other format.</div>
+    <div><b>Preview adds nothing</b>New report opens the parameter panel, the same panel as creating a record. Preview runs the report and opens the print page. No row is added and no file is stored.</div>
+    <div><b>Publish keeps the file</b>Publish writes that PDF or Excel into the file store and adds one row: parameters, who published it, and when. Download, and Preview on that row, return the stored file. Running it again publishes another file.</div>
+  </div>
+</header>
+<nav class="toc"><div id="toc"></div></nav>
+<main class="page" id="flows"></main>
+<script>
+const ICON = {
+  home: '<svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>',
+  records: '<svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>',
+  reports: '<svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5L14 3.5zM8 12h8v1.6H8V12zm0 3.2h8v1.6H8v-1.6zm0 3.2h5v1.6H8V18.4z"/></svg>',
+  inbox: '<svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 12h-4a3 3 0 0 1-6 0H5V5h14v10z"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><path d="M6 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm12 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>'
+};
+const NAV = [['home', 'Home', 'home'], ['records', 'Records', 'records'], ['reports', 'Reports', 'reports'], ['inbox', 'Inbox', 'inbox'], ['more', 'More', 'more']];
+const hit = (on) => (on ? ' hit' : '');
+
+function nav(k, on) {
+  const html = NAV.map(([key, label, icon]) => `<div class="nv${on === key ? ' on' : ''}"><span class="g">${ICON[icon]}</span><span class="lbl">${label}</span>${key === 'inbox' ? '<span class="dot">4</span>' : ''}</div>`).join('');
+  return k === 'phone' ? `<div class="navbar" style="--nav-n:${NAV.length}">${html}</div>` : `<div class="rail">${html}</div>`;
+}
+function appbar() {
+  return `<div class="appbar"><span class="brand">NGOOne</span><span class="org">Demo Foundation</span><span class="sp"></span><span class="ib">🔔<span class="dot">4</span></span><span class="ib av">AS</span></div>`;
+}
+function pageHead(s) {
+  const extra = s.action && s.action.where !== 'fab' ? `<span class="sp"></span><span class="btn p sm${hit(s.hitNew)}">New report</span>` : '';
+  return `<div class="pagehead">${s.back ? '<span class="back" aria-hidden="true">←</span>' : ''}<div class="h1">${s.title}</div>${extra}</div>`;
+}
+function crumbBar(k, s) {
+  if (!s.crumbs) return '';
+  const all = s.crumbs;
+  const shown = k === 'phone' && all.length > 2 ? [all[0], ['…'], all[all.length - 1]] : all;
+  const li = (it, i) => i === shown.length - 1 ? `<li aria-current="page">${it[0]}</li>` : `<li><a>${it[0]}</a></li>`;
+  return `<nav class="crumbs" aria-label="Breadcrumb"><ol>${shown.map(li).join('')}</ol></nav>`;
+}
+function frame(k, s) {
+  const head = s.bare ? '' : pageHead(Object.assign({}, s, { action: k === 'desk' ? s.action : null }));
+  const fab = !s.bare && s.fab && (k === 'phone' || !s.action) ? `<span class="fab${hit(s.hitNew)}">+</span>` : '';
+  const body = `<div class="main">${head}${s.intro && !s.bare ? `<p class="intro">${s.intro}</p>` : ''}${s.body(k)}${fab}${s.overlay ? s.overlay(k) : ''}</div>`;
+  if (s.bare) {
+    return k === 'phone'
+      ? `<div class="phone"><div class="scr"><div class="status" style="background:var(--bg);color:var(--fg)"><span>9:41</span><span>●●● 100%</span></div>${body}</div></div>`
+      : `<div class="browser"><div class="chrome"><div class="url">${s.url}</div></div><div class="scr">${body}</div></div>`;
+  }
+  return k === 'phone'
+    ? `<div class="phone"><div class="scr"><div class="status"><span>9:41</span><span>●●● 100%</span></div>${appbar()}${crumbBar('phone', s)}<div class="frame-body">${body}</div>${nav('phone', s.nav)}</div></div>`
+    : `<div class="browser"><div class="chrome"><div class="url">${s.url}</div></div><div class="scr">${appbar()}${crumbBar('desk', s)}<div class="frame-body">${nav('desk', s.nav)}${body}</div></div></div>`;
+}
+const field = (l, v) => `<div class="mf"><div class="l">${l} <i>*</i></div><div class="o">${v}<span>▾</span></div></div>`;
+const dateField = (l, v) => `<div class="mf"><div class="l">${l} <i>*</i></div><div class="o">${v}<span>📅</span></div></div>`;
+function sheet(k, title, content, buttons) {
+  const h = k === 'phone' ? 'max-height:84%' : '';
+  return `<div class="scrim"></div><div class="sheet" style="${h}"><div class="handle"></div><div class="ttl">${title}<span class="x">✕</span></div><div class="scroll">${content}</div><div class="acts">${buttons}</div></div>`;
+}
+
+const GROUPS = [
+  { label: 'Finance', open: true, items: [
+    { name: 'Donation statement', desc: 'PDF', hit: true },
+    { name: 'Fund utilisation', desc: 'PDF' }
+  ]},
+  { label: 'Programmes', open: true, items: [
+    { name: 'Beneficiary register', desc: 'Excel' }
+  ]},
+  { label: 'Operations', open: false, items: [] }
+];
+function groups() {
+  return GROUPS.map((g) => `<div><div class="sec-h" style="margin-bottom:7px"><span>${g.label}</span><span>${g.open ? '⌃' : '⌄'}</span></div>${g.open ? `<div class="panel" style="margin-bottom:12px">${g.items.map((it) => `<div class="listrow${hit(it.hit)}"><div><b>${it.name}</b><div class="cs">${it.desc}</div></div><span class="cs">›</span></div>`).join('')}</div>` : ''}</div>`).join('');
+}
+
+const PDF_ROWS = [
+  { when: '12 Oct 2026', params: '2025-26 · All funds · From 1 Apr 2025 · To 31 Mar 2026', by: 'Meera Shah' },
+  { when: '2 Jul 2026', params: '2026-27 · Education fund · From 1 Apr 2026 · To 30 Jun 2026', by: 'Arun Das' }
+];
+const NEW_ROW = { when: '5 Nov 2026', params: '2026-27 · All funds · From 1 Apr 2026 · To 5 Nov 2026', by: 'Asha Menon', sel: true };
+const XLS_ROWS = [
+  { when: '18 Aug 2026', params: 'Evening school · As on 18 Aug 2026 · Enrolled', by: 'Arun Das' }
+];
+
+function fileRows(k, rows, o = {}) {
+  const buttons = `<span class="btn sm${hit(o.hitPreview)}">Preview</span> <span class="btn sm${hit(o.hitDownload)}">Download</span>`;
+  if (k === 'phone') {
+    return `<div class="panel">${rows.map((r) => `<div class="lr${r.sel ? ' sel' : ''}"><div class="c"><div class="tt">${r.when}</div><div class="st">${r.params}</div><div class="mt">${r.by}</div></div><div class="aside">${buttons}</div></div>`).join('')}</div>`;
+  }
+  return `<div class="panel"><table class="rows"><thead><tr><th>Generated</th><th>Parameters</th><th>Prepared by</th><th></th></tr></thead><tbody>${rows.map((r) => `<tr class="${r.sel ? 'sel' : ''}"><td class="t">${r.when}</td><td>${r.params}</td><td>${r.by}</td><td>${buttons}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function pdfPaper() {
+  return `<div class="paper"><div class="row" style="align-items:flex-start"><div><div style="font-size:1.05em;font-weight:700;color:var(--brand)">Demo Foundation</div><div class="cs">12 Lake Road, Pune</div></div><span class="sp"></span><div style="text-align:right"><div class="cs">Not published</div></div></div><div class="ptitle">Donation statement</div><div class="cs" style="text-align:center">2026-27 · All funds · From 1 Apr 2026 · To 5 Nov 2026</div><table><thead><tr><th>Date</th><th>Donor</th><th class="num">Amount</th></tr></thead><tbody><tr><td>4 Apr 2026</td><td>Meera Shah</td><td class="num">₹15,000</td></tr><tr><td>19 Jun 2026</td><td>Arun Das</td><td class="num">₹8,500</td></tr><tr><td>2 Oct 2026</td><td>Niloufer Ali</td><td class="num">₹22,000</td></tr><tr><td></td><th>Total</th><td class="num">₹45,500</td></tr></tbody></table></div>`;
+}
+function excelPaper() {
+  return `<div class="sheet-tab">Register</div><div class="paper" style="border-radius:0 2px 2px 2px"><div style="font-weight:700">Beneficiary register</div><div class="cs">Evening school · As on 5 Nov 2026 · Enrolled</div><table><thead><tr><th>Name</th><th>Programme</th><th>Status</th><th>Enrolled</th></tr></thead><tbody><tr><td>Asha Menon</td><td>Evening school</td><td>Enrolled</td><td>12 Jan 2026</td></tr><tr><td>Rahul Iyer</td><td>Evening school</td><td>Enrolled</td><td>3 Mar 2026</td></tr></tbody></table></div>`;
+}
+function printBar(primary, hitPrimary) {
+  return `<div class="printbar"><span class="btn">← Back</span><span class="sp"></span><span class="cs" style="margin-right:8px">Not published</span><span class="btn p${hit(hitPrimary)}">${primary}</span></div>`;
+}
+
+const STEPS = [
+  { t: 'Reports, grouped', act: 'Tap <kbd>Reports</kbd>', url: '/reports', title: 'Reports', nav: 'reports',
+    body: () => groups(),
+    note: 'The same screen as Records: one column, a header per group, the format as the row’s second line. Operations is collapsed. Search appears only when there are more than eight reports. Donation statement is the next tap.' },
+  { t: 'Generated files', act: 'Tap <kbd>Donation statement</kbd>', url: '/reports/donation-statement', title: 'Donation statement', back: true, nav: 'reports', intro: 'PDF', fab: true, action: { where: 'title' }, hitNew: true,
+    crumbs: [['Reports', '/reports'], ['Finance', '/reports'], ['Donation statement']],
+    body: (k) => fileRows(k, PDF_ROWS),
+    note: 'The same list as a record type. Phones get cards and the + button. Wide screens get the table and New report on the heading row. Each row is a file already published. Preview and Download return that stored PDF. The + is the next tap.' },
+  { t: 'Parameters', act: 'Tap <kbd>+</kbd> or <kbd>New report</kbd>', url: '/reports/donation-statement?create=new', title: 'Donation statement', back: true, nav: 'reports', intro: 'PDF', fab: true, action: { where: 'title' },
+    crumbs: [['Reports', '/reports'], ['Finance', '/reports'], ['Donation statement', '/reports/donation-statement'], ['New donation statement']],
+    body: (k) => fileRows(k, PDF_ROWS),
+    overlay: () => sheet('phone', 'New donation statement', `<p class="cs" style="margin:0 0 10px">Preview runs this report. Publish on the next screen adds it to the list.</p>${field('Financial year', '2026-27')}${field('Fund', 'All funds')}<div class="grid2">${dateField('From', '01/04/2026')}${dateField('To', '05/11/2026')}</div>`, '<span class="btn">Cancel</span><span class="btn p hit">Preview</span>'),
+    note: 'The same panel as creating a record: a bottom sheet on the phone, centred on a wide screen. The fields are this report’s parameters. Preview is the primary button. Nothing is written yet.' },
+  { t: 'Preview', act: 'Tap <kbd>Preview</kbd>', url: '/print/report/donation-statement', title: 'Donation statement', bare: true, nav: 'reports',
+    body: () => printBar('Publish', true) + pdfPaper(),
+    note: 'The same page as a receipt: no app bar, no breadcrumb, no navigation. Back returns to the parameter panel with the values kept. Publish is where Print sits on a receipt. This page is not in the list and the file is not stored.' },
+  { t: 'Published', act: 'Tap <kbd>Publish</kbd>', url: '/reports/donation-statement', title: 'Donation statement', back: true, nav: 'reports', intro: 'PDF', fab: true, action: { where: 'title' },
+    crumbs: [['Reports', '/reports'], ['Finance', '/reports'], ['Donation statement']],
+    body: (k) => `<div class="note ok">Published. PDF file kept.</div>` + fileRows(k, [NEW_ROW].concat(PDF_ROWS), { hitDownload: true }),
+    overlay: () => '<div class="toast">Published. PDF file kept.</div>',
+    note: 'One new row, with the parameters, Asha Menon, and 5 Nov 2026. Download starts that stored file. Preview of this row opens the same print page with Download, and without Publish, because the file already exists. A later run is another row.' },
+  { t: 'An Excel report', act: 'Reports → Programmes → <kbd>Beneficiary register</kbd>', url: '/reports/beneficiary-register?create=new', title: 'Beneficiary register', back: true, nav: 'reports', intro: 'Excel', fab: true, action: { where: 'title' },
+    crumbs: [['Reports', '/reports'], ['Programmes', '/reports'], ['Beneficiary register', '/reports/beneficiary-register'], ['New beneficiary register']],
+    body: (k) => fileRows(k, XLS_ROWS),
+    overlay: () => sheet('phone', 'New beneficiary register', `<p class="cs" style="margin:0 0 10px">Preview runs this report. Publish on the next screen adds it to the list.</p>${field('Programme', 'Evening school')}${dateField('As on', '05/11/2026')}${field('Status', 'Enrolled')}`, '<span class="btn">Cancel</span><span class="btn p">Preview</span>'),
+    note: 'The format is Excel, so the row says Excel and there is still one Download. The parameter panel changes with the report. The list behind it is the files already published for this report.' },
+  { t: 'Excel preview', act: 'Tap <kbd>Preview</kbd>', url: '/print/report/beneficiary-register', title: 'Beneficiary register', bare: true, nav: 'reports',
+    body: () => printBar('Publish', true) + excelPaper(),
+    note: 'Same print chrome as the PDF. The page is a sheet, with a tab, because this report is Excel. Publish keeps that workbook. The sample rows are the people who match Evening school and Enrolled.' }
+];
+
+const toc = document.getElementById('toc');
+const root = document.getElementById('flows');
+toc.insertAdjacentHTML('beforeend', '<a href="#reports">01 · Reports</a>');
+const steps = STEPS.map((s, si) => `
+  <div class="step">
+    <div class="num">1.${si + 1}</div>
+    <div class="stephead"><b>${s.t}</b><span class="act">${s.act}</span><code>${s.url}</code></div>
+    <div></div>
+    <div><p class="cap">Phone</p>${frame('phone', s)}</div>
+    <div class="desk"><p class="cap">Desktop</p>${frame('desk', s)}<div class="noteline">${s.note}</div></div>
+  </div>`).join('');
+root.insertAdjacentHTML('beforeend', `<section class="flow" id="reports"><div class="flabel">Journey 1</div><h2>Run a report and keep the file</h2><p>From the Reports destination to a published PDF, then the same path for an Excel report. The yellow outline is the next tap.</p>${steps}</section>`);
+</script>
+</body>
+</html>

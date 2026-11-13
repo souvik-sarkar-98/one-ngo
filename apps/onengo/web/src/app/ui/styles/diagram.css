@@ -1,0 +1,27 @@
+:host { display: block; }
+.diagram {
+  overflow-x: auto;
+  background: var(--bg, #f6f8fa);
+  border: 1px solid var(--line, #d8dee4);
+  border-radius: var(--radius, 8px);
+  padding: .25rem;
+}
+.diagram__svg { display: block; max-width: none; font-family: inherit; }
+.diagram__edge { fill: none; stroke: var(--muted, #8a97a6); stroke-width: 2; }
+.diagram__edge--accent { stroke: var(--brand, #1f5f8b); }
+.diagram__edge--selected { stroke-width: 3.5; }
+.diagram__marker path { fill: var(--muted, #8a97a6); }
+.diagram__marker--accent path { fill: var(--brand, #1f5f8b); }
+.diagram__node, .diagram__tag { cursor: pointer; outline: none; }
+.diagram__node rect { fill: var(--card, #fff); stroke: var(--line, #c3ccd5); stroke-width: 1.5; }
+.diagram__node--start rect { stroke: var(--brand, #1f5f8b); stroke-width: 2.5; }
+.diagram__node--final rect { fill: color-mix(in srgb, var(--muted, #8a97a6) 12%, var(--card, #fff)); }
+.diagram__node--unreachable rect { stroke-dasharray: 5 4; }
+.diagram__node--selected rect, .diagram__node:focus-visible rect { stroke: var(--brand, #1f5f8b); stroke-width: 3.5; }
+.diagram__label { text-anchor: middle; font-size: 13px; font-weight: 600; fill: var(--text, #1b2733); }
+.diagram__note { text-anchor: middle; font-size: 11px; fill: var(--muted, #5f6b78); }
+.diagram__tag rect { fill: var(--card, #fff); stroke: var(--line, #c3ccd5); }
+.diagram__tag text { text-anchor: middle; font-size: 11px; fill: var(--text, #1b2733); }
+.diagram__tag--accent rect { stroke: var(--brand, #1f5f8b); }
+.diagram__tag--accent text { fill: var(--brand, #1f5f8b); }
+.diagram__tag--selected rect, .diagram__tag:focus-visible rect { stroke: var(--brand, #1f5f8b); stroke-width: 2.5; }

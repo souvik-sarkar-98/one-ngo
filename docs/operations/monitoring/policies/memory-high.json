@@ -1,0 +1,34 @@
+{
+  "displayName": "NGO platform: memory high",
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "An instance's resident memory is above MEMORY_ALERT_MB (default 300 MB of the 384 MB F1/B1 instance). App Engine restarts an instance that exceeds its memory, dropping in-flight requests. Each serving instance checks every minute, and each scheduler tick checks too. Look for a large import or export, or a leak after a recent deploy; move to a larger instance class if it is steady load. Alert name: memory.high."
+  },
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "Any memory.high reading in 5 minutes",
+      "conditionThreshold": {
+        "filter": "metric.type=\"logging.googleapis.com/user/ngo_memory_high\" AND resource.type=\"gae_app\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "300s",
+            "perSeriesAligner": "ALIGN_SUM",
+            "crossSeriesReducer": "REDUCE_SUM"
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 0,
+        "duration": "0s",
+        "trigger": {
+          "count": 1
+        }
+      }
+    }
+  ],
+  "alertStrategy": {
+    "autoClose": "1800s"
+  },
+  "severity": "WARNING",
+  "enabled": true
+}

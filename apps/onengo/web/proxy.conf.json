@@ -1,0 +1,5 @@
+{
+  "/api": { "target": "http://localhost:8080", "secure": false },
+  "/webhooks": { "target": "http://localhost:8080", "secure": false },
+  "/guide-app": { "target": "http://127.0.0.1:4300", "secure": false, "ws": true }
+}

@@ -1,0 +1,116 @@
+{
+  "$id": "script",
+  "title": "Override script",
+  "description": "Runs in the sandbox. Body receives `ctx` with record, previous, status, user, inputs, effects, propose, fail(message), log(...). It returns changed values and proposed effects; the platform checks and applies them in the save.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["key", "recordType", "hook", "code"],
+  "x-preview": "script",
+  "properties": {
+    "key": { "$ref": "#/definitions/key", "description": "Stable name of the script" },
+    "label": { "type": "string", "description": "Name shown to administrators" },
+    "recordType": { "$ref": "#/definitions/key", "description": "The record type it runs for", "x-ref": "recordType" },
+    "hook": {
+      "enum": ["beforeSave", "validate", "afterSave", "workflowGuard", "customButton", "reportShape"],
+      "description": "When it runs: before a record is saved, while it is validated, after it is written, when a workflow step is asked for, from a record action button, or to shape a report"
+    },
+    "order": { "type": "integer", "description": "Scripts of the same record type run from the lowest order up" },
+    "enabled": { "type": "boolean", "default": true, "description": "Runs only when not false" },
+    "timeoutMs": { "type": "integer", "minimum": 10, "maximum": 1000, "description": "Longest run in milliseconds", "x-group": "limits" },
+    "memoryMb": { "type": "integer", "minimum": 1, "maximum": 32, "description": "Most memory in megabytes", "x-group": "limits" },
+    "runAs": {
+      "$ref": "#/definitions/key",
+      "description": "Role whose permissions read the inputs and apply the effects, instead of the person saving. Only organisation administrators may publish it",
+      "x-ref": "role"
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Data the platform loads before the run and passes as ctx.inputs; a script cannot look anything else up",
+      "properties": {
+        "related": {
+          "type": "array",
+          "maxItems": 5,
+          "description": "Records a reference field of this record points to",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "field", "fields"],
+            "properties": {
+              "name": { "$ref": "#/definitions/key", "description": "Name under ctx.inputs" },
+              "field": { "$ref": "#/definitions/key", "description": "Reference field of this record type", "x-ref": "field" },
+              "fields": { "type": "array", "minItems": 1, "maxItems": 50, "uniqueItems": true, "items": { "$ref": "#/definitions/key" }, "description": "Fields of the referenced record to load" }
+            }
+          }
+        },
+        "lookups": {
+          "type": "array",
+          "maxItems": 3,
+          "description": "Records of a type whose fields equal fields of this record, newest first",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "recordType", "match", "fields"],
+            "properties": {
+              "name": { "$ref": "#/definitions/key", "description": "Name under ctx.inputs" },
+              "recordType": { "$ref": "#/definitions/key", "description": "Record type to look in", "x-ref": "recordType" },
+              "match": {
+                "type": "object",
+                "minProperties": 1,
+                "maxProperties": 5,
+                "additionalProperties": { "$ref": "#/definitions/key" },
+                "description": "Field of the looked-up type, mapped to the field of this record its value must equal"
+              },
+              "fields": { "type": "array", "minItems": 1, "maxItems": 50, "uniqueItems": true, "items": { "$ref": "#/definitions/key" }, "description": "Fields to load" },
+              "limit": { "type": "integer", "minimum": 1, "maximum": 20, "default": 5, "description": "Most records to load" }
+            }
+          }
+        },
+        "settings": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["organisationName", "financialYearStartMonth", "defaultCurrency", "receiptSeries"] },
+          "description": "Organisation settings to load; never secrets or connector settings"
+        },
+        "balances": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Ledger account and fund balances as of the save date. Only organisation administrators may publish a script that declares it",
+          "properties": {
+            "accounts": { "type": "array", "maxItems": 20, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 40 }, "description": "Ledger account codes" },
+            "funds": { "type": "array", "maxItems": 20, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 40 }, "description": "Fund codes" }
+          }
+        }
+      }
+    },
+    "effects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allow"],
+      "description": "What the script may propose. Absent means it proposes nothing",
+      "properties": {
+        "allow": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["ledger.propose", "records.create", "records.update", "notify", "connector.call"] },
+          "description": "Effect types the script may propose"
+        },
+        "accounts": { "type": "array", "maxItems": 20, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 40 }, "description": "Ledger accounts a journal may use; required to propose journals" },
+        "maxTotalAmount": {
+          "type": ["string", "number"],
+          "pattern": "^(0|[1-9][0-9]{0,10})(\\.[0-9]{1,2})?$",
+          "minimum": 0,
+          "maximum": 99999999999.99,
+          "description": "Most the journals of one run may total; required to propose journals"
+        },
+        "connectors": { "type": "array", "maxItems": 10, "uniqueItems": true, "items": { "$ref": "#/definitions/key" }, "description": "Http (send mode) or webhook connectors the script may call", "x-ref": "connector" },
+        "recipients": { "type": "array", "maxItems": 10, "uniqueItems": true, "items": { "$ref": "#/definitions/key" }, "description": "Named fixed recipients from the organisation settings the script may notify" },
+        "maxEffects": { "type": "integer", "minimum": 1, "maximum": 20, "description": "Most effects one run may propose" }
+      }
+    },
+    "code": { "type": "string", "minLength": 1, "maxLength": 20000, "description": "JavaScript run with ctx; call ctx.fail('message') to stop the save", "x-control": "code" }
+  },
+  "definitions": {
+    "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,62}$" }
+  }
+}

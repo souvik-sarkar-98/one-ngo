@@ -1,0 +1,6 @@
+{
+  "key": "fundraising",
+  "label": "Fundraising",
+  "order": 10,
+  "reports": ["donationSummary", "donationRegister"]
+}

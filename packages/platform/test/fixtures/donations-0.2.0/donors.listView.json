@@ -1,0 +1,21 @@
+{
+  "key": "donors",
+  "recordType": "donor",
+  "label": "Donors",
+  "pageSize": 20,
+  "layout": "table",
+  "columns": ["name", "email", "phone", "city"],
+  "compactColumns": ["name", "phone"],
+  "chips": [{ "id": "all", "label": "All" }],
+  "defaultChip": "all",
+  "filters": ["city"],
+  "row": { "title": "name", "subtitle": ["email", "phone"], "meta": "number" },
+  "detail": {
+    "sections": [
+      { "id": "donor", "label": "Donor", "fields": ["number", "name", "email", "phone", "pan", "address", "city", "totalGiven", "donationCount", "notes"] },
+      { "id": "donations", "label": "Donations", "related": { "recordType": "donation", "field": "donor", "total": "amount" } }
+    ]
+  },
+  "create": { "fields": ["name", "email", "phone", "pan", "address", "city", "notes"] },
+  "edit": { "fields": ["name", "email", "phone", "pan", "address", "city", "notes"] }
+}

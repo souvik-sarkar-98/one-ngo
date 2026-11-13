@@ -1,0 +1,83 @@
+:host {
+  display: block;
+}
+.nav {
+  display: flex;
+  background: var(--card, #fff);
+}
+.nav--bottom {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  height: 58px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-top: 1px solid var(--line, #d8dee6);
+}
+.nav--rail {
+  flex-direction: column;
+  gap: 4px;
+  width: 84px;
+  height: 100%;
+  padding-top: 10px;
+  box-sizing: border-box;
+  border-right: 1px solid var(--line, #d8dee6);
+}
+.nav__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 0;
+  min-height: 48px;
+  color: var(--muted, #5b6878);
+  font-size: 0.68rem;
+  text-decoration: none;
+}
+.nav__item:focus-visible {
+  outline: 2px solid var(--brand, #1f5f8b);
+  outline-offset: -2px;
+}
+.nav__item--on {
+  color: var(--brand, #1f5f8b);
+  font-weight: 600;
+}
+.nav__glyph {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+}
+.nav__item:hover .nav__glyph {
+  background: color-mix(in srgb, var(--brand, #1f5f8b) 6%, #fff);
+}
+.nav__item--on .nav__glyph {
+  background: color-mix(in srgb, var(--brand, #1f5f8b) 12%, #fff);
+}
+.nav__badge {
+  position: absolute;
+  top: 0;
+  left: calc(50% + 6px);
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: #fdf1dc;
+  color: #9a6200;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+.nav__hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

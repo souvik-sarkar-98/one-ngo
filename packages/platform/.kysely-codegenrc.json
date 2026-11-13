@@ -1,0 +1,24 @@
+{
+  "dialect": "postgres",
+  "outFile": "src/infrastructure/postgres/db-types.ts",
+  "numericParser": "string",
+  "dateParser": "timestamp",
+  "typeMapping": {
+    "json": "ColumnType<Json, string, string>",
+    "jsonb": "ColumnType<Json, string, string>"
+  },
+  "customImports": {
+    "JobActor": "./db-json.js",
+    "JobData": "./db-json.js",
+    "OutboxPayload": "./db-json.js"
+  },
+  "overrides": {
+    "columns": {
+      "job.actor": "ColumnType<JobActor, string | undefined, string>",
+      "job.input": "ColumnType<JobData, string | undefined, string>",
+      "job.state": "ColumnType<JobData, string | undefined, string>",
+      "job.result": "ColumnType<JobData | null, string | null, string | null>",
+      "outbox_event.payload": "ColumnType<OutboxPayload, string, string>"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "$id": "translation",
+  "title": "Translation",
+  "description": "Labels and messages in one language: the organisation's own definitions and any screen text it wants to word differently. Missing entries fall back to English.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["key", "locale", "entries"],
+  "properties": {
+    "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,62}$", "description": "Name of this translation, usually the language code", "x-order": 1 },
+    "locale": {
+      "type": "string",
+      "pattern": "^[a-z]{2}(-[A-Z]{2})?$",
+      "description": "Language code, for example hi for Hindi or ta for Tamil",
+      "x-ref": "locale",
+      "x-order": 2
+    },
+    "entries": {
+      "type": "object",
+      "description": "Translated text by path, for example recordType.donation.fields.amount.label, or ui.* for screen text",
+      "propertyNames": {
+        "pattern": "^(ui|recordType|workflow|listView|recordGroup|page|action|template)\\.[A-Za-z0-9_.-]{1,200}$"
+      },
+      "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 4000 },
+      "x-order": 3
+    }
+  }
+}

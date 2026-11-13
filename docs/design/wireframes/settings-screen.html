@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Settings — wireframe</title>
+<style>
+  :root {
+    --fg: #1d2733; --muted: #5b6878; --line: #d8dee6; --bg: #f5f7fa; --card: #fff;
+    --brand: #1f5f8b; --ok: #1d7a46; --radius: 6px;
+    --b50: color-mix(in srgb, var(--brand) 6%, #fff);
+    --b100: color-mix(in srgb, var(--brand) 12%, #fff);
+    --b200: color-mix(in srgb, var(--brand) 25%, #fff);
+    --page: #eef1f5;
+    --font: 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Devanagari', Helvetica, Arial, sans-serif;
+    --mono: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font); color: #18212b; background: var(--page); }
+  header.page { max-width: 1440px; margin: 0 auto; padding: 32px 40px 8px; }
+  header.page h1 { margin: 0 0 8px; font-size: 28px; }
+  header.page p { margin: 0 0 10px; max-width: 860px; line-height: 1.55; color: #36414d; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 16px; }
+  .rules div { background: #fff; border: 1px solid #dfe5eb; border-radius: 10px; padding: 12px 14px; font-size: 13.5px; line-height: 1.45; }
+  .rules b { display: block; color: var(--brand); margin-bottom: 3px; }
+  .bar { position: sticky; top: 0; z-index: 30; background: rgba(238,241,245,.94); border-bottom: 1px solid #dbe1e7; }
+  .bar div { max-width: 1440px; margin: 0 auto; padding: 10px 40px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+  .grp { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .lbl { font: 600 11px var(--mono); letter-spacing: .04em; text-transform: uppercase; color: #6a7683; margin-right: 2px; }
+  .bar button { font: 600 12.5px var(--font); border: 1px solid #ccd5de; background: #fff; color: #243140; border-radius: 999px; padding: 6px 10px; cursor: pointer; }
+  .bar button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+  main.page { max-width: 1440px; margin: 0 auto; padding: 22px 40px 64px; }
+  .stage { display: grid; grid-template-columns: 390px minmax(0, 1fr); gap: 28px; align-items: start; }
+  @media (max-width: 1100px) { .stage { grid-template-columns: 1fr; } }
+  .cap { font: 600 10.5px var(--mono); color: #6a7683; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 6px; }
+  .note { margin-top: 18px; background: #fff; border: 1px solid #dfe5eb; border-radius: 10px; padding: 14px 16px; font-size: 14px; line-height: 1.5; max-width: 860px; }
+  .note h2 { margin: 0 0 6px; font-size: 15px; }
+  .note p { margin: 0 0 8px; }
+  .note p:last-child { margin: 0; }
+  .spec { margin-top: 36px; }
+  .spec h2 { margin: 28px 0 8px; font-size: 20px; }
+  .spec p, .spec li { font-size: 14.5px; line-height: 1.5; color: #243140; }
+  .spec ul { margin: 6px 0 0; padding-left: 18px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #dfe5eb; border-radius: 10px; overflow: hidden; font-size: 13.5px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #e6ebf0; vertical-align: top; }
+  th { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: #64748b; background: #f8fafc; }
+  code { font-family: var(--mono); font-size: .92em; }
+
+  .phone { width: 390px; height: 860px; border-radius: 36px; background: #0f141a; padding: 10px; box-shadow: 0 14px 30px rgba(15,23,42,.18); }
+  .phone .scr { height: 100%; border-radius: 28px; overflow: hidden; background: var(--bg); position: relative; display: flex; flex-direction: column; color: var(--fg); font-size: 14px; }
+  .browser { border-radius: 10px; background: #fff; border: 1px solid #d5dbe2; box-shadow: 0 14px 30px rgba(15,23,42,.12); overflow: hidden; }
+  .browser .chrome { height: 34px; background: #e9edf1; border-bottom: 1px solid #d5dbe2; display: flex; align-items: center; padding: 0 10px; }
+  .browser .url { flex: 1; height: 22px; border-radius: 6px; background: #fff; font: 12px var(--mono); color: #536171; display: flex; align-items: center; padding: 0 10px; }
+  .browser .scr { height: 800px; background: var(--bg); position: relative; display: flex; flex-direction: column; color: var(--fg); font-size: 14px; overflow: hidden; }
+
+  .status { height: 28px; flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; font: 600 11px var(--font); background: var(--brand); color: #fff; }
+  .appbar { height: 52px; flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 0 12px; background: var(--brand); color: #fff; }
+  .appbar .brand { font-weight: 700; font-size: 15px; }
+  .appbar .org { font-weight: 600; font-size: 13px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .appbar .sp { flex: 1; }
+  .av { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.2); font: 700 12px var(--font); }
+  .bell { width: 44px; height: 44px; display: grid; place-items: center; }
+  .bell svg { width: 20px; height: 20px; fill: #fff; }
+  .crumbs { flex: 0 0 auto; background: #fff; border-bottom: 1px solid var(--line); height: 32px; display: flex; align-items: center; padding: 0 12px; font-size: 12px; }
+  .browser .crumbs { padding-left: 16px; }
+  .crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; min-width: 0; }
+  .crumbs li { display: flex; align-items: center; color: var(--muted); white-space: nowrap; }
+  .crumbs li + li::before { content: '›'; margin: 0 6px; color: #94a3b8; }
+  .crumbs button { border: 0; background: transparent; color: var(--brand); font: 600 12px var(--font); padding: 4px 2px; cursor: pointer; }
+  .crumbs li[aria-current="page"] { color: var(--fg); font-weight: 600; }
+  .frame-body { flex: 1; display: flex; min-height: 0; }
+  .rail { width: 84px; flex: 0 0 auto; background: #fff; border-right: 1px solid var(--line); display: flex; flex-direction: column; padding-top: 8px; gap: 2px; }
+  .navbar { flex: 0 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); background: #fff; border-top: 1px solid var(--line); height: 62px; }
+  .nv { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 10.5px; color: var(--muted); min-height: 44px; }
+  .nv.on { color: var(--brand); font-weight: 600; }
+  .nv svg { width: 20px; height: 20px; fill: currentColor; }
+  .nv.on .g { background: var(--b100); }
+  .nv .g { width: 44px; height: 26px; border-radius: 13px; display: grid; place-items: center; }
+  .main { flex: 1; min-width: 0; overflow: auto; padding: 14px 14px 18px; position: relative; }
+  .browser .main { padding: 18px 28px 24px; }
+  .col { max-width: 640px; margin: 0 auto; }
+  .pagehead { display: flex; align-items: center; gap: 4px; margin: 0 0 14px; }
+  .pagehead h1 { margin: 0; font-size: 1.15rem; font-weight: 700; }
+  .back { width: 44px; height: 44px; border: 0; background: transparent; border-radius: 50%; font-size: 18px; cursor: pointer; color: var(--fg); }
+  .back:focus-visible, .row:focus-visible, .lang:focus-visible, .x:focus-visible, .textbtn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .sec { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 16px 2px 6px; }
+  .card { background: #fff; border: 1px solid rgba(148,163,184,.25); border-radius: 14px; box-shadow: 0 1px 2px #0f172a0a; padding: 14px; }
+  .who { display: flex; gap: 12px; align-items: flex-start; }
+  .who .av { background: var(--b100); color: var(--brand); flex: 0 0 auto; }
+  .who .id { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+  .who b { font-size: 16px; }
+  .roles { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .roles li { background: #e8edf3; color: var(--muted); border-radius: 999px; padding: 4px 8px; font-size: 11px; font-weight: 700; line-height: 1.2; }
+  .facts { margin: 12px 0 0; }
+  .facts div { display: grid; grid-template-columns: minmax(96px, 36%) 1fr; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
+  .facts dt { color: var(--muted); }
+  .facts dd { margin: 0; overflow-wrap: anywhere; }
+  .hint { margin: 8px 0 0; color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+  .panel { background: #fff; border: 1px solid rgba(148,163,184,.22); border-radius: 16px; overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 8px 8px 8px 14px; border: 0; background: transparent; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+  .row + .row { border-top: 1px solid rgba(148,163,184,.2); }
+  .row:hover { background: color-mix(in srgb, var(--brand) 5%, #fff); }
+  .row--static { cursor: default; }
+  .row--static:hover { background: transparent; }
+  .row .txt { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+  .row .txt b { font-size: 14px; font-weight: 600; }
+  .row .txt span { color: var(--muted); font-size: 13px; }
+  .chev { width: 44px; height: 44px; display: grid; place-items: center; color: #94a3b8; flex: 0 0 auto; font-size: 18px; }
+  .bdg { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 4px 8px; line-height: 1; }
+  .bdg.on { background: #e3f4ea; color: var(--ok); }
+  .bdg.off { background: #e8edf3; color: var(--muted); }
+  .flash { background: #eef5fb; border: 1px solid #c6d9e8; color: var(--brand); border-radius: 12px; padding: 8px 12px; font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+  .scrim { position: absolute; inset: 0; background: #0f172a59; z-index: 4; border: 0; padding: 0; }
+  .sheet { position: absolute; z-index: 5; background: #fff; display: flex; flex-direction: column; }
+  .phone .sheet { left: 0; right: 0; bottom: 0; max-height: 92%; border-radius: 20px 20px 0 0; box-shadow: 0 -8px 32px #0f172a1f; padding: 8px 16px 16px; }
+  .browser .sheet { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(440px, 86%); max-height: 86%; border-radius: 20px; box-shadow: 0 18px 48px #0f172a33; padding: 16px 20px 18px; }
+  .handle { width: 36px; height: 4px; border-radius: 999px; background: #cbd5e1; margin: 2px auto 8px; }
+  .browser .handle { display: none; }
+  .sheet h2 { margin: 0 0 4px; text-align: center; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; position: relative; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+  .x { position: absolute; right: 0; top: 0; width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; cursor: pointer; color: #475569; font-size: 16px; }
+  .x i { width: 28px; height: 28px; border-radius: 50%; background: #f1f5f9; display: grid; place-items: center; font-style: normal; margin: auto; }
+  .sheet .lead { margin: 0 0 8px; text-align: center; color: var(--muted); font-size: 13px; }
+  .sheet .scroll { overflow-x: hidden; overflow-y: auto; min-height: 0; }
+  .lang { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 52px; padding: 6px 8px; border: 0; border-bottom: 1px solid rgba(148,163,184,.2); background: transparent; font: inherit; text-align: start; cursor: pointer; }
+  .lang[aria-pressed="true"] { background: var(--b50); }
+  .lang b { font-size: 15px; }
+  .lang .en { color: var(--muted); font-size: 13px; margin-left: 6px; }
+  .lang .mark { margin-left: auto; color: var(--brand); font-size: 13px; font-weight: 700; }
+  .sheet .err { background: #fdf0ef; border: 1px solid #efc4c1; color: #7f1d1d; border-radius: 12px; padding: 8px 12px; font-size: 13px; margin-bottom: 8px; }
+  .about p { margin: 0 0 10px; font-size: 14px; }
+  .about .k { color: var(--muted); font-size: 12px; display: block; }
+  .ring { outline: 2px solid var(--brand); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Settings</h1>
+  <p>Settings stays its own screen at <code>/settings</code>, opened from the More tile. It holds a read-only profile, language, two-step status, the user guide, and About. The page name follows the language the person chose.</p>
+  <p>Organisation settings (name, registrations, theme, layout, storage) stay under Administration. Sign out stays on the initials in the app bar.</p>
+  <div class="rules">
+    <div><b>Profile is read-only</b>Name, email, organisation and roles come from the signed-in session. An administrator changes them. There is no Edit button, and no phone or emergency-contact fields. The record-based profile is removed.</div>
+    <div><b>Roles are chips</b>Each role is its own chip under the name, the same treatment as before.</div>
+    <div><b>Language applies at once</b>The sheet lists each language in its own script, with the English name beside it. Choosing one saves it and closes. There is no Save button.</div>
+    <div><b>Two-step is a status</b>On or Off, plus a sentence about the person’s role. It is not a switch on this screen.</div>
+    <div><b>A centred column</b>The groups stay in a 640px column, centred in the page frame. Phone and desktop use the same groups.</div>
+    <div><b>The page name translates</b>The heading, breadcrumb, and browser title use the same Settings string as the rest of the screen.</div>
+  </div>
+</header>
+
+<div class="bar">
+  <div>
+    <div class="grp">
+      <span class="lbl">Screen</span>
+      <button type="button" data-go="chrome" data-arg="en">English</button>
+      <button type="button" data-go="chrome" data-arg="hi">हिन्दी</button>
+    </div>
+    <div class="grp">
+      <span class="lbl">Two-step</span>
+      <button type="button" data-go="two" data-arg="on">On</button>
+      <button type="button" data-go="two" data-arg="off">Off</button>
+    </div>
+    <div class="grp">
+      <span class="lbl">Open</span>
+      <button type="button" data-go="panel" data-arg="">Closed</button>
+      <button type="button" data-go="panel" data-arg="language">Language</button>
+      <button type="button" data-go="panel" data-arg="language-error">Language failed</button>
+      <button type="button" data-go="panel" data-arg="about">About</button>
+    </div>
+    <div class="grp">
+      <span class="lbl">Review</span>
+      <button type="button" data-go="focus" data-arg="toggle">Keyboard focus</button>
+    </div>
+  </div>
+</div>
+
+<main class="page">
+  <div class="stage">
+    <div>
+      <p class="cap">Phone</p>
+      <div class="phone"><div class="scr" id="phone"></div></div>
+    </div>
+    <div>
+      <p class="cap">Desktop</p>
+      <div class="browser" id="desk"></div>
+    </div>
+  </div>
+  <div class="note" id="note"></div>
+
+  <section class="spec">
+    <h2>What changes from the current screen</h2>
+    <ul>
+      <li>The flat list becomes three groups: Profile, Preferences, and Help.</li>
+      <li>Profile is read-only: name, email, organisation and roles. Roles are chips. There is no Edit button, no phone or emergency contact, and no profile form. The record-based profile is removed.</li>
+      <li>About no longer prints the server name on the row. Version stays on the row. The server sits under “For support” in the About panel.</li>
+      <li>Two-step gains an explanation. The row does not look clickable.</li>
+      <li>Language shows the native name and the English name, so “हिन्दी” is not clipped against the chevron.</li>
+      <li>The heading and breadcrumb use <code>ui.nav.settings</code>, which has a translation in every supported language.</li>
+    </ul>
+
+    <h2>Interaction</h2>
+    <ul>
+      <li>Back returns to the screen that was open before More. It does not open the More menu.</li>
+      <li>Language and About are addressable: <code>/settings?panel=language</code> and <code>/settings?panel=about</code>. Reload and Back restore them.</li>
+      <li>Opening a panel moves focus to its title. Tab stays inside. Escape closes the panel. Closing returns focus to the row that opened it.</li>
+      <li>Choosing a language saves it and closes the panel. A failure stays in the panel and keeps the previous language selected.</li>
+      <li>User guide navigates to <code>/guide</code>.</li>
+      <li>Profile details come from the signed-in session, so there is no loading or error state on the Profile card.</li>
+    </ul>
+
+    <h2>Layout and touch</h2>
+    <ul>
+      <li>Phone and desktop share one column. On desktop the column is 640px and centred in the page frame.</li>
+      <li>Rows are at least 48px tall. Back and Close use a 44×44px target. The close glyph can stay 28px inside that target.</li>
+      <li>Phone panels are bottom sheets, at most 92% of the viewport height. Desktop panels are centred, about 440px wide.</li>
+      <li>On and Off use a text pill. The current language shows the word Selected. Colour is not the only signal.</li>
+      <li>Reduced motion: panels appear in place, with no slide.</li>
+    </ul>
+
+    <h2>Proposed strings</h2>
+    <p>Existing catalogue strings stay. These are the new ones. Hindi is the sample; Tamil, Telugu, Bengali, and Marathi need the same keys.</p>
+    <table>
+      <thead><tr><th>Key</th><th>English</th><th>Hindi</th></tr></thead>
+      <tbody>
+        <tr><td><code>ui.nav.settings</code></td><td>Settings</td><td>सेटिंग्स</td></tr>
+        <tr><td><code>ui.settings.email</code></td><td>Email</td><td>ईमेल</td></tr>
+        <tr><td><code>ui.settings.roles</code></td><td>Roles</td><td>भूमिकाएँ</td></tr>
+        <tr><td><code>ui.settings.preferences</code></td><td>Preferences</td><td>प्राथमिकताएँ</td></tr>
+        <tr><td><code>ui.settings.help</code></td><td>Help</td><td>सहायता</td></tr>
+        <tr><td><code>ui.settings.twoStepOn</code></td><td>Your role requires a code from an authenticator app when you sign in.</td><td>साइन इन करते समय आपकी भूमिका को प्रमाणक ऐप का कोड चाहिए।</td></tr>
+        <tr><td><code>ui.settings.twoStepOff</code></td><td>Your role does not require a second step when you sign in.</td><td>साइन इन करते समय आपकी भूमिका को दूसरे चरण की ज़रूरत नहीं है।</td></tr>
+        <tr><td><code>ui.settings.languageHint</code></td><td>Choosing a language applies it now.</td><td>भाषा चुनते ही लागू हो जाती है।</td></tr>
+        <tr><td><code>ui.settings.selected</code></td><td>Selected</td><td>चयनित</td></tr>
+        <tr><td><code>ui.settings.version</code></td><td>Version {version}</td><td>संस्करण {version}</td></tr>
+        <tr><td><code>ui.profile.accountHint</code></td><td>Your name and email are changed by an administrator.</td><td>आपका नाम और ईमेल व्यवस्थापक बदलते हैं।</td></tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+
+<script>
+const ICONS = {
+  home: '<svg viewBox="0 0 24 24"><path d="M12 3 3 11h2v9h5v-6h4v6h5v-9h2z"/></svg>',
+  records: '<svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg>',
+  inbox: '<svg viewBox="0 0 24 24"><path d="M3 5h18v10h-5l-2 3h-4l-2-3H3z"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18" cy="12" r="1.7"/></svg>',
+  bell: '<svg viewBox="0 0 24 24"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6V11a6 6 0 0 0-5-5.9V4a1 1 0 0 0-2 0v1.1A6 6 0 0 0 6 11v5l-2 2v1h16v-1z"/></svg>'
+};
+const NAV = [['home', 'Home', 'होम'], ['records', 'Records', 'रिकॉर्ड'], ['inbox', 'Inbox', 'इनबॉक्स'], ['more', 'More', 'और']];
+const LANGS = [
+  { code: 'en', native: 'English', en: 'English' },
+  { code: 'hi', native: 'हिन्दी', en: 'Hindi' },
+  { code: 'ta', native: 'தமிழ்', en: 'Tamil' },
+  { code: 'te', native: 'తెలుగు', en: 'Telugu' },
+  { code: 'bn', native: 'বাংলা', en: 'Bengali' },
+  { code: 'mr', native: 'मराठी', en: 'Marathi' }
+];
+const COPY = {
+  en: {
+    settings: 'Settings', home: 'Home', records: 'Records', inbox: 'Inbox', more: 'More',
+    profile: 'Profile', email: 'Email', org: 'Organisation', roles: 'Roles', hint: 'Your name and email are changed by an administrator.',
+    preferences: 'Preferences', help: 'Help', language: 'Language', two: 'Two-step sign-in', on: 'On', off: 'Off',
+    twoOn: 'Your role requires a code from an authenticator app when you sign in.',
+    twoOff: 'Your role does not require a second step when you sign in.',
+    guide: 'User guide', guideDetail: 'Walk through the screens',
+    about: 'About this app', version: 'Version 0.1.0',
+    changed: 'Language changed to {name}.', hintLang: 'Choosing a language applies it now.',
+    selected: 'Selected', failed: 'Could not change the language.',
+    support: 'For support', back: 'Back returns to the previous screen.'
+  },
+  hi: {
+    settings: 'सेटिंग्स', home: 'होम', records: 'रिकॉर्ड', inbox: 'इनबॉक्स', more: 'और',
+    profile: 'प्रोफ़ाइल', email: 'ईमेल', org: 'संगठन', roles: 'भूमिकाएँ', hint: 'आपका नाम और ईमेल व्यवस्थापक बदलते हैं।',
+    preferences: 'प्राथमिकताएँ', help: 'सहायता', language: 'भाषा', two: 'दो-चरण साइन इन', on: 'चालू', off: 'बंद',
+    twoOn: 'साइन इन करते समय आपकी भूमिका को प्रमाणक ऐप का कोड चाहिए।',
+    twoOff: 'साइन इन करते समय आपकी भूमिका को दूसरे चरण की ज़रूरत नहीं है।',
+    guide: 'उपयोगकर्ता मार्गदर्शिका', guideDetail: 'स्क्रीन का परिचय',
+    about: 'इस ऐप के बारे में', version: 'संस्करण 0.1.0',
+    changed: 'भाषा बदल कर {name} हो गई।', hintLang: 'भाषा चुनते ही लागू हो जाती है।',
+    selected: 'चयनित', failed: 'भाषा नहीं बदल सकी।',
+    support: 'सहायता के लिए', back: 'वापस पिछले स्क्रीन पर ले जाता है।'
+  }
+};
+
+const state = { chrome: 'en', lang: 'en', two: true, panel: null, langError: false, flash: '', focus: false };
+const t = () => COPY[state.chrome];
+const langOf = (code) => LANGS.find((l) => l.code === code);
+const langLabel = (code) => { const l = langOf(code); return l.native === l.en ? l.native : `${l.native} · ${l.en}`; };
+
+function url() {
+  if (state.panel === 'language') return '/settings?panel=language';
+  if (state.panel === 'about') return '/settings?panel=about';
+  return '/settings';
+}
+
+function crumbs() {
+  const c = t();
+  const panelName = state.panel === 'language' ? c.language : state.panel === 'about' ? c.about : '';
+  if (!panelName) return `<ol><li aria-current="page">${c.settings}</li></ol>`;
+  return `<ol><li><button type="button" data-go="panel" data-arg="">${c.settings}</button></li><li aria-current="page">${panelName}</li></ol>`;
+}
+
+function nav(kind) {
+  const items = NAV.map(([id, en, hi]) => {
+    const label = state.chrome === 'hi' ? hi : en;
+    const on = id === 'more' ? ' on' : '';
+    return `<div class="nv${on}"><span class="g">${ICONS[id]}</span><span>${label}</span></div>`;
+  }).join('');
+  return kind === 'phone' ? `<nav class="navbar" aria-hidden="true">${items}</nav>` : `<nav class="rail" aria-hidden="true">${items}</nav>`;
+}
+
+function profile() {
+  const c = t();
+  const roles = ['Administrator'].map((r) => `<li>${r}</li>`).join('');
+  return `<section><h2 class="sec">${c.profile}</h2><div class="card"><div class="who"><span class="av" aria-hidden="true">DA</span><div class="id"><b>Demo Admin</b><ul class="roles" aria-label="${c.roles}">${roles}</ul></div></div><dl class="facts"><div><dt>${c.email}</dt><dd>admin@demo.local</dd></div><div><dt>${c.org}</dt><dd>Demo Foundation</dd></div></dl><p class="hint">${c.hint}</p></div></section>`;
+}
+
+function prefs() {
+  const c = t();
+  const focus = state.focus ? ' ring' : '';
+  const pill = state.two ? `<span class="bdg on">${c.on}</span>` : `<span class="bdg off">${c.off}</span>`;
+  return `<section><h2 class="sec">${c.preferences}</h2><div class="panel">
+    <button type="button" class="row${focus}" data-go="panel" data-arg="language"><span class="txt"><b>${c.language}</b><span>${langLabel(state.lang)}</span></span><span class="chev" aria-hidden="true">›</span></button>
+    <div class="row row--static"><span class="txt"><b>${c.two}</b><span>${state.two ? c.twoOn : c.twoOff}</span></span>${pill}</div>
+  </div></section>`;
+}
+
+function help() {
+  const c = t();
+  return `<section><h2 class="sec">${c.help}</h2><div class="panel">
+    <button type="button" class="row" data-go="guide"><span class="txt"><b>${c.guide}</b><span>${c.guideDetail}</span></span><span class="chev" aria-hidden="true">›</span></button>
+    <button type="button" class="row" data-go="panel" data-arg="about"><span class="txt"><b>${c.about}</b><span>${c.version}</span></span><span class="chev" aria-hidden="true">›</span></button>
+  </div></section>`;
+}
+
+function pageBody() {
+  const c = t();
+  const flash = state.flash ? `<div class="flash" role="status">${state.flash}</div>` : '';
+  return `<div class="col">${flash}<div class="pagehead"><button type="button" class="back" data-go="back" aria-label="${c.settings}">‹</button><h1>${c.settings}</h1></div>${profile()}${prefs()}${help()}</div>`;
+}
+
+function sheet(kind, inner) {
+  return `<button type="button" class="scrim" data-go="close" aria-label="Close"></button><div class="sheet">${kind === 'phone' ? '<div class="handle"></div>' : ''}<div class="scroll">${inner}</div></div>`;
+}
+
+function languageSheet() {
+  const c = t();
+  const err = state.langError ? `<div class="err" role="alert">${c.failed}</div>` : '';
+  const rows = LANGS.map((l) => {
+    const on = l.code === state.lang;
+    const mark = on ? `<span class="mark">${c.selected}</span>` : '';
+    const en = l.native === l.en ? '' : `<span class="en">${l.en}</span>`;
+    return `<button type="button" class="lang" data-go="lang" data-arg="${l.code}" aria-pressed="${on}"><b>${l.native}</b>${en}${mark}</button>`;
+  }).join('');
+  return `<h2>${c.language}<button type="button" class="x" data-go="close"><i>✕</i></button></h2><p class="lead">${c.hintLang}</p>${err}<div>${rows}</div>`;
+}
+
+function aboutSheet() {
+  const c = t();
+  return `<h2>${c.about}<button type="button" class="x" data-go="close"><i>✕</i></button></h2>
+    <div class="about"><p><span class="k">OneNGO</span>${c.version}</p><p><span class="k">${c.org}</span>Demo Foundation</p><p><span class="k">${c.support}</span>localhost:4200</p></div>`;
+}
+
+function overlay(kind) {
+  if (!state.panel) return '';
+  return sheet(kind, state.panel === 'language' ? languageSheet() : aboutSheet());
+}
+
+function shell(kind) {
+  const bar = `<header class="appbar"><span class="brand">OneNGO</span><span class="org">Demo Foundation</span><span class="sp"></span><span class="bell">${ICONS.bell}</span><span class="av">DA</span></header>`;
+  const status = kind === 'phone' ? `<div class="status"><span>9:41</span><span>LTE</span></div>` : '';
+  const chrome = kind === 'desk' ? `<div class="chrome"><div class="url">localhost:4200${url()}</div></div>` : '';
+  const body = `<div class="frame-body">${kind === 'desk' ? nav('desk') : ''}<div class="main">${pageBody()}</div></div>${kind === 'phone' ? nav('phone') : ''}`;
+  const scr = `${status}${bar}<div class="crumbs">${crumbs()}</div>${body}${overlay(kind)}`;
+  return kind === 'desk' ? chrome + `<div class="scr">${scr}</div>` : scr;
+}
+
+function annotation() {
+  const c = t();
+  const lines = [];
+  if (state.flash && state.flash === c.back) lines.push(state.flash);
+  if (state.panel === 'language' && state.langError) {
+    lines.push('The change failed. The notice stays in the panel, the previous language stays selected, and focus stays in the panel.');
+  } else if (state.panel === 'language') {
+    lines.push('Each language is named in its own script, with the English name when it differs. The current one shows the word Selected. Choosing one applies it immediately and closes the panel.');
+    lines.push('Phone: a bottom sheet. Desktop: a centred dialog. Implementation traps focus, sets aria-modal, and restores focus to the Language row on close.');
+  } else if (state.panel === 'about') {
+    lines.push('Version stays on the Settings row. The server name moves here, under For support, so the list does not read like a developer console.');
+  } else {
+    lines.push('Profile is read-only: name, email, organisation and roles from the signed-in session. An administrator changes them. There is no Edit button and no phone or emergency-contact fields.');
+  }
+  if (state.chrome === 'hi') lines.push('The heading, breadcrumb, section labels, and row text are Hindi together.');
+  if (!state.two && !state.panel) lines.push('Off uses a neutral pill and a sentence. The row is not a button.');
+  if (state.focus) lines.push('The ring is the Language row’s keyboard focus. Enter opens it.');
+  const title = state.panel === 'language' ? c.language : state.panel === 'about' ? c.about : c.settings;
+  document.getElementById('note').innerHTML = `<h2>${title}</h2>` + lines.map((p) => `<p>${p}</p>`).join('');
+}
+
+function paintBar() {
+  document.querySelectorAll('.bar button').forEach((b) => {
+    const go = b.dataset.go;
+    const arg = b.dataset.arg;
+    let on = false;
+    if (go === 'chrome') on = state.chrome === arg;
+    if (go === 'two') on = (arg === 'on') === state.two;
+    if (go === 'panel') {
+      if (arg === 'language-error') on = state.panel === 'language' && state.langError;
+      else if (arg === 'language') on = state.panel === 'language' && !state.langError;
+      else if (arg === 'about') on = state.panel === 'about';
+      else on = !state.panel;
+    }
+    if (go === 'focus') on = state.focus;
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
+
+function render() {
+  document.getElementById('phone').innerHTML = shell('phone');
+  document.getElementById('desk').innerHTML = shell('desk');
+  annotation();
+  paintBar();
+}
+
+function apply(go, arg) {
+  if (go === 'chrome') { state.chrome = arg; state.lang = arg; state.flash = ''; }
+  else if (go === 'two') { state.two = arg === 'on'; }
+  else if (go === 'panel') {
+    state.langError = arg === 'language-error';
+    state.panel = arg === 'language' || arg === 'language-error' ? 'language' : arg === 'about' ? 'about' : null;
+    state.flash = ''; state.focus = false;
+  }
+  else if (go === 'close') { state.panel = null; state.langError = false; }
+  else if (go === 'lang') {
+    if (state.langError) return;
+    state.lang = arg;
+    if (arg === 'en' || arg === 'hi') state.chrome = arg;
+    state.panel = null;
+    state.flash = t().changed.replace('{name}', langLabel(arg));
+  }
+  else if (go === 'guide') { state.panel = null; state.flash = state.chrome === 'hi' ? 'यह /guide खोलता है।' : 'This opens /guide.'; }
+  else if (go === 'back') { state.panel = null; state.flash = t().back; }
+  else if (go === 'focus') { state.focus = !state.focus; state.panel = null; }
+  render();
+}
+
+document.body.addEventListener('click', (ev) => {
+  const el = ev.target.closest('[data-go]');
+  if (!el) return;
+  ev.preventDefault();
+  apply(el.dataset.go, el.dataset.arg ?? '');
+});
+
+render();
+</script>
+</body>
+</html>

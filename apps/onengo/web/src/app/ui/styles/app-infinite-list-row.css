@@ -1,0 +1,1 @@
+:host ::ng-deep .list-row__subtitle-link{color:var(--primary-700);font-weight:600;text-decoration:underline;cursor:pointer}:host ::ng-deep .list-row__subtitle-link:hover{color:var(--primary-800)}:host ::ng-deep .list-row__subtitle-emphasis{font-weight:700;color:var(--secondary-700)}:host ::ng-deep .list-row__subtitle-sep{color:var(--secondary-400)}

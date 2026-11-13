@@ -1,0 +1,33 @@
+{
+  "$id": "template",
+  "title": "Message template",
+  "description": "A subject, a plain message for notifications and SMS, and an optional HTML message for email. {{ expression }} placeholders are filled from the record, e.g. {{ record.donorName }}.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["key", "subject", "body"],
+  "x-preview": "template",
+  "properties": {
+    "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,62}$", "description": "Stable name of the template" },
+    "label": { "type": "string", "description": "Name shown to administrators" },
+    "subject": { "type": "string", "minLength": 1, "maxLength": 200, "description": "Email subject and notification title; may use {{ placeholders }}" },
+    "body": { "type": "string", "minLength": 1, "maxLength": 10000, "description": "Plain message for in-app notifications and SMS, and the plain-text part of an email. May use {{ placeholders }}", "x-group": "message" },
+    "html": { "type": "string", "maxLength": 50000, "description": "HTML for the email, or the page of a document template. {{ placeholders }} are filled in and escaped. Leave this empty to send the plain message as the email.", "x-control": "html", "x-group": "email" },
+    "kind": { "enum": ["message", "document"], "description": "A message for email and notifications, or a document printed as a PDF. Default message" },
+    "whatsapp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "description": "An approved WhatsApp Business template sent instead of the body on the WhatsApp channel",
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z0-9_]{1,512}$", "description": "Template name as approved in WhatsApp Business" },
+        "language": { "type": "string", "pattern": "^[a-z]{2}(_[A-Z]{2})?$", "description": "Template language code, for example en or hi; default en" },
+        "parameters": {
+          "type": "array",
+          "maxItems": 20,
+          "items": { "type": "string" },
+          "description": "Values for the template's numbered placeholders, as expressions"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+:root {
+  color: #1d2733;
+  background: #f5f7fa;
+  font-family: "Segoe UI", Roboto, "Noto Sans", "Noto Sans Devanagari", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  --fg: #1d2733;
+  --muted: #5b6878;
+  --line: #d8dee6;
+  --bg: #f5f7fa;
+  --card: #fff;
+  --brand: #1f5f8b;
+  --brand-fg: #fff;
+  --hit: #f3be26;
+  --radius: 6px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: linear-gradient(180deg, #f6f8fa, #eef1f5); }
+button, a { font: inherit; }
+code { font-family: Consolas, "Cascadia Mono", "Courier New", monospace; font-size: 0.85em; }

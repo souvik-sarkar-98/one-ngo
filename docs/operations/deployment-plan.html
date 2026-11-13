@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Production deployment plan and CI/CD test gates</title>
+<style>
+  :root {
+    --ink: #1b2430; --muted: #566274; --line: #d7dde5; --soft: #f4f6f9;
+    --accent: #1f5fbf; --ok: #19734a; --okbg: #e6f4ec; --warn: #8a5a00; --warnbg: #fff3d6;
+    --bad: #a12222; --badbg: #fde8e8; --code: #eef1f5;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: #fff; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px 80px; }
+  header { padding: 40px 0 24px; border-bottom: 1px solid var(--line); }
+  header h1 { margin: 0 0 6px; font-size: 28px; }
+  header p { margin: 0; color: var(--muted); }
+  nav { position: sticky; top: 0; background: rgba(255,255,255,.96); border-bottom: 1px solid var(--line); z-index: 2; }
+  nav .wrap { padding: 8px 24px; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; }
+  nav a { color: var(--accent); text-decoration: none; }
+  nav a:hover { text-decoration: underline; }
+  h2 { margin: 44px 0 10px; font-size: 21px; padding-top: 8px; }
+  h3 { margin: 24px 0 6px; font-size: 16px; }
+  p { margin: 8px 0; }
+  ul, ol { margin: 8px 0; padding-left: 22px; }
+  li { margin: 3px 0; }
+  code { background: var(--code); padding: 1px 5px; border-radius: 3px; font: 13px/1.4 ui-monospace, Consolas, monospace; }
+  pre { background: #12202f; color: #e7eef7; padding: 14px 16px; border-radius: 6px; overflow-x: auto; font: 13px/1.5 ui-monospace, Consolas, monospace; margin: 10px 0; }
+  pre code { background: none; padding: 0; color: inherit; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border: 1px solid var(--line); }
+  th { background: var(--soft); font-weight: 600; }
+  .note, .warn, .bad, .good { border-left: 4px solid; padding: 10px 14px; margin: 14px 0; border-radius: 0 4px 4px 0; }
+  .note { border-color: var(--accent); background: #eef4fc; }
+  .warn { border-color: #d89a00; background: var(--warnbg); }
+  .bad { border-color: var(--bad); background: var(--badbg); }
+  .good { border-color: var(--ok); background: var(--okbg); }
+  .tag { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 10px; font-weight: 600; white-space: nowrap; }
+  .tag.ok { background: var(--okbg); color: var(--ok); }
+  .tag.warn { background: var(--warnbg); color: var(--warn); }
+  .tag.bad { background: var(--badbg); color: var(--bad); }
+  .tag.gray { background: var(--soft); color: var(--muted); }
+  .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; margin: 14px 0; }
+  .step { flex: 1 1 150px; border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; background: var(--soft); font-size: 13px; position: relative; }
+  .step b { display: block; margin-bottom: 3px; font-size: 14px; }
+  .step.gate { background: var(--okbg); border-color: #9fd0b5; }
+  .step.human { background: var(--warnbg); border-color: #e6c670; }
+  .step.stop { background: var(--badbg); border-color: #e3a3a3; }
+  .legend { font-size: 13px; color: var(--muted); }
+  svg { max-width: 100%; height: auto; }
+  svg text { font: 12px system-ui, sans-serif; fill: #1b2430; }
+  svg .small { font-size: 11px; fill: #566274; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+  footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+  @media print { nav { display: none; } pre { white-space: pre-wrap; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap" style="border:0;padding-bottom:0">
+    <h1>Production deployment plan and CI/CD test gates</h1>
+    <p>NGO platform on Google App Engine standard (Mumbai), deployed by GitHub Actions from <code>master</code>. Stage on Cloud Run is phase 2.</p>
+  </div>
+</header>
+<nav><div class="wrap">
+  <a href="#decisions">Decisions</a>
+  <a href="#topology">Topology</a>
+  <a href="#cost">Cost</a>
+  <a href="#pipeline">Pipeline</a>
+  <a href="#gates">Test gates</a>
+  <a href="#smoke">Smoke checks</a>
+  <a href="#rollback">Rollback</a>
+  <a href="#cleanup">Cleanup</a>
+  <a href="#config">Secrets and variables</a>
+  <a href="#database">Database</a>
+  <a href="#gcp">Google Cloud</a>
+  <a href="#github">GitHub</a>
+  <a href="#status">What is verified</a>
+  <a href="#stage">Stage (phase 2)</a>
+  <a href="#checklist">Checklist</a>
+</div></nav>
+
+<div class="wrap">
+
+<h2 id="decisions">1. Decisions</h2>
+<table>
+  <tr><th style="width:26%">Question</th><th>Decision</th><th style="width:30%">Why</th></tr>
+  <tr><td>Where does production run?</td><td>App Engine standard, F1 instances, <code>asia-south1</code> (Mumbai). Two services: <code>default</code> (organisation app) and <code>console</code> (operator console).</td><td>The F1 free allowance covers a small NGO workload. The app is a plain Node server, so no container build is needed.</td></tr>
+  <tr><td>Who can reach the console?</td><td>Anyone can load its address. Nobody gets in without an enabled console account and fresh two-factor sign-in.</td><td>Identity-Aware Proxy needs an HTTPS load balancer, about $18 a month. Two-factor sign-in is already enforced in the code (<code>requireFreshMfa</code>, step-up for suspend, reactivate and close).</td></tr>
+  <tr><td>Where does the pipeline live?</td><td>GitHub Actions, in this repository.</td><td>No separate deploy project to keep in step. Azure Pipelines is not used.</td></tr>
+  <tr><td>Which branch deploys?</td><td><code>master</code> only. <code>develop</code> runs the tests and deploys nothing.</td><td>Stage does not exist yet.</td></tr>
+  <tr><td>How do credentials reach Google Cloud?</td><td>Workload identity federation, limited to this repository and <code>refs/heads/master</code>. No service-account key file.</td><td>Nothing long-lived to leak or rotate.</td></tr>
+  <tr><td>How do secrets reach the app?</td><td>GitHub environment secrets, written into <code>app.yaml</code> on the runner at deploy time. Never committed.</td><td>App Engine standard cannot read Secret Manager values into environment variables by itself. See the trade-off in section 7.</td></tr>
+  <tr><td>How is a release made safe?</td><td>Deploy with no traffic, smoke-test, move traffic, smoke-test the public address, move traffic back on failure.</td><td>App Engine keeps old versions, so going back is a traffic change, not a rebuild.</td></tr>
+</table>
+
+<h2 id="topology">2. Production topology</h2>
+<svg viewBox="0 0 960 400" role="img" aria-label="Production topology">
+  <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#566274"/></marker></defs>
+  <rect x="10" y="10" width="940" height="380" rx="8" fill="#fafbfc" stroke="#d7dde5"/>
+  <text x="24" y="32" style="font-weight:600">Google Cloud project (App Engine app, asia-south1)</text>
+
+  <rect x="40" y="60" width="270" height="130" rx="6" fill="#e9f1fb" stroke="#1f5fbf"/>
+  <text x="56" y="84" style="font-weight:600">default service</text>
+  <text x="56" y="104" class="small">apps/onengo/server, F1, max 1 instance</text>
+  <text x="56" y="124" class="small">Members, donations, payments, web app</text>
+  <text x="56" y="144" class="small">Logins: ngo_main_system, ngo_main_runtime</text>
+  <text x="56" y="164" class="small">Own service account, own secrets</text>
+
+  <rect x="40" y="220" width="270" height="130" rx="6" fill="#e9f1fb" stroke="#1f5fbf"/>
+  <text x="56" y="244" style="font-weight:600">console service</text>
+  <text x="56" y="264" class="small">apps/onengo-console/server, F1, max 1 instance</text>
+  <text x="56" y="284" class="small">Onboard, status, retry, suspend, close</text>
+  <text x="56" y="304" class="small">Logins: ngo_operator, ngo_operator_runtime</text>
+  <text x="56" y="324" class="small">Own service account, own secrets, 2FA sign-in</text>
+
+  <rect x="380" y="60" width="200" height="60" rx="6" fill="#fff" stroke="#566274"/>
+  <text x="396" y="86" style="font-weight:600">cron.yaml</text>
+  <text x="396" y="104" class="small">POST /internal/tick every 60 min</text>
+
+  <rect x="380" y="150" width="200" height="60" rx="6" fill="#fff" stroke="#566274"/>
+  <text x="396" y="176" style="font-weight:600">Cloud Logging</text>
+  <text x="396" y="194" class="small">JSON log lines, alerts (O3)</text>
+
+  <rect x="380" y="240" width="200" height="60" rx="6" fill="#fff" stroke="#566274"/>
+  <text x="396" y="266" style="font-weight:600">Old versions</text>
+  <text x="396" y="284" class="small">Newest five kept for rollback</text>
+
+  <rect x="700" y="130" width="230" height="140" rx="6" fill="#fff4e0" stroke="#d89a00"/>
+  <text x="716" y="154" style="font-weight:600">PostgreSQL 15+ (one database)</text>
+  <text x="716" y="174" class="small">Free managed provider, outside Google Cloud</text>
+  <text x="716" y="194" class="small">Owner login: deploy job only</text>
+  <text x="716" y="214" class="small">Four serving logins, none can migrate</text>
+  <text x="716" y="234" class="small">Row-level security isolates organisations</text>
+  <text x="716" y="254" class="small">Provider backups, restore tested (O1)</text>
+
+  <path d="M310,125 L700,185" stroke="#566274" fill="none" marker-end="url(#a)"/>
+  <path d="M310,285 L700,220" stroke="#566274" fill="none" marker-end="url(#a)"/>
+  <path d="M380,90 L312,100" stroke="#566274" fill="none" marker-end="url(#a)"/>
+  <path d="M312,150 L380,172" stroke="#566274" fill="none" marker-end="url(#a)"/>
+</svg>
+<p class="legend">Staff and members use <code>https://&lt;project&gt;.&lt;region&gt;.r.appspot.com</code>. The console is on <code>https://console-dot-&lt;project&gt;.&lt;region&gt;.r.appspot.com</code>. Read the exact host from <code>gcloud app describe --format="value(defaultHostname)"</code> after creating the app. A custom domain can come later; if you add one, change <code>PUBLIC_BASE_URL</code> and the redirect addresses registered with Google sign-in and each connector.</p>
+
+<div class="note"><b>One database, four logins.</b> The same PostgreSQL database holds everything. Five connection strings point at it with different logins: <code>DATABASE_OWNER_URL</code> (migrations, used only by the deploy job), then <code>DATABASE_SYSTEM_URL</code>, <code>DATABASE_RUNTIME_URL</code> (main), <code>OPERATOR_DATABASE_URL</code>, <code>OPERATOR_RUNTIME_URL</code> (console). Pointing two of them at the same login defeats the separation the server relies on.</div>
+
+<h2 id="cost">3. Cost envelope</h2>
+<table>
+  <tr><th>Item</th><th>Free allowance</th><th>What this plan does</th></tr>
+  <tr><td>App Engine F1 instance hours</td><td>28 a day per project</td><td><code>min_instances: 0</code>, <code>max_instances: 1</code> on both services. Idle instances stop. The hourly cron wakes the default service once an hour, which keeps it up for part of each hour. My estimate is well under 28 hours a day for a few dozen users, but watch the first week in the quota page.</td></tr>
+  <tr><td>Outbound traffic</td><td>1 GB a day</td><td>Mostly JSON and one web bundle per user.</td></tr>
+  <tr><td>Build minutes for deploy</td><td>Cloud Build free tier</td><td>Each deploy builds twice (two services).</td></tr>
+  <tr><td>Stored versions and staging files</td><td>Small storage charges past the free amount</td><td>A separate cleanup workflow removes old versions, stale staging files and untagged images. A scheduled run only reports; a person has to turn the dry run off before anything is deleted.</td></tr>
+  <tr><td>Load balancer and IAP</td><td>None free</td><td>Not used.</td></tr>
+  <tr><td>GitHub Actions minutes</td><td>Unlimited on a public repository; 2,000 a month on a private one</td><td>One gate run is about 10 to 15 minutes. Cancelled duplicate pull-request runs save minutes.</td></tr>
+</table>
+<div class="warn">A candidate version runs briefly next to the live one during every deploy, so instance hours go up on deploy days. This is why <code>max_instances: 1</code> matters.</div>
+
+<h2 id="pipeline">4. The pipeline</h2>
+<p>Three workflows in <code>.github/workflows/</code>. Colour: <span class="tag ok">green</span> is an automated gate, <span class="tag warn">amber</span> needs a person, <span class="tag bad">red</span> is where a failure stops everything after it.</p>
+
+<h3>On a pull request, and on any push to <code>develop</code></h3>
+<div class="flow">
+  <div class="step">Open or update pull request</div>
+  <div class="step gate"><b>Typecheck, build, test</b>Postgres service, <code>npm run ci</code></div>
+  <div class="step gate"><b>Dependency audit</b><code>npm run ci:audit</code></div>
+  <div class="step gate"><b>CI gate</b>Needs both jobs green. The one required check.</div>
+  <div class="step human"><b>Merge</b>Blocked while CI gate is red</div>
+</div>
+
+<h3>On a push to <code>master</code> (or a manual run of CI on <code>master</code>)</h3>
+<div class="flow">
+  <div class="step gate"><b>1. CI gate</b>Same two jobs again, on the merge commit</div>
+  <div class="step human"><b>2. Approval</b>Required reviewer on environment <code>prod</code></div>
+  <div class="step"><b>3. Build</b>Both servers from this exact commit</div>
+  <div class="step stop"><b>4. Fill manifests</b>Missing secret stops here, before anything changes</div>
+  <div class="step"><b>5. Migrate</b><code>deploy:prepare</code> with the owner login</div>
+  <div class="step"><b>6. Deploy, no traffic</b>Both services, <code>--no-promote</code></div>
+  <div class="step gate"><b>7. Curl /health</b>Both new versions, before any user sees them</div>
+  <div class="step"><b>8. Move traffic</b>100% to the new versions</div>
+  <div class="step gate"><b>9. Curl /health</b>Public addresses. Failure moves traffic back.</div>
+  <div class="step"><b>10. Cron</b>Deploy <code>cron.yaml</code>. Old versions stay for rollback.</div>
+  <div class="step gate"><b>11. Playwright</b>Separate job. Opens both sign-in pages. Does not write data.</div>
+</div>
+
+<h3>Why the build is repeated instead of passed from CI</h3>
+<p>CI already has a test (<code>apps/onengo/server/test/artifact.test.ts</code>) that builds the bundle twice from clean and fails if the two results differ. So building again from the same commit in the deploy job gives the same bytes CI tested, without moving artifacts between jobs.</p>
+
+<h3>Why the database moves before the code</h3>
+<p>The server refuses to start if <code>deploy:prepare</code> has not run (tested in the same artifact test). So the order is fixed: migrate, then start new code. The old version keeps serving against the new schema for the minutes between steps 5 and 8.</p>
+<div class="bad"><b>Rule for every migration:</b> it must work with the previous release too. App Engine rollback moves traffic back but cannot undo a migration. Drop or rename a column only in a later release than the one that stopped using it.</div>
+
+<h2 id="gates">5. Test gates</h2>
+<table>
+  <tr><th style="width:19%">Gate</th><th style="width:24%">Where it runs</th><th>What it proves</th><th style="width:15%">Blocks</th></tr>
+  <tr><td>Typecheck</td><td>CI, <code>npm run ci</code></td><td>All workspaces and the root compile with no type errors.</td><td>Merge, deploy</td></tr>
+  <tr><td>Builds</td><td>CI, <code>npm run ci</code></td><td>Main server, console server, organisation web app, console web app and user guide all build.</td><td>Merge, deploy</td></tr>
+  <tr><td>Unit and integration tests</td><td>CI, vitest against a <code>postgres:16</code> service</td><td>Behaviour of the platform packages, row-level security, the tenancy rules, the database roles, the operator console's authorisation and step-up rules, the migration set.</td><td>Merge, deploy</td></tr>
+  <tr><td>Bundle test</td><td>CI, inside vitest</td><td>The built <code>dist/</code> starts on plain Node, reports healthy, refuses an unsigned API call, serves the web shell, refuses to start on an unprepared database, rejects unsupported database URLs without printing the password, runs the deploy step twice with no second change, and loads the script sandbox. Two clean builds match.</td><td>Merge, deploy</td></tr>
+  <tr><td>Console manifest test</td><td>CI, <code>architecture.test.ts</code></td><td>The console manifest is <code>service: console</code> with no ingress restriction and no IAP setting, so nobody quietly reverts the access model.</td><td>Merge, deploy</td></tr>
+  <tr><td>Dependency audit</td><td>CI, <code>npm audit --omit=dev --audit-level=high</code></td><td>No known high or critical vulnerability in production dependencies.</td><td>Merge, deploy</td></tr>
+  <tr><td>Approval</td><td>GitHub environment <code>prod</code></td><td>A named person agreed to this release.</td><td>Deploy</td></tr>
+  <tr><td>Placeholder check</td><td>Deploy, <code>stage-app-engine.mjs</code></td><td>Every <code>REPLACE_WITH_</code> value has a real value, and none remain after substitution.</td><td>Migration, deploy</td></tr>
+  <tr><td>Candidate health curl</td><td>Deploy, step 7</td><td><code>GET /health</code> on each new version returns 200 and <code>{"status":"ok"}</code>.</td><td>Traffic move</td></tr>
+  <tr><td>Live health curl</td><td>Deploy, step 9</td><td>The same request against both public addresses.</td><td>Triggers rollback</td></tr>
+  <tr><td>Post-deploy Playwright</td><td>Separate job after the deploy</td><td>A browser opens the app sign-in page and the console sign-in page. No sign-in, no records written.</td><td>The workflow. Traffic stays; roll back by hand.</td></tr>
+</table>
+
+<h3>The seeded browser suite stays off production</h3>
+<p>The Playwright suite in <code>tests/e2e/specs</code> signs in as seeded members and creates donors, donations and API keys. It needs the environment <code>npm run dev</code> builds, and that script is PowerShell for Windows. It is not part of CI and it is not the post-deploy job. The post-deploy job uses <code>tests/e2e/playwright.post-deploy.config.ts</code>, which only loads <code>tests/e2e/post-deploy</code>.</p>
+
+<h2 id="smoke">6. Health curl, then Playwright</h2>
+<p>Inside the deploy job, <code>.github/scripts/smoke-test.mjs</code> does one thing. It waits up to two minutes, because a new App Engine version starts on its first request, then sends <code>GET /health</code> and requires 200 and <code>{"status":"ok"}</code>. It does this for the main service and the console, first on the new versions and again on the public addresses. The console serves that route from <code>buildOperatorServer</code>. A failure before traffic moves stops the release. A failure after traffic moves sends traffic back.</p>
+<p>After that job succeeds, the <b>Post-deploy end-to-end</b> job installs Playwright in <code>tests/e2e</code> and runs two browser checks against the public addresses:</p>
+<ul>
+  <li>The app's <code>/sign-in</code> page shows the organisation-code field.</li>
+  <li>The console home redirects to its sign-in page and shows <b>Console sign in</b>.</li>
+</ul>
+<p>That job does not receive the production database secrets and it does not sign in. If it fails, the workflow is red, the Playwright report is kept for seven days, and the new version keeps serving. Go back with the rollback workflow.</p>
+
+<h2 id="rollback">7. Rollback and its limits</h2>
+<h3>Automatic</h3>
+<p>The deploy job records the version serving each service. If the public <code>GET /health</code> fails, or the traffic move itself fails part-way, the job sets both services back to the recorded versions and the run ends red. The Playwright job runs only after this job has succeeded, so a browser failure does not move traffic.</p>
+<h3>Manual</h3>
+<p>Run workflow <b>Rollback (production)</b> from <code>master</code> with a version name from a deploy summary, for example <code>g1a2b3c4d5-r12</code>. It checks the version exists on both services before moving either, then curls <code>GET /health</code> on both public addresses. It needs approval from the same <code>prod</code> reviewers. It does not re-run Playwright.</p>
+<table>
+  <tr><th>Case</th><th>Behaviour</th></tr>
+  <tr><td>First ever deploy of a service</td><td>There is no earlier version. The run prints a warning instead of rolling back. App Engine sends the first version all traffic.</td></tr>
+  <tr><td>Migration already applied</td><td>Not undone. Rolling back is safe only if the migration works with the older release (see section 4).</td></tr>
+  <tr><td>Version already cleaned up</td><td>Rollback only reaches versions the cleanup workflow has not deleted. By default that is the newest five per service, plus any version still taking traffic. The rollback workflow says so if the version is missing.</td></tr>
+  <tr><td>Same commit deployed again</td><td>Gets a new version name from the run number, so it can never overwrite the version serving traffic.</td></tr>
+  <tr><td>Two deploys at once</td><td>The <code>deploy-prod</code> concurrency group queues the second.</td></tr>
+</table>
+<div class="warn"><b>Secrets live in the version.</b> App Engine stores the filled <code>app.yaml</code> values with each version, and anyone with App Engine viewer access on the project can read them in the console. Keep project membership to the few people who may see production credentials. Moving to Secret Manager means reading it in application code at start-up, which is a code change and not part of this pipeline.</div>
+
+<h2 id="cleanup">8. Cleanup</h2>
+<p>Taken from the deploy repository's <code>ops-gcp-cleanup</code> workflow and reduced to this one production project. The release workflow does not delete anything. Cleanup is its own workflow, <code>.github/workflows/cleanup.yml</code>.</p>
+<table>
+  <tr><th>What</th><th>Rule</th></tr>
+  <tr><td>App Engine versions</td><td>Per service, keep every version that has traffic, and keep the newest five whether or not they have traffic. Delete the rest. If the traffic split cannot be read, the version is kept. The deploy repository keeps two; five matches the rollback window in section 7.</td></tr>
+  <tr><td>Staging bucket</td><td><code>staging.&lt;project&gt;.appspot.com</code>. Files older than three days. App Engine uploads the source here on every deploy.</td></tr>
+  <tr><td>Artifact Registry</td><td>Untagged images in every repository in the project. A standard App Engine Node deploy may leave none; the step reports that and moves on.</td></tr>
+</table>
+<p>Monday, Wednesday and Friday at 17:00 UTC the workflow runs as a dry run: the report lists what it would delete, and it deletes nothing. To delete, open <b>Actions → Cleanup (production) → Run workflow</b> and untick dry run. Both kinds of run use the <code>prod</code> environment, so a reviewer approves before any Google Cloud call. The run uploads <code>cleanup-summary.md</code> and writes the counts into the job summary. A dry run's deleted count is zero; the report is the list.</p>
+<div class="warn">The schedule only fires once this file is on the repository's default branch. The first useful run is a dry run, so a missing permission shows up as a warning before anything is removed.</div>
+
+<h2 id="config">9. GitHub environment <code>prod</code>: variables and secrets</h2>
+<p>Create these on the environment, not on the repository. The count was checked against the workflow files: 10 variables, 10 secrets, and every <code>REPLACE_WITH_</code> placeholder in both manifests is filled.</p>
+<div class="two">
+<div>
+<h3>Variables (not secret)</h3>
+<table>
+  <tr><th>Name</th><th>Value</th></tr>
+  <tr><td><code>GCP_PROJECT_ID</code></td><td>Project id</td></tr>
+  <tr><td><code>GCP_WORKLOAD_IDENTITY_PROVIDER</code></td><td><code>projects/&lt;number&gt;/locations/global/workloadIdentityPools/github/providers/github-repo</code></td></tr>
+  <tr><td><code>GCP_SERVICE_ACCOUNT</code></td><td>Deploy account email</td></tr>
+  <tr><td><code>SERVICE_ACCOUNT</code></td><td>Runtime account of <code>default</code></td></tr>
+  <tr><td><code>CONSOLE_SERVICE_ACCOUNT</code></td><td>Runtime account of <code>console</code>. Different from the main one.</td></tr>
+  <tr><td><code>PUBLIC_BASE_URL</code></td><td>Public address of the main app, no trailing slash</td></tr>
+  <tr><td><code>CONSOLE_PUBLIC_BASE_URL</code></td><td>Public address of the console</td></tr>
+  <tr><td><code>CONSOLE_OIDC_ISSUER</code></td><td>Identity provider issuer address</td></tr>
+  <tr><td><code>CONSOLE_OIDC_CLIENT_ID</code></td><td>Client id for the console</td></tr>
+  <tr><td><code>CONSOLE_OIDC_AUDIENCE</code></td><td>Audience the provider issues</td></tr>
+</table>
+</div>
+<div>
+<h3>Secrets</h3>
+<table>
+  <tr><th>Name</th><th>How to make it</th></tr>
+  <tr><td><code>DATABASE_OWNER_URL</code></td><td>Owner login. Used by the deploy job only.</td></tr>
+  <tr><td><code>SYSTEM_DATABASE_URL</code></td><td>Login that is a member of <code>ngo_main_system</code></td></tr>
+  <tr><td><code>RUNTIME_DATABASE_URL</code></td><td>Login that is a member of <code>ngo_main_runtime</code></td></tr>
+  <tr><td><code>CONSOLE_DATABASE_URL</code></td><td>Login that is a member of <code>ngo_operator</code></td></tr>
+  <tr><td><code>CONSOLE_RUNTIME_URL</code></td><td>Login that is a member of <code>ngo_operator_runtime</code></td></tr>
+  <tr><td><code>TOKEN_SECRET</code></td><td><code>openssl rand -hex 32</code></td></tr>
+  <tr><td><code>ENCRYPTION_KEY</code></td><td>32 bytes as hex or base64. Losing it makes encrypted fields unreadable. Back it up apart from GitHub.</td></tr>
+  <tr><td><code>CONSOLE_ENCRYPTION_KEY</code></td><td>A different 32-byte key</td></tr>
+  <tr><td><code>CONSOLE_INTERNAL_TOKEN_SECRET</code></td><td><code>openssl rand -hex 32</code></td></tr>
+  <tr><td><code>CONSOLE_OIDC_CLIENT_SECRET</code></td><td>From the identity provider</td></tr>
+</table>
+</div>
+</div>
+<p>Do not reuse any value between the main and console columns. The point of two services is that one leaked set does not open the other.</p>
+<p>Outbound email (<code>SMTP_*</code>), payment gateways and connector credentials are optional and are not in the manifests today. Organisations configure their own gateway and mail settings in the app.</p>
+
+<h2 id="database">10. Database set-up (once, before the first pipeline run)</h2>
+<p>The first pipeline run cannot pass its smoke tests until the four serving logins exist, and the logins can only be granted group roles that the first <code>deploy:prepare</code> creates. So do this once by hand.</p>
+<ol>
+  <li>Create the database at your provider (PostgreSQL 15 or later, with the <code>pg_trgm</code> extension available). Note the owner connection string.</li>
+  <li>From a checkout, run the migrations with the owner login:
+<pre><code>npm ci
+npm run build:server
+$env:DATABASE_OWNER_URL = "postgres://owner:...@host/db?sslmode=require"
+npm run deploy:prepare</code></pre>
+  </li>
+  <li>As the owner, create the four logins (generate a different long random password for each) and grant each its group role:
+<pre><code>create role ngo_main_system_login     login password '&lt;generated&gt;';
+grant ngo_main_system     to ngo_main_system_login;
+
+create role ngo_main_runtime_login    login password '&lt;generated&gt;';
+grant ngo_main_runtime    to ngo_main_runtime_login;
+
+create role ngo_operator_login        login password '&lt;generated&gt;';
+grant ngo_operator        to ngo_operator_login;
+
+create role ngo_operator_runtime_login login password '&lt;generated&gt;';
+grant ngo_operator_runtime to ngo_operator_runtime_login;</code></pre>
+  </li>
+  <li>Build the four connection strings with these logins and store them as the four database secrets. Add <code>?sslmode=require</code> if your provider requires encrypted connections.</li>
+  <li><b>Open gap:</b> create the first console account (a row in <code>operator_account</code>, migration 030, linked to the identity provider's subject). The repository does not yet document a production procedure for this. Ask the development team for it before go-live, or nobody can sign in to the console.</li>
+</ol>
+<div class="note">The role statements follow the bundle test in <code>apps/onengo/server/test/artifact.test.ts</code>, which creates the same logins the same way and starts the real bundle with them. The local development script creates its runtime login with <code>noinherit</code>; the hosted pattern above is the one the bundle test proves.</div>
+<p>Free managed databases pause or limit idle projects, cap storage, and differ in backup retention. Check yours against the backup and restore drill (O4) in <code>docs/operations/devops-handover.md</code> before the first real member is added.</p>
+
+<h2 id="gcp">11. Google Cloud set-up (once)</h2>
+<pre><code>$PROJECT = "your-project-id"
+gcloud config set project $PROJECT
+
+gcloud services enable appengine.googleapis.com cloudbuild.googleapis.com `
+  cloudscheduler.googleapis.com iamcredentials.googleapis.com `
+  iam.googleapis.com cloudresourcemanager.googleapis.com logging.googleapis.com
+
+gcloud app create --region=asia-south1        # permanent; the region cannot change later
+gcloud app describe --format="value(defaultHostname)"</code></pre>
+
+<h3>Runtime service accounts (one per service)</h3>
+<pre><code>gcloud iam service-accounts create ngo-main    --display-name "NGO main runtime"
+gcloud iam service-accounts create ngo-console --display-name "NGO console runtime"
+# Each only needs to write logs:
+gcloud projects add-iam-policy-binding $PROJECT --role roles/logging.logWriter `
+  --member "serviceAccount:ngo-main@$PROJECT.iam.gserviceaccount.com"
+gcloud projects add-iam-policy-binding $PROJECT --role roles/logging.logWriter `
+  --member "serviceAccount:ngo-console@$PROJECT.iam.gserviceaccount.com"</code></pre>
+
+<h3>Deploy account and workload identity (trusts only <code>master</code> of this repository)</h3>
+<pre><code>$REPO = "OWNER/REPO"                           # your GitHub owner and repository
+$NUMBER = gcloud projects describe $PROJECT --format="value(projectNumber)"
+
+gcloud iam service-accounts create gha-deploy --display-name "GitHub Actions deploy"
+
+gcloud iam workload-identity-pools create github --location=global
+gcloud iam workload-identity-pools providers create-oidc github-repo `
+  --location=global --workload-identity-pool=github `
+  --issuer-uri="https://token.actions.githubusercontent.com" `
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.ref=assertion.ref" `
+  --attribute-condition="assertion.repository=='$REPO' &amp;&amp; assertion.ref=='refs/heads/master'"
+
+gcloud iam service-accounts add-iam-policy-binding "gha-deploy@$PROJECT.iam.gserviceaccount.com" `
+  --role roles/iam.workloadIdentityUser `
+  --member "principalSet://iam.googleapis.com/projects/$NUMBER/locations/global/workloadIdentityPools/github/attribute.repository/$REPO"</code></pre>
+
+<h3>What the deploy account may do (starting set)</h3>
+<table>
+  <tr><th>Role</th><th>Needed for</th></tr>
+  <tr><td><code>roles/appengine.deployer</code></td><td>Creating versions</td></tr>
+  <tr><td><code>roles/appengine.serviceAdmin</code></td><td>Changing traffic, deleting old versions</td></tr>
+  <tr><td><code>roles/appengine.appViewer</code></td><td>Describing the app and listing versions</td></tr>
+  <tr><td><code>roles/appengine.appCreator</code> is <b>not</b> given</td><td>The app is created once, by a person</td></tr>
+  <tr><td><code>roles/cloudbuild.builds.editor</code></td><td>App Engine builds the deployed code with Cloud Build</td></tr>
+  <tr><td><code>roles/storage.objectAdmin</code> on the App Engine staging buckets</td><td>Uploading source files, and deleting files older than three days in the cleanup workflow</td></tr>
+  <tr><td><code>roles/artifactregistry.repoAdmin</code> or a narrower delete role</td><td>Removing untagged images, if the project has any. Skip until a dry run reports images.</td></tr>
+  <tr><td><code>roles/cloudscheduler.admin</code></td><td>Deploying <code>cron.yaml</code></td></tr>
+  <tr><td><code>roles/iam.serviceAccountUser</code> on <b>both</b> runtime accounts</td><td>Deploying a service that runs as them</td></tr>
+</table>
+<div class="warn">This list comes from Google's documented deployment roles and has not been run against your project. Expect to adjust it once on the first real run; a permission error in the logs names the missing role.</div>
+
+<h2 id="github">12. GitHub set-up (once)</h2>
+<ol>
+  <li>Add the remote and push. This checkout has no remote yet.</li>
+  <li><b>Settings, Environments, New environment</b>: <code>prod</code>. Add required reviewers. Set <b>Deployment branches</b> to <code>master</code> only.</li>
+  <li>Add the 10 variables and 10 secrets from section 9 to that environment.</li>
+  <li><b>Settings, Branches</b>: protect <code>master</code> and <code>develop</code>. Require a pull request and the status check named <b>CI gate</b>. Do not require the individual jobs, so a job added later joins the gate without changing the rule.</li>
+  <li><b>Settings, Actions, General</b>: set workflow permissions to read-only by default. The deploy job asks for <code>id-token: write</code> by itself.</li>
+</ol>
+<p>Workflows use <code>actions/*@v4</code> and <code>google-github-actions/*@v2</code>. For a stricter supply chain, pin each action to a commit hash and let Dependabot update them.</p>
+
+<h2 id="status">13. What has and has not been verified</h2>
+<table>
+  <tr><th>Item</th><th>Status</th></tr>
+  <tr><td>All three workflow files parse as YAML; every <code>needs</code> points at a real job; <code>CI gate</code> waits for every test job; <code>deploy-prod</code> waits for <code>CI gate</code></td><td><span class="tag ok">Checked here</span></td></tr>
+  <tr><td>Every manifest placeholder is filled by the deploy workflow, and none extra</td><td><span class="tag ok">Checked here</span></td></tr>
+  <tr><td>Health script accepts <code>{"status":"ok"}</code> and rejects any other body</td><td><span class="tag ok">Checked here</span></td></tr>
+  <tr><td>Post-deploy Playwright against a live address</td><td><span class="tag warn">First deploy will show</span></td></tr>
+  <tr><td><code>npm run ci</code> passing on a GitHub runner (Postgres service, Node 22)</td><td><span class="tag warn">First run will show</span></td></tr>
+  <tr><td><code>gcloud</code> flags against a live project, including <code>versionUrl</code> for the candidate address (the script falls back to the <code>appspot.com</code> form)</td><td><span class="tag warn">First run will show</span></td></tr>
+  <tr><td>Deploy account role list</td><td><span class="tag warn">First run will show</span></td></tr>
+  <tr><td>Automatic rollback taking effect</td><td><span class="tag warn">Rehearse once</span>: deploy a build whose <code>/health</code> does not answer, and watch traffic return</td></tr>
+  <tr><td>Seeded Playwright suite (<code>tests/e2e/specs</code>) in CI</td><td><span class="tag bad">Not in CI</span>. It writes records and needs the Windows dev environment (section 5).</td></tr>
+  <tr><td>Stage Cloud Run deploy</td><td><span class="tag warn">First run will show</span>. The workflow is <code>cd-stage.yml</code>.</td></tr>
+</table>
+<p>The app was not started and no deploy was attempted while preparing this plan.</p>
+
+<h2 id="stage">14. Stage on Cloud Run</h2>
+<p><code>.github/workflows/cd-stage.yml</code> runs after <b>CI gate</b> passes on <code>develop</code>. Production's workflow is not involved. Use a separate Google Cloud project so stage does not consume the App Engine free hours. The free Cloud Run allowance (180,000 vCPU-seconds, 360,000 GiB-seconds, 2 million requests a month, per billing account) applies in Mumbai.</p>
+<ul>
+  <li><b>Services:</b> <code>ngo</code> and <code>ngo-console</code> in <code>asia-south1</code>, or <code>GCP_REGION</code>. Minimum instances 0, maximum 1, 512 MiB, one CPU, CPU only while a request is in progress.</li>
+  <li><b>Image:</b> <code>.github/scripts/stage-cloud-run.mjs</code> writes a Dockerfile next to the built <code>dist</code>. Cloud Build runs it. No secret is in the image.</li>
+  <li><b>Secrets:</b> the <code>stage</code> environment holds the same names as production, plus <code>TICK_SECRET</code>. <code>.github/scripts/sync-stage-secrets.sh</code> copies them into Secret Manager and grants each runtime service account its own secrets. Cloud Run mounts them with <code>--set-secrets</code>.</li>
+  <li><b>Database:</b> its own database and four logins, never production's. The workflow runs <code>deploy:prepare</code> with the stage owner login. Seed it from <code>utilities/seed/</code> when you want sample data.</li>
+  <li><b>Release:</b> the new revision is tagged <code>candidate</code> and gets no traffic until <code>GET /health</code> answers. Traffic then moves. A failed public check returns traffic to the previous revision. <code>rollback-stage.yml</code> does the same later, from <code>develop</code>, given the two revision names.</li>
+  <li><b>Scheduler:</b> Cloud Scheduler posts <code>/internal/tick</code> every hour with <code>Authorization: Bearer TICK_SECRET</code>. The token is visible to anyone who can read the job.</li>
+  <li><b>First address:</b> leave <code>PUBLIC_BASE_URL</code> and <code>CONSOLE_PUBLIC_BASE_URL</code> empty for the first run. The health check uses the Cloud Run URLs. The revision itself still has <code>https://pending.invalid</code> until you copy the URLs from the deploy summary into those variables and run again. Do that before anyone signs in.</li>
+  <li><b>Identity:</b> the stage workload identity trusts <code>refs/heads/develop</code> only. The production pool stays limited to <code>master</code>. The deploy account needs Cloud Run, Cloud Build, Secret Manager, and Cloud Scheduler access, and permission to act as both runtime service accounts. Treat that as a starting set and tighten it after the first run.</li>
+</ul>
+
+<h2 id="checklist">15. Go-live checklist</h2>
+<ol>
+  <li>Merge the branch that adds these files into <code>develop</code>, then <code>develop</code> into <code>master</code> once the gate is green on a pull request.</li>
+  <li>Create the Google Cloud project, App Engine app, service accounts and workload identity (section 11).</li>
+  <li>Create the database, run the first <code>deploy:prepare</code>, create the four logins (section 10).</li>
+  <li>Create environment <code>prod</code> and add the variables and secrets (sections 8, 11).</li>
+  <li>Protect <code>master</code> and <code>develop</code> with the <b>CI gate</b> check.</li>
+  <li>Register the public addresses with the identity provider (console redirect <code>/op/auth/callback</code>) and, if used, Google sign-in (<code>/api/auth/oidc/callback</code>) and connectors (<code>/api/connectors/oauth/callback</code>).</li>
+  <li>Push to <code>master</code>. Approve. Read the deploy summary. Write down the release name.</li>
+  <li>Rehearse a failed release and a manual rollback once, before real data is in.</li>
+  <li>Run <b>Cleanup (production)</b> once as a dry run and read the report. Delete only after that report looks right.</li>
+  <li>Complete the alerts (O3) and the backup and restore drill (O4) in <code>docs/operations/devops-handover.md</code>.</li>
+  <li>Get the first console account created (section 10, open gap).</li>
+</ol>
+
+<footer>
+  Files: <code>.github/workflows/ci.yml</code>, <code>cd.yml</code>, <code>cd-stage.yml</code>, <code>rollback.yml</code>, <code>rollback-stage.yml</code>, <code>cleanup.yml</code>; <code>.github/scripts/stage-app-engine.mjs</code>, <code>smoke-test.mjs</code>; <code>.github/scripts/gcp-cleanup-*.sh</code>; <code>apps/onengo/server/app.yaml</code>, <code>cron.yaml</code>; <code>apps/onengo-console/server/app.yaml</code>. Operations detail: <code>docs/operations/devops-handover.md</code>.
+</footer>
+
+</div>
+</body>
+</html>

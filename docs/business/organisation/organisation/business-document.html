@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Organisation identity, onboarding and lifecycle — Business Document</title>
+    <style>
+      :root {
+        --bg: #f7f6f3;
+        --ink: #1c1b19;
+        --muted: #5c574f;
+        --line: #d9d4cb;
+        --accent: #0f5c4c;
+        --warn: #8a4b00;
+        --card: #fffefb;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+        color: var(--ink);
+        background: linear-gradient(180deg, #eef3f1 0%, var(--bg) 40%);
+        line-height: 1.55;
+      }
+      main { max-width: 52rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+      h1 { font-size: 1.85rem; margin: 0 0 0.35rem; color: var(--accent); }
+      .meta { color: var(--muted); font-size: 0.95rem; margin-bottom: 0.75rem; }
+      .badge {
+        display: inline-block; font-size: 0.75rem; letter-spacing: 0.02em;
+        background: #e2ece8; color: var(--accent); border: 1px solid var(--line);
+        border-radius: 999px; padding: 0.1rem 0.6rem; margin: 0 0.3rem 1.5rem 0;
+      }
+      h2 {
+        font-size: 1.15rem; margin: 2rem 0 0.65rem; padding-bottom: 0.35rem;
+        border-bottom: 1px solid var(--line);
+      }
+      h3 { font-size: 1rem; margin: 1.1rem 0 0.4rem; }
+      ul { padding-left: 1.2rem; }
+      table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 0.92rem; }
+      th, td { border: 1px solid var(--line); padding: 0.55rem 0.65rem; text-align: left; vertical-align: top; }
+      th { background: #e8efec; }
+      code { font-family: ui-monospace, Consolas, monospace; font-size: 0.86em; background: #eceae4; padding: 0.05rem 0.3rem; border-radius: 3px; }
+      .src { color: var(--muted); font-size: 0.85rem; }
+      .warn { color: var(--warn); }
+
+      .tc { background: #f2f7f5; }
+      .tc td:first-child { font-weight: 600; white-space: nowrap; }
+      .scenarios-nav { margin: 0.5rem 0 1rem; font-size: 0.9rem; }
+      .scenarios-nav a { color: var(--accent, #0f5c4c); }
+
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Organisation identity, onboarding and lifecycle</h1>
+      <p class="meta">Domain: organisation · Entity: organisation</p>
+      <span class="badge">Implementation-independent · reconciled against backend + frontend</span>
+
+      <h2>1. Purpose</h2>
+      <p>
+        OneNGO is one product used by many NGOs. Each NGO is an <strong>organisation</strong> with its own identity: the name people
+        know it by, its legal name, how to reach it, its registered address, its registrations (trust or society registration,
+        12A, 80G, FCRA and so on) and its logo. That identity appears in the application, on the organisation's sign-in page and on
+        the documents it issues. A OneNGO operator brings an approved NGO onto the platform; the NGO's primary administrator then
+        finishes setting it up. An operator can later suspend, reactivate or close an organisation without losing its data. Every
+        receipt keeps the issuer identity that applied when it was issued, so later changes never rewrite an old receipt.
+      </p>
+
+      <h2>2. Actors</h2>
+      <ul>
+        <li><strong>OneNGO operator</strong> — an authorised person, named in the environment where the operator command runs. Onboards an approved request, checks a request without onboarding it, inspects an organisation's status and history, retries a failed onboarding, and suspends, reactivates or closes an organisation. Operators act outside every organisation; nothing an organisation's own people or API keys hold lets them do any of this.</li>
+        <li><strong>Primary administrator</strong> — named in the onboarding request. Receives the invitation to set a password, holds the Organisation administrator role, and finishes setup.</li>
+        <li><strong>Organisation administrator</strong> (organisation-settings permission) — maintains the display and legal names, contact details, address, time zone, registrations and logo, and confirms setup steps. Cannot change the organisation code, hosting region or lifecycle status.</li>
+        <li><strong>Any member</strong> — sees the organisation's display name and logo in the application.</li>
+        <li><strong>Anyone, before signing in</strong> — opening an organisation's sign-in link sees only its display name, logo and sign-in options, and only while the organisation is active.</li>
+      </ul>
+
+      <h2>3. Domain model</h2>
+      <table>
+        <thead><tr><th>Concept</th><th>Business meaning</th></tr></thead>
+        <tbody>
+          <tr><td>Organisation</td><td>One NGO on the platform. All of its data belongs to it alone.</td></tr>
+          <tr><td>Organisation code</td><td>A short, lowercase identifier (<code>helpinghands</code>) chosen at onboarding and never changed. It is in the organisation's sign-in link <code>/o/&lt;code&gt;/sign-in</code> and in invitation and reset links. It is an identifier, not a secret.</td></tr>
+          <tr><td>Display name</td><td>The name people know the organisation by, shown in the application and on its sign-in page.</td></tr>
+          <tr><td>Legal name</td><td>The name on the organisation's registration documents, used on legal documents such as receipts. Kept separately from the display name.</td></tr>
+          <tr><td>Organisation profile</td><td>Primary email, phone and website; structured postal address (lines, city, state, postal code, country); time zone; and when setup steps were confirmed.</td></tr>
+          <tr><td>Registration</td><td>One official registration of the organisation: its type (for example <code>80g</code>), number, issuing authority, issue date, optional expiry date and notes. An organisation may have several; the same type and number appear only once within an organisation.</td></tr>
+          <tr><td>Logo</td><td>The organisation's image, kept as a managed asset of the organisation. There is one current logo; replacing it makes the new image current.</td></tr>
+          <tr><td>Onboarding request</td><td>An approved request to bring one NGO onto the platform, identified by its request id. It records how far onboarding has got, the last failure and whether the administrator's invitation was sent. Kept by the operator side only.</td></tr>
+          <tr><td>Lifecycle status</td><td><em>Provisioning</em> (being set up), <em>Active</em> (open for sign-in), <em>Provisioning failed</em> (setup stopped; can be retried), <em>Suspended</em> (closed for sign-in for now), <em>Closed</em> (closed for good; data kept).</td></tr>
+          <tr><td>Setup checklist</td><td>What the primary administrator should finish: identity confirmed, registrations present, current financial year open, receipt series reviewed, an operational role with a member, outbound email status (shown, optional) and payment setup (optional).</td></tr>
+          <tr><td>Issuer snapshot</td><td>The organisation's display and legal names, contact details, address, registrations in force on the receipt date, and logo, kept with each receipt when it is issued.</td></tr>
+          <tr><td>Platform history</td><td>The operator-side record of every onboarding step and every operator action, with who did it and when.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>4. Business rules</h2>
+      <h3>Identity</h3>
+      <ul>
+        <li>The display name and the legal name are separate and both required once onboarded. The product name OneNGO is fixed and is not part of an organisation's identity.</li>
+        <li>A registration's number is stored trimmed and in capitals, so <code>aaatc1234f</code> and <code>AAATC1234F</code> are the same number; an organisation cannot hold the same type and number twice. Two different organisations may hold the same registration.</li>
+        <li>An expiry date cannot be before the issue date.</li>
+        <li>The organisation code, hosting region and lifecycle status belong to the operator. Organisation administrators see the code but cannot change it.</li>
+        <li>Every change to the identity, registrations, logo or setup confirmation is recorded in the organisation's audit log.</li>
+      </ul>
+      <h3>Logo</h3>
+      <ul>
+        <li>The logo must be a PNG, JPEG or WebP image of at most 1 MB. Other images (including SVG) and other files are refused.</li>
+        <li>The current logo, and any earlier logo kept by an issued receipt, is never removed by the clean-up of unused uploads. An earlier logo no receipt keeps is cleaned up like any unused upload.</li>
+        <li>Members only ever see their own organisation's logo. Before sign-in, only an active organisation's current logo is shown, from the platform itself; no logo is ever loaded from another website.</li>
+      </ul>
+      <h3>Onboarding</h3>
+      <ul>
+        <li>Only an operator onboards an organisation, from a request file, never from an organisation's own screens or credentials. The request never contains a password.</li>
+        <li>The whole request is checked before anything is written, and every problem is reported against the field it concerns. Unknown properties, an unknown or unpublished module, a module whose prerequisite is missing, an unsupported language, an unknown time zone, invalid registrations, a code already used by another organisation or another request, a reserved code, a receipt prefix that is unsafe or has no receipts to apply to, and a financial year that does not match the start month are all refused.</li>
+        <li>One approved request creates exactly one organisation. Running the same request again continues where it stopped, or returns the organisation it already created; running a request id again with different contents is refused.</li>
+        <li>Onboarding happens in steps: create the organisation, save its profile and registrations, create the Organisation administrator role, enable the chosen modules (with their roles, ledger accounts and receipt series), apply the receipt prefix, set the financial year start month and open the requested year, add the primary administrator, check readiness, activate. Each finished step is recorded; an interrupted or failed onboarding resumes after the last finished step and never repeats one.</li>
+        <li>A requested receipt prefix replaces the prefix of the chosen modules' receipt series for this organisation only, and only while nothing is numbered in that series yet.</li>
+        <li>The financial year start month is set before the requested year opens, so the year is labelled and bounded by the organisation's own start month.</li>
+        <li>The primary administrator's account is created, or reused if that email already has one. A reused account keeps its name and password, and is added only to the new organisation, with the Organisation administrator role there; its memberships elsewhere do not change.</li>
+        <li>After the contact details, address and registrations are saved in the organisation, the onboarding request no longer keeps its own copy of them.</li>
+      </ul>
+      <h3>Activation and sign-in</h3>
+      <ul>
+        <li>Before activation the readiness checks must pass: both names, contact email, address and time zone present; the Organisation administrator role exists with full access; the primary administrator is an active member holding it; every chosen module is enabled and its receipt series exist; the requested financial year is open.</li>
+        <li>Only an active organisation can be signed in to. While provisioning, after a failed provisioning, while suspended and once closed, every sign-in is refused, existing sessions stop working and the organisation's API keys are refused.</li>
+        <li>The primary administrator's single-use, seven-day invitation is sent only after the organisation is active. If sending fails, the failure is recorded and a retry sends it again; it never creates another organisation or administrator.</li>
+        <li>The organisation's sign-in page shows only its code, display name, logo and sign-in options. An unknown code and an organisation that is not active get exactly the same "not available" answer, so the page cannot be used to discover organisations. Lookups are rate-limited like sign-in.</li>
+        <li>On the organisation's own sign-in page nobody types an organisation code. The organisation of the last successful sign-in on the device is remembered, and the general sign-in opens that organisation's page, keeping where the person was going. "Use another organisation" forgets it and shows the general sign-in, which keeps an organisation-code field as the fallback.</li>
+        <li>After setting a password from an invitation or a reset link, the person is sent to their organisation's sign-in page.</li>
+      </ul>
+      <h3>Product identity</h3>
+      <ul>
+        <li>The product is always called OneNGO: on sign-in, in the application bar, in the installed-app name and in every browser title. Beside the OneNGO mark the application shows the organisation's display name and logo.</li>
+        <li>Browser titles read <code>&lt;screen&gt; | OneNGO</code>; on Home and on an organisation's sign-in page the screen is the organisation's display name.</li>
+      </ul>
+      <h3>Lifecycle</h3>
+      <ul>
+        <li>Only an active organisation can be suspended, and a reason is required. Suspending ends every session of the organisation at once and stops its API keys. No data is deleted.</li>
+        <li>Only a suspended organisation can be reactivated. Reactivation does not bring back sessions that ended or keys that were revoked; members sign in again with their valid credentials.</li>
+        <li>Only a suspended organisation, or one whose provisioning failed, can be closed, and a reason is required. Closing keeps all data for export and retention; a closed organisation is not reactivated.</li>
+        <li>Every onboarding step and every operator action is kept in the platform history with the operator's identity. Activation, suspension, reactivation and closing also appear in the organisation's own audit log, attributed to the operator.</li>
+      </ul>
+      <h3>Receipts</h3>
+      <ul>
+        <li>Every receipt keeps the issuer snapshot taken when it was issued. Changing the organisation's names, address, registrations or logo later never changes an issued receipt; new receipts carry the new identity.</li>
+        <li>A receipt's issuer snapshot cannot be changed or deleted.</li>
+        <li>A receipt issued before issuer snapshots were kept shows the organisation's current identity, and says so.</li>
+        <li>The printed receipt is headed by the issuer as kept: the legal name (or the display name without one), the display name when it differs, the address, the contact details, the registrations in force on the receipt date and the logo it was issued with.</li>
+      </ul>
+
+      <h2>5. User flows</h2>
+      <h3>Find / view</h3>
+      <p>
+        An operator asks for an organisation's status by code (or a request's status by request id) and sees its names, status,
+        region, when its status last changed, how far onboarding got, the invitation state and the history of steps and actions.
+        An organisation administrator opens the organisation settings to see the identity, registrations, logo and setup checklist.
+        Every member sees the display name and logo in the application. Anyone opening <code>/o/&lt;code&gt;/sign-in</code> sees the
+        organisation's display name and logo while it is active.
+      </p>
+      <h3>Sign in</h3>
+      <p>
+        A person opens their organisation's sign-in link (from the invitation, or remembered from their last sign-in) and sees
+        OneNGO with the organisation's name and logo and its sign-in options, and signs in with email and password, an emailed code
+        or an identity provider, without typing an organisation code. If the link's organisation is unknown or not active they see
+        one neutral "not available" message and can choose "Use another organisation". The general sign-in asks for the
+        organisation code.
+      </p>
+      <h3>Create</h3>
+      <p>
+        The operator prepares a request file with the request id, organisation code, display and legal names, contact details,
+        address, time zone, language, hosting region, registrations, primary administrator, modules, financial year and optional
+        receipt prefix. The operator can first check it without onboarding. Onboarding prints the organisation's id, code, status,
+        last step and invitation state, and never the request's details, tokens or secrets. The primary administrator receives the
+        invitation, sets a password and signs in.
+      </p>
+      <h3>Update</h3>
+      <p>
+        An organisation administrator changes the display name, legal name and default language in the organisation settings;
+        the contact details, address and time zone; adds, corrects and removes registrations; and uploads, replaces or removes the
+        logo. They confirm the organisation identity and that they have reviewed the receipt series; when every required item is
+        done, setup is marked complete with who completed it.
+      </p>
+      <p>
+        The settings open with the setup checklist (each item done or still to do, required or optional, and the two
+        confirmations), then the identity (organisation code and sign-in link shown read-only, legal name, contact, address, time
+        zone), the registrations and the logo. Problems are shown on the field they concern, whether found before saving or reported
+        when saving; a duplicate registration is shown on its number. Removing a registration asks for confirmation. A logo that
+        is not a PNG, JPEG or WebP image of at most 1 MB is refused before it is sent. A new display name or logo shows in the
+        application bar at once.
+      </p>
+      <h3>Other actions</h3>
+      <p>
+        The operator retries a failed or interrupted onboarding, or a failed invitation, by request id. The operator suspends an
+        active organisation (with a reason), reactivates a suspended one, and closes a suspended one (with a reason).
+      </p>
+
+      <h2>6. Fields &amp; validation</h2>
+      <table>
+        <thead><tr><th>Field</th><th>Rules</th><th>Visibility / conditions</th></tr></thead>
+        <tbody>
+          <tr><td>Request id</td><td>Required; 3 to 100 letters, digits or <code>. _ : -</code>; identifies the approved request.</td><td>Operator only.</td></tr>
+          <tr><td>Organisation code</td><td>Required; 3 to 40 lowercase letters, digits and single dashes, starting with a letter and not ending with a dash; not a reserved word (for example <code>admin</code>, <code>api</code>, <code>onengo</code>); unique across the platform; never changes.</td><td>Set by the operator; read-only for administrators.</td></tr>
+          <tr><td>Display name</td><td>Required; at most 120 characters.</td><td>Everyone who can see the organisation.</td></tr>
+          <tr><td>Legal name</td><td>Required; at most 200 characters; spaces are tidied.</td><td>Administrators; on receipts.</td></tr>
+          <tr><td>Primary email</td><td>Required at onboarding; a valid address; stored in lowercase.</td><td>Administrators; on receipts.</td></tr>
+          <tr><td>Phone</td><td>Optional; digits, spaces, brackets or dashes, optionally starting with +; 6 to 20 characters.</td><td>Administrators; on receipts.</td></tr>
+          <tr><td>Website</td><td>Optional; an <code>http</code> or <code>https</code> address, at most 200 characters.</td><td>Administrators; on receipts.</td></tr>
+          <tr><td>Address</td><td>First line, city, postal code and country required; second line and state optional; country as its two-letter code (IN). Replaced as a whole.</td><td>Administrators; on receipts.</td></tr>
+          <tr><td>Time zone</td><td>Required at onboarding; a named time zone such as Asia/Kolkata.</td><td>Administrators.</td></tr>
+          <tr><td>Default language</td><td>Required at onboarding; one of the languages the product ships.</td><td>Administrators.</td></tr>
+          <tr><td>Hosting region</td><td>Required at onboarding; for example <code>asia-south1</code>.</td><td>Operator only.</td></tr>
+          <tr><td>Registration type</td><td>Required; lowercase letters, digits, <code>-</code> or <code>_</code>, at most 40 (for example <code>80g</code>, <code>12a</code>, <code>fcra</code>).</td><td>Administrators; on receipts while in force.</td></tr>
+          <tr><td>Registration number</td><td>Required; at most 80 characters; stored in capitals; unique with its type within the organisation.</td><td>Administrators; on receipts while in force.</td></tr>
+          <tr><td>Issuing authority, notes</td><td>Optional; at most 200 and 500 characters.</td><td>Administrators.</td></tr>
+          <tr><td>Issue and expiry dates</td><td>Optional; real calendar dates; expiry not before issue.</td><td>A registration is on a receipt when the receipt date is within them.</td></tr>
+          <tr><td>Logo</td><td>PNG, JPEG or WebP; at most 1 MB.</td><td>Members; the sign-in page while active; receipts.</td></tr>
+          <tr><td>Administrator name and email</td><td>Required; name at most 120 characters; a valid email.</td><td>Operator.</td></tr>
+          <tr><td>Modules</td><td>A list (possibly empty) of modules the installation ships and has published; each at most once; prerequisites included.</td><td>Operator.</td></tr>
+          <tr><td>Financial year</td><td>Start month 1 to 12; the year to open must be labelled for that start month (<code>2026</code> for January, otherwise <code>2026-27</code>).</td><td>Operator.</td></tr>
+          <tr><td>Receipt prefix</td><td>Optional; 1 to 12 capital letters, digits or dashes, starting with a letter or digit (no <code>/</code>); only when a chosen module issues receipts.</td><td>Operator; visible in receipt numbers.</td></tr>
+          <tr><td>Suspension or closing reason</td><td>Required; at most 500 characters.</td><td>Operator; platform history and the organisation's audit.</td></tr>
+          <tr><td>Named fixed recipients</td><td>At most 20; each a short name (lower-case letter first, letters, digits, <code>-</code> or <code>_</code>) with an email, a phone number, or both, and an optional label; replaced as a whole; every change audited.</td><td>Administrators; override scripts may notify them by name, never by address.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>7. Out of scope / non-goals</h2>
+      <ul>
+        <li>Self-registration by an NGO, subscription billing, and an operator web console.</li>
+        <li>Public organisation search, autocomplete or finding an organisation from a person's email.</li>
+        <li>Deleting an organisation or its data on closing; retention and export rules apply instead.</li>
+        <li>Changing an organisation code after onboarding.</li>
+        <li>A logo from another website, or a vector (SVG) logo.</li>
+        <li>An organisation switcher for people who belong to several organisations.</li>
+        <li>Remembering more than one organisation on a device.</li>
+      </ul>
+
+      <h2>8. Testable scenarios (for test generation)</h2>
+      <p class="src">Given / When / Then acceptance criteria. Each row seeds one or more test cases. "BE" = backend-enforced, "FE" = frontend-enforced, "E2E" = end-to-end.</p>
+      <table>
+        <thead><tr><th>ID</th><th>Given</th><th>When</th><th>Then (expected)</th><th>Layer</th></tr></thead>
+        <tbody class="tc">
+          <tr><td>ORG-01</td><td>A request with a password field, an unknown module, a used code and an invalid registration date</td><td>The operator onboards it</td><td>Refused with an issue on each of those fields; nothing is created; registration numbers are not echoed</td><td>BE</td></tr>
+          <tr><td>ORG-02</td><td>A valid request</td><td>The operator checks it only</td><td>Reported valid; no organisation or request is recorded</td><td>BE</td></tr>
+          <tr><td>ORG-03</td><td>A valid request choosing Donations, prefix HH, year starting April</td><td>The operator onboards it</td><td>One active organisation with its profile, registrations, Organisation administrator, Finance and Viewer roles, Donations accounts, receipt series prefixed HH, the year open from 1 April; the administrator is invited</td><td>BE</td></tr>
+          <tr><td>ORG-04</td><td>That request was onboarded</td><td>The operator runs it again; then runs the same id with another name</td><td>Same organisation, no second invitation; the changed request is refused</td><td>BE</td></tr>
+          <tr><td>ORG-05</td><td>Onboarding stops after any one step (a failure or a stopped process)</td><td>The operator retries or reruns the request</td><td>It finishes; there is one organisation, one administrator and one profile; sign-in was refused until then</td><td>BE</td></tr>
+          <tr><td>ORG-06</td><td>The administrator's email already belongs to a member of another organisation</td><td>The organisation is onboarded</td><td>The same account is used, keeps its name and password, is administrator only in the new organisation, and its other memberships are unchanged</td><td>BE</td></tr>
+          <tr><td>ORG-07</td><td>Sending the invitation fails</td><td>Onboarding finishes, then the operator retries</td><td>The organisation is active with the invitation marked failed; the retry sends it without another organisation or administrator</td><td>BE</td></tr>
+          <tr><td>ORG-08</td><td>An active organisation with a signed-in member and an API key</td><td>The operator suspends it</td><td>The session and the key stop working and sign-in is refused; no data is deleted</td><td>BE</td></tr>
+          <tr><td>ORG-09</td><td>A suspended organisation</td><td>The operator reactivates it</td><td>Members sign in again with their passwords; the old session and a revoked key stay refused</td><td>BE</td></tr>
+          <tr><td>ORG-10</td><td>An active organisation</td><td>The operator closes it</td><td>Refused until it is suspended; once closed it cannot be reactivated and its data is kept</td><td>BE</td></tr>
+          <tr><td>ORG-11</td><td>Organisations active, provisioning, failed, suspended and closed, and an unknown code</td><td>Someone opens each sign-in link</td><td>Only the active one shows its display name and logo; all others get the same "not available" answer</td><td>BE / E2E</td></tr>
+          <tr><td>ORG-12</td><td>An administrator of organisation A</td><td>They add <code>80g aaatc1234f</code> and then <code>80G AAATC1234F</code></td><td>The second is refused as a duplicate; organisation B may add the same registration</td><td>BE</td></tr>
+          <tr><td>ORG-13</td><td>An organisation with a logo</td><td>A member of another organisation asks for it</td><td>Not found</td><td>BE</td></tr>
+          <tr><td>ORG-14</td><td>A receipt was issued; then the names, address, registrations and logo change</td><td>The receipt is printed</td><td>It shows the identity and logo it was issued with; a new receipt shows the new identity</td><td>BE / E2E</td></tr>
+          <tr><td>ORG-15</td><td>The current logo, a replaced logo kept by a receipt and a replaced logo kept by none, all older than a day</td><td>Unused uploads are cleaned up</td><td>Only the last one is removed</td><td>BE</td></tr>
+          <tr><td>ORG-16</td><td>A new organisation</td><td>The administrator adds a registration, gives someone the Finance role, confirms the identity and the receipt series</td><td>Every required checklist item is done and setup is marked complete</td><td>BE / FE</td></tr>
+          <tr><td>ORG-17</td><td>An organisation administrator with full access</td><td>They try any operator action through the application</td><td>There is no such action to call</td><td>BE</td></tr>
+          <tr><td>ORG-18</td><td>A member signed in to Helping Hands</td><td>They open Home and then Records</td><td>The bar shows OneNGO with Helping Hands and its logo; the titles read "Helping Hands | OneNGO" and "Records | OneNGO"</td><td>FE</td></tr>
+          <tr><td>ORG-19</td><td>Someone last signed in to <code>demo</code> on this device</td><td>They open the general sign-in, then choose "Use another organisation"</td><td>They land on <code>/o/demo/sign-in</code> with no code field; then on the general sign-in with an empty code field, and <code>demo</code> is no longer remembered</td><td>FE</td></tr>
+          <tr><td>ORG-20</td><td>An unknown code and a suspended organisation's code</td><td>Someone opens each organisation sign-in link</td><td>Both show the same "not available" message and "Use another organisation"</td><td>FE / BE</td></tr>
+          <tr><td>ORG-21</td><td>An invitation link for <code>demo</code></td><td>The person sets their password</td><td>"Go to sign in" opens <code>/o/demo/sign-in</code></td><td>FE</td></tr>
+          <tr><td>ORG-22</td><td>An administrator in the settings</td><td>They save a website without https, a country "India", an SVG logo, and a registration already held</td><td>Each problem is shown on its own field; nothing invalid is saved</td><td>FE / BE</td></tr>
+        </tbody>
+      </table>
+
+      <h2>9. Discrepancies (backend vs frontend)</h2>
+      <p class="src">Where the two implementations disagree. Backend enforcement is authoritative for correctness.</p>
+      <table>
+        <thead><tr><th>Topic</th><th>Backend behavior</th><th>Frontend behavior</th><th>Resolution</th></tr></thead>
+        <tbody>
+          <tr><td class="warn">Invitation wording</td><td>Invitation subject is "You have been invited to &lt;display name&gt;", without "on OneNGO" (<code>src/identity/identity-service.ts</code>).</td><td>After setting a password the person is sent to their organisation's sign-in page, as intended.</td><td>Open: the "on OneNGO" wording is a server change.</td></tr>
+          <tr><td class="warn">Authenticator app label</td><td>Two-step setup labels the account "NGO Platform:&lt;email&gt;" in the authenticator app (<code>src/identity/identity-service.ts</code>).</td><td>Everything the application shows says OneNGO.</td><td>Open: the label is a server change.</td></tr>
+          <tr><td>Display and legal name saved separately</td><td>The legal name is saved with the organisation settings; contact, address and time zone with the organisation profile.</td><td>One "Save identity" saves the legal name first, then the profile; a refusal of either is shown on its fields.</td><td>Consistent; noted because a refused profile can follow an accepted legal name.</td></tr>
+          <tr><td>Checks before sending</td><td>Enforces every identity, registration and logo rule.</td><td>Repeats the required fields, the two-letter country, the registration type format, the expiry-before-issue rule and the logo type and size before sending; all other rules come back from the server onto their fields.</td><td>Consistent; the backend stays authoritative.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>10. Revision history</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Change (why)</th><th>Side</th><th>Code drivers</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>2026-10-26</td>
+            <td>Created (Release 2, organisation onboarding and lifecycle, server side). Structured organisation identity with separate legal name, profile, registrations and managed logo; operator-run, resumable, idempotent onboarding with modules, financial year and an invited primary administrator; readiness and activation; suspend, reactivate and close; platform history; organisation sign-in identity; issuer snapshot on every receipt.</td>
+            <td>backend</td>
+            <td class="src"><code>migrations/017_organisation_lifecycle.sql</code>, <code>migrations/018_receipt_issuer_snapshot.sql</code>, <code>src/domain/organisation.ts</code>, <code>src/domain/receipts.ts</code>, <code>src/application/organisations/</code>, <code>src/engines/admin/organisation-service.ts</code>, <code>src/engines/admin/administration-service.ts</code>, <code>src/engines/actions/receipt-print.ts</code>, <code>src/engines/files/file-service.ts</code>, <code>src/kernel/capabilities.ts</code>, <code>src/identity/identity-service.ts</code>, <code>src/http/plugins/organisation.ts</code>, <code>src/organisation.ts</code>, <code>src/organisation-command.ts</code></td>
+          </tr>
+          <tr>
+            <td>2026-10-26</td>
+            <td>Frontend side built and reconciled: OneNGO mark with the organisation's name and logo and <code>&lt;screen&gt; | OneNGO</code> titles; the organisation sign-in page with remembered organisation, "Use another organisation", code fallback and the neutral "not available" state; invitations and resets returning to it; settings for legal name, contact, address, time zone, registrations, logo and the setup checklist with field-level problems; receipts headed by the kept issuer. Resolved four "not built yet" discrepancies; two server wording gaps remain.</td>
+            <td>frontend</td>
+            <td class="src"><code>web/src/app/core/organisation/</code>, <code>web/src/app/services/organisation.ts</code>, <code>web/src/app/admin/settings/organisation-store.ts</code>, <code>web/src/app/admin/settings/organisation-sections.ts</code>, <code>web/src/app/pages/sign-in.page.ts</code>, <code>web/src/app/pages/sign-in-store.ts</code>, <code>web/src/app/pages/reset-password.page.ts</code>, <code>web/src/app/routes.ts</code>, <code>web/src/app/shell/shell-store.ts</code>, <code>web/src/app/ui/app-bar.ts</code>, <code>web/src/app/core/records/print.ts</code>, <code>web/src/app/print/</code>, <code>web/public/manifest.webmanifest</code>, <code>web/src/index.html</code></td>
+          </tr>
+          <tr>
+            <td>2026-10-26</td>
+            <td>Named fixed recipients (for example the auditor) added to the organisation settings, kept by administrators, for override-script notifications (block X2). The settings screen does not edit them yet.</td>
+            <td>backend</td>
+            <td class="src"><code>src/engines/admin/administration-service.ts</code>, <code>src/http/contracts/settings.ts</code>, <code>src/kernel/settings.ts</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>11. Learning log</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Learning</th><th>How it was inferred</th></tr></thead>
+        <tbody>
+          <tr><td>2026-10-26</td><td>Before this change an organisation's status was only active or suspended, and nothing checked it after sign-in: a session and an API key kept working for a suspended organisation.</td><td>Backend: sign-in looked up only active organisations, but access-token checks, session renewal and API-key checks did not look at the status (<code>src/identity/identity-service.ts</code>, <code>src/kernel/capabilities.ts</code>).</td></tr>
+          <tr><td>2026-10-26</td><td>The logo lives in the same file store as uploads, and unused uploads are removed after a day, so a logo had to be marked as kept rather than stored elsewhere.</td><td>Backend: the clean-up removes every upload not linked to a record (<code>src/engines/files/file-service.ts</code>).</td></tr>
+          <tr><td>2026-10-26</td><td>A module's receipt series are copied into each organisation when the module is enabled, so a receipt prefix can be set for one organisation without changing the shipped module.</td><td>Backend: enabling a module inserts the organisation's own receipt series rows (<code>src/metadata/definition-service.ts</code>).</td></tr>
+          <tr><td>2026-10-26</td><td>Adding a member and creating their profile can safely run again, which lets onboarding resume after the administrator step.</td><td>Backend: membership and role assignment are upserts and the profile is created only when missing (<code>src/identity/identity-service.ts</code>, <code>src/application/identity/profile-service.ts</code>).</td></tr>
+          <tr><td>2026-10-26</td><td>Logos that need the sign-in cannot be shown by address alone, since the access token does not travel with an image; the application fetches them and shows them inline. The sign-in page's logo needs no sign-in and is shown directly.</td><td>Frontend: the access token is held in memory and sent as a header; the content policy allows only same-origin and inline images (<code>web/src/app/services/api.ts</code>, <code>src/http/server.ts</code>).</td></tr>
+          <tr><td>2026-10-26</td><td>The server reports field problems in two shapes: a malformed request names the field as <code>/address/postalCode</code>, a rule failure as <code>address.postalCode</code>; a duplicate registration is a conflict with no field. All three are shown on the field.</td><td>Backend: schema failures and validation failures are answered separately (<code>src/http/validation.ts</code>, <code>src/domain/organisation.ts</code>, <code>src/engines/admin/organisation-service.ts</code>).</td></tr>
+          <tr><td>2026-10-26</td><td>The application already remembered the last organisation after sign-in and after opening an invitation; the organisation page builds on that memory rather than adding another.</td><td>Frontend: the last organisation is stored after sign-in and from the invitation link (<code>web/src/app/services/session.ts</code>, <code>web/src/app/pages/reset-password.page.ts</code>).</td></tr>
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

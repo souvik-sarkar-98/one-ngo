@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NGO Platform — organisation administrator: theme, layout and organisation information</title>
+<style>
+  :root {
+    --fg: #1d2733; --muted: #5b6878; --line: #d8dee6; --bg: #f5f7fa; --card: #fff;
+    --brand: #1f5f8b; --ok: #1d7a46; --warn: #9a6200; --bad: #b3261e; --radius: 6px;
+    --b50: color-mix(in srgb, var(--brand) 6%, #fff); --b100: color-mix(in srgb, var(--brand) 12%, #fff); --b200: color-mix(in srgb, var(--brand) 25%, #fff);
+    --page: #eef1f5; --ink: #18212b;
+    --font: 'Segoe UI', Roboto, 'Noto Sans', Helvetica, Arial, sans-serif;
+    --mono: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font); color: var(--ink); background: linear-gradient(180deg, #f6f8fa, var(--page)); }
+  header.page { max-width: 1440px; margin: 0 auto; padding: 36px 40px 18px; }
+  header.page h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -.01em; }
+  header.page p { margin: 0 0 10px; max-width: 980px; line-height: 1.55; color: #36414d; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 16px; }
+  .rules div { background: #fff; border: 1px solid #dfe5eb; border-radius: 10px; padding: 12px 14px; font-size: 13.5px; line-height: 1.5; }
+  .rules b { display: block; color: var(--brand); margin-bottom: 3px; }
+  nav.toc { position: sticky; top: 0; z-index: 20; background: rgba(238,241,245,.94); backdrop-filter: blur(6px); border-bottom: 1px solid #dbe1e7; }
+  nav.toc div { max-width: 1440px; margin: 0 auto; padding: 9px 40px; display: flex; gap: 4px; overflow-x: auto; }
+  nav.toc a { font: 600 12px var(--mono); color: #3a4a5a; text-decoration: none; padding: 6px 10px; border-radius: 6px; white-space: nowrap; }
+  nav.toc a:hover { background: #fff; }
+  main.page { max-width: 1440px; margin: 0 auto; padding: 0 40px 80px; }
+  section.flow { margin-top: 40px; }
+  .flabel { font: 700 12px var(--mono); color: var(--brand); text-transform: uppercase; letter-spacing: .06em; display: flex; gap: 8px; align-items: center; }
+  .flabel::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+  section.flow > h2 { margin: 4px 0 4px; font-size: 22px; }
+  section.flow > p { margin: 0 0 14px; color: #3a4552; max-width: 980px; line-height: 1.5; }
+  .step { display: grid; grid-template-columns: 52px 330px minmax(0, 1fr); gap: 18px; align-items: start; padding: 18px 0; border-top: 1px dashed #d3dae2; }
+  @media (max-width: 1200px) { .step { grid-template-columns: 44px minmax(0, 1fr); } .step .desk { grid-column: 2; } }
+  .num { width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 2px solid var(--brand); color: var(--brand); font: 700 15px/36px var(--font); text-align: center; }
+  .stephead { grid-column: 2 / -1; margin-bottom: -6px; }
+  .stephead b { font-size: 16px; }
+  .stephead .act { display: inline-block; margin-left: 10px; font-size: 13px; color: #3a4552; }
+  .stephead .act kbd { font: 600 12px var(--font); background: #fff; border: 1px solid #ccd5de; border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; }
+  .stephead code { display: block; margin-top: 4px; font: 12px var(--mono); color: #556373; }
+  .cap { font: 600 10.5px var(--mono); color: #6a7683; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 5px; }
+  .noteline { font-size: 13px; color: #3a4552; line-height: 1.5; margin-top: 8px; max-width: 760px; }
+
+  .phone { width: 330px; height: 640px; border-radius: 34px; background: #0f141a; padding: 10px; box-shadow: 0 14px 30px rgba(15,23,42,.18); }
+  .phone .scr { width: 100%; height: 100%; border-radius: 26px; overflow: hidden; background: var(--bg); position: relative; display: flex; flex-direction: column; color: var(--fg); font-size: 14px; }
+  .status { height: 26px; flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; font: 600 11px var(--font); background: var(--brand); color: #fff; }
+  .browser { border-radius: 10px; background: #fff; border: 1px solid #d5dbe2; box-shadow: 0 14px 30px rgba(15,23,42,.12); overflow: hidden; min-width: 0; }
+  .browser .chrome { height: 30px; background: #e9edf1; border-bottom: 1px solid #d5dbe2; display: flex; align-items: center; padding: 0 10px; }
+  .browser .url { flex: 1; height: 20px; border-radius: 6px; background: #fff; font: 11.5px var(--mono); color: #536171; display: flex; align-items: center; padding: 0 9px; overflow: hidden; white-space: nowrap; }
+  .browser .scr { height: 600px; background: var(--bg); position: relative; overflow: hidden; display: flex; flex-direction: column; color: var(--fg); font-size: 14px; }
+
+  .appbar { height: 50px; flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 12px; background: var(--brand); color: #fff; }
+  .appbar .brand { font-weight: 700; font-size: 15px; }
+  .appbar .mark { width: 22px; height: 22px; border-radius: 5px; background: #fff; color: var(--brand); font: 800 9px/22px var(--font); text-align: center; flex: 0 0 auto; }
+  .appbar .org { font-weight: 600; font-size: 13px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pagehead { display: flex; align-items: center; gap: 2px; margin: 0 0 10px; }
+  .pagehead .h1 { margin: 0; line-height: 1.25; }
+  .pagehead .back { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; flex: 0 0 auto; }
+  .ib { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; position: relative; font-size: 17px; }
+  .ib.av { background: rgba(255,255,255,.2); font: 700 12px var(--font); }
+  .ib .dot { position: absolute; top: 3px; right: 2px; min-width: 15px; height: 15px; border-radius: 8px; background: #fdf1dc; color: var(--warn); font: 700 9.5px/15px var(--font); text-align: center; }
+  .frame-body { flex: 1; display: flex; min-height: 0; }
+  .main { flex: 1; min-width: 0; overflow: hidden; padding: 12px 12px 0; position: relative; }
+  .browser .main { padding: 16px 20px 0; }
+  .navbar { flex: 0 0 auto; display: grid; grid-template-columns: repeat(var(--nav-n, 4), minmax(0, 1fr)); background: #fff; border-top: 1px solid var(--line); height: 58px; }
+  .rail { flex: 0 0 auto; width: 84px; background: #fff; border-right: 1px solid var(--line); display: flex; flex-direction: column; padding-top: 10px; gap: 4px; overflow: auto; }
+  .nv { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 10.5px; color: var(--muted); padding: 6px 0; position: relative; min-width: 0; }
+  .nv .lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nv .g { width: 44px; height: 26px; border-radius: 13px; display: grid; place-items: center; }
+  .nv.on { color: var(--brand); font-weight: 600; }
+  .nv.on .g { background: var(--b100); }
+  .nv svg { width: 20px; height: 20px; fill: currentColor; }
+  .nv .dot { position: absolute; top: 3px; left: calc(50% + 6px); min-width: 15px; height: 15px; border-radius: 8px; background: #fdf1dc; color: var(--warn); font: 700 9.5px/15px var(--font); text-align: center; }
+
+  .h1 { font-size: 1.15rem; font-weight: 700; margin: 0 0 10px; }
+  .chipbar { display: flex; gap: 8px; overflow: hidden; padding-bottom: 10px; }
+  .chip { flex: 0 0 auto; border: 1px solid rgba(148,163,184,.35); background: #fff; border-radius: 999px; padding: 7px 13px; font-size: .7rem; font-weight: 700; line-height: 1; }
+  .chip.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .hit { outline: 3px solid #f3be26; outline-offset: 2px; border-radius: 12px; }
+  .panel { background: #fff; border-radius: 16px; border: 1px solid rgba(148,163,184,.22); box-shadow: 0 1px 2px #0f172a0d, 0 4px 14px #0f172a12; overflow: hidden; }
+  .bdg { font-size: .56rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; border-radius: 999px; padding: 4px 8px; line-height: 1; white-space: nowrap; }
+  .bdg.w { background: #fdf1dc; color: var(--warn); } .bdg.s { background: #e3f4ea; color: var(--ok); } .bdg.p { background: var(--b100); color: var(--brand); }
+  .btn { font: inherit; font-size: 13px; padding: .45rem .8rem; border-radius: var(--radius); border: 1px solid var(--line); background: #fff; color: var(--fg); text-align: center; display: inline-block; }
+  .btn.p { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn.d { color: var(--bad); border-color: var(--bad); }
+  .card { background: #fff; border: 1px solid rgba(148,163,184,.25); border-radius: 14px; padding: 12px; margin-bottom: 10px; box-shadow: 0 1px 2px #0f172a0a; }
+  .card .ct { font-weight: 700; font-size: .85rem; }
+  .cs { font-size: .72rem; color: #64748b; }
+  .listrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid rgba(148,163,184,.18); font-size: .8rem; }
+  .listrow.tight { padding: 6px 10px; font-size: .74rem; }
+  .listrow:last-child { border-bottom: 0; }
+  .note { background: #eef5fb; border: 1px solid #c6d9e8; color: var(--brand); border-radius: 12px; padding: 9px 12px; font-size: .72rem; margin-bottom: 10px; line-height: 1.4; }
+  .note.warn { background: #fff8ee; border-color: #f0d9b5; color: #8a4b0f; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .sp { flex: 1; }
+  .crumbs { flex: 0 0 auto; background: #fff; border-bottom: 1px solid var(--line); padding: 0 12px; height: 26px; display: flex; align-items: center; font-size: 11.5px; }
+  .browser .crumbs { padding-left: 16px; height: 30px; font-size: 12.5px; }
+  .crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; min-width: 0; overflow: hidden; white-space: nowrap; }
+  .crumbs li { display: flex; align-items: center; color: var(--muted); }
+  .crumbs li + li::before { content: '›'; margin: 0 6px; color: #94a3b8; }
+  .crumbs a { color: var(--brand); font-weight: 600; }
+  .crumbs li[aria-current] { color: var(--fg); font-weight: 600; }
+  .mf { margin-bottom: 8px; }
+  .mf .l { font-size: .72rem; font-weight: 600; color: #374151; margin-bottom: 3px; }
+  .mf .l i { color: #f97316; font-style: normal; }
+  .mf .o { border: 1px solid #79747e; border-radius: 4px; height: 32px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .78rem; background: #fff; }
+  .mf .o.ro { background: #f2f2f4; color: #6b6870; border-color: #c9c6cf; }
+  .mf .o.err { border-color: #ba1a1a; }
+  .kv { margin: 0 0 8px; border: 1px solid rgba(148,163,184,.32); border-radius: 12px; overflow: hidden; }
+  .kv div { display: grid; grid-template-columns: 108px 1fr; gap: 8px; padding: 6px 10px; font-size: .7rem; }
+  .kv div:not(:last-child) { border-bottom: 1px solid rgba(148,163,184,.32); }
+  .kv div:nth-child(2n) { background: #f8fafc; }
+  .kv b { font-weight: 600; color: #334155; }
+  .check { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; font-size: .74rem; border-bottom: 1px solid rgba(148,163,184,.16); }
+  .check:last-child { border-bottom: 0; }
+  .check .markok { color: var(--ok); font-weight: 800; width: 14px; }
+  .check .markno { color: var(--muted); width: 14px; }
+  .logo { width: 56px; height: 56px; border-radius: 10px; border: 1px solid var(--line); background: #fff; color: var(--brand); display: grid; place-items: center; font: 800 16px var(--font); flex: 0 0 auto; }
+  .crow { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid rgba(148,163,184,.35); border-radius: 8px; padding: 4px 8px; margin-bottom: 5px; font-size: .74rem; }
+  .sw { width: 18px; height: 18px; border-radius: 4px; border: 1px solid rgba(15,23,42,.15); flex: 0 0 auto; }
+  .crow .cl { font-weight: 600; }
+  .crow .ch { margin-left: auto; font: 12px var(--mono); color: #475569; }
+  .issue { border-radius: 8px; padding: 7px 10px; font-size: .7rem; font-weight: 600; margin: 6px 0; }
+  .issue.ok { background: #e3f4ea; color: var(--ok); }
+  .issue.bad { background: #fdeceb; color: var(--bad); }
+  .mini { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--bg); }
+  .mini .ab { background: var(--brand); color: #fff; font-size: .7rem; font-weight: 700; padding: 7px 8px; display: flex; align-items: center; gap: 6px; }
+  .mini .ab .mark { width: 16px; height: 16px; border-radius: 4px; background: #fff; color: var(--brand); font: 800 8px/16px var(--font); text-align: center; }
+  .mini .chips { display: flex; gap: 5px; padding: 7px 8px 0; }
+  .mini .lr { display: flex; gap: 8px; align-items: center; margin: 7px 8px; background: #fff; border-radius: 8px; padding: 7px 8px; font-size: .68rem; }
+  .mini .btns { display: flex; gap: 6px; padding: 0 8px 8px; }
+  .mini .btn { font-size: .66rem; padding: .3rem .55rem; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+  .switch { display: inline-flex; border: 1px solid rgba(148,163,184,.35); border-radius: 12px; overflow: hidden; background: #fff; }
+  .switch span { padding: 0 11px; min-height: 32px; display: inline-flex; align-items: center; font-size: .7rem; font-weight: 700; color: #475569; }
+  .switch span.on { background: var(--b100); color: var(--brand); }
+  .scrim { position: absolute; inset: 0; background: #0f172a59; z-index: 4; }
+  .sheet { position: absolute; z-index: 5; background: #fff; box-shadow: 0 -8px 32px #0f172a1f; padding: 10px 16px 14px; display: flex; flex-direction: column; }
+  .phone .sheet { left: 0; right: 0; bottom: 0; border-radius: 20px 20px 0 0; }
+  .browser .sheet { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(480px, 86%); border-radius: 20px; padding: 16px 22px 18px; box-shadow: 0 18px 48px #0f172a33; }
+  .sheet .handle { width: 36px; height: 4px; border-radius: 999px; background: #cbd5e1; margin: 0 auto 10px; }
+  .browser .sheet .handle { display: none; }
+  .sheet .ttl { text-align: center; font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 12px; }
+  .acts { display: flex; gap: 8px; margin-top: 8px; }
+  .acts .btn { flex: 1; }
+  .toast { position: absolute; z-index: 7; left: 12px; right: 12px; bottom: 70px; background: #1d2733; color: #fff; border-radius: 10px; padding: 10px 14px; font-size: 12.5px; }
+  .browser .toast { left: auto; right: 24px; bottom: 24px; width: 320px; }
+  .home-card { background: #fff; border: 1px solid rgba(148,163,184,.25); border-radius: 14px; padding: 12px; margin-bottom: 10px; }
+  .home-card b { color: var(--brand); }
+  .cut { font-size: .66rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--brand); background: var(--b50); padding: 6px 12px; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Organisation administrator — theme, layout and organisation information</h1>
+  <p>Asha Shetty is an administrator of Demo Foundation. From Administration she changes how the app looks and who the organisation is. She does not open the Builder. Phone and desktop use the same fields and buttons. Width only changes the arrangement: a single column on a phone, the form beside a live preview on a wide screen. The yellow outline marks what she taps next.</p>
+  <div class="rules">
+    <div><b>Who can change it</b>Manage organisation settings (<code>admin:settings</code>). People without it do not see Theme, Layout or Organisation information. Every save is written to the audit log.</div>
+    <div><b>Theme</b>The organisation theme: brand, text on brand, background, surface, text, muted, lines, and corner radius. Tokens, not a stylesheet. A contrast check runs before publish. Failing contrast needs a confirmation. Everyone sees it on the next screen load, including the app bar, sign-in and the installed app colour.</div>
+    <div><b>Layout</b>The published navigation: what sits on the bar and the rail, and what stays in More. The phone bar keeps the first four sidebar slots, then More. The rail holds eight. Home stays on the sidebar. Also the starting list layout on wide screens, cards or table. Phones stay on cards. Each person can still switch; that choice stays in the address.</div>
+    <div><b>Organisation information</b>The name on the app bar, the legal name printed on receipts, contact, registered address, time zone, registrations such as 12A and 80G, and the logo. The organisation code and the sign-in link are read-only. Language, storage, the API limit and the financial year stay on the same screen under Other settings.</div>
+  </div>
+  <div class="rules" style="margin-top:12px">
+    <div><b>Same values as the Builder</b>Theme and layout are the published theme and navigation. Builder → Theme and Builder → Navigation edit the same values. This screen is the one an administrator uses. A module may ship a starting theme and a starting navigation; the administrator's publish replaces them for this organisation.</div>
+    <div><b>Logo</b>PNG, JPEG or WebP, at most 1 MB, stored with the organisation. Shown on the app bar, the sign-in page and new receipts. A remote address is not loaded. Removing it returns the app bar to the name alone.</div>
+    <div><b>What this does not change</b>Home widgets, record forms, roles and permissions stay in the Builder. List filters, chips and a person's own cards-or-table choice stay as they are. The product name NGOOne stays on the app bar.</div>
+    <div><b>Addresses</b><code>/admin</code>, <code>/admin/settings</code>, <code>/admin/theme</code>, <code>/admin/layout</code>. Back, reload and a shared link open the same section. Breadcrumb: More › Administration › Theme, Layout, or Organisation information.</div>
+  </div>
+</header>
+<nav class="toc"><div id="toc"></div></nav>
+<main class="page" id="flows"></main>
+<script>
+const ICON = {
+  home: '<svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>',
+  records: '<svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>',
+  inbox: '<svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 12h-4a3 3 0 0 1-6 0H5V5h14v10z"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><path d="M6 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm12 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>',
+  people: '<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>',
+};
+const DEFAULT_NAV = {
+  phone: [['home', 'Home', 'home'], ['records', 'Records', 'records'], ['inbox', 'Inbox', 'inbox'], ['more', 'More', 'more']],
+  desk: [['home', 'Home', 'home'], ['records', 'Records', 'records'], ['inbox', 'Inbox', 'inbox'], ['more', 'More', 'more']],
+};
+const PUBLISHED_NAV = {
+  phone: [['home', 'Home', 'home'], ['donors', 'Donors', 'records'], ['donations', 'Donations', 'records'], ['inbox', 'Inbox', 'inbox'], ['more', 'More', 'more']],
+  desk: [['home', 'Home', 'home'], ['donors', 'Donors', 'records'], ['donations', 'Donations', 'records'], ['inbox', 'Inbox', 'inbox'], ['visits', 'Visits', 'records'], ['people', 'People', 'people'], ['more', 'More', 'more']],
+};
+const hit = (on) => (on ? ' hit' : '');
+
+function nav(k, on, o = {}) {
+  const items = (o.navItems && o.navItems[k]) || DEFAULT_NAV[k];
+  const html = items.map(([key, label, icon]) => `<div class="nv${on === key ? ' on' : ''}"><span class="g">${ICON[icon] || ICON.records}</span><span class="lbl">${label}</span>${key === 'inbox' ? '<span class="dot">2</span>' : ''}</div>`).join('');
+  return k === 'phone' ? `<div class="navbar" style="--nav-n:${items.length}">${html}</div>` : `<div class="rail">${html}</div>`;
+}
+function appbar(o = {}) {
+  const mark = o.logo ? `<span class="mark">${o.logo}</span>` : '';
+  return `<div class="appbar">${mark}<span class="brand">NGOOne</span><span class="org">${o.org || 'Demo Foundation'}</span><span class="sp"></span><span class="ib">🔔<span class="dot">2</span></span><span class="ib av">AS</span></div>`;
+}
+function crumbs(s) {
+  const items = s.crumbs || [['More', '/more'], ['Administration', '/admin']];
+  return `<nav class="crumbs" aria-label="Breadcrumb"><ol>${items.map((it, i) => i === items.length - 1 ? `<li aria-current="page">${it[0]}</li>` : `<li><a>${it[0]}</a></li>`).join('')}</ol></nav>`;
+}
+function frame(k, s) {
+  const head = `<div class="pagehead">${s.back ? '<span class="back" aria-hidden="true">←</span>' : ''}<div class="h1">${s.title}</div></div>`;
+  const theme = s.theme ? `--brand:${s.theme};--b100:color-mix(in srgb, ${s.theme} 12%, #fff);--b200:color-mix(in srgb, ${s.theme} 25%, #fff);` : '';
+  const body = `<div class="main">${head}${s.body(k)}${s.toast ? `<div class="toast">${s.toast}</div>` : ''}${s.overlay ? s.overlay(k) : ''}</div>`;
+  const bar = appbar(s);
+  return k === 'phone'
+    ? `<div class="phone"><div class="scr" style="${theme}"><div class="status"><span>9:41</span><span>●●● 100%</span></div>${bar}${crumbs(s)}<div class="frame-body">${body}</div>${nav('phone', s.nav || 'more', s)}</div></div>`
+    : `<div class="browser"><div class="chrome"><div class="url">${s.url}</div></div><div class="scr" style="${theme}">${bar}${crumbs(s)}<div class="frame-body">${nav('desk', s.nav || 'more', s)}${body}</div></div></div>`;
+}
+const field = (l, v, o = {}) => `<div class="mf"><div class="l">${l}${o.req ? ' <i>*</i>' : ''}</div><div class="o${o.ro ? ' ro' : ''}${o.err ? ' err' : ''}"><span>${v}</span>${o.icon ? `<span>${o.icon}</span>` : ''}</div></div>`;
+const row = (title, sub, on) => `<div class="listrow${hit(on)}"><div><b>${title}</b><div class="cs">${sub}</div></div><span class="cs">›</span></div>`;
+const colour = (label, hex, on) => `<div class="crow${hit(on)}"><span class="sw" style="background:${hex}"></span><span class="cl">${label}</span><span class="ch">${hex}</span></div>`;
+function mini(brand, logo) {
+  return `<div class="mini" style="--brand:${brand}"><div class="ab">${logo ? `<span class="mark">${logo}</span>` : ''}Demo Foundation</div><div class="chips"><span class="chip">Mine</span><span class="chip on">Outstanding</span></div><div class="lr"><b>Ravi Kumar</b><span class="sp"></span><span class="bdg w">Raised</span></div><div class="btns"><span class="btn p">Mark as paid</span><span class="btn">Edit</span></div></div>`;
+}
+function sheet(k, title, content, actions) {
+  return `<div class="scrim"></div><div class="sheet"><div class="handle"></div><div class="ttl">${title}</div>${content}<div class="acts">${actions}</div></div>`;
+}
+
+const COLOURS = [
+  ['Brand', '#1f5f8b'],
+  ['Text on brand', '#ffffff'],
+  ['Background', '#f5f7fa'],
+  ['Surface', '#ffffff'],
+  ['Text', '#1d2733'],
+  ['Muted text', '#5b6878'],
+  ['Lines', '#d8dee6'],
+];
+function themeForm(brand, o = {}) {
+  const rows = COLOURS.map(([l, c]) => colour(l, l === 'Brand' ? brand : c, l === 'Brand' && o.hitBrand));
+  const contrast = o.fail
+    ? '<div class="issue bad">Text on brand: contrast 1.4 : 1. Needs 4.5 : 1.</div>'
+    : '<div class="issue ok">Text on brand: contrast 7.1 : 1. Text on background: contrast 12.4 : 1.</div>';
+  const fields = `${rows.join('')}${field('Corner radius', '6px')}${contrast}<div class="row"><span class="sp"></span><span class="btn">Reset</span><span class="btn p${hit(o.hitSave)}">Publish</span></div>`;
+  const preview = `<p class="cap">Preview</p>${mini(brand, o.logo || '')}<div class="cs" style="margin-top:6px">App bar, chips, a list row and buttons. Sign-in and receipts use the same brand.</div>`;
+  return (k) => k === 'phone'
+    ? `${o.fail ? '' : ''}${fields}<div style="height:8px"></div>${preview}`
+    : `<div class="cols"><div>${fields}</div><div>${preview}</div></div>`;
+}
+
+function adminHome() {
+    return `<p class="cap">Appearance</p><div class="panel" style="margin-bottom:8px">${row('Theme', 'Brand #1f5f8b · corners 6px', false)}${row('Layout', 'Home, Records, Inbox, More · lists open as a table', false)}</div>
+    <p class="cap">Organisation</p><div class="panel" style="margin-bottom:8px">${row('Organisation information', 'Demo Foundation · legal name, address, logo', true)}</div>
+    <p class="cap">People and operations</p><div class="panel">${row('People', '14 people · 2 invited', false)}${row('Roles', '5 roles', false)}${row('Connectors, API keys, jobs, audit log', 'Unchanged', false)}</div>`;
+}
+function identity(k) {
+  const head = `<div class="kv"><div><b>Code</b>demo</div><div><b>Sign-in link</b>/o/demo/sign-in</div></div>`;
+  const checks = `<div class="card" style="padding:6px 12px;margin-bottom:8px"><div class="check"><span class="markok">✓</span><div><b>Identity</b> <span class="cs">confirmed</span></div></div><div class="check"><span class="markno">○</span><div><b>Registrations</b> <span class="cs">still to do</span></div></div></div>`;
+  const save = `<div class="row"><span class="sp"></span><span class="btn p hit">Save identity</span></div>`;
+  const name = `${field('Organisation name', 'Demo Foundation', { req: true })}${field('Legal name', 'Demo Foundation Trust', { req: true })}${field('Contact email', 'office@demo.foundation', { req: true })}`;
+  if (k === 'phone') return `${checks}${name}${field('Address line 1', '14 MG Road', { req: true })}${save}`;
+  const id = `${head}${name}${field('Phone', '+91 20 2567 0100')}`;
+  const addr = `${field('Address line 1', '14 MG Road', { req: true })}${field('City', 'Pune', { req: true })}${field('Postal code', '411001', { req: true })}${field('Country', 'IN', { req: true })}${field('Time zone', 'Asia/Kolkata', { icon: '▾' })}`;
+  return `${checks}<div class="cols"><div class="card" style="margin-bottom:0"><div class="ct">Organisation identity</div><div style="height:6px"></div>${id}</div><div class="card" style="margin-bottom:0"><div class="ct">Registered address</div><div style="height:6px"></div>${addr}</div></div>${save}`;
+}
+function logoAndRegs() {
+  return `<div class="card"><div class="row" style="margin-bottom:8px"><span class="logo">DF</span><div><b>Logo</b><div class="cs">PNG, JPEG or WebP · at most 1 MB</div><div class="cs">Shown on the app bar, sign-in and new receipts</div></div></div><div class="row"><span class="btn hit">Replace the logo</span><span class="btn">Remove logo</span></div></div>
+    <div class="card"><div class="row" style="margin-bottom:8px"><b>Registrations</b><span class="sp"></span><span class="btn p hit">Add registration</span></div><div class="listrow" style="padding-left:0;padding-right:0"><div><b>12A · AAATD1234F/12A/2020</b><div class="cs">Issued 4 Jun 2020 · Income Tax Department</div></div><span class="cs">Edit · Remove</span></div><div class="cs">None yet for 80G. Receipts can name a registration once it is saved.</div></div>
+    <div class="note">Language, storage, the API limit and the financial year are under Other settings, further down this screen.</div>`;
+}
+const SIDE = [
+  ['Home', 'Destination', 'Stays', false],
+  ['Donors', 'Record list', 'Up · Down · To More', false],
+  ['Donations', 'Record list', 'Up · Down · To More', true],
+  ['Inbox', 'Destination', 'Up · Down · To More', false],
+];
+const SIDE_MORE = [
+  ['Visits', 'Record list', 'Up · Down · To More'],
+  ['People', 'Destination', 'Up · Down · To More'],
+];
+const MORE = [
+  ['Fundraising dashboard', 'Page', 'To sidebar'],
+  ['Grants', 'Record list', 'To sidebar'],
+  ['Administration', 'Destination', 'To sidebar'],
+  ['Builder', 'Destination', 'To sidebar'],
+  ['Settings', 'Screen', 'Stays in More'],
+];
+function layout(k) {
+  const move = (a, b, c, h) => `<div class="listrow tight${hit(h)}"><div><b>${a}</b> <span class="cs">${b}</span></div><span class="cs">${c}</span></div>`;
+  const side = SIDE.map(([a, b, c, h]) => move(a, b, c, h)).join('');
+  const rest = SIDE_MORE.map(([a, b, c]) => move(a, b, c, false)).join('');
+  const more = MORE.map(([a, b, c]) => move(a, b, c, false)).join('');
+  const cutoff = '<div class="cut">Phone bar ends here</div>';
+  const start = `<div class="card" style="padding:8px 12px"><div class="row"><b style="font-size:.8rem">Wide-screen lists</b><span class="sp"></span><span class="switch${hit(false)}"><span>Cards</span><span class="on">Table</span></span></div></div>`;
+  const publish = `<div class="row" style="margin-bottom:8px"><span class="bdg w">Draft</span><span class="sp"></span><span class="btn">Discard</span><span class="btn p hit">Publish</span></div>`;
+  if (k === 'phone') {
+    return `${start}<p class="cap">Sidebar · first four, then More</p><div class="panel">${side}${cutoff}</div><div class="cs" style="margin-top:6px">Visits and People stay on the desktop rail. Five tiles stay in More, including Settings.</div>`;
+  }
+  return `${publish}${start}<div class="cols"><div><p class="cap">Sidebar · 6 of 8</p><div class="panel">${side}${cutoff}${rest}</div></div><div><p class="cap">More</p><div class="panel">${more}</div><div class="cs" style="margin-top:6px">My profile, Language and About this app stay on Settings.</div></div></div>`;
+}
+function seen(k) {
+  const cards = `<div class="cs" style="margin-bottom:8px">Good morning, Asha</div><div class="home-card"><b>Fundraising</b><div class="listrow" style="padding-left:0"><div>Donors<div class="cs">People and organisations who give</div></div><span class="cs">New</span></div><div class="listrow" style="padding-left:0"><div>Donations<div class="cs">From raised to paid, with receipts</div></div><span class="cs">New</span></div></div>`;
+  return k === 'phone' ? cards : `<div class="cols"><div>${cards}</div><div class="note">The app bar uses the published green, the logo and the organisation name. Donations is on the bar, so it highlights itself. People who cannot read Donors do not see that slot, and the bar closes up.</div></div>`;
+}
+
+const CRUMB = {
+  admin: [['More', '/more'], ['Administration']],
+  info: [['More', '/more'], ['Administration', '/admin'], ['Organisation information']],
+  theme: [['More', '/more'], ['Administration', '/admin'], ['Theme']],
+  layout: [['More', '/more'], ['Administration', '/admin'], ['Layout']],
+  home: [['Home']],
+};
+
+const STEPS = [
+  { id: 'admin', t: 'Administration', act: 'More → <kbd>Administration</kbd>', url: '/admin', title: 'Administration', back: true, nav: 'more', crumbs: CRUMB.admin,
+    body: adminHome,
+    note: 'Appearance is new: Theme and Layout. Organisation information is the existing organisation settings, now including the name, legal identity, address, registrations and logo. People, roles and the operational areas are unchanged. Each row is shown only with its permission.' },
+  { id: 'identity', t: 'Organisation information', act: 'Tap <kbd>Organisation information</kbd>', url: '/admin/settings', title: 'Organisation information', back: true, nav: 'more', crumbs: CRUMB.info,
+    body: identity,
+    note: 'The name on the app bar sits with the legal name. Code and the sign-in link (/o/demo/sign-in) are read-only and sit at the top of the form. The phone shows the name, legal name, email and the first address line; phone, website, city, state, postal code, country and time zone follow on the same scroll. The wide screen places identity beside the address. Save identity writes them all and is audited. The checklist stays until identity is confirmed and a registration exists.' },
+  { id: 'logo', t: 'Logo and registrations', act: 'Further down the same screen', url: '/admin/settings#logo', title: 'Organisation information', back: true, nav: 'more', crumbs: CRUMB.info, logo: 'DF',
+    body: logoAndRegs,
+    note: 'Replace asks for a PNG, JPEG or WebP of at most 1 MB. A larger file or another type is refused under the button, and the current logo stays. Remove asks for confirmation in the same panel. 12A is already saved. Add registration opens the panel in the next step. Other settings (language, storage, API limit, financial year, how email is sent) follow on this screen and are unchanged from the Administration journey.' },
+  { id: 'registration', t: 'Add a registration', act: 'Tap <kbd>Add registration</kbd>', url: '/admin/settings?registration=new', title: 'Organisation information', back: true, nav: 'more', crumbs: CRUMB.info, logo: 'DF',
+    body: () => logoAndRegs().replaceAll(' hit', ''),
+    overlay: () => sheet('phone', 'Add registration', `${field('Type', '80g', { req: true })}${field('Number', 'CIT(E)/80G/2024/00123', { req: true })}${field('Issuing authority', 'Income Tax Department')}${field('Issued on', '12 Apr 2024')}${field('Expires on', '')}<div class="cs">Leave the expiry empty when the registration does not expire.</div>`, '<span class="btn">Cancel</span><span class="btn p hit">Save</span>'),
+    note: 'Type is a short name such as 80g, 12a or fcra. The expiry cannot be before the issue date. Save adds the row and can complete the Registrations checklist item. Edit and Remove are on the row; Remove asks to confirm in place, then removes it. The same panel is a bottom sheet on a phone and centred on a wide screen.' },
+  { id: 'theme', t: 'Theme', act: 'Administration → <kbd>Theme</kbd>. Change brand to green.', url: '/admin/theme', title: 'Theme', back: true, nav: 'more', crumbs: CRUMB.theme, logo: 'DF',
+    body: () => themeForm('#0e7c66', { hitBrand: true, hitSave: true, logo: 'DF' }),
+    note: 'Seven colours and the corner radius, the same tokens as Builder → Theme. The preview draws the real app bar, chips, a row and buttons in the draft colour. Reset returns the draft to the last published theme. Publish is refused while a value is not a colour or the radius is not a size such as 6px. After publish, every person sees it on the next screen load.' },
+  { id: 'contrast', t: 'Contrast check', act: 'Brand set to a pale yellow, then <kbd>Publish</kbd>', url: '/admin/theme', title: 'Theme', back: true, nav: 'more', crumbs: CRUMB.theme,
+    body: () => themeForm('#f6e7a1', { fail: true }),
+    overlay: () => sheet('phone', 'Low contrast', '<div class="issue bad">White text on #f6e7a1 is 1.4 : 1. People will struggle to read the app bar and the buttons.</div><div class="cs">You can still publish. Prefer a darker brand, or change the text on brand.</div>', '<span class="btn hit">Choose another colour</span><span class="btn">Publish anyway</span>'),
+    note: 'The check covers text on the brand colour and text on the background. Publish anyway is an explicit confirmation, recorded in the audit log with the colours. Choose another colour closes the panel and leaves the draft. There is no stylesheet upload.' },
+  { id: 'layout', t: 'Layout', act: 'Administration → <kbd>Layout</kbd>. Move Donations onto the sidebar.', url: '/admin/layout', title: 'Layout', back: true, nav: 'more', crumbs: CRUMB.layout, logo: 'DF',
+    body: layout,
+    note: 'This is the published navigation. Up, Down, To More and To sidebar are the only moves, so a phone can arrange it as well as a wide screen. Home cannot leave the sidebar. Settings cannot leave More. The first four sidebar slots are the phone bar; the note under Inbox says so. The rail stops at eight. Lists on a wide screen open as a table until a person switches to cards. Items a person cannot read are left out when their bar is drawn. Publish replaces any navigation draft and is the same publish as Builder → Navigation.' },
+  { id: 'seen', t: 'What everyone sees', act: 'Asha opens Home after both publishes', url: '/', title: 'Home', nav: 'home', navItems: PUBLISHED_NAV, crumbs: CRUMB.home, theme: '#0e7c66', logo: 'DF', toast: 'Theme and layout published.',
+    body: seen,
+    note: 'The app bar is the published green, with the logo and Demo Foundation. Donors and Donations are on the bar; Visits and People are on the desktop rail only, and open from More on a phone. A person who cannot read Donations does not get that slot. The breadcrumb still follows the address, so a donations list is Records › Fundraising › Donations even when Donations is highlighted on the bar.' },
+];
+
+const toc = document.getElementById('toc');
+const root = document.getElementById('flows');
+const steps = STEPS.map((s, i) => {
+  toc.insertAdjacentHTML('beforeend', `<a href="#${s.id}">${i + 1} · ${s.t}</a>`);
+  return `<div class="step" id="${s.id}">
+    <div class="num">${i + 1}</div>
+    <div class="stephead"><b>${s.t}</b><span class="act">${s.act}</span><code>${s.url}</code></div>
+    <div></div>
+    <div><p class="cap">Phone</p>${frame('phone', s)}</div>
+    <div class="desk"><p class="cap">Desktop</p>${frame('desk', s)}${s.note ? `<div class="noteline">${s.note}</div>` : ''}</div>
+  </div>`;
+}).join('');
+root.insertAdjacentHTML('beforeend', `<section class="flow"><div class="flabel">Administration</div><h2>Theme, layout and organisation information</h2><p>One journey. The administrator starts from Administration, saves the organisation's identity, publishes a theme and a navigation, then sees the result on Home.</p>${steps}</section>`);
+</script>
+</body>
+</html>

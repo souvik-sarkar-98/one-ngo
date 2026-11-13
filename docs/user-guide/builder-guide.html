@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OneNGO Builder guide</title>
+  <meta name="description" content="Plain-language guide to configuring OneNGO with the Builder: every screen, button and field explained." />
+  <style>
+    :root {
+      --ink: #1c1917;
+      --muted: #57534e;
+      --line: #e7e0d6;
+      --paper: #f7f3ec;
+      --card: #fffdf8;
+      --teal: #0f5c56;
+      --teal-soft: #e5f3f1;
+      --amber: #8a4b12;
+      --amber-soft: #fbf1e4;
+      --red: #8f2d2d;
+      --red-soft: #f8e8e6;
+      --shadow: 0 1px 2px rgba(28, 25, 23, 0.06), 0 8px 24px rgba(28, 25, 23, 0.05);
+      --serif: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+      --sans: "Segoe UI", system-ui, sans-serif;
+      --mono: "Cascadia Code", Consolas, ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; color: var(--ink); background: var(--paper); font: 17px/1.55 var(--sans); }
+    a { color: var(--teal); }
+    a:hover { text-decoration-thickness: 2px; }
+    :focus-visible { outline: 3px solid #c47b2b; outline-offset: 3px; }
+    .skip { position: absolute; left: 12px; top: -40px; background: var(--ink); color: #fff; padding: 8px 12px; z-index: 5; }
+    .skip:focus { top: 12px; }
+    header.mast { background: #14332f; color: #f6f1e8; padding: 28px 24px 22px; }
+    header.mast a { color: #d7efe9; }
+    .wrap { max-width: 1180px; margin: 0 auto; }
+    .kicker { margin: 0 0 6px; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.75rem; font-weight: 700; color: #b7d9d2; }
+    h1 { margin: 0 0 8px; font-family: var(--serif); font-size: clamp(2rem, 4vw, 3.1rem); font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }
+    .lede { margin: 0; max-width: 46rem; color: #efe7db; }
+    .layout { display: grid; grid-template-columns: 250px 1fr; gap: 28px; padding: 24px; max-width: 1220px; margin: 0 auto; }
+    nav.toc { position: sticky; top: 16px; align-self: start; max-height: calc(100vh - 32px); overflow: auto; padding: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+    nav.toc p { margin: 0 0 8px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+    nav.toc a { display: block; padding: 5px 8px; border-radius: 8px; color: var(--ink); text-decoration: none; font-size: 0.9rem; }
+    nav.toc a:hover, nav.toc a:focus-visible { background: var(--teal-soft); }
+    nav.toc .group { margin: 12px 0 4px; padding: 0 8px; font-size: 0.78rem; font-weight: 700; color: var(--teal); }
+    main { min-width: 0; }
+    .finder { display: flex; gap: 10px; align-items: center; margin: 0 0 16px; padding: 12px 14px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+    .finder label { font-weight: 700; white-space: nowrap; }
+    .finder input { flex: 1; font: inherit; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+    .finder output { color: var(--muted); font-size: 0.9rem; white-space: nowrap; }
+    section { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 22px 24px 8px; margin: 0 0 16px; box-shadow: var(--shadow); }
+    h2, h3, h4 { font-family: var(--serif); font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+    h2 { margin: 0 0 8px; font-size: 1.7rem; }
+    h3 { margin: 24px 0 8px; font-size: 1.22rem; }
+    h4 { margin: 18px 0 6px; font-size: 1.05rem; }
+    p, li { max-width: 74ch; }
+    ol.steps { padding-left: 1.2rem; }
+    ol.steps li { margin: 0 0 8px; }
+    ol.steps li::marker { color: var(--teal); font-weight: 700; }
+    .note, .warn, .stop { border-radius: 12px; padding: 12px 14px; margin: 12px 0 16px; }
+    .note { background: var(--teal-soft); }
+    .warn { background: var(--amber-soft); }
+    .stop { background: var(--red-soft); }
+    .note strong, .warn strong, .stop strong { display: block; margin-bottom: 2px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 18px; font-size: 0.94rem; }
+    th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+    th { font-size: 0.76rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+    td:first-child { width: 26%; }
+    table.three td:nth-child(2) { width: 12%; }
+    td b { font-weight: 650; }
+    .k { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.02em; background: #eee7dc; color: #4a423a; white-space: nowrap; }
+    .k.btn { background: #dcefeb; color: var(--teal); }
+    .k.fld { background: #efe6f7; color: #5a3d7a; }
+    .k.sel { background: #e6edf8; color: #29497a; }
+    .k.tog { background: var(--amber-soft); color: var(--amber); }
+    .k.tab { background: #f3e9dd; color: #6c4a24; }
+    .k.msg { background: var(--red-soft); color: var(--red); }
+    pre { overflow: auto; background: #17211f; color: #f3efe6; border-radius: 12px; padding: 14px 16px; font: 0.86rem/1.45 var(--mono); }
+    code { font-family: var(--mono); font-size: 0.9em; background: #f1ebe1; padding: 0 4px; border-radius: 4px; }
+    pre code { background: none; padding: 0; }
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0 18px; }
+    .cards a { display: block; padding: 14px; border-radius: 14px; background: var(--paper); color: inherit; text-decoration: none; border: 1px solid var(--line); }
+    .cards a:hover { border-color: var(--teal); }
+    .cards strong { display: block; font-family: var(--serif); font-size: 1.1rem; margin-bottom: 4px; }
+    .cards span { color: var(--muted); font-size: 0.9rem; }
+    dl.gloss { display: grid; grid-template-columns: 200px 1fr; gap: 6px 16px; margin: 8px 0 18px; }
+    dl.gloss dt { font-weight: 700; }
+    dl.gloss dd { margin: 0; }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 16px; }
+    footer { padding: 8px 24px 32px; color: var(--muted); font-size: 0.9rem; }
+    [hidden] { display: none !important; }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; padding: 16px; }
+      nav.toc { position: static; max-height: none; }
+      .cards { grid-template-columns: 1fr; }
+      dl.gloss { grid-template-columns: 1fr; }
+      td:first-child { width: auto; }
+    }
+    @media print {
+      header.mast, nav.toc, .finder, .skip { display: none !important; }
+      body { background: #fff; }
+      .layout { display: block; padding: 0; }
+      section { break-inside: auto; box-shadow: none; }
+      [hidden] { display: block !important; }
+      tr[hidden] { display: table-row !important; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#content">Skip to the guide</a>
+  <header class="mast">
+    <div class="wrap">
+      <p class="kicker">OneNGO · for the person who sets things up</p>
+      <h1>Builder guide</h1>
+      <p class="lede">How to shape OneNGO to the way your organisation works, without a programmer. Every Builder screen is explained in plain words, with what each button and box does. The <a href="index.html">general user guide</a> covers day-to-day use.</p>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Guide contents">
+      <p>Contents</p>
+      <div class="group">Getting started</div>
+      <a href="#about">What the Builder is</a>
+      <a href="#before">Before you begin</a>
+      <a href="#words">Words used in this guide</a>
+      <a href="#first">Your first set-up, step by step</a>
+      <a href="#controls">Controls you will meet everywhere</a>
+      <div class="group">Finding your way</div>
+      <a href="#home">Builder home</a>
+      <a href="#kind-list">A kind's list and the New box</a>
+      <a href="#editor">The editor screen</a>
+      <a href="#formula">Formula boxes</a>
+      <div class="group">Data</div>
+      <a href="#record-types">Record types</a>
+      <a href="#fields">Fields (the field panel)</a>
+      <a href="#rt-rules">Rules, lookups, workflows, used by</a>
+      <a href="#lists">Lists</a>
+      <a href="#groups">Record groups and report groups</a>
+      <a href="#feeds">Data feeds</a>
+      <div class="group">Process</div>
+      <a href="#workflows">Workflows</a>
+      <a href="#actions">Actions</a>
+      <a href="#automations">Automations</a>
+      <a href="#recipients">Choosing who is told</a>
+      <div class="group">Templates and money</div>
+      <a href="#templates">Message templates</a>
+      <a href="#reports">Report templates</a>
+      <a href="#posting">Posting rules</a>
+      <a href="#receipts">Receipt rules</a>
+      <div class="group">Look and navigation</div>
+      <a href="#theme">Theme</a>
+      <a href="#layout">Layout</a>
+      <a href="#pages">Pages</a>
+      <a href="#translations">Translations</a>
+      <div class="group">Access and advanced</div>
+      <a href="#access">Access map</a>
+      <a href="#roles">Roles and permissions</a>
+      <a href="#scripts">Scripts</a>
+      <a href="#modules">Modules</a>
+      <div class="group">Related setup in Administration</div>
+      <a href="#checklist">Setup checklist</a>
+      <a href="#org">Organisation screens</a>
+      <a href="#connectors">Connectors</a>
+      <a href="#api-keys">API keys</a>
+      <a href="#activity">Jobs, audit log, migration</a>
+      <div class="group">Help</div>
+      <a href="#trouble">Common messages and fixes</a>
+    </nav>
+
+    <main id="content">
+      <div class="finder" role="search">
+        <label for="find">Find a button or field</label>
+        <input id="find" type="search" placeholder="Type a label, for example Publish or Roll-up" autocomplete="off" />
+        <output id="find-count" for="find" aria-live="polite"></output>
+      </div>
+
+      <!-- ============================== GETTING STARTED ============================== -->
+      <section id="about">
+        <h2>What the Builder is</h2>
+        <p>OneNGO has no fixed screens for "donations" or "volunteers". Everything people see is described by settings called <strong>definitions</strong>, and the Builder is where you create and change them. For example:</p>
+        <ul>
+          <li>a <strong>record type</strong> says what information you keep, such as a donation with an amount and a donor;</li>
+          <li>a <strong>workflow</strong> says the stages it goes through, such as Raised, then Paid;</li>
+          <li>a <strong>list</strong> says how people browse those records;</li>
+          <li>a <strong>message template</strong> says what email goes out.</li>
+        </ul>
+        <p>You build these up like blocks. When you are happy, you <strong>publish</strong>, and everyone sees the change straight away. Nothing you type affects anyone until you publish it.</p>
+        <div class="cards">
+          <a href="#first"><strong>New to this?</strong><span>Follow the step-by-step set-up of a small module.</span></a>
+          <a href="#editor"><strong>Saving and publishing</strong><span>How drafts, Check and Publish work on every screen.</span></a>
+          <a href="#trouble"><strong>Something refused?</strong><span>Common messages and what to do about them.</span></a>
+        </div>
+        <div class="note"><strong>Safe by design</strong>Every change is kept as a version. You can see what changed, go back to an earlier version, and nothing you publish rewrites old records. Some rules can never be broken by any setting: accounts always balance, closed years stay closed, a receipt number is never reused, and one organisation never sees another's data.</div>
+      </section>
+
+      <section id="before">
+        <h2>Before you begin</h2>
+        <h3>Where to find it</h3>
+        <p>Open <b>More</b>, then <b>Builder</b>. You only see it if your role includes the setup permission.</p>
+        <h3>Use a computer or tablet</h3>
+        <p>On a phone you can look around, but you cannot edit. A blue note says: "Editing works best on a tablet or computer. Here you can look at the published settings."</p>
+        <h3>Permissions you may need</h3>
+        <p>These are given through roles (see <a href="#roles">Roles and permissions</a>). Ask your administrator if something is greyed out or says "Read-only for you".</p>
+        <table>
+          <thead><tr><th>Permission (as shown in the role editor)</th><th>What it lets you do</th></tr></thead>
+          <tbody>
+            <tr><td><b>See the setup</b></td><td>Open the Builder and look at every definition.</td></tr>
+            <tr><td><b>Change and publish the setup</b></td><td>Create, edit and publish definitions. Without it you see: "You can look at this definition; changing it needs permission to publish."</td></tr>
+            <tr><td><b>Publish scripts</b></td><td>Edit, try and publish scripts.</td></tr>
+            <tr><td><b>Publish and try scripts and reports that read the ledger or run as a role</b></td><td>The more powerful scripts and reports. Usually only the organisation administrator.</td></tr>
+            <tr><td><b>Turn modules on and off</b></td><td>Use the Modules screen.</td></tr>
+            <tr><td><b>Manage roles</b></td><td>Create roles, give them permissions and add people to them.</td></tr>
+            <tr><td><b>Change organisation settings</b></td><td>Theme, layout and the Organisation screens in Administration.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="words">
+        <h2>Words used in this guide</h2>
+        <dl class="gloss">
+          <dt>Definition</dt><dd>One saved piece of setup: a record type, a workflow, a template and so on.</dd>
+          <dt>Kind</dt><dd>The sort of definition, for example "Record type" or "Automation".</dd>
+          <dt>Record type</dt><dd>A kind of thing you keep a register of: donors, donations, beneficiaries, assets. Think of it as a form plus the register it fills.</dd>
+          <dt>Record</dt><dd>One entry in that register, such as one donation.</dd>
+          <dt>Field</dt><dd>One box on the form, such as "Amount" or "Date of birth".</dd>
+          <dt>Label</dt><dd>The name people see. You can change it whenever you like.</dd>
+          <dt>Key</dt><dd>The short internal name the system uses, made from the label (for example "Volunteer shift" becomes <code>volunteerShift</code>). Once published it is fixed, so the label can change without breaking anything.</dd>
+          <dt>Draft</dt><dd>Your unpublished changes. Only people in the Builder see them.</dd>
+          <dt>Publish</dt><dd>Make the draft live for everyone. It creates a new numbered version (v1, v2…).</dd>
+          <dt>Module</dt><dd>A ready-made bundle of definitions shipped with the product, such as "Donations". Your changes to it are kept separately (as a "patch") so product updates still reach you.</dd>
+          <dt>Workflow, status, step</dt><dd>A workflow is the path a record follows. Each stop on the path is a <em>status</em> (also called a state), such as "Raised". A <em>step</em> is a button that moves the record from one status to another, such as "Mark as paid".</dd>
+          <dt>Role and permission</dt><dd>A permission is one thing a person may do, such as "Edit donations". A role is a named bundle of permissions, such as "Finance". People are given roles.</dd>
+          <dt>Formula (expression)</dt><dd>A short calculation or condition, such as <code>record.amount &gt; 0</code>. Used for "only when" conditions and calculated fields. See <a href="#formula">Formula boxes</a>.</dd>
+          <dt>Placeholder</dt><dd>A gap in a message filled from the record, written in double curly brackets, such as <code>{{ record.number }}</code>.</dd>
+          <dt>Chip</dt><dd>A quick-filter button above a list, such as "Mine" or "Outstanding".</dd>
+          <dt>Connector</dt><dd>A saved link to an outside service: SMS, WhatsApp, a webhook, or another website's API.</dd>
+        </dl>
+      </section>
+
+      <section id="first">
+        <h2>Your first set-up, step by step</h2>
+        <p>This example builds a small "Volunteer shift" register: people sign up for shifts, a coordinator approves them, and the volunteer gets an email. Every Builder module is made the same way.</p>
+        <ol class="steps">
+          <li><b>Create the record type.</b> In the Builder, open <b>Record types</b> and press <b>New record type</b>. Type the Name "Volunteer shift" and press <b>Create</b>.</li>
+          <li><b>Add the fields.</b> Press <b>Add field</b> for each box you need: Volunteer (Person), Shift date (Date), Hours (Number), Notes (Long text). Tick <b>Required</b> where a value must be given. Choose a <b>Title field</b> so each record has a readable name.</li>
+          <li><b>Publish the record type.</b> Press <b>Check</b>, fix anything it lists, then <b>Publish…</b> and <b>Publish</b>. Other definitions can only point to a record type once it is published.</li>
+          <li><b>Add a workflow.</b> Open <b>Workflows</b>, press <b>New workflow</b>, and choose the record type "Volunteer shift". Add the statuses Requested, Approved and Done, and steps such as "Approve" (from Requested to Approved). Under Approval, tick <b>Needs approval</b> if a coordinator must agree. Publish.</li>
+          <li><b>Add a list.</b> Open <b>Lists</b>, press <b>New list</b>, and pick the record type. Add chips (for example "Mine" and "Requested"), choose the table columns, and build the create form. Watch the preview on the right. Publish.</li>
+          <li><b>Write the message.</b> Open <b>Message templates</b>, press <b>New message template</b>, and write a Subject and Message using placeholders such as <code>{{ record.shiftDate }}</code>. Use <b>Send a test to me</b>. Publish.</li>
+          <li><b>Send it automatically.</b> Open <b>Automations</b>, press <b>New automation</b>, and set the Event to "The status changes" and To status to "approved". Add an action "Notify people", pick the template, and send to the volunteer. Publish.</li>
+          <li><b>Give people access.</b> In <b>Access</b> (or Administration › Roles), give the volunteer role "See" and "Create" on Volunteer shifts, and the coordinator role the "Approve" step.</li>
+          <li><b>Put it in the menu.</b> Open <b>Layout</b>, use <b>Add a record</b> to add Volunteer shifts to the navigation bar, then <b>Publish layout</b>.</li>
+        </ol>
+        <div class="note"><strong>Tip</strong>Publish things in the order they depend on each other: the record type first, then the workflow, list, templates and automations that use it.</div>
+      </section>
+
+      <section id="controls">
+        <h2>Controls you will meet everywhere</h2>
+        <p>In this guide, each control is tagged with its type:</p>
+        <div class="legend">
+          <span class="k btn">Button</span><span class="k fld">Text box</span><span class="k sel">Dropdown</span><span class="k tog">Switch / checkbox</span><span class="k tab">Tab</span><span class="k">Other</span><span class="k msg">Message</span>
+        </div>
+        <table class="three">
+          <thead><tr><th>Control</th><th>Type</th><th>How it works</th></tr></thead>
+          <tbody>
+            <tr><td><b>⠿</b> (drag handle)</td><td><span class="k">Handle</span></td><td>Drag a row up or down to change its order. With the keyboard, focus the handle and use the arrow keys, or press Alt + arrow on the row.</td></tr>
+            <tr><td><b>Bin icon</b> ("Remove: …")</td><td><span class="k btn">Button</span></td><td>Removes that row.</td></tr>
+            <tr><td><b>+ Add …</b> under a table</td><td><span class="k btn">Button</span></td><td>Adds a new row and opens it, for example "Add field", "Add chip", "Add step".</td></tr>
+            <tr><td>Clicking a row</td><td><span class="k">Row</span></td><td>Opens that row's settings in a panel at the side. Close it with the <b>✕</b> ("Close") button.</td></tr>
+            <tr><td><b>Pills</b> with "Add a value"</td><td><span class="k fld">List</span></td><td>A list of values. Type in the box and press <b>Add</b> or Enter. Click <b>✕</b> on a pill to remove it. Many pill boxes suggest matching names as you type.</td></tr>
+            <tr><td><b>Field pills</b> with "Add field"</td><td><span class="k fld">List</span></td><td>An ordered list of fields. Pick from the <b>Add field</b> dropdown. Drag the grip or use <b>‹</b> ("Move up") to reorder, and <b>✕</b> to remove.</td></tr>
+            <tr><td><b>Add {name}</b> / <b>Remove {name}</b></td><td><span class="k btn">Button</span></td><td>Shows or removes an optional group of settings, for example "Add Sort".</td></tr>
+            <tr><td><b>Name / Value</b> rows with <b>Add an entry</b></td><td><span class="k fld">List</span></td><td>Pairs, such as which field gets which value. <b>✕</b> removes a pair.</td></tr>
+            <tr><td><b>Permission box</b> ("For example record:donation:read")</td><td><span class="k fld">Text box</span></td><td>Suggests existing permissions as you type. Leave empty for no extra restriction. A permission no role holds is flagged as a warning.</td></tr>
+            <tr><td><b>ƒx</b> box</td><td><span class="k fld">Formula</span></td><td>A formula box. See <a href="#formula">Formula boxes</a>.</td></tr>
+            <tr><td>"—" in a dropdown</td><td><span class="k sel">Dropdown</span></td><td>Means "not set". Optional dropdowns start with it.</td></tr>
+            <tr><td>"Enter a number." / "Enter a whole number." / "This is not valid JSON."</td><td><span class="k msg">Message</span></td><td>The value typed is not the right kind. Correct it and the message goes away.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ============================== FINDING YOUR WAY ============================== -->
+      <section id="home">
+        <h2>Builder home</h2>
+        <p>The first screen. Its introduction reads: "Create and change how the organisation works. Changes are saved as drafts and take effect when published." Each row opens a list of that kind, or opens its own screen.</p>
+        <table>
+          <thead><tr><th>Group and row</th><th>What it is for</th></tr></thead>
+          <tbody>
+            <tr><td><b>Data › Record types</b></td><td>"The records the organisation keeps". The forms and registers. <a href="#record-types">More</a></td></tr>
+            <tr><td><b>Data › Lists</b></td><td>"How each record type is browsed": chips, columns, record panel and forms. <a href="#lists">More</a></td></tr>
+            <tr><td><b>Data › Record groups</b></td><td>"Related records shown together" on Home and Records. <a href="#groups">More</a></td></tr>
+            <tr><td><b>Data › Data feeds</b></td><td>"A published read a public site can call with an API key". <a href="#feeds">More</a></td></tr>
+            <tr><td><b>Process › Workflows</b></td><td>"The steps a record moves through". <a href="#workflows">More</a></td></tr>
+            <tr><td><b>Process › Actions</b></td><td>"What a person can do to a record": extra buttons. <a href="#actions">More</a></td></tr>
+            <tr><td><b>Process › Automations</b></td><td>"What happens on its own", for example a thank-you email. <a href="#automations">More</a></td></tr>
+            <tr><td><b>Templates › Message templates</b></td><td>"In-app, email, SMS, and WhatsApp". <a href="#templates">More</a></td></tr>
+            <tr><td><b>Templates › Report templates</b></td><td>"Print and download records, totals and calculations." <a href="#reports">More</a></td></tr>
+            <tr><td><b>Money › Posting rules</b></td><td>"How a record updates the books". <a href="#posting">More</a></td></tr>
+            <tr><td><b>Money › Receipt rules</b></td><td>"When a numbered receipt is issued". <a href="#receipts">More</a></td></tr>
+            <tr><td><b>Look and navigation › Theme</b></td><td>"Colours and corner radius". <a href="#theme">More</a></td></tr>
+            <tr><td><b>Look and navigation › Layout</b></td><td>"The bar, More, and how lists open". <a href="#layout">More</a></td></tr>
+            <tr><td><b>Look and navigation › Pages</b></td><td>"Screens built from widgets", including Home. <a href="#pages">More</a></td></tr>
+            <tr><td><b>Look and navigation › Translations</b></td><td>"Wording for each language". <a href="#translations">More</a></td></tr>
+            <tr><td><b>Access › Access</b></td><td>"Who can see and change what". <a href="#access">More</a></td></tr>
+            <tr><td><b>Advanced › Scripts</b></td><td>"Extra behaviour for this organisation". <a href="#scripts">More</a></td></tr>
+            <tr><td><b>Advanced › Modules</b></td><td>"Turn modules on and off". <a href="#modules">More</a></td></tr>
+            <tr><td><b>Read-only for you</b> badge</td><td>Shown on Scripts or Modules when you may look but not change them.</td></tr>
+            <tr><td><b>Back</b> arrow</td><td>Returns to the page you came from.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="kind-list">
+        <h2>A kind's list and the New box</h2>
+        <p>Choosing a row on the home page, for example Record types, shows every definition of that kind.</p>
+        <h3>The list screen</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Back</b></td><td><span class="k btn">Button</span></td><td>Returns to the Builder home.</td></tr>
+            <tr><td><b>New record type</b>, <b>New list</b>, <b>New workflow</b>… (one per kind)</td><td><span class="k btn">Button</span></td><td>Starts a new definition by opening the New box (below). On a phone it is a round floating button. Needs the publish permission.</td></tr>
+            <tr><td><b>Search</b> ("Search by name or key…")</td><td><span class="k fld">Text box</span></td><td>Appears when there are more than 8 definitions. Filters the list as you type.</td></tr>
+            <tr><td>Column <b>Name</b></td><td><span class="k">Column</span></td><td>The label of the definition. Click the heading to sort; click again to reverse; a third time to clear.</td></tr>
+            <tr><td>Column <b>Kind</b></td><td><span class="k">Column</span></td><td>What sort of definition it is.</td></tr>
+            <tr><td>Column <b>Key</b></td><td><span class="k">Column</span></td><td>Its internal name.</td></tr>
+            <tr><td>Column <b>From</b></td><td><span class="k">Column</span></td><td>"Module · donations" if it came with a module, or "Organisation" if your organisation made it.</td></tr>
+            <tr><td>Column <b>State</b></td><td><span class="k">Column</span></td><td>For example "v3 · Draft v4". Amber means there is an unpublished draft; green means only published.</td></tr>
+            <tr><td>Clicking a row</td><td><span class="k">Row</span></td><td>Opens the definition in the editor.</td></tr>
+          </tbody>
+        </table>
+        <h3>The row menu (⋮ More actions)</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Open</b></td><td><span class="k btn">Menu item</span></td><td>Opens the editor.</td></tr>
+            <tr><td><b>History</b></td><td><span class="k btn">Menu item</span></td><td>Opens the editor on its History tab, to see earlier versions.</td></tr>
+            <tr><td><b>Duplicate</b></td><td><span class="k btn">Menu item</span></td><td>Makes a copy under a new name. The name starts as "Copy of …".</td></tr>
+            <tr><td><b>Revert to module version</b></td><td><span class="k btn">Menu item</span></td><td>Only for definitions that came with a module. Removes your organisation's changes and goes live at once. It asks first: "Revert to the module's version? The organisation's changes to it are removed and published at once."</td></tr>
+            <tr><td><b>Delete draft</b></td><td><span class="k btn">Menu item</span></td><td>Only for your own definitions that have a draft. Asks "Discard the unpublished draft?"</td></tr>
+          </tbody>
+        </table>
+        <h3>The New box</h3>
+        <p>A panel titled "New: Record type" (or the kind you chose), "Start from …" when you pick ready-made fields, or "Duplicate …" when copying.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Name</b> ("Name, e.g. Volunteer shift")</td><td><span class="k fld">Text box</span></td><td>The name people will see. Underneath, "key: …" shows the internal name that will be made from it.</td></tr>
+            <tr><td><b>Ready-made fields</b></td><td><span class="k sel">Dropdown</span></td><td>New record types only. Start with a set of common fields: <b>None</b>, <b>Beneficiary</b> (name, phone, date of birth, address), <b>Expense</b> (description, amount, date, paid to) or <b>Asset</b> (name, asset tag, purchase date, value, location).</td></tr>
+            <tr><td><b>Record type</b></td><td><span class="k sel">Dropdown</span></td><td>For workflows, lists, record groups, automations, posting rules, receipt rules, scripts and actions: the record type it belongs to. Only published record types are listed.</td></tr>
+            <tr><td><b>Create</b></td><td><span class="k btn">Button</span></td><td>Saves a first draft and opens it in the editor.</td></tr>
+            <tr><td><b>Cancel</b> / <b>✕</b></td><td><span class="k btn">Button</span></td><td>Closes without creating anything.</td></tr>
+            <tr><td>"Enter a name."</td><td><span class="k msg">Message</span></td><td>The name is empty or has no letters to make a key from.</td></tr>
+            <tr><td>"A … entry with key '…' already exists."</td><td><span class="k msg">Message</span></td><td>Choose a different name.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="editor">
+        <h2>The editor screen</h2>
+        <p>Every definition opens in the same frame. Only the middle part (the <b>Visual</b> tab) differs by kind; it is described in the sections that follow.</p>
+        <h3>How saving works</h3>
+        <ul>
+          <li><strong>There is no Save button.</strong> Your changes save themselves about a second after you stop typing, when you leave a box, and when you leave the page.</li>
+          <li>Changes go into a <strong>draft</strong>. People using the app see nothing until you publish.</li>
+          <li>For definitions that came with a <strong>module</strong>, the draft is kept <em>in this browser only</em> ("Draft on this device"). Publish before you switch computers, or your edits will not be there.</li>
+        </ul>
+        <h3>Header</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it means or does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Back</b> arrow</td><td><span class="k btn">Button</span></td><td>Returns to the previous page.</td></tr>
+            <tr><td>Title</td><td><span class="k">Heading</span></td><td>The definition's label.</td></tr>
+            <tr><td>Kind badge, for example "Record type"</td><td><span class="k">Badge</span></td><td>What you are editing.</td></tr>
+            <tr><td><b>Published v3</b></td><td><span class="k">Badge</span></td><td>Green. The version people are using now.</td></tr>
+            <tr><td><b>Draft v4</b></td><td><span class="k">Badge</span></td><td>Amber. There are unpublished changes.</td></tr>
+            <tr><td><b>Draft on this device</b></td><td><span class="k">Badge</span></td><td>Module definitions only: your edits are only in this browser.</td></tr>
+            <tr><td><b>Module</b> / <b>Module · changed</b> / <b>Organisation</b></td><td><span class="k">Badge</span></td><td>Where it came from. "Module · changed" means your organisation has adjusted a shipped definition.</td></tr>
+            <tr><td><b>⋮ More actions › Back to the Builder</b></td><td><span class="k btn">Menu item</span></td><td>Returns to this kind's list.</td></tr>
+            <tr><td><b>⋮ More actions › Duplicate</b></td><td><span class="k btn">Menu item</span></td><td>Opens the New box filled in as a copy.</td></tr>
+            <tr><td><b>⋮ More actions › Revert to module version</b></td><td><span class="k btn">Menu item</span></td><td>Throws away your organisation's changes to a shipped definition and publishes at once. Asks first.</td></tr>
+            <tr><td><b>⋮ More actions › Discard draft</b></td><td><span class="k btn">Menu item</span></td><td>Same as the Discard draft button at the bottom.</td></tr>
+            <tr><td>"Shipped by the product (base v…). Your changes are kept as a patch, so product updates still reach you."</td><td><span class="k msg">Notice</span></td><td>Reassurance on module definitions: you can safely change them.</td></tr>
+          </tbody>
+        </table>
+        <h3>Tabs</h3>
+        <table class="three">
+          <thead><tr><th>Tab</th><th>Type</th><th>What it shows</th></tr></thead>
+          <tbody>
+            <tr><td><b>Visual</b></td><td><span class="k tab">Tab</span></td><td>The friendly editor with boxes, tables and a live preview. Use this almost always.</td></tr>
+            <tr><td><b>JSON</b></td><td><span class="k tab">Tab</span></td><td>The same settings as raw text, in a box called <b>Definition</b>. For advanced users and for pasting a definition prepared elsewhere. Text that is not valid is not saved, and you see "The definition must be a JSON object."</td></tr>
+            <tr><td><b>Changes</b></td><td><span class="k tab">Tab</span></td><td>A line-by-line list of what your draft changes. On module definitions, choose <b>Draft vs published</b> (your draft compared with what is live) or <b>Organisation vs module</b> (your changes compared with the product's version).</td></tr>
+            <tr><td><b>History</b></td><td><span class="k tab">Tab</span></td><td>Every version, with columns <b>Version</b>, <b>Status</b> ("Published", "Draft" or "Earlier version") and <b>Published</b> (date). An earlier version's ⋮ menu has <b>Restore this version</b>, which asks "Restore version …? It becomes the newest published version." and goes live at once.</td></tr>
+          </tbody>
+        </table>
+        <h3>Footer buttons and status</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td>"Saving…", "Draft saved 10:42", "Unsaved changes", "Draft not saved", "No unpublished changes", "Draft kept on this device"</td><td><span class="k">Status</span></td><td>Tells you whether your latest typing has been stored.</td></tr>
+            <tr><td><b>Discard draft</b></td><td><span class="k btn">Button</span></td><td>Throws away all unpublished changes after asking "Discard the unpublished draft?". If the definition was never published, it disappears. Shows "Draft discarded."</td></tr>
+            <tr><td><b>Check</b></td><td><span class="k btn">Button</span></td><td>Looks for problems without publishing. Shows "No problems found." or "Errors: 2 · Warnings: 1" with a list. Errors must be fixed; warnings (marked ⚠) are advice.</td></tr>
+            <tr><td><b>Publish…</b></td><td><span class="k btn">Button</span></td><td>Saves, then opens the publish box. Active only when there is something to publish.</td></tr>
+          </tbody>
+        </table>
+        <h3>The publish box</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td>Publish "Volunteer shift" v2</td><td><span class="k">Title</span></td><td>The version number this publish will create.</td></tr>
+            <tr><td><b>What changes for people</b></td><td><span class="k">List</span></td><td>A plain list of what users will notice.</td></tr>
+            <tr><td>"Fix these problems before publishing:"</td><td><span class="k msg">Message</span></td><td>Shown when there are errors. The Publish button is hidden until they are fixed.</td></tr>
+            <tr><td><b>Publish</b></td><td><span class="k btn">Button</span></td><td>Makes the change live. Shows "Published. The change is live." Not available while offline.</td></tr>
+            <tr><td><b>Back</b> / <b>✕</b></td><td><span class="k btn">Button</span></td><td>Closes the box without publishing.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="formula">
+        <h2>Formula boxes</h2>
+        <p>Many settings take a short formula, for example "Only when", "Visible when", "Calculated as" or "Must be true". A formula is like a spreadsheet formula. It reads the record's fields and gives back a value, often true or false.</p>
+        <h3>Examples</h3>
+        <pre><code>record.amount &gt; 0                      the amount is more than zero
+record.amount &gt;= 50000                 fifty thousand rupees or more
+record.status == 'raised'              the record is in the Raised status
+isEmpty(record.phone)                  no phone number was given
+record.quantity * record.rate          a calculated total
+daysBetween(record.startDate, today()) days since the start date</code></pre>
+        <p>Text goes in quotes. Use <code>and</code>, <code>or</code>, <code>not</code>; compare with <code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>; and do arithmetic with <code>+ - * / %</code>. <code>a ? b : c</code> means "if a then b, otherwise c".</p>
+        <h3>The formula box</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td>The box itself</td><td><span class="k fld">Text box</span></td><td>As you type, suggestions pop up. Use the arrow keys and Enter or Tab to pick one, Esc to close. Ctrl + Space asks for suggestions at any time.</td></tr>
+            <tr><td>"Valid · result type: number"</td><td><span class="k">Status</span></td><td>The formula works, and says what kind of answer it gives (number, text, true or false, date, list…).</td></tr>
+            <tr><td>Error line, with <b>Use '…'</b></td><td><span class="k msg">Message</span></td><td>Something is wrong, for example "Unknown name 'amout'. Did you mean 'amount'?". The <b>Use '…'</b> button applies the suggested fix.</td></tr>
+            <tr><td><b>ƒx</b> ("Open the expression editor")</td><td><span class="k btn">Button</span></td><td>Opens a larger editor, described below.</td></tr>
+          </tbody>
+        </table>
+        <h3>The expression editor</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Expression</b></td><td><span class="k fld">Text box</span></td><td>A large box for writing the formula.</td></tr>
+            <tr><td><b>Insert a field</b></td><td><span class="k btn">Buttons</span></td><td>One button per field and value you can use. Clicking one inserts its name. They include the record's fields, <code>record.number</code>, <code>status</code> ("Status now"), <code>previousStatus</code> ("Status before this change"), <code>user.roles</code> ("The signed-in person's roles") and, in actions, <code>input.…</code> ("A field of the action's form").</td></tr>
+            <tr><td><b>Functions</b></td><td><span class="k btn">Buttons</span></td><td>Ready-made helpers, each with a description (listed below).</td></tr>
+            <tr><td><b>Try it › Sample record</b> ("Search records")</td><td><span class="k fld">Text box</span></td><td>Pick a real record to test with, or type sample values into the boxes shown.</td></tr>
+            <tr><td><b>Try</b></td><td><span class="k btn">Button</span></td><td>Works the formula out and shows "Result: …". Nothing is saved.</td></tr>
+            <tr><td><b>Use this</b></td><td><span class="k btn">Button</span></td><td>Puts the formula back into the setting you were editing.</td></tr>
+            <tr><td><b>Cancel</b> / <b>✕</b></td><td><span class="k btn">Button</span></td><td>Closes without changing the setting.</td></tr>
+          </tbody>
+        </table>
+        <h3>Functions</h3>
+        <table>
+          <thead><tr><th>Function</th><th>What it gives back</th></tr></thead>
+          <tbody>
+            <tr><td><code>len(x)</code></td><td>Length of a text or list</td></tr>
+            <tr><td><code>isEmpty(x)</code></td><td>True when blank or an empty list</td></tr>
+            <tr><td><code>coalesce(a, b)</code></td><td>The first value that is not blank</td></tr>
+            <tr><td><code>contains(list, x)</code></td><td>Whether a text or list contains a value</td></tr>
+            <tr><td><code>lower(text)</code> / <code>upper(text)</code> / <code>trim(text)</code></td><td>Text in small letters / capital letters / without spaces at either end</td></tr>
+            <tr><td><code>round(x, 2)</code> / <code>abs(x)</code></td><td>Rounds to a number of decimals / a number without its sign</td></tr>
+            <tr><td><code>min(a, b)</code> / <code>max(a, b)</code></td><td>The smallest / largest of the numbers</td></tr>
+            <tr><td><code>today()</code> / <code>now()</code></td><td>Today's date / the date and time now</td></tr>
+            <tr><td><code>daysBetween(a, b)</code> / <code>addDays(date, n)</code></td><td>Days from the first date to the second / a date plus a number of days</td></tr>
+            <tr><td><code>text(x)</code> / <code>number(x)</code></td><td>A value as text / as a number</td></tr>
+            <tr><td><code>sum(list, field)</code> / <code>avg(list, field)</code> / <code>count(list)</code></td><td>The total / average of a list or of one field of each row / how many items</td></tr>
+            <tr><td><code>formatMoney(amount)</code></td><td>An amount with Indian grouping, such as 12,34,567.50</td></tr>
+            <tr><td><code>formatDate(date)</code></td><td>A date as 5 Nov 2026</td></tr>
+            <tr><td><code>inWords(amount)</code></td><td>An amount in words, using crore, lakh and paise</td></tr>
+          </tbody>
+        </table>
+        <div class="note"><strong>What a formula can read depends on where it is</strong>Automations can only read the record and its status. Actions can also read their own form (<code>input.…</code>). Most other places can also read the signed-in person (<code>user.…</code>) and the value before the change (<code>previous.…</code>).</div>
+      </section>
+
+      <!-- ============================== DATA ============================== -->
+      <section id="record-types">
+        <h2>Record types</h2>
+        <p>A record type is a register and its form, such as Donations or Beneficiaries. Its Visual tab has a second row of tabs: <b>Fields</b>, <b>Rules</b>, <b>Lookups</b>, <b>Workflows</b> and <b>Used by</b>. The Fields tab holds the general settings on the left and the list of fields on the right.</p>
+        <h3>General</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Name</b></td><td><span class="k fld">Text box</span></td><td>The name of one record, for example "Donation". Required.</td></tr>
+            <tr><td><b>Plural name</b></td><td><span class="k fld">Text box</span></td><td>The name for many, for example "Donations". Used in menus and list titles.</td></tr>
+            <tr><td><b>Description</b></td><td><span class="k fld">Text box</span></td><td>A short note about what this register is for.</td></tr>
+            <tr><td><b>Title field</b></td><td><span class="k sel">Dropdown</span></td><td>"Shown as the record title in lists and panels". Pick the field that best names a record, such as the donor's name.</td></tr>
+            <tr><td><b>Who can see records</b></td><td><span class="k sel">Dropdown</span></td><td><b>Everyone with access</b>: anyone allowed to see this record type sees every record. <b>Only their own and shared</b>: people see only records they created or that were shared with them, unless their role has "See all".</td></tr>
+          </tbody>
+        </table>
+        <h3>Public (forms for outside visitors)</h3>
+        <p>"Each operation is off until you turn it on. View, edit and delete apply only to the submission a visitor just made." Use this for a public enquiry or volunteer sign-up form.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Create</b></td><td><span class="k tog">Switch</span></td><td>Visitors who are not signed in may submit a new record.</td></tr>
+            <tr><td><b>View</b></td><td><span class="k tog">Switch</span></td><td>The visitor may look at what they just submitted. Needs Create.</td></tr>
+            <tr><td><b>Edit</b></td><td><span class="k tog">Switch</span></td><td>The visitor may correct what they just submitted. Needs View.</td></tr>
+            <tr><td><b>Delete</b></td><td><span class="k tog">Switch</span></td><td>The visitor may withdraw what they just submitted. Needs View.</td></tr>
+            <tr><td>A tick box per field</td><td><span class="k tog">Checkbox</span></td><td>Which fields appear on the public form. Sensitive, calculated, file, signature and person fields cannot be public, so they are not offered. Every required field must be included.</td></tr>
+            <tr><td><b>Thank-you text</b></td><td><span class="k fld">Text box</span></td><td>Shown to the visitor after they submit.</td></tr>
+            <tr><td><b>Catalogue</b></td><td><span class="k tog">Switch</span></td><td>Lets visitors browse and search a public list of records, such as open volunteer opportunities. When on, tick the fields each result shows.</td></tr>
+            <tr><td><b>Statuses a visitor can search</b></td><td><span class="k fld">Text box</span></td><td>"Status keys, separated by commas." Only records in these statuses are listed, so private records stay hidden. Required for a catalogue.</td></tr>
+            <tr><td><b>Request form and its reference field</b></td><td><span class="k fld">Two text boxes</span></td><td>Optional. Lets a visitor pick a catalogue item and send a request about it: the key of the record type that receives the request, and its <b>Reference field</b> pointing back here.</td></tr>
+          </tbody>
+        </table>
+        <div class="warn"><strong>Money and public forms do not mix</strong>A record type that posts to the books or issues receipts cannot be made public.</div>
+        <h3>Numbering</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Give each record a number</b></td><td><span class="k tog">Switch</span></td><td>Each new record gets a reference number such as <code>DON/2026-27/00042</code>.</td></tr>
+            <tr><td><b>Number format</b></td><td><span class="k fld">Text box</span></td><td>The pattern of the number. "Tokens: {fy} financial year, {seq:5} running number". <code>{seq:5}</code> means a five-digit counter. Underneath you see "Next: …", the number the next record will get.</td></tr>
+            <tr><td><b>Reset</b></td><td><span class="k sel">Dropdown</span></td><td><b>Each financial year</b>: the counter starts at 1 every April (or whenever your year starts). <b>Never</b>: the counter keeps rising.</td></tr>
+            <tr><td>"Add the running number {seq}." / "Unknown token …"</td><td><span class="k msg">Message</span></td><td>The format needs a counter, or contains a token the system does not know.</td></tr>
+          </tbody>
+        </table>
+        <h3>The field list</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td>"Fields · 6"</td><td><span class="k">Heading</span></td><td>How many fields there are.</td></tr>
+            <tr><td>Columns <b>Label</b>, <b>Key</b>, <b>Type</b>, <b>Required</b>, <b>Rules</b></td><td><span class="k">Columns</span></td><td>A summary of each field. The Rules column shows badges such as "Calculated", "Roll-up", "Copied from …", "Shown when…", "Editable when…", "Unique", "Pattern", "Sensitive", "Who can see" and "Who can change".</td></tr>
+            <tr><td><b>⠿</b></td><td><span class="k">Handle</span></td><td>"Drag ⠿ to reorder. Select a row to edit it." The order here is the default order on forms.</td></tr>
+            <tr><td>Bin icon</td><td><span class="k btn">Button</span></td><td>Removes the field after asking "Remove the field …?". If something published still uses it, you see "… is still used by …. Change those first."</td></tr>
+            <tr><td><b>Add field</b></td><td><span class="k btn">Button</span></td><td>Adds a "New field" of type Short text and opens its panel.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="fields">
+        <h2>Fields (the field panel)</h2>
+        <p>Click a field in the list to open its panel. Which sections appear depends on the field's type.</p>
+        <h3>Field types</h3>
+        <table>
+          <thead><tr><th>Type</th><th>Use it for</th></tr></thead>
+          <tbody>
+            <tr><td><b>Short text</b></td><td>A name, a reference, one line of text.</td></tr>
+            <tr><td><b>Long text</b></td><td>Notes or an address over several lines.</td></tr>
+            <tr><td><b>Rich text</b></td><td>Text with formatting such as bold and lists.</td></tr>
+            <tr><td><b>Number</b></td><td>Quantities, hours, counts.</td></tr>
+            <tr><td><b>Amount (₹)</b></td><td>Money. Shown with the rupee sign and Indian grouping.</td></tr>
+            <tr><td><b>Date</b></td><td>A calendar date.</td></tr>
+            <tr><td><b>Yes / no</b></td><td>A tick box.</td></tr>
+            <tr><td><b>Choice list</b></td><td>Pick one option from a list you define.</td></tr>
+            <tr><td><b>Multiple choice</b></td><td>Pick several options from a list.</td></tr>
+            <tr><td><b>Email</b> / <b>Phone</b></td><td>Checked as an email address / phone number.</td></tr>
+            <tr><td><b>Link to record</b></td><td>Points to a record of another type, for example a donation's donor.</td></tr>
+            <tr><td><b>Person</b></td><td>One of your organisation's people (users).</td></tr>
+            <tr><td><b>File</b></td><td>Attachments such as photos, bills or PDFs.</td></tr>
+            <tr><td><b>Location</b></td><td>A map position from the phone, or typed coordinates.</td></tr>
+            <tr><td><b>Signature</b></td><td>A signature drawn on screen.</td></tr>
+          </tbody>
+        </table>
+        <h3>Basics</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Label</b></td><td><span class="k fld">Text box</span></td><td>The field's name on forms and lists. Required.</td></tr>
+            <tr><td><b>Key</b></td><td><span class="k fld">Text box</span></td><td>The internal name, made from the label. "Fixed after first publish", so choose a sensible label before publishing.</td></tr>
+            <tr><td><b>Type</b></td><td><span class="k sel">Dropdown</span></td><td>The kind of value (see the table above). Changing it removes options the new type does not have.</td></tr>
+            <tr><td><b>Help text</b></td><td><span class="k fld">Text box</span></td><td>A hint shown under the box on the form.</td></tr>
+            <tr><td><b>Placeholder</b></td><td><span class="k fld">Text box</span></td><td>Grey example text shown inside an empty box, such as "e.g. 9876543210".</td></tr>
+          </tbody>
+        </table>
+        <h3>Rules</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Required</b></td><td><span class="k tog">Checkbox</span></td><td>The record cannot be saved without a value.</td></tr>
+            <tr><td><b>Searchable</b></td><td><span class="k tog">Checkbox</span></td><td>The list's search box looks in this field.</td></tr>
+            <tr><td><b>Unique</b></td><td><span class="k tog">Checkbox</span></td><td>No two records may have the same value, for example a PAN number. For short text, email, phone, number and person fields.</td></tr>
+            <tr><td><b>Smallest</b> / <b>Largest</b></td><td><span class="k fld">Number</span></td><td>The lowest and highest value allowed (numbers and amounts).</td></tr>
+            <tr><td><b>Longest text</b></td><td><span class="k fld">Number</span></td><td>The most characters allowed.</td></tr>
+            <tr><td><b>Pattern</b></td><td><span class="k fld">Text box</span></td><td>A text pattern the value must match, for example a PIN code of six digits. For short text only.</td></tr>
+            <tr><td><b>Pattern message</b></td><td><span class="k fld">Text box</span></td><td>What people are told when the value does not match, such as "Enter a 6-digit PIN code".</td></tr>
+          </tbody>
+        </table>
+        <h3>Choices (choice list and multiple choice)</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Value</b></td><td><span class="k fld">Text box</span></td><td>The stored code for the option, such as <code>cash</code>. Keep it short; formulas and filters use it.</td></tr>
+            <tr><td><b>Label</b></td><td><span class="k fld">Text box</span></td><td>What people see, such as "Cash".</td></tr>
+            <tr><td><b>↑ Move up</b> / <b>↓ Move down</b></td><td><span class="k btn">Button</span></td><td>Changes the order of options.</td></tr>
+            <tr><td><b>✕ Remove</b></td><td><span class="k btn">Button</span></td><td>Removes an option. A list must keep at least one.</td></tr>
+            <tr><td><b>Add choice</b></td><td><span class="k btn">Button</span></td><td>Adds another option.</td></tr>
+          </tbody>
+        </table>
+        <h3>Linking and copying</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Linked record type</b></td><td><span class="k fld">Search box</span></td><td>For "Link to record": which register the link points to, such as Donors.</td></tr>
+            <tr><td><b>Copy from a chosen record › Reference field</b></td><td><span class="k sel">Dropdown</span></td><td>Fill this field from a record chosen in another link field. For example, copy the donor's phone when the donor is picked.</td></tr>
+            <tr><td><b>Field on …</b></td><td><span class="k sel">Dropdown</span></td><td>Which field of the linked record to copy. "Filled when the record is chosen or changed; kept as it was afterwards".</td></tr>
+          </tbody>
+        </table>
+        <h3>Conditions</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Visible when</b> ("Always shown")</td><td><span class="k fld">Formula</span></td><td>Show the field only when the formula is true, for example only ask "Cheque number" when the method is cheque: <code>record.method == 'cheque'</code>.</td></tr>
+            <tr><td><b>Editable when</b> ("Always editable")</td><td><span class="k fld">Formula</span></td><td>Allow changes only when the formula is true; otherwise the field is read-only.</td></tr>
+          </tbody>
+        </table>
+        <h3>Calculated as</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Calculated as</b> ("Calculated, e.g. record.a + record.b")</td><td><span class="k fld">Formula</span></td><td>The system works the value out; nobody types it. For example a total of quantity times rate. Turns off Required, Unique and the conditions, because they do not apply.</td></tr>
+          </tbody>
+        </table>
+        <h3>Roll-up (numbers and amounts)</h3>
+        <p>A roll-up keeps a count or total of other records up to date automatically, for example "Total donated" on a donor.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Keep up to date from other records</b></td><td><span class="k tog">Switch</span></td><td>Turns the roll-up on.</td></tr>
+            <tr><td><b>Record type</b></td><td><span class="k fld">Search box</span></td><td>The other register to count or total, such as Donations.</td></tr>
+            <tr><td><b>Their reference field</b></td><td><span class="k sel">Dropdown</span></td><td>The link field on those records that points back here, such as the donation's Donor.</td></tr>
+            <tr><td><b>Measure</b></td><td><span class="k sel">Dropdown</span></td><td><b>How many</b> (count them) or <b>Total of a field</b> (add a field up).</td></tr>
+            <tr><td><b>Field to add up</b></td><td><span class="k sel">Dropdown</span></td><td>For a total: which number or amount field, such as Amount.</td></tr>
+            <tr><td><b>Only records where</b></td><td><span class="k fld">Formula</span></td><td>Count only some records, for example only paid ones: <code>record.status == 'paid'</code>.</td></tr>
+          </tbody>
+        </table>
+        <h3>File, location and signature options</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Several files</b></td><td><span class="k tog">Checkbox</span></td><td>Allow more than one attachment.</td></tr>
+            <tr><td><b>Accepted files</b>: Image, PDF, Document, Spreadsheet</td><td><span class="k tog">Pills</span></td><td>Which kinds of file are accepted. None ticked means any.</td></tr>
+            <tr><td><b>Largest file (MB)</b></td><td><span class="k fld">Number</span></td><td>The biggest file allowed, from 0.1 to 25 MB.</td></tr>
+            <tr><td><b>Allow typed coordinates</b></td><td><span class="k tog">Switch</span></td><td>Location fields: people may type a position instead of using the phone's GPS.</td></tr>
+            <tr><td><b>Ask for a typed name</b></td><td><span class="k tog">Switch</span></td><td>Signature fields: the signer also types their name.</td></tr>
+          </tbody>
+        </table>
+        <h3>Who can see and change</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Sensitive</b></td><td><span class="k tog">Checkbox</span></td><td>Personal or confidential values, such as Aadhaar or bank details. Only roles with "See sensitive" see the value; everyone else sees it masked in lists, panels, exports and totals.</td></tr>
+            <tr><td><b>Who can see</b></td><td><span class="k fld">Permission</span></td><td>"Empty: everyone who can see the record. Without it the value is masked." Set automatically when Sensitive is ticked.</td></tr>
+            <tr><td><b>Who can change</b></td><td><span class="k fld">Permission</span></td><td>"Empty: anyone who can edit the record. Without it the field is read-only."</td></tr>
+          </tbody>
+        </table>
+        <h3>Bottom of the panel</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Used by</b></td><td><span class="k">List</span></td><td>Published definitions that use this field, each a link. "Nothing published uses this yet." if none.</td></tr>
+            <tr><td><b>Duplicate</b></td><td><span class="k btn">Button</span></td><td>Adds a copy of this field ("… copy") just below.</td></tr>
+            <tr><td><b>Remove field</b></td><td><span class="k btn">Button</span></td><td>Removes the field. Disabled while something uses it.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="rt-rules">
+        <h2>Rules, lookups, workflows and used by</h2>
+        <h3>Rules tab</h3>
+        <p>"A rule must be true for a record to save." Use rules for checks that involve more than one field, for example that the fee is not more than the amount.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Add rule</b></td><td><span class="k btn">Button</span></td><td>Adds a rule and opens it.</td></tr>
+            <tr><td><b>Key</b></td><td><span class="k fld">Text box</span></td><td>A short name for the rule.</td></tr>
+            <tr><td><b>Only when (optional)</b> ("Always")</td><td><span class="k fld">Formula</span></td><td>Check the rule only in some cases. Empty means always.</td></tr>
+            <tr><td><b>Must be true</b></td><td><span class="k fld">Formula</span></td><td>The condition, for example <code>(record.fee ?? 0) &lt;= record.amount</code>.</td></tr>
+            <tr><td><b>Message if not</b></td><td><span class="k fld">Text box</span></td><td>What the person is told when the rule fails. Required. Write it so they know what to fix.</td></tr>
+            <tr><td><b>Remove rule</b> / bin icon</td><td><span class="k btn">Button</span></td><td>Deletes the rule straight away.</td></tr>
+          </tbody>
+        </table>
+        <h3>Lookups tab</h3>
+        <p>"A lookup sends some fields to an HTTP connector while the record saves, and fills other fields from its answer." For example, send a PIN code and get back the city and state. You first need an HTTP connector in lookup mode (see <a href="#connectors">Connectors</a>).</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Add lookup</b></td><td><span class="k btn">Button</span></td><td>Adds a lookup and opens it.</td></tr>
+            <tr><td><b>Key</b></td><td><span class="k fld">Text box</span></td><td>A short name for the lookup.</td></tr>
+            <tr><td><b>Connector</b></td><td><span class="k sel">Dropdown</span></td><td>"An HTTP connector in lookup mode."</td></tr>
+            <tr><td><b>Inputs</b></td><td><span class="k tog">Checkboxes</span></td><td>"Sent to the connector. The lookup runs when one of these changes."</td></tr>
+            <tr><td><b>Fills › Field</b> / <b>Answer value</b></td><td><span class="k fld">Rows</span></td><td>Which field to fill, and the name of the value in the service's answer to fill it with. Money fields cannot be filled this way.</td></tr>
+            <tr><td><b>Add value</b></td><td><span class="k btn">Button</span></td><td>Adds another field to fill.</td></tr>
+            <tr><td><b>Remove lookup</b></td><td><span class="k btn">Button</span></td><td>Deletes the lookup.</td></tr>
+          </tbody>
+        </table>
+        <h3>Workflows tab</h3>
+        <p>Lists every workflow of this record type, with columns <b>Workflow</b>, <b>Role</b>, <b>Chosen when / starts when</b>, <b>States</b> and <b>Steps</b>. Click one to open it, or press <b>Add workflow</b>, then type a <b>Name</b>, choose a <b>Role</b> (Primary or Parallel) and press <b>Add</b>. See <a href="#workflows">Workflows</a>.</p>
+        <h3>Used by tab</h3>
+        <p>Every published definition that depends on this record type, with columns <b>Definition</b> (a link), <b>Kind</b> and <b>Use</b>. Check here before changing or removing something.</p>
+      </section>
+
+      <section id="lists">
+        <h2>Lists</h2>
+        <p>A list decides how people browse a record type: the quick-filter chips, what each row shows, the table columns, the detail panel and the create and edit forms. A live preview on the right shows the result as you work.</p>
+        <h3>Top settings</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Record type</b></td><td><span class="k sel">Dropdown</span></td><td>Which register this list shows.</td></tr>
+            <tr><td><b>Label</b></td><td><span class="k fld">Text box</span></td><td>The list's title. Empty uses the record type's plural name.</td></tr>
+          </tbody>
+        </table>
+        <h3>Chips</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Add chip</b></td><td><span class="k btn">Button</span></td><td>Adds a "New chip". Up to 8 chips.</td></tr>
+            <tr><td><b>Label</b></td><td><span class="k fld">Text box</span></td><td>The chip's text, such as "Outstanding".</td></tr>
+            <tr><td><b>Shows</b></td><td><span class="k sel">Dropdown</span></td><td>What the chip lists:
+              <ul>
+                <li><b>All</b>: every record;</li>
+                <li><b>Statuses</b>: tick the statuses to include;</li>
+                <li><b>Workflow state</b>: statuses of another workflow (choose <b>Workflow</b> and tick <b>In states</b>);</li>
+                <li><b>My own records</b>: what the signed-in person created;</li>
+                <li><b>Shared with me</b>: what others shared with them;</li>
+                <li><b>Field value</b>: records where fields match conditions (see the next row).</li>
+              </ul></td></tr>
+            <tr><td><b>Records where</b> and <b>Add a condition</b></td><td><span class="k fld">Conditions</span></td><td>For "Field value". Pick a field, then set its value: tick choices; Yes or No; <b>From</b> and <b>Up to</b> for numbers and dates; or <b>The signed-in person</b> for person fields. All conditions must be true. <b>Remove</b> deletes one.</td></tr>
+            <tr><td><b>Only for</b></td><td><span class="k fld">Permission</span></td><td>"Empty: everyone who can see the list." Otherwise only people with this permission see the chip.</td></tr>
+            <tr><td><b>Default chip</b></td><td><span class="k tog">Checkbox</span></td><td>The chip selected when the list opens. Without one, the first chip is used.</td></tr>
+          </tbody>
+        </table>
+        <h3>Filters, rows and table</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Filters</b></td><td><span class="k fld">Field pills</span></td><td>Fields people can filter by in the list's filter sheet. Sensitive fields are never offered.</td></tr>
+            <tr><td><b>Rows (cards) › Title</b></td><td><span class="k sel">Dropdown</span></td><td>The main line of each card. <b>Automatic</b> uses the title field.</td></tr>
+            <tr><td><b>Subtitle</b></td><td><span class="k fld">Field pills</span></td><td>Smaller lines under the title.</td></tr>
+            <tr><td><b>Shown on the right</b></td><td><span class="k sel">Dropdown</span></td><td>A value on the right of each card, such as the amount.</td></tr>
+            <tr><td><b>Badge</b></td><td><span class="k sel">Dropdown</span></td><td>A coloured label on each card. Automatic shows the status.</td></tr>
+            <tr><td><b>Table columns</b></td><td><span class="k fld">Field pills</span></td><td>Columns on wide screens. Up to 12.</td></tr>
+            <tr><td><b>Tablet columns</b></td><td><span class="k fld">Field pills</span></td><td>Columns on tablet-width screens. Up to 6.</td></tr>
+            <tr><td><b>Layout</b></td><td><span class="k sel">Dropdown</span></td><td><b>Automatic</b>, <b>Table</b> or <b>Cards</b> on wide screens. Phones always show cards.</td></tr>
+            <tr><td><b>Page size</b></td><td><span class="k fld">Number</span></td><td>How many rows load at a time (5 to 100).</td></tr>
+            <tr><td>"⚠ …: this filter is not indexed yet."</td><td><span class="k msg">Warning</span></td><td>The database is still preparing that field; filtering may be slow for a while. No action needed.</td></tr>
+          </tbody>
+        </table>
+        <h3>Record panel sections</h3>
+        <p>The detail panel that opens when someone clicks a record is built from sections, top to bottom.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Add section</b></td><td><span class="k btn">Button</span></td><td>Adds a "New section".</td></tr>
+            <tr><td><b>Fields of this record</b> / <b>Related records</b></td><td><span class="k tab">Choice</span></td><td>Show this record's own fields, or a list of other records that link to it (for example a donor's donations).</td></tr>
+            <tr><td><b>Label</b></td><td><span class="k fld">Text box</span></td><td>The section heading.</td></tr>
+            <tr><td><b>Fields</b></td><td><span class="k fld">Field pills</span></td><td>The fields in the section, in order.</td></tr>
+            <tr><td><b>Record type</b> (related)</td><td><span class="k sel">Dropdown</span></td><td>The register whose records are listed.</td></tr>
+            <tr><td><b>Linked through</b></td><td><span class="k sel">Dropdown</span></td><td>Their link field that points to this record.</td></tr>
+            <tr><td><b>Add up</b></td><td><span class="k sel">Dropdown</span></td><td>Optional: an amount to total under the list (shown with Σ).</td></tr>
+            <tr><td><b>Shown to people with</b></td><td><span class="k fld">Permission</span></td><td>"Empty: everyone who can see the record."</td></tr>
+          </tbody>
+        </table>
+        <h3>Create form and edit form</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Edit</b> (next to the create form summary)</td><td><span class="k btn">Button</span></td><td>Opens the Create form sheet.</td></tr>
+            <tr><td><b>One page</b> / <b>Steps</b></td><td><span class="k tab">Choice</span></td><td>All fields on one screen, or split into pages like a wizard. In Steps mode, name each <b>Step 1</b>, <b>Step 2</b>… and drag fields between them. <b>Add step</b> and <b>Remove step</b> add and remove pages; no field is lost.</td></tr>
+            <tr><td><b>Fields</b></td><td><span class="k fld">Field pills</span></td><td>The fields on the form, in order. Calculated fields are not offered.</td></tr>
+            <tr><td><b>Columns on wide screens</b></td><td><span class="k sel">Dropdown</span></td><td>1, 2 or 3 columns. Phones always use one.</td></tr>
+            <tr><td><b>Fields on their own row</b></td><td><span class="k tog">Checkboxes</span></td><td>Fields that take a whole row, such as long notes.</td></tr>
+            <tr><td>"⚠ Required but not on the form: …"</td><td><span class="k msg">Warning</span></td><td>Records could not be saved, because a required field is missing from the form. Add it. Green "✓ Every required field is on the form." means all is well.</td></tr>
+            <tr><td><b>Offered on chips</b> / <b>Allowed on chips</b></td><td><span class="k tog">Checkboxes</span></td><td>Show the New (or Edit) button only while one of these chips is selected. "None ticked: every chip."</td></tr>
+            <tr><td><b>Presets</b> with <b>Address parameter</b> and <b>Add</b></td><td><span class="k fld">Rows</span></td><td>Fill a field from the web address. This is what makes a "New donation for this donor" button open with the donor already chosen.</td></tr>
+            <tr><td><b>Close</b></td><td><span class="k btn">Button</span></td><td>Closes the sheet. Changes are already in the draft.</td></tr>
+          </tbody>
+        </table>
+        <h3>Preview</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Phone</b> / <b>Tablet</b> / <b>Desktop</b></td><td><span class="k tab">Tab</span></td><td>See the list as it will look on each size of screen.</td></tr>
+            <tr><td><b>Record panel</b></td><td><span class="k tab">Tab</span></td><td>The detail panel of the row you click. "Choose a row to see its record panel."</td></tr>
+            <tr><td><b>Create</b></td><td><span class="k tab">Tab</span></td><td>The create form as people will see it.</td></tr>
+            <tr><td>"Real records you can see, with the draft applied." / "Sample records…"</td><td><span class="k">Note</span></td><td>Whether the preview uses your real data or made-up examples. Nothing in the preview is saved.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="groups">
+        <h2>Record groups and report groups</h2>
+        <p>Groups put related record types (or reports) together under one heading on Home, the Records screen or the Reports screen. Anything in no group is listed under "Other".</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Key</b></td><td><span class="k fld">Read-only</span></td><td>"Stable name of the group".</td></tr>
+            <tr><td><b>Label</b></td><td><span class="k fld">Text box</span></td><td>"Group heading", such as "Fundraising".</td></tr>
+            <tr><td><b>Order</b></td><td><span class="k fld">Number</span></td><td>"Lower comes first" (0 to 1000).</td></tr>
+            <tr><td><b>Record types</b> / <b>Reports</b></td><td><span class="k fld">Pills</span></td><td>What is in the group, in order. If something is in several groups, it shows only in the first.</td></tr>
+            <tr><td><b>Order in this group</b></td><td><span class="k">Preview</span></td><td>Record groups only: drag rows to reorder; the bin icon removes one. A note warns if a type already shows in an earlier group.</td></tr>
+            <tr><td><b>Records screen</b></td><td><span class="k">Preview</span></td><td>How the Records screen will look, with your group marked "· this group".</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="feeds">
+        <h2>Data feeds</h2>
+        <p>A data feed lets your public website show information from OneNGO, such as open campaigns or an "About us" text, without giving it access to anything else. The website calls the feed with an API key made just for that feed (see <a href="#api-keys">API keys</a>).</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Key</b></td><td><span class="k fld">Read-only</span></td><td>Part of the feed's web address.</td></tr>
+            <tr><td><b>Label</b> / <b>Description</b></td><td><span class="k fld">Text box</span></td><td>Its name, and a note on what it is for.</td></tr>
+            <tr><td><b>Source</b></td><td><span class="k sel">Dropdown</span></td><td><b>Records</b> (a list from one record type) or <b>Written text</b> (text you type here).</td></tr>
+            <tr><td><b>Records › Record type</b></td><td><span class="k fld">Search box</span></td><td>The register to read.</td></tr>
+            <tr><td><b>Fields</b></td><td><span class="k fld">Pills</span></td><td>The only fields the website receives. Sensitive and personal fields are refused.</td></tr>
+            <tr><td><b>Statuses</b></td><td><span class="k fld">Pills</span></td><td>Only records in these statuses, for example only "published" campaigns. Required, so a feed can never list everything.</td></tr>
+            <tr><td><b>Search these fields</b></td><td><span class="k fld">Pills</span></td><td>Lets the website search in these fields.</td></tr>
+            <tr><td><b>Add Sort</b> › <b>Field</b> and <b>Direction</b></td><td><span class="k sel">Group</span></td><td>The order of results: <b>Ascending</b> or <b>Descending</b>. Without it, newest first.</td></tr>
+            <tr><td><b>Caller may filter</b></td><td><span class="k fld">Pills</span></td><td>Fields the website may filter on with an exact value.</td></tr>
+            <tr><td><b>Content</b> list (headed "Translations")</td><td><span class="k fld">Table</span></td><td>For Written text: the pieces of text returned. Each has a <b>Key</b>, <b>Label</b> and <b>Text</b> (up to 4000 characters).</td></tr>
+          </tbody>
+        </table>
+        <div class="note"><strong>Calling from a web page</strong>If the website reads the feed directly from the visitor's browser, add the site's address to <b>Sites that may read data feeds</b> in Administration › Organisation › Settings.</div>
+      </section>
+
+      <!-- ============================== PROCESS ============================== -->
+      <section id="workflows">
+        <h2>Workflows</h2>
+        <p>A workflow is the path a record follows: its statuses (Draft, Submitted, Approved…) and the buttons (steps) that move it along. A record type usually has one <b>primary</b> workflow, which holds its status. It may also have <b>parallel</b> workflows that run alongside, such as a separate "Documents checked" track.</p>
+        <h3>Workflows · n (all workflows of the record type)</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Add workflow</b> › <b>Name</b>, <b>Role</b>, <b>Add</b></td><td><span class="k btn">Button</span></td><td>Creates another workflow for the same record type.</td></tr>
+            <tr><td><b>Record type</b></td><td><span class="k sel">Dropdown</span></td><td>Which register follows this workflow.</td></tr>
+            <tr><td><b>Role</b>: <b>Primary</b> / <b>Parallel</b></td><td><span class="k sel">Dropdown</span></td><td>Primary holds the record's status. Parallel runs beside it.</td></tr>
+            <tr><td><b>Chosen when</b> (primary)</td><td><span class="k fld">Formula</span></td><td>If you have several primary workflows, which one a new record follows. "Leave empty for the default." Exactly one primary workflow must have no condition.</td></tr>
+            <tr><td><b>Starts when</b> (parallel)</td><td><span class="k fld">Formula</span></td><td>When the parallel workflow begins. "Leave empty to start when a record is created."</td></tr>
+            <tr><td><b>Applies to</b></td><td><span class="k">Summary</span></td><td>Plain sentences, such as "Every new record follows Donation.", plus ✓ and ⚠ checks such as "Records need one primary workflow to hold their status."</td></tr>
+          </tbody>
+        </table>
+        <h3>Diagram</h3>
+        <p>Boxes are statuses and arrows are steps. "Choose a state or step to edit it." Statuses marked "start", "Final" or "Locked" are labelled. Steps needing approval show "· Approval". A warning "⚠ No step leads to: …" means a status can never be reached; add a step that leads to it.</p>
+        <h3>States</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Add status</b></td><td><span class="k btn">Button</span></td><td>Adds a status.</td></tr>
+            <tr><td><b>Label</b></td><td><span class="k fld">Text box</span></td><td>The name people see, such as "Approved".</td></tr>
+            <tr><td><b>Key</b></td><td><span class="k fld">Text box</span></td><td>Its internal name, stored on records and used in formulas (for example <code>approved</code>). Fixed once published.</td></tr>
+            <tr><td><b>Starting state</b></td><td><span class="k tog">Radio</span></td><td>New records start here.</td></tr>
+            <tr><td><b>Final</b></td><td><span class="k tog">Checkbox</span></td><td>The work is finished; no steps lead out.</td></tr>
+            <tr><td><b>Locked for editing</b></td><td><span class="k tog">Checkbox</span></td><td>Records in this status cannot be edited, only moved on by a step. Good for "Paid" or "Closed".</td></tr>
+            <tr><td>Bin icon</td><td><span class="k btn">Button</span></td><td>Removes the status and any steps that lead only to or from it.</td></tr>
+          </tbody>
+        </table>
+        <h3>Steps</h3>
+        <p>The table shows <b>Button label</b>, <b>From → to</b>, <b>Asks for</b>, <b>Who</b> and <b>Approval</b>. <b>Add step</b> adds one.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Button label</b></td><td><span class="k fld">Text box</span></td><td>The text on the button people press, such as "Mark as paid".</td></tr>
+            <tr><td><b>Key</b></td><td><span class="k fld">Text box</span></td><td>Internal name; also part of the step's permission. Fixed once published.</td></tr>
+            <tr><td><b>Available from</b></td><td><span class="k tog">Checkboxes</span></td><td>The statuses in which the button appears.</td></tr>
+            <tr><td><b>Moves to</b></td><td><span class="k sel">Dropdown</span></td><td>The status the record goes to.</td></tr>
+            <tr><td><b>Fields that must be filled</b></td><td><span class="k tog">Checkboxes</span></td><td>The step is blocked until these have values, for example "Payment date" before "Mark as paid".</td></tr>
+            <tr><td><b>Only allowed when (optional)</b></td><td><span class="k fld">Formula</span></td><td>The step works only when this is true, for example <code>record.amount &gt; 0</code>.</td></tr>
+            <tr><td><b>Message when not allowed</b></td><td><span class="k fld">Text box</span></td><td>What people are told when the condition is false.</td></tr>
+            <tr><td><b>Who can run it › Permission</b></td><td><span class="k fld">Permission</span></td><td>Who may press the button. By default each step has its own permission, which you give to roles.</td></tr>
+            <tr><td><b>Needs approval</b></td><td><span class="k tog">Checkbox</span></td><td>Pressing the button sends a request; the record moves only once someone else approves.</td></tr>
+            <tr><td><b>Approver roles</b></td><td><span class="k tog">Checkboxes</span></td><td>Roles whose members may approve, such as Treasurer.</td></tr>
+            <tr><td><b>People</b></td><td><span class="k fld">Text box</span></td><td>Named people who may approve, separated by commas.</td></tr>
+            <tr><td><b>Approvals needed</b></td><td><span class="k fld">Number</span></td><td>How many approvals are required (1 to 5).</td></tr>
+            <tr><td><b>Only when</b> ("record.amount &gt;= 50000")</td><td><span class="k fld">Formula</span></td><td>Ask for approval only in some cases, for example large amounts. "Leave empty to always ask."</td></tr>
+            <tr><td>"People never approve their own requests."</td><td><span class="k">Note</span></td><td>Built-in safeguard: the person who pressed the button cannot approve it.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="actions">
+        <h2>Actions</h2>
+        <p>An action is an extra button on a record, such as "Send reminder" or "Print receipt". It can ask a few questions first, then does its steps in order.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Record type</b></td><td><span class="k fld">Search box</span></td><td>The register the button appears on.</td></tr>
+            <tr><td><b>Label</b></td><td><span class="k fld">Text box</span></td><td>"Button text", up to 60 characters.</td></tr>
+            <tr><td><b>Shown in</b>: <b>Record panel</b>, <b>Row menu</b>, <b>Bulk bar</b></td><td><span class="k tog">Pills</span></td><td>Where the button appears: at the bottom of the detail panel, in a row's ⋮ menu, or in the bar shown when several rows are selected.</td></tr>
+            <tr><td><b>Permission</b></td><td><span class="k fld">Permission</span></td><td>Who may use it. By default the action has its own permission to give to roles.</td></tr>
+            <tr><td><b>Shown when › Only when</b></td><td><span class="k fld">Formula</span></td><td>Offer the button only when true, for example <code>record.status == 'raised'</code>.</td></tr>
+            <tr><td><b>Confirm › Confirmation</b></td><td><span class="k fld">Text box</span></td><td>A question asked before it runs, such as "Send a reminder to the donor?".</td></tr>
+            <tr><td><b>Add Form fields</b></td><td><span class="k btn">Button</span></td><td>Ask for a few values first. Each form field has a <b>Key</b>, <b>Label</b>, <b>Type</b>, <b>Required</b>, and optionally <b>Choices</b>, <b>Linked record type</b>, <b>Smallest</b>/<b>Largest</b>, <b>Longest text</b>, <b>Help text</b> and <b>Placeholder</b>. Set <b>Columns on wide screens</b> and <b>Fields on their own row</b> for layout. Answers are read in formulas as <code>input.key</code>.</td></tr>
+            <tr><td><b>Steps › Type</b></td><td><span class="k sel">Dropdown</span></td><td>What each step does (1 to 10 steps, run in order):
+              <ul>
+                <li><b>Set fields</b>: change values on the record;</li>
+                <li><b>Run a workflow step</b>: press a workflow button;</li>
+                <li><b>Create a record</b>: add a new record, perhaps of another type;</li>
+                <li><b>Notify people</b>: send a message template;</li>
+                <li><b>Call a webhook</b> / <b>Call a connector</b>: tell an outside system;</li>
+                <li><b>Ask for a payment</b>: request a UPI, Razorpay or Cashfree payment;</li>
+                <li><b>Open the receipt print view</b>;</li>
+                <li><b>Run a script</b>;</li>
+                <li><b>Open a report</b>.</li>
+              </ul></td></tr>
+            <tr><td><b>Field values</b></td><td><span class="k fld">Name / Value</span></td><td>For Set fields, Run a workflow step and Create a record: which field gets which value (each value is a formula).</td></tr>
+            <tr><td><b>Workflow step</b> / <b>Record type</b> / <b>Template</b> / <b>Script</b> / <b>Report</b></td><td><span class="k fld">Search box</span></td><td>What the step uses, depending on its type.</td></tr>
+            <tr><td><b>Parameters</b></td><td><span class="k fld">Name / Value</span></td><td>Values passed to the report.</td></tr>
+            <tr><td><b>Send to</b> and <b>Channels</b></td><td><span class="k fld">Group</span></td><td>For Notify people: who is told and how. See <a href="#recipients">Choosing who is told</a>.</td></tr>
+            <tr><td><b>Connector</b> / <b>Webhook values</b></td><td><span class="k fld">Search box</span></td><td>For webhook and connector steps: which connector, and extra values to send.</td></tr>
+            <tr><td><b>Provider</b>: UPI, Razorpay, Cashfree</td><td><span class="k sel">Dropdown</span></td><td>For Ask for a payment: how the payment is taken.</td></tr>
+            <tr><td><b>Amount</b> / <b>Account</b></td><td><span class="k fld">Formula / text</span></td><td>How much to ask for, and the money account that receives it.</td></tr>
+            <tr><td><b>Add When it is paid</b> › <b>Workflow step</b>, <b>Paid-on field</b>, <b>Payment reference field</b>, <b>Method field</b>, <b>Method value</b></td><td><span class="k fld">Group</span></td><td>What happens when the money arrives: which step to run, and which fields record the date, the payment reference and the method.</td></tr>
+          </tbody>
+        </table>
+        <div class="note"><strong>Messages never undo a save</strong>Notifications, webhooks and connector calls go out after the record is saved. If one fails, the record still stands.</div>
+      </section>
+
+      <section id="automations">
+        <h2>Automations</h2>
+        <p>An automation does something on its own when something happens, for example "when a donation becomes Paid, email the donor a thank-you", or "every Monday, remind people of overdue tasks".</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Label</b></td><td><span class="k fld">Text box</span></td><td>"Name shown to administrators".</td></tr>
+            <tr><td><b>On</b></td><td><span class="k tog">Switch</span></td><td>Turn the automation off without deleting it.</td></tr>
+            <tr><td><b>When › Record type</b></td><td><span class="k fld">Search box</span></td><td>"The record type it watches".</td></tr>
+            <tr><td><b>Trigger › Event</b></td><td><span class="k sel">Dropdown</span></td><td>What starts it: <b>A record is created</b>, <b>A record is updated</b>, <b>The status changes</b> or <b>On a schedule</b>.</td></tr>
+            <tr><td><b>To status</b> / <b>From status</b></td><td><span class="k fld">Text box</span></td><td>For "The status changes": only changes into, or out of, this status key.</td></tr>
+            <tr><td><b>Workflow</b></td><td><span class="k fld">Search box</span></td><td>Which workflow's status to watch. Default: the primary one.</td></tr>
+            <tr><td><b>Schedule (cron)</b></td><td><span class="k fld">Text box</span></td><td>For "On a schedule". Five parts: minute, hour, day of month, month, day of week. Underneath, the schedule is spelled out, for example <code>30 3 * * 1-5</code> shows "At 03:30, Monday to Friday (UTC)". Times are UTC; India is 5 hours 30 minutes ahead, so 03:30 UTC is 09:00 in India.</td></tr>
+            <tr><td><b>Records in status</b></td><td><span class="k fld">Text box</span></td><td>For a schedule: run for each record in this status.</td></tr>
+            <tr><td><b>Only if</b></td><td><span class="k fld">Formula</span></td><td>"Runs only when this is true for the record".</td></tr>
+            <tr><td><b>Actions › Type</b></td><td><span class="k sel">Dropdown</span></td><td>What it does (1 to 10): <b>Set fields</b>, <b>Notify people</b>, <b>Create a record</b>, <b>Run a workflow step</b>, <b>Call a webhook</b> or <b>Call a connector</b>. The other boxes are the same as for <a href="#actions">action steps</a>.</td></tr>
+          </tbody>
+        </table>
+        <h3>Schedule examples</h3>
+        <pre><code>0 3 * * *       every day at 03:00 UTC (08:30 in India)
+30 3 * * 1      every Monday at 03:30 UTC (09:00 in India)
+0 */6 * * *     every 6 hours
+0 4 1 * *       on the 1st of each month at 04:00 UTC</code></pre>
+      </section>
+
+      <section id="recipients">
+        <h2>Choosing who is told</h2>
+        <p>Used by "Notify people" in actions and automations.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Send to › Roles</b></td><td><span class="k fld">Pills</span></td><td>"Everyone with these roles".</td></tr>
+            <tr><td><b>People</b></td><td><span class="k fld">Pills</span></td><td>"These people".</td></tr>
+            <tr><td><b>Email</b></td><td><span class="k fld">Formula</span></td><td>An email address, often taken from the record, such as <code>record.donorEmail</code>.</td></tr>
+            <tr><td><b>Phone</b></td><td><span class="k fld">Formula</span></td><td>A phone number for SMS and WhatsApp.</td></tr>
+            <tr><td><b>The person who created the record</b></td><td><span class="k tog">Switch</span></td><td>Tell whoever created the record.</td></tr>
+            <tr><td><b>Type: Person chosen in a field</b> + <b>Field</b></td><td><span class="k sel">Dropdown</span></td><td>Tell the person chosen in a Person field, such as the assigned volunteer.</td></tr>
+            <tr><td><b>Channels</b>: In the app, Email, SMS, WhatsApp</td><td><span class="k tog">Pills</span></td><td>How the message goes. Default: in the app and email. SMS and WhatsApp need a connector.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ============================== TEMPLATES AND MONEY ============================== -->
+      <section id="templates">
+        <h2>Message templates</h2>
+        <p>The wording of a message or printed document, with placeholders filled from the record. For example: <code>Dear {{ record.donorName }}, thank you for your gift of {{ formatMoney(record.amount) }}.</code></p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Label</b></td><td><span class="k fld">Text box</span></td><td>Name shown to administrators.</td></tr>
+            <tr><td><b>Subject</b></td><td><span class="k fld">Text box</span></td><td>The email subject and notification title. Required.</td></tr>
+            <tr><td><b>Kind</b>: <b>Message</b> / <b>Document</b></td><td><span class="k sel">Dropdown</span></td><td>Message is sent by email or notification. Document is a page printed as a PDF, used by report templates.</td></tr>
+            <tr><td><b>Message</b></td><td><span class="k fld">Text box</span></td><td>Plain text for in-app notifications, SMS and the plain part of emails. Required.</td></tr>
+            <tr><td><b>Email HTML</b></td><td><span class="k fld">Editor</span></td><td>An optional formatted email. Leave empty to send the plain message.</td></tr>
+            <tr><td><b>Add WhatsApp template</b> › <b>Template name</b>, <b>Language</b>, <b>Parameters</b></td><td><span class="k fld">Group</span></td><td>WhatsApp only allows pre-approved templates. Enter the approved name, language code (such as <code>en</code> or <code>hi</code>) and the values for its numbered gaps.</td></tr>
+          </tbody>
+        </table>
+        <h3>The email editor</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Design</b> / <b>HTML</b></td><td><span class="k tab">Tab</span></td><td>Edit visually, or edit the underlying code.</td></tr>
+            <tr><td><b>Paragraph</b> / <b>Heading</b></td><td><span class="k btn">Button</span></td><td>Normal text, or a heading.</td></tr>
+            <tr><td><b>Bold</b> / <b>Italic</b> / <b>Underline</b></td><td><span class="k btn">Button</span></td><td>Text styles.</td></tr>
+            <tr><td><b>Bulleted list</b> / <b>Numbered list</b></td><td><span class="k btn">Button</span></td><td>Start a list.</td></tr>
+            <tr><td><b>Link</b> › <b>Link address</b> › <b>Apply</b></td><td><span class="k btn">Button</span></td><td>Make the selected text a link. "Use an http, https, or mailto address."</td></tr>
+            <tr><td><b>Image</b> › <b>Image address</b> › <b>Apply</b></td><td><span class="k btn">Button</span></td><td>Insert a picture from a web address. "Use an https image address."</td></tr>
+            <tr><td><b>Table</b></td><td><span class="k btn">Button</span></td><td>Insert a small table.</td></tr>
+          </tbody>
+        </table>
+        <h3>Preview</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Record type to preview with</b></td><td><span class="k fld">Search box</span></td><td>Which kind of record fills the gaps.</td></tr>
+            <tr><td><b>Record</b> ("Number or name")</td><td><span class="k fld">Search box</span></td><td>A real record to try it with. "Choose a record to fill in the placeholders."</td></tr>
+            <tr><td><b>Add to the message:</b></td><td><span class="k btn">Chips</span></td><td>Click a placeholder to insert it where you last typed.</td></tr>
+            <tr><td><b>Email</b>, <b>Notification</b>, <b>SMS</b>, <b>WhatsApp</b></td><td><span class="k">Preview</span></td><td>How the message looks in each channel. Documents show a <b>Printed page</b> instead.</td></tr>
+            <tr><td><b>Send a test to me</b></td><td><span class="k btn">Button</span></td><td>Emails the filled message to you, with "Test: " in front of the subject. "Sent to …".</td></tr>
+          </tbody>
+        </table>
+        <div class="note"><strong>Document templates can repeat and choose</strong><code>{{#each … as row}} … {{/each}}</code> repeats a block for each row, <code>{{#if …}} … {{else}} … {{/if}}</code> shows a block only sometimes, and <code>{{&gt; otherTemplate}}</code> includes another template.</div>
+      </section>
+
+      <section id="reports">
+        <h2>Report templates</h2>
+        <p>A report gathers records, totals and calculations and makes one file: a PDF (from a Document message template) or an Excel workbook.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Label</b></td><td><span class="k fld">Text box</span></td><td>The report's name, seen by the person running it.</td></tr>
+            <tr><td><b>Audience</b></td><td><span class="k fld">Pills</span></td><td>Roles that may run it. Empty: anyone with the report's permission.</td></tr>
+            <tr><td><b>Parameters</b> › <b>Key</b>, <b>Label</b>, <b>Type</b>, <b>Required</b>, <b>Choices</b></td><td><span class="k fld">Table</span></td><td>Questions asked when the report runs, such as "From date" and "To date". Read in formulas as <code>params.key</code>.</td></tr>
+            <tr><td><b>Datasets › Key</b>, <b>Label</b></td><td><span class="k fld">Table</span></td><td>Each set of data the report uses (1 to 12).</td></tr>
+            <tr><td><b>Source</b>: <b>Records</b>, <b>Total</b>, <b>Ledger balances</b></td><td><span class="k sel">Dropdown</span></td><td>A list of records, a count or total, or balances from the accounts.</td></tr>
+            <tr><td><b>Record type</b>, <b>Filters</b>, <b>Statuses</b>, <b>Fields</b>, <b>Rows shown</b></td><td><span class="k fld">Various</span></td><td>Which records, filtered how, which fields, and how many at most (up to 20,000). Filters are written as JSON, for example <code>{"date": {"from": "params.from", "to": "params.to"}}</code>.</td></tr>
+            <tr><td><b>Add Sort</b> › <b>Field</b>, <b>Direction</b></td><td><span class="k fld">Group</span></td><td>The order of rows.</td></tr>
+            <tr><td><b>Related records</b> › <b>Their reference field</b>, <b>Fields</b></td><td><span class="k fld">Table</span></td><td>Bring in fields from linked records, such as the donor's name for each donation.</td></tr>
+            <tr><td><b>Measure</b>, <b>Field</b>, <b>Add Group by</b> (<b>Field</b>, <b>Period</b>, <b>Date field</b>)</td><td><span class="k sel">Various</span></td><td>For a Total: count or add up, split by a field or by Day, Week, Month or Financial year.</td></tr>
+            <tr><td><b>Ledger accounts</b>, <b>Funds</b>, <b>As of</b></td><td><span class="k fld">Various</span></td><td>For Ledger balances: which accounts and funds, and the date to take balances to.</td></tr>
+            <tr><td><b>Calculations</b> › <b>Key</b>, <b>Label</b>, and the formula box (shown as "Must be true")</td><td><span class="k fld">Table</span></td><td>Extra figures worked out from parameters, datasets and earlier calculations.</td></tr>
+            <tr><td><b>Add Custom step</b> › <b>Script</b> / <b>Provider</b></td><td><span class="k fld">Group</span></td><td>Advanced: a script shapes the data instead. Needs the organisation administrator to publish.</td></tr>
+            <tr><td><b>Outputs › Add PDF</b> › <b>Template</b>, <b>Page size</b> (A4/Letter), <b>Direction</b> (Portrait/Landscape)</td><td><span class="k fld">Group</span></td><td>Make a PDF from a Document template.</td></tr>
+            <tr><td><b>Outputs › Add Excel</b> › <b>Sheets</b> › <b>Dataset</b>, <b>Table columns</b> (<b>Field</b>, <b>Heading</b>, <b>Number format</b>, <b>Total</b>)</td><td><span class="k fld">Group</span></td><td>Make a workbook with one sheet per dataset. Tick <b>Total</b> to add a totals row for a column.</td></tr>
+          </tbody>
+        </table>
+        <p>A report must have exactly one output: PDF or Excel.</p>
+      </section>
+
+      <section id="posting">
+        <h2>Posting rules</h2>
+        <p>A posting rule writes a journal entry into the accounts when a record reaches a status. For example, when a donation becomes Paid: debit Bank, credit Donations received. The system always refuses an entry that does not balance or falls in a closed period.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>When › Record type</b></td><td><span class="k fld">Search box</span></td><td>The register it watches.</td></tr>
+            <tr><td><b>Enters status</b></td><td><span class="k fld">Text box</span></td><td>Post when a record enters this status key, such as <code>paid</code>.</td></tr>
+            <tr><td><b>Workflow</b></td><td><span class="k fld">Search box</span></td><td>Whose status. Default: the primary workflow.</td></tr>
+            <tr><td><b>Only if</b></td><td><span class="k fld">Formula</span></td><td>Post only when this is true.</td></tr>
+            <tr><td><b>Date</b></td><td><span class="k fld">Formula</span></td><td>The date of the entry, such as <code>record.paidOn</code>. Required.</td></tr>
+            <tr><td><b>Memo</b></td><td><span class="k fld">Formula</span></td><td>The narration on the entry.</td></tr>
+            <tr><td><b>Lines › Side</b>: Debit / Credit</td><td><span class="k sel">Dropdown</span></td><td>Which side. At least two lines; debits must equal credits.</td></tr>
+            <tr><td><b>Account</b> or <b>Account as an expression</b></td><td><span class="k fld">Text / formula</span></td><td>The ledger account code. Fill exactly one of the two: a fixed code, or a formula that picks one.</td></tr>
+            <tr><td><b>Amount</b></td><td><span class="k fld">Formula</span></td><td>A positive amount, such as <code>record.amount</code>.</td></tr>
+            <tr><td><b>Fund</b></td><td><span class="k fld">Formula</span></td><td>Optional fund code, for restricted funds.</td></tr>
+            <tr><td><b>Balance check › Record</b> › <b>Check the balance</b></td><td><span class="k btn">Button</span></td><td>Shows the lines the rule would post for a real record, without posting. "Balanced: debit … = credit …" or "Not balanced: …".</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="receipts">
+        <h2>Receipt rules</h2>
+        <p>A receipt rule issues a numbered receipt when a record reaches a status. Receipt numbers come from a receipt series and are never reused; a void keeps its number.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Receipt series</b></td><td><span class="k fld">Text box</span></td><td>The numbering series the receipt number comes from.</td></tr>
+            <tr><td><b>Amount</b> / <b>Date</b></td><td><span class="k fld">Formula</span></td><td>The amount received and the receipt date.</td></tr>
+            <tr><td><b>When › Record type</b>, <b>Enters status</b>, <b>Workflow</b>, <b>Only if</b></td><td><span class="k fld">Various</span></td><td>When to issue it, as for posting rules.</td></tr>
+            <tr><td><b>Add Layout</b></td><td><span class="k btn">Button</span></td><td>Customise the wording. The issuer, number, date, signature and void stamp always stay.</td></tr>
+            <tr><td><b>Title</b></td><td><span class="k fld">Text box</span></td><td>Empty uses the series name.</td></tr>
+            <tr><td><b>Acknowledgement</b></td><td><span class="k fld">Text box</span></td><td>The sentence under the title, such as "Received with thanks from {{ record.donorName }} the sum of {{ receipt.amount }}…".</td></tr>
+            <tr><td><b>Thank-you line</b></td><td><span class="k fld">Text box</span></td><td>The line above the signature.</td></tr>
+            <tr><td><b>Rows</b> › <b>Label</b>, <b>Field</b> or <b>Value</b></td><td><span class="k fld">Table</span></td><td>The lines printed on the receipt. Empty prints the record's filled-in fields.</td></tr>
+            <tr><td><b>Clauses</b> › <b>Registration</b>, <b>Wording</b></td><td><span class="k fld">Table</span></td><td>Sentences printed only if your organisation holds that registration, for example the 80G clause with <code>{{ registration.number }}</code>.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ============================== LOOK AND NAVIGATION ============================== -->
+      <section id="theme">
+        <h2>Theme</h2>
+        <p>Your organisation's colours. Each colour has a box for a code like <code>#1f5f8b</code> and a colour picker.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Brand colour</b></td><td><span class="k fld">Colour</span></td><td>The app bar, main buttons and selected chips.</td></tr>
+            <tr><td><b>Text on the brand colour</b></td><td><span class="k fld">Colour</span></td><td>Text and icons on top of the brand colour.</td></tr>
+            <tr><td><b>Background</b></td><td><span class="k fld">Colour</span></td><td>Behind the screens.</td></tr>
+            <tr><td><b>Surface</b></td><td><span class="k fld">Colour</span></td><td>Cards, panels and tables.</td></tr>
+            <tr><td><b>Text</b> / <b>Muted text</b></td><td><span class="k fld">Colour</span></td><td>Main text / hints and secondary text.</td></tr>
+            <tr><td><b>Lines and borders</b></td><td><span class="k fld">Colour</span></td><td>Borders and dividers.</td></tr>
+            <tr><td><b>Corner radius</b></td><td><span class="k fld">Text box</span></td><td>How rounded corners are, such as <code>6px</code>.</td></tr>
+            <tr><td><b>Preview</b></td><td><span class="k">Preview</span></td><td>A sample screen in your colours.</td></tr>
+            <tr><td><b>Contrast</b></td><td><span class="k">Checker</span></td><td>Checks that text is easy to read on each background. <b>AAA</b> and <b>AA</b> are fine; <b>large text only</b> and <b>too low</b> are hard to read. "Text needs at least 4.5 : 1 (AA) to be easy to read."</td></tr>
+            <tr><td><b>Reset</b></td><td><span class="k btn">Button</span></td><td>Goes back to the published colours.</td></tr>
+            <tr><td><b>Publish theme</b></td><td><span class="k btn">Button</span></td><td>Makes the colours live. If contrast is poor it asks "Some text is hard to read": choose <b>Choose another colour</b> or <b>Publish anyway</b>.</td></tr>
+            <tr><td>"Use a colour like #0e7c66." / "Use a corner radius like 8px."</td><td><span class="k msg">Message</span></td><td>The value is not in the right form.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="layout">
+        <h2>Layout</h2>
+        <p>The order of the navigation bar and how lists open.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Wide-screen lists</b>: <b>Cards</b> / <b>Table</b></td><td><span class="k tog">Radio</span></td><td>How lists look on computers. "Phones always use cards." Each person can still switch for themselves.</td></tr>
+            <tr><td><b>Navigation</b> cards</td><td><span class="k">List</span></td><td>One card per destination: Home, Records, Inbox, Reports, your pages, Administration, Builder, User guide, Settings, Sign out, and any record lists you added.</td></tr>
+            <tr><td>Drag handle ("Move: …")</td><td><span class="k">Handle</span></td><td>Drag a card to change its place. A phone shows the first three and More when there are more than four links.</td></tr>
+            <tr><td>Icon button ("Icon: …")</td><td><span class="k btn">Button</span></td><td>Pick a different icon. Use "Search icons" to find one.</td></tr>
+            <tr><td><b>Remove</b></td><td><span class="k btn">Button</span></td><td>Takes a record list you added off the bar. Fixed destinations cannot be removed.</td></tr>
+            <tr><td><b>Add a record</b></td><td><span class="k sel">Dropdown</span></td><td>Adds a record type's list to the bar.</td></tr>
+            <tr><td><b>Discard</b></td><td><span class="k btn">Button</span></td><td>Goes back to the published layout.</td></tr>
+            <tr><td><b>Publish layout</b></td><td><span class="k btn">Button</span></td><td>Makes the order live. "Everyone sees it on the next screen load."</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="pages">
+        <h2>Pages</h2>
+        <p>Pages are screens made of tiles (widgets): numbers, charts, short lists and links. The page with key <code>home</code> is everyone's Home screen.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Label</b></td><td><span class="k fld">Text box</span></td><td>The page title.</td></tr>
+            <tr><td><b>Audience</b></td><td><span class="k tog">Checkboxes</span></td><td>Which roles see the page. "No role chosen: everyone sees the page."</td></tr>
+            <tr><td><b>Add widget</b></td><td><span class="k btn">Button</span></td><td>Adds a tile (up to 24). Drag rows to reorder.</td></tr>
+            <tr><td><b>Type</b>: <b>Number</b>, <b>Chart</b>, <b>List</b>, <b>Links</b>, <b>Record groups</b></td><td><span class="k sel">Dropdown</span></td><td>A single figure, a bar or line chart, the first rows of a list, a set of shortcut links, or the record groups the person can see.</td></tr>
+            <tr><td><b>Label</b></td><td><span class="k fld">Text box</span></td><td>The tile's heading.</td></tr>
+            <tr><td><b>Record type</b></td><td><span class="k sel">Dropdown</span></td><td>Number and Chart: what to count or total.</td></tr>
+            <tr><td><b>Measure</b>: <b>How many</b> / <b>Total of a field</b></td><td><span class="k sel">Dropdown</span></td><td>Count records, or add up a field.</td></tr>
+            <tr><td><b>Field</b></td><td><span class="k sel">Dropdown</span></td><td>"Number and money fields" to add up.</td></tr>
+            <tr><td><b>Group by</b></td><td><span class="k sel">Dropdown</span></td><td>Chart: one bar per Day, Week, Month, Financial year, or per value of a field.</td></tr>
+            <tr><td><b>Date field</b></td><td><span class="k sel">Dropdown</span></td><td>Which date decides the period ("Created on" or a date field).</td></tr>
+            <tr><td><b>Chart style</b>: Bar chart / Line chart</td><td><span class="k sel">Dropdown</span></td><td>How the chart is drawn.</td></tr>
+            <tr><td><b>List view</b> / <b>Rows shown</b></td><td><span class="k sel">Dropdown / number</span></td><td>List: which list to pin, and how many rows (1 to 20).</td></tr>
+            <tr><td><b>Chip</b></td><td><span class="k sel">Dropdown</span></td><td>Limit the tile to one chip's records, such as "Outstanding".</td></tr>
+            <tr><td><b>My own records</b></td><td><span class="k tog">Checkbox</span></td><td>Each viewer sees only their own figures.</td></tr>
+            <tr><td><b>Links</b> › <b>Link text</b>, <b>Opens</b>, <b>Link permission</b>, <b>Move up</b>, <b>Remove</b>, <b>Add link</b></td><td><span class="k fld">Rows</span></td><td>Shortcut links. "Addresses inside the app only, such as /records/donation". Up to 12.</td></tr>
+            <tr><td><b>Widget permission</b></td><td><span class="k fld">Permission</span></td><td>"Needed besides the page audience; empty means everyone who sees the page."</td></tr>
+            <tr><td><b>My figures</b> / <b>Sample data</b></td><td><span class="k tab">Choice</span></td><td>Preview with your real data or made-up data.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="translations">
+        <h2>Translations</h2>
+        <p>Your organisation's wording in each language. OneNGO comes with Hindi, Tamil, Telugu, Bengali and Marathi; you can correct their wording or fill gaps. Anything not translated shows in English.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td>Language chips, such as "हिन्दी · 92%"</td><td><span class="k tab">Tab</span></td><td>Pick a language. The percentage shows how much is translated.</td></tr>
+            <tr><td><b>Open the translations grid</b></td><td><span class="k btn">Button</span></td><td>Opens the full table of wording for that language.</td></tr>
+            <tr><td><b>Search paths or text…</b></td><td><span class="k fld">Text box</span></td><td>Find wording by its English text, translation or path.</td></tr>
+            <tr><td><b>Missing only</b></td><td><span class="k tog">Checkbox</span></td><td>Show only what is not yet translated.</td></tr>
+            <tr><td><b>Area</b></td><td><span class="k sel">Dropdown</span></td><td>Narrow to record types, workflows, lists, pages, actions, message templates or screen text.</td></tr>
+            <tr><td>Columns <b>Path</b>, <b>English</b>, language, <b>From</b></td><td><span class="k">Columns</span></td><td>Where the text is used, the English, your translation (or "Missing — English shows"), and whether it comes from your <b>Organisation</b> or the <b>App</b>.</td></tr>
+            <tr><td>Translation box in the row panel</td><td><span class="k fld">Text box</span></td><td>Type the wording. "Leave empty to use the app's translation or English."</td></tr>
+            <tr><td>"Keep {count}" / "Placeholder missing"</td><td><span class="k msg">Warning</span></td><td>Your translation dropped a gap such as <code>{count}</code> or <code>{{ record.number }}</code>. Put it back.</td></tr>
+            <tr><td><b>Remove them</b></td><td><span class="k btn">Button</span></td><td>Deletes translations of things that no longer exist.</td></tr>
+            <tr><td><b>Load more</b></td><td><span class="k btn">Button</span></td><td>Shows the next 100 rows.</td></tr>
+          </tbody>
+        </table>
+        <p>Translations save as a draft and are published with the usual <b>Check</b> and <b>Publish…</b> buttons.</p>
+      </section>
+
+      <!-- ============================== ACCESS AND ADVANCED ============================== -->
+      <section id="access">
+        <h2>Access map</h2>
+        <p>"What each part of the app requires and which roles hold it." One table of every record type, field, section, chip, step, action, page and app area, with the permission it needs and the roles that have it. Use it to spot things nobody can see.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>What can a role see?</b></td><td><span class="k btn">Menu</span></td><td>Pick a role to see everything it can see and do, with a live preview.</td></tr>
+            <tr><td>Chips <b>All</b>, <b>Record types</b>, <b>Fields</b>, <b>Sections</b>, <b>Chips</b>, <b>Steps and actions</b>, <b>Pages and widgets</b>, <b>App areas</b></td><td><span class="k tab">Tab</span></td><td>Narrow the table to one kind of element.</td></tr>
+            <tr><td><b>Search elements or permissions…</b></td><td><span class="k fld">Text box</span></td><td>Find an element by name or permission.</td></tr>
+            <tr><td><b>Record type</b> / <b>Held by roles</b></td><td><span class="k sel">Dropdown</span></td><td>Show only one record type, or only what one role holds.</td></tr>
+            <tr><td><b>Only problems</b></td><td><span class="k tog">Checkbox</span></td><td>Show only elements no role holds, so nobody can see them.</td></tr>
+            <tr><td>Columns <b>Element</b>, <b>Where</b>, <b>Requires</b>, <b>Held by roles</b></td><td><span class="k">Columns</span></td><td>The element, what kind it is, the permission it needs (or "Everyone who gets here"), and who holds it. A yellow <b>No role</b> badge marks a problem.</td></tr>
+            <tr><td><b>Change</b> › <b>Requires</b> › <b>Apply</b> / <b>Cancel</b></td><td><span class="k btn">Button</span></td><td>Change the permission an element needs. "Leave empty for the default." This makes a draft of the definition it belongs to.</td></tr>
+            <tr><td><b>Discard draft</b> / <b>Check</b> / <b>Publish…</b></td><td><span class="k btn">Button</span></td><td>At the bottom once you have changes: "1 draft: …". Publish asks "Publish …?" and then "Published. The new permissions apply now."</td></tr>
+          </tbody>
+        </table>
+        <h3>What can a role see?</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Back to the access map</b></td><td><span class="k btn">Button</span></td><td>Returns to the full table.</td></tr>
+            <tr><td><b>Edit role …</b></td><td><span class="k btn">Button</span></td><td>Opens that role's permissions in Administration.</td></tr>
+            <tr><td><b>Records</b></td><td><span class="k">Summary</span></td><td>For each record type: "not visible", or "Can: see, add, edit…", "Masked: …", "Read-only: …", "Hidden sections: …", "Hidden chips: …", "Not available: …".</td></tr>
+            <tr><td><b>Pages and widgets</b> / <b>App areas</b></td><td><span class="k">Summary</span></td><td>Which pages, tiles and app areas the role reaches (✓ or ✗).</td></tr>
+            <tr><td><b>Preview</b></td><td><span class="k sel">Dropdown</span></td><td>"The real list and panel with …'s permissions, on sample records."</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="roles">
+        <h2>Roles and permissions</h2>
+        <p>Roles live in <b>Administration › Roles</b>. Each role has a <b>Members</b> tab (who has it) and a <b>Permissions</b> tab (what it allows).</p>
+        <h3>Roles list</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Search roles…</b></td><td><span class="k fld">Text box</span></td><td>Find a role.</td></tr>
+            <tr><td>Columns <b>Role</b>, <b>Members</b>, <b>Two-step</b></td><td><span class="k">Columns</span></td><td>Its name, how many people have it, and whether it requires two-step sign-in.</td></tr>
+            <tr><td><b>New role</b> › <b>Role name</b> › <b>Create</b></td><td><span class="k btn">Button</span></td><td>Creates a role and opens its Permissions tab.</td></tr>
+          </tbody>
+        </table>
+        <h3>Members tab</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Add people</b> › <b>People</b> › <b>Add</b></td><td><span class="k btn">Button</span></td><td>Give the role to one or more people. Takes effect straight away.</td></tr>
+            <tr><td><b>Search people…</b></td><td><span class="k fld">Text box</span></td><td>Find a member.</td></tr>
+            <tr><td>Columns <b>Person</b>, <b>Status</b>, <b>Other roles</b>, <b>Joined</b></td><td><span class="k">Columns</span></td><td>Who they are, whether Active, Invited or Suspended, and their other roles.</td></tr>
+            <tr><td><b>Remove</b></td><td><span class="k btn">Button</span></td><td>Takes the role away from that person.</td></tr>
+          </tbody>
+        </table>
+        <h3>Permissions tab</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Role name</b></td><td><span class="k fld">Text box</span></td><td>The role's name.</td></tr>
+            <tr><td><b>Require two-step sign-in</b></td><td><span class="k tog">Checkbox</span></td><td>Members must enter a code from an authenticator app when signing in. Recommended for finance and admin roles.</td></tr>
+            <tr><td>Grid: <b>See</b>, <b>Create</b>, <b>Edit</b>, <b>See sensitive</b>, <b>See all</b>, <b>Share</b>, <b>Import</b>, <b>Export</b>, <b>Bulk</b></td><td><span class="k tog">Checkboxes</span></td><td>For each record type: see records, add them, edit them, see sensitive fields, see everyone's records (not only their own), share records, import from a file, export, and change many at once. "See all" and "Share" only appear for record types set to "Only their own and shared".</td></tr>
+            <tr><td><b>Steps</b> / <b>Actions</b></td><td><span class="k tog">Pills</span></td><td>Which workflow buttons and action buttons the role may use.</td></tr>
+            <tr><td><b>Money</b></td><td><span class="k tog">Checkboxes</span></td><td>Taking and confirming payments, setting up payment providers, and seeing, opening and moving money between accounts.</td></tr>
+            <tr><td><b>Setup</b></td><td><span class="k tog">Checkboxes</span></td><td>Builder, script, module, people, roles, connector, API key, jobs, audit, settings, migration and privacy permissions (see <a href="#before">Before you begin</a>).</td></tr>
+            <tr><td><b>Used in definitions</b> / <b>More record permissions</b> / <b>Other grants</b></td><td><span class="k tog">Checkboxes</span></td><td>Custom permissions written on fields, chips and pages; rarer record permissions; and broad grants such as "everything on donations". A box ticked because of a broader grant is locked.</td></tr>
+            <tr><td><b>Undo changes</b></td><td><span class="k btn">Button</span></td><td>Goes back to the last saved role.</td></tr>
+            <tr><td><b>Save</b></td><td><span class="k btn">Button</span></td><td>Saves the role. This takes effect straight away. "Role saved."</td></tr>
+          </tbody>
+        </table>
+        <div class="stop"><strong>You cannot lock everyone out</strong>The system refuses a change that would leave nobody able to manage roles ("This would leave nobody who can manage roles and access."). You also cannot give roles to yourself.</div>
+      </section>
+
+      <section id="scripts">
+        <h2>Scripts</h2>
+        <p>Scripts are small programs for behaviour that settings cannot express. They are for trusted, technically minded staff. A script runs in a sealed sandbox: it cannot reach the internet or the database directly, it has time and memory limits, and it can never break the accounting and receipt rules.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Label</b> / <b>Record type</b></td><td><span class="k fld">Text / search</span></td><td>Its name, and the register it runs for.</td></tr>
+            <tr><td><b>Runs</b></td><td><span class="k sel">Dropdown</span></td><td>When it runs: <b>Before a record is saved</b>, <b>When a record is checked</b>, <b>After a record is saved</b>, <b>Before a workflow step</b>, <b>From a button</b> (via an action) or <b>Report shape</b>.</td></tr>
+            <tr><td><b>Order</b></td><td><span class="k fld">Number</span></td><td>Lower runs first when there are several.</td></tr>
+            <tr><td><b>On</b></td><td><span class="k tog">Switch</span></td><td>Turn the script off without deleting it.</td></tr>
+            <tr><td><b>Runs as role</b></td><td><span class="k fld">Search box</span></td><td>Use a role's permissions instead of the person saving. Only the organisation administrator may publish this.</td></tr>
+            <tr><td><b>Code</b></td><td><span class="k fld">Code box</span></td><td>The JavaScript. Call <code>ctx.fail('message')</code> to stop a save with a message.</td></tr>
+            <tr><td><b>Limits › Time limit (ms)</b> / <b>Memory (MB)</b></td><td><span class="k fld">Number</span></td><td>How long (10 to 1000 ms) and how much memory (1 to 32 MB) a run may use.</td></tr>
+            <tr><td><b>Data it reads</b> › <b>Related records</b>, <b>Matching records</b>, <b>Organisation settings</b>, <b>Balances</b></td><td><span class="k fld">Group</span></td><td>Data loaded for the script before it runs: linked records, records that match, settings such as the financial year start, and account balances.</td></tr>
+            <tr><td><b>What it may do</b> › <b>Allowed effects</b></td><td><span class="k tog">Pills</span></td><td>What the script may propose: <b>Propose a journal entry</b>, <b>Create a record</b>, <b>Update a record</b>, <b>Notify people</b>, <b>Call a connector</b>. Without this group it proposes nothing.</td></tr>
+            <tr><td><b>Ledger accounts</b>, <b>Largest total amount per run</b>, <b>Connectors</b>, <b>Named recipients</b>, <b>Most effects per run</b></td><td><span class="k fld">Various</span></td><td>Limits on what it may touch, how much money, and how many effects per run.</td></tr>
+            <tr><td><b>Try it › Record</b> › <b>Run</b></td><td><span class="k btn">Button</span></td><td>Runs the draft on a real record without saving. Shows "Ran in … ms", the fields it changed and the <b>Log</b>. "Nothing is saved. Scripts cannot reach the database or the internet."</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="modules">
+        <h2>Modules</h2>
+        <p>Ready-made bundles you can switch on. Today the product ships <b>Donations</b>: "Keep donors, record donations from raised to paid, post them to the books, and issue numbered receipts."</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td>Columns <b>Module</b>, <b>What it adds</b>, <b>Version</b>, <b>Status</b></td><td><span class="k">Columns</span></td><td>Its name and description, the definitions it brings, its version (with "… available" when there is an update) and On or Off.</td></tr>
+            <tr><td><b>Turn on</b></td><td><span class="k btn">Button</span></td><td>Adds the module's definitions to your organisation.</td></tr>
+            <tr><td><b>Turn off</b></td><td><span class="k btn">Button</span></td><td>Hides the module. Asks "Turn off …? Its records are kept but hidden." No data is deleted.</td></tr>
+            <tr><td><b>Review update</b></td><td><span class="k btn">Button</span></td><td>Shows what a new version changes ("new", "changed", "removed"), and which of your own changes are affected.</td></tr>
+            <tr><td><b>Update</b> / <b>Back</b></td><td><span class="k btn">Button</span></td><td>Applies the update, keeping your changes. If any clash, "Fix these before updating:" lists them first.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ============================== ADMINISTRATION ============================== -->
+      <section id="checklist">
+        <h2>Setup checklist</h2>
+        <p>On the Administration home, <b>View checklist</b> shows what is left to do, such as "3 of 5 required".</p>
+        <table>
+          <thead><tr><th>Item</th><th>What it needs</th></tr></thead>
+          <tbody>
+            <tr><td><b>Organisation identity</b></td><td>Legal name, contact email and address filled in, then <b>Confirm the identity</b>.</td></tr>
+            <tr><td><b>Registrations</b></td><td>At least one registration, such as 12A or 80G.</td></tr>
+            <tr><td><b>Financial year</b></td><td>The current financial year is open.</td></tr>
+            <tr><td><b>Receipt series</b></td><td>Review the receipt numbering, then press <b>I have reviewed the receipt series</b>.</td></tr>
+            <tr><td><b>People in roles</b></td><td>Someone besides the administrator holds a working role, such as Finance.</td></tr>
+            <tr><td><b>Outgoing email</b> (optional)</td><td>An email connector, or OneNGO's own email service.</td></tr>
+            <tr><td><b>Online payments</b> (optional)</td><td>A payment connector is set up.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="org">
+        <h2>Organisation screens</h2>
+        <h3>Identity</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Organisation code</b> / <b>Sign-in link</b></td><td><span class="k">Read-only</span></td><td>Your code and the address people use to sign in.</td></tr>
+            <tr><td><b>Upload a logo</b> / <b>Remove logo</b></td><td><span class="k btn">Button</span></td><td>A PNG, JPEG or WebP image of at most 1 MB, shown in the app, at sign-in and on new receipts.</td></tr>
+            <tr><td><b>Display name</b></td><td><span class="k fld">Text box</span></td><td>The name people see in the app.</td></tr>
+            <tr><td><b>Legal name</b></td><td><span class="k fld">Text box</span></td><td>"As it appears on the registration documents; printed on receipts".</td></tr>
+            <tr><td><b>Default language</b></td><td><span class="k sel">Dropdown</span></td><td>For new people and messages; each person can choose their own.</td></tr>
+            <tr><td><b>Save</b></td><td><span class="k btn">Button</span></td><td>"Settings saved."</td></tr>
+            <tr><td><b>Authorised signatory › Name</b> / <b>Designation</b> / <b>Save signatory</b></td><td><span class="k fld">Text box</span></td><td>Printed on receipts issued from now on. Old receipts keep their signatory.</td></tr>
+            <tr><td><b>Upload a signature</b> / <b>Remove signatory</b></td><td><span class="k btn">Button</span></td><td>A PNG image of at most 200 kB.</td></tr>
+          </tbody>
+        </table>
+        <h3>Profile</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Contact email</b>, <b>Phone</b>, <b>Website</b></td><td><span class="k fld">Text box</span></td><td>How to reach the organisation. The website starts with https://.</td></tr>
+            <tr><td><b>Address line 1</b>, <b>Address line 2</b>, <b>City</b>, <b>State</b>, <b>Postal code</b></td><td><span class="k fld">Text box</span></td><td>The registered address.</td></tr>
+            <tr><td><b>Country</b></td><td><span class="k fld">Text box</span></td><td>Two-letter code. India is <code>IN</code>.</td></tr>
+            <tr><td><b>Time zone</b></td><td><span class="k fld">Search box</span></td><td>For dates and times, such as Asia/Kolkata.</td></tr>
+            <tr><td><b>Save</b></td><td><span class="k btn">Button</span></td><td>"Organisation identity saved."</td></tr>
+          </tbody>
+        </table>
+        <h3>Registrations</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Add registration</b></td><td><span class="k btn">Button</span></td><td>Opens the form below.</td></tr>
+            <tr><td><b>Type</b></td><td><span class="k fld">Text box</span></td><td>Lowercase code, such as <code>80g</code>, <code>12a</code> or <code>fcra</code>. Receipt clauses use it.</td></tr>
+            <tr><td><b>Number</b>, <b>Issuing authority</b>, <b>Issued on</b>, <b>Expires on</b>, <b>Notes</b></td><td><span class="k fld">Text / date</span></td><td>The certificate's details.</td></tr>
+            <tr><td><b>Edit</b> / <b>Remove</b> (then <b>Confirm remove</b>)</td><td><span class="k btn">Button</span></td><td>Change or delete a registration.</td></tr>
+          </tbody>
+        </table>
+        <h3>Settings</h3>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Financial year starts in</b></td><td><span class="k sel">Dropdown</span></td><td>When books, receipt numbers and record numbers start a new year (usually April). Fixed once a year is opened or a receipt issued.</td></tr>
+            <tr><td><b>Storage quota (GB)</b></td><td><span class="k fld">Number</span></td><td>How much file storage the organisation may use. The bar shows how much is used.</td></tr>
+            <tr><td><b>API requests per minute, per key</b></td><td><span class="k fld">Number</span></td><td>A speed limit for outside systems.</td></tr>
+            <tr><td><b>Sites that may read data feeds</b></td><td><span class="k fld">Text box</span></td><td>One website address per line (at most 10) whose pages may read your data feeds.</td></tr>
+            <tr><td><b>Save</b></td><td><span class="k btn">Button</span></td><td>"Settings saved."</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="connectors">
+        <h2>Connectors</h2>
+        <p>Links to outside services. "Nothing is sent through a connector until it is set up and switched on." Find them in Administration › Connectors, or <b>Connectors ↗</b> in the Builder.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>New connector</b> › <b>Key</b> › <b>Next</b></td><td><span class="k btn">Button</span></td><td>Starts a connector with a short name.</td></tr>
+            <tr><td><b>Kind</b></td><td><span class="k sel">Dropdown</span></td><td><b>Webhook</b> (tell another system when something happens), <b>SMS</b>, <b>WhatsApp</b>, <b>HTTP call</b> (send to or look up from another website), or <b>Account sign-in</b> (sign in to a service on the organisation's behalf).</td></tr>
+            <tr><td><b>Address (https://)</b>, <b>Signing secret</b></td><td><span class="k fld">Text box</span></td><td>Webhook: where to send, and a secret to prove it came from you.</td></tr>
+            <tr><td><b>Cloud API address</b>, <b>Phone number ID</b>, <b>Access token</b>, <b>App secret</b></td><td><span class="k fld">Text box</span></td><td>WhatsApp Business details from Meta.</td></tr>
+            <tr><td><b>Address</b>, <b>Method</b>, <b>Body</b>, <b>Body format</b>, <b>API key</b></td><td><span class="k fld">Various</span></td><td>SMS provider details.</td></tr>
+            <tr><td><b>Mode</b>: <b>Send after save</b> / <b>Look up while saving</b></td><td><span class="k sel">Dropdown</span></td><td>HTTP call: send data out, or fetch values back (used by record type lookups).</td></tr>
+            <tr><td><b>Method</b>, <b>Address</b>, <b>Sign in with</b>, <b>Headers (JSON)</b>, <b>Body</b>, <b>Body format</b>, <b>Inputs, one field per line</b>, <b>Answer fields (JSON)</b>, <b>Success answers (JSON list)</b>, <b>Wait up to, milliseconds</b></td><td><span class="k fld">Various</span></td><td>HTTP call details: how to call the other website, what to send, and where to find values in its answer.</td></tr>
+            <tr><td><b>Send all of this organisation's email through this connector</b> + <b>From address</b></td><td><span class="k tog">Switch</span></td><td>Use this HTTP connector for all outgoing email.</td></tr>
+            <tr><td><b>Authorization address</b>, <b>Token address</b>, <b>Client id</b>, <b>Scopes</b>, <b>Client secret</b>, <b>Connect</b> / <b>Reconnect</b></td><td><span class="k fld">Various</span></td><td>Account sign-in details from the provider, then connect.</td></tr>
+            <tr><td><b>Replace</b> (on a secret marked "Set") / <b>New secret name</b> + <b>Add secret</b></td><td><span class="k btn">Button</span></td><td>Secrets are never shown again once saved; you can only replace them.</td></tr>
+            <tr><td><b>Switched on</b></td><td><span class="k tog">Switch</span></td><td>Nothing is sent while off.</td></tr>
+            <tr><td>Test (<b>Phone number for the test</b>, <b>Try a lookup</b>, <b>Look up</b>)</td><td><span class="k btn">Button</span></td><td>Sends a sample, or tries a lookup, to check the settings.</td></tr>
+            <tr><td><b>Save</b></td><td><span class="k btn">Button</span></td><td>"Connector saved."</td></tr>
+            <tr><td><b>Deliveries</b>: All / Failed / Retrying, <b>Retry now</b></td><td><span class="k">List</span></td><td>Each message sent, whether it worked, and a button to send a failed one again.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="api-keys">
+        <h2>API keys</h2>
+        <p>Keys let another system, such as your website, talk to OneNGO.</p>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>New API key</b> › <b>Name</b></td><td><span class="k btn">Button</span></td><td>A name for the key. Records it changes show "api:" and this name.</td></tr>
+            <tr><td><b>This key</b>: <b>Acts as a role</b> / <b>Reads a data feed</b></td><td><span class="k sel">Choice</span></td><td>Let the key do whatever one role allows, or only read one published data feed.</td></tr>
+            <tr><td><b>Acts as role</b> / <b>Data feed</b></td><td><span class="k sel">Dropdown</span></td><td>Which role or which feed.</td></tr>
+            <tr><td><b>Create key</b> › <b>Copy</b> › <b>I have copied it</b></td><td><span class="k btn">Button</span></td><td>"Copy this secret now. It is shown only once." Give it to whoever runs the other system.</td></tr>
+            <tr><td><b>Revoke</b></td><td><span class="k btn">Button</span></td><td>"Systems using this key stop working at once. This cannot be undone."</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="activity">
+        <h2>Jobs, audit log and migration</h2>
+        <table class="three">
+          <thead><tr><th>On screen</th><th>Type</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Jobs</b>: Running / Failed / All, <b>Cancel job</b>, <b>Download failed rows (CSV)</b></td><td><span class="k">Screen</span></td><td>Long-running work such as imports and bulk changes, with progress and any failed rows.</td></tr>
+            <tr><td><b>Audit log</b>: When, Who, What, Area, <b>Search</b>, filters Person / Area / Record type / Date</td><td><span class="k">Screen</span></td><td>A read-only history of who changed what, including every Builder publish.</td></tr>
+            <tr><td><b>Data migration</b>: <b>New migration</b>, then Files, Map, Order, Books, Check, Run</td><td><span class="k">Screen</span></td><td>Bring in CSV files from an old system: upload files, match columns to fields, set the load order, enter opening balances and receipt numbers, check, then run. "Automations, mail and receipts stay off for the run."</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ============================== HELP ============================== -->
+      <section id="trouble">
+        <h2>Common messages and fixes</h2>
+        <table>
+          <thead><tr><th>You see</th><th>What it means and what to do</th></tr></thead>
+          <tbody>
+            <tr><td>"You can look at this definition; changing it needs permission to publish."</td><td>Your role can only look. Ask an administrator for "Change and publish the setup".</td></tr>
+            <tr><td>"Editing works best on a tablet or computer…"</td><td>You are on a phone. Use a larger screen to edit.</td></tr>
+            <tr><td>"Fix these problems before publishing:"</td><td>Read each line, fix it on the Visual tab, then press Check again.</td></tr>
+            <tr><td>"record type '…' is not published"</td><td>Publish the record type first, then the definition that uses it.</td></tr>
+            <tr><td>"unknown field '…'" / "unknown status '…'"</td><td>A field or status was renamed or removed. Pick it again from the list.</td></tr>
+            <tr><td>"… is still used by …. Change those first."</td><td>Open the definitions listed under Used by and stop using the field there, then remove it.</td></tr>
+            <tr><td>"⚠ Required but not on the form: …"</td><td>Add those fields to the list's create form, or nobody can create a record.</td></tr>
+            <tr><td>"⚠ No role holds this, so nobody sees …"</td><td>On the Access map, give that permission to a role, or change what the element requires.</td></tr>
+            <tr><td>"'…' is not a generated permission and no role has it yet"</td><td>A warning: you typed a new permission. Give it to a role, or fix a typing mistake.</td></tr>
+            <tr><td>"Not balanced: debit …, credit …"</td><td>The posting rule's debit and credit lines do not add up to the same amount. Check the Amount formulas.</td></tr>
+            <tr><td>"Only one primary workflow may have no condition"</td><td>Give all but one primary workflow a "Chosen when" condition.</td></tr>
+            <tr><td>"Draft kept on this device"</td><td>Edits to a module definition are only in this browser. Publish them before switching computers.</td></tr>
+            <tr><td>A change does not appear for users</td><td>Check it was published (the badge says "Published v…" with no "Draft"), that their role has the permission, and ask them to reload the screen.</td></tr>
+          </tbody>
+        </table>
+      </section>
+      <p id="no-hits" class="note" hidden><strong>Nothing found</strong>Try a shorter word, or clear the search box.</p>
+    </main>
+  </div>
+
+  <footer class="wrap">
+    <p>Written for the OneNGO Builder in this repository. Labels quote the English screen text; your organisation's translations and module versions may differ slightly. See also the <a href="index.html">OneNGO user guide</a>.</p>
+  </footer>
+
+  <script>
+    (function () {
+      var input = document.getElementById('find');
+      var count = document.getElementById('find-count');
+      var none = document.getElementById('no-hits');
+      var sections = Array.prototype.slice.call(document.querySelectorAll('main section'));
+      function apply() {
+        var q = input.value.trim().toLowerCase();
+        var hits = 0;
+        sections.forEach(function (section) {
+          var rows = Array.prototype.slice.call(section.querySelectorAll('tbody tr'));
+          var rowHits = 0;
+          rows.forEach(function (row) {
+            var match = !q || row.textContent.toLowerCase().indexOf(q) !== -1;
+            row.hidden = !match;
+            if (match) rowHits++;
+          });
+          var headingMatch = q && section.querySelector('h2').textContent.toLowerCase().indexOf(q) !== -1;
+          if (headingMatch) rows.forEach(function (row) { row.hidden = false; });
+          var textMatch = !q || section.textContent.toLowerCase().indexOf(q) !== -1;
+          section.hidden = !!q && !headingMatch && rowHits === 0 && !textMatch;
+          if (q && !section.hidden) hits += headingMatch ? rows.length || 1 : rowHits || 1;
+        });
+        count.textContent = q ? hits + (hits === 1 ? ' match' : ' matches') : '';
+        none.hidden = !q || hits > 0;
+      }
+      input.addEventListener('input', apply);
+    })();
+  </script>
+</body>
+</html>

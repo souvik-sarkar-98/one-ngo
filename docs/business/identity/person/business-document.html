@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Person — Business Document</title>
+    <style>
+      :root {
+        --bg: #f7f6f3;
+        --ink: #1c1b19;
+        --muted: #5c574f;
+        --line: #d9d4cb;
+        --accent: #0f5c4c;
+        --warn: #8a4b00;
+        --card: #fffefb;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+        color: var(--ink);
+        background: linear-gradient(180deg, #eef3f1 0%, var(--bg) 40%);
+        line-height: 1.55;
+      }
+      main { max-width: 52rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+      h1 { font-size: 1.85rem; margin: 0 0 0.35rem; color: var(--accent); }
+      .meta { color: var(--muted); font-size: 0.95rem; margin-bottom: 0.75rem; }
+      .badge {
+        display: inline-block; font-size: 0.75rem; letter-spacing: 0.02em;
+        background: #e2ece8; color: var(--accent); border: 1px solid var(--line);
+        border-radius: 999px; padding: 0.1rem 0.6rem; margin: 0 0.3rem 1.5rem 0;
+      }
+      h2 {
+        font-size: 1.15rem; margin: 2rem 0 0.65rem; padding-bottom: 0.35rem;
+        border-bottom: 1px solid var(--line);
+      }
+      h3 { font-size: 1rem; margin: 1.1rem 0 0.4rem; }
+      ul { padding-left: 1.2rem; }
+      table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 0.92rem; }
+      th, td { border: 1px solid var(--line); padding: 0.55rem 0.65rem; text-align: left; vertical-align: top; }
+      th { background: #e8efec; }
+      code { font-family: ui-monospace, Consolas, monospace; font-size: 0.86em; background: #eceae4; padding: 0.05rem 0.3rem; border-radius: 3px; }
+      .src { color: var(--muted); font-size: 0.85rem; }
+      .warn { color: var(--warn); }
+      .tc { background: #f2f7f5; }
+      .tc td:first-child { font-weight: 600; white-space: nowrap; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Person</h1>
+      <p class="meta">Domain: identity · Entity: person</p>
+      <span class="badge">Implementation-independent · reconciled against backend + frontend</span>
+
+      <h2>1. Purpose</h2>
+      <p>Keep one membership for each person in the organisation, with a profile the organisation can extend, a read-only directory for colleagues, and administration for invitations, roles and the full profile.</p>
+
+      <h2>2. Actors</h2>
+      <ul>
+        <li><strong>Any signed-in person</strong> opens My profile from their name on More. They see and change only the profile fields the organisation marked as editable by the person.</li>
+        <li><strong>Someone who can see people</strong> opens the People destination and looks up active colleagues. The list is read-only.</li>
+        <li><strong>Someone who can manage people</strong> uses More → Administration → People to add, invite, suspend, reactivate and edit any profile field, and assigns roles.</li>
+        <li><strong>Someone who can manage roles</strong> uses Administration → Roles to add people to a role or remove them.</li>
+        <li><strong>A configurer</strong> adds profile fields in the Builder and marks each as editable by the person and/or shown in the directory.</li>
+      </ul>
+
+      <h2>3. Domain model</h2>
+      <table>
+        <thead><tr><th>Concept</th><th>Business meaning</th></tr></thead>
+        <tbody>
+          <tr><td>Person</td><td>A member of the organisation: name, email, roles and status (invited, active or suspended). People are never deleted; on request they can be erased, which pseudonymises them (see Consent and erasure).</td></tr>
+          <tr><td>Profile</td><td>The extra details of that person. One profile exists for every member, created with them, and it can be empty. The organisation chooses the fields.</td></tr>
+          <tr><td>Directory</td><td>The read-only list of active people, plus the profile fields marked for colleagues to see.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>4. Business rules</h2>
+      <ul>
+        <li>Name and email belong to the account. A person does not change them on My profile.</li>
+        <li>The directory shows active people only. Invited and suspended people stay on the administration list.</li>
+        <li>A suspended person's profile cannot be changed until they are reactivated. Their name stays on records and in the audit log.</li>
+        <li>My profile opens read-only. Edit is offered only when at least one field is editable by that person. Save sends only the fields they changed.</li>
+        <li>Fields an administrator sets are not shown on My profile. Administrators still see and change the whole profile.</li>
+        <li>A sensitive field shown in the directory is masked unless the viewer may see sensitive profile details.</li>
+        <li>Sensitive values (for example the phone number and emergency contact on a profile, or a donor's PAN) are stored encrypted with the organisation's current key. People who may see them, and the organisation's own automations and messages, read them as entered; everyone else still sees them masked. They are never kept readable in search or in the activity history.</li>
+        <li>A sensitive value marked unique is still unique: a second person or record with the same value (ignoring capitals) is refused, and imports still find a record by it, without the value being decrypted for the check.</li>
+        <li>When the key changes, values stored under the old key stay readable until a background job stores them again under the new key. The same job encrypts values saved before encryption was introduced.</li>
+        <li>The profile does not appear among Records.</li>
+        <li>A change to someone's roles, a role's permissions, or their membership status (for example suspension) takes effect on their next action, and within 5 seconds wherever else they are signed in.</li>
+        <li><span class="warn">Proposed, awaiting product-owner approval:</span> someone with the erase permission can erase a suspended person. Their profile's personal fields are cleared (kind, dates and other non-personal choices stay), and, when they belong to no other organisation, their account's name and email become a pseudonym and the account is switched off. An account shared with another organisation is left unchanged. Records that name the person keep pointing at them and show the pseudonym. Consent the person gave is withdrawn. The full rules are in the Consent and erasure document.</li>
+      </ul>
+
+      <h2>5. User flows</h2>
+      <h3>Find / view</h3>
+      <p>People who can see people open the People destination. They search, filter and open a person read-only. There is no invite, edit or role change on that screen.</p>
+      <h3>Create</h3>
+      <p>An administrator adds a person from Administration → People, with email, name, roles, optional profile values and an optional invitation. The profile is created even when those values are left blank.</p>
+      <h3>Update</h3>
+      <p>From More, the account card (name, email and organisation, with no extra label) opens My profile. The person reads their editable fields, chooses Edit, changes them and saves. Cancel returns to the read-only view. An administrator edits every profile field from the person's panel in Administration.</p>
+      <h3>Other actions</h3>
+      <p>Administration → People resends an invitation, suspends and reactivates, and sets the person's roles. Administration → Roles adds or removes people on a role. The Builder remains the place that adds profile fields and the two switches "Editable by the person themselves" and "Shown in the directory".</p>
+
+      <h2>6. Fields &amp; validation</h2>
+      <table>
+        <thead><tr><th>Field</th><th>Rules</th><th>Visibility / conditions</th></tr></thead>
+        <tbody>
+          <tr><td>Name, email</td><td>Required to add a person. Email identifies the account.</td><td>Shown on the directory and on My profile. Not edited there.</td></tr>
+          <tr><td>Roles, status</td><td>Status is invited, active or suspended.</td><td>Roles appear in the directory. Status appears only in Administration.</td></tr>
+          <tr><td>Profile fields</td><td>Defined by the organisation. Each can be editable by the person, shown in the directory, or both. Conditions can hide a field.</td><td>Directory shows only fields marked for it. My profile shows only fields the person may change. Administration shows all of them.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>7. Out of scope / non-goals</h2>
+      <ul>
+        <li>Deleting a person (erasure pseudonymises instead).</li>
+        <li>Listing profiles under Records.</li>
+        <li>Letting a person change another person's profile, or a field an administrator owns.</li>
+      </ul>
+
+      <h2>8. Testable scenarios (for test generation)</h2>
+      <table>
+        <thead><tr><th>ID</th><th>Given</th><th>When</th><th>Then (expected)</th><th>Layer</th></tr></thead>
+        <tbody class="tc">
+          <tr><td>PER-01</td><td>The person can see people</td><td>They look at the main navigation</td><td>People is a destination and opens the read-only directory</td><td>FE</td></tr>
+          <tr><td>PER-02</td><td>The person cannot see people</td><td>They look at the main navigation and at More</td><td>People is absent from both</td><td>FE</td></tr>
+          <tr><td>PER-03</td><td>The person can manage people</td><td>They open More → Administration → People</td><td>They can invite, edit the full profile and assign roles</td><td>E2E</td></tr>
+          <tr><td>PER-04</td><td>A signed-in person with some self-editable fields</td><td>They open My profile from the account card</td><td>The view is read-only and lists only those fields; Edit then Save changes them</td><td>FE</td></tr>
+          <tr><td>PER-05</td><td>No field is editable by the person, or the person is suspended</td><td>They open My profile</td><td>There is no Edit action</td><td>FE</td></tr>
+          <tr><td>PER-06</td><td>A person saves a field an administrator owns</td><td>The save is sent</td><td>It is refused and the field is named</td><td>BE</td></tr>
+          <tr><td>PER-07</td><td>A signed-in person whose role an administrator removes</td><td>They act again, on any server</td><td>The action the role allowed is refused within 5 seconds</td><td>BE</td></tr>
+          <tr><td>PER-08</td><td>A profile or record with a sensitive value</td><td>It is saved, then read by someone with and someone without the sensitive permission</td><td>The stored value is unreadable without the key; the first person sees it as entered, the second sees it masked</td><td>BE</td></tr>
+          <tr><td>PER-09</td><td>Values stored under an old key, and a new current key</td><td>The re-encryption job runs</td><td>Every value reads the same and is stored under the new key; the old key is no longer needed</td><td>BE</td></tr>
+          <tr><td>PER-10</td><td>An active person</td><td>Someone asks to erase them</td><td>Refused until the person is suspended</td><td>BE</td></tr>
+          <tr><td>PER-11</td><td>A suspended person who belongs to no other organisation</td><td>They are erased</td><td>Profile phone and department are gone, kind stays; the account shows a pseudonym and cannot sign in</td><td>BE</td></tr>
+        </tbody>
+      </table>
+
+      <h2>9. Discrepancies (backend vs frontend)</h2>
+      <table>
+        <thead><tr><th>Topic</th><th>Backend behavior</th><th>Frontend behavior</th><th>Resolution</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Fields on My profile</td>
+            <td>The own-profile read returns every profile field, and marks which ones the person may change. A save of any other field is refused.</td>
+            <td>My profile shows only the fields the person may change.</td>
+            <td>The save rule is authoritative. Hiding the other fields is presentation.</td>
+          </tr>
+          <tr>
+            <td class="warn">A profile field that points at another person</td>
+            <td>The person may change it when it is marked editable by them.</td>
+            <td>My profile does not offer that kind of field.</td>
+            <td>An administrator can still set it. A person-picker on My profile is not provided.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>10. Revision history</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Change (why)</th><th>Side</th><th>Code drivers</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>2026-10-25</td>
+            <td>The directory became its own destination for people who can see people. Invitations, full profile edit and role assignment stay under Administration. My profile opens read-only and lists only fields the person may change. The account card no longer carries a My profile label.</td>
+            <td>frontend</td>
+            <td class="src"><code>web/src/app/core/shell.ts</code>, <code>web/src/app/more/my-profile.panel.ts</code>, <code>web/src/app/core/people/profile.ts</code></td>
+          </tr>
+          <tr>
+            <td>2026-10-25</td>
+            <td>Role and membership changes now reach every running server within 5 seconds, not only the server that made the change (before, others could keep old permissions for up to 30 seconds).</td>
+            <td>backend</td>
+            <td class="src"><code>migrations/015_access_version.sql</code>, <code>src/identity/identity-service.ts</code></td>
+          </tr>
+          <tr>
+            <td>2026-10-26</td>
+            <td>Sensitive values are now stored encrypted under a versioned key, with a job that re-encrypts them after the key changes. What people see, export and receive is unchanged, and unique sensitive values stay unique.</td>
+            <td>backend</td>
+            <td class="src"><code>src/runtime/records/sensitive.ts</code>, <code>src/runtime/records/save/encrypt.ts</code>, <code>src/kernel/crypto.ts</code>, <code>migrations/019_sensitive_field_encryption.sql</code>, <code>test/field-encryption.test.ts</code></td>
+          </tr>
+          <tr>
+            <td>2026-10-26</td>
+            <td>A suspended person can be erased: profile personal fields cleared, account pseudonymised and switched off when it belongs to no other organisation, consent withdrawn. Proposed rules, awaiting product-owner approval.</td>
+            <td>backend</td>
+            <td class="src"><code>src/application/privacy/privacy-service.ts</code>, <code>migrations/020_consent_erasure.sql</code>, <code>test/erasure.test.ts</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>11. Learning log</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Learning</th><th>How it was inferred</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>2026-10-25</td>
+            <td>Colleagues look people up from the main navigation. Managing them stays under More → Administration. A person's own screen is a read-only view of the fields they are allowed to change, with Edit as a second step.</td>
+            <td>Agreed in conversation and applied in the web app. The server already returned the editable flags and refused other changes, so no server change was required.</td>
+          </tr>
+          <tr>
+            <td>2026-10-25</td>
+            <td>Each server kept signed-in people's permissions for 30 seconds and only forgot them when the change was made on that same server. The agreed limit for every server is now 5 seconds.</td>
+            <td>Read from the sign-in cache in <code>src/identity/identity-service.ts</code>; checked with two servers on one database in <code>test/lifecycle.test.ts</code>.</td>
+          </tr>
+          <tr>
+            <td>2026-10-26</td>
+            <td>Sensitive values were masked on screen but kept in plain text in storage. They are now encrypted at rest. A unique sensitive value (the donor PAN) is checked through a keyed fingerprint rather than by decrypting, because refusing "unique and sensitive" would have broken the shipped Donations module. Fields that only point at a record, a member or a file are not encrypted: the pointer is not the sensitive part.</td>
+            <td>Read from the save, read and export paths and the shipped definitions (<code>modules/donations/donor.recordType.json</code>, <code>platform/person.recordType.json</code>); checked in <code>test/field-encryption.test.ts</code>.</td>
+          </tr>
+          <tr>
+            <td>2026-10-26</td>
+            <td>The account (name, email, password) is shared by every organisation the person belongs to, so one organisation may pseudonymise it only when the person belongs nowhere else. Records refer to people by an id, so they need no change when the account's name becomes a pseudonym.</td>
+            <td>Read from <code>migrations/002_identity.sql</code> and <code>src/engines/records/person-fields.ts</code>; checked in <code>test/erasure.test.ts</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

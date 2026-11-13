@@ -1,0 +1,18 @@
+@use '@angular/material' as mat;
+
+// Material theme for the shared list dashboard. Fonts are the system stack;
+// nothing is loaded from outside the app.
+html {
+  color-scheme: light;
+  @include mat.theme((
+    color: (
+      theme-type: light,
+      primary: mat.$azure-palette,
+    ),
+    typography: (
+      plain-family: ('Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Devanagari', Helvetica, Arial, sans-serif),
+      brand-family: ('Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Devanagari', Helvetica, Arial, sans-serif),
+    ),
+    density: 0,
+  ));
+}

@@ -1,0 +1,24 @@
+:host { display: block; min-width: 0; }
+.rt-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; margin-top: .75rem; align-items: start; }
+@media (min-width: 1000px) { .rt-layout { grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); } }
+.rt-heading { margin: .75rem 0 .4rem; font-size: .95rem; }
+.rt-box { border: 1px solid var(--line); border-radius: var(--radius); padding: .75rem .9rem; margin: 0 0 .75rem; }
+.rt-note { color: var(--muted); font-size: .85rem; }
+.rt-code { font-family: Consolas, 'Courier New', monospace; }
+.rt-ok { color: #1d7a46; font-size: .85rem; margin-top: .2rem; }
+.rt-switch { display: flex; align-items: center; gap: .5rem; margin: .35rem 0; font-weight: 600; }
+.rt-switch--wide { justify-content: space-between; }
+.rt-label { display: block; font-weight: 600; margin: .5rem 0 .25rem; }
+.rt-pair { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.rt-choice { display: grid; grid-template-columns: minmax(5rem, 1fr) 2fr auto auto auto; gap: .4rem; align-items: center; margin-bottom: .4rem; }
+.rt-pills { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .5rem; }
+.rt-pill { padding: .2rem .7rem; border-radius: 999px; border: 1px solid var(--line); background: var(--card); font-size: .85rem; }
+.rt-pill--on { background: #eef5fb; border-color: #c6d9e8; color: var(--brand); }
+.rt-sec { border-top: 1px solid var(--line); padding: .6rem 0 .4rem; }
+.rt-sec:first-child { border-top: 0; padding-top: 0; }
+.rt-sec__title { margin: 0 0 .4rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+.rt-sec app-expression-field, .rt-sec app-autocomplete { display: block; margin-bottom: .6rem; }
+.rt-uses { margin: 0 0 .5rem; padding-left: 1.1rem; line-height: 1.8; }
+.rt-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
+.rt-table { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow-x: auto; margin-top: .75rem; }
+.link { border: 0; background: none; padding: 0; color: var(--brand); text-decoration: underline; cursor: pointer; font: inherit; }

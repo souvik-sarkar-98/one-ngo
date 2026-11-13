@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NGO Platform — Organisation area</title>
+<style>
+  :root {
+    --fg: #1d2733; --muted: #5b6878; --line: #d8dee6; --bg: #f5f7fa; --card: #fff;
+    --brand: #1f5f8b; --ok: #1d7a46; --warn: #9a6200; --bad: #b3261e; --radius: 6px;
+    --b50: color-mix(in srgb, var(--brand) 6%, #fff); --b100: color-mix(in srgb, var(--brand) 12%, #fff);
+    --page: #eef1f5; --ink: #18212b;
+    --font: 'Segoe UI', Roboto, 'Noto Sans', Helvetica, Arial, sans-serif;
+    --mono: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font); color: var(--ink); background: linear-gradient(180deg, #f6f8fa, var(--page)); }
+  header.page { max-width: 1440px; margin: 0 auto; padding: 36px 40px 18px; }
+  header.page h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -.01em; }
+  header.page p { margin: 0 0 10px; max-width: 980px; line-height: 1.55; color: #36414d; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 16px; }
+  .rules div { background: #fff; border: 1px solid #dfe5eb; border-radius: 10px; padding: 12px 14px; font-size: 13.5px; line-height: 1.5; }
+  .rules b { display: block; color: var(--brand); margin-bottom: 3px; }
+  nav.toc { position: sticky; top: 0; z-index: 20; background: rgba(238,241,245,.94); backdrop-filter: blur(6px); border-bottom: 1px solid #dbe1e7; }
+  nav.toc div { max-width: 1440px; margin: 0 auto; padding: 9px 40px; display: flex; gap: 4px; overflow-x: auto; }
+  nav.toc a { font: 600 12px var(--mono); color: #3a4a5a; text-decoration: none; padding: 6px 10px; border-radius: 6px; white-space: nowrap; }
+  nav.toc a:hover { background: #fff; }
+  main.page { max-width: 1440px; margin: 0 auto; padding: 0 40px 80px; }
+  section.flow { margin-top: 40px; }
+  .flabel { font: 700 12px var(--mono); color: var(--brand); text-transform: uppercase; letter-spacing: .06em; display: flex; gap: 8px; align-items: center; }
+  .flabel::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+  section.flow > h2 { margin: 4px 0 4px; font-size: 22px; }
+  section.flow > p { margin: 0 0 14px; color: #3a4552; max-width: 980px; line-height: 1.5; }
+  .step { display: grid; grid-template-columns: 52px 330px minmax(0, 1fr); gap: 18px; align-items: start; padding: 18px 0; border-top: 1px dashed #d3dae2; }
+  @media (max-width: 1200px) { .step { grid-template-columns: 44px minmax(0, 1fr); } .step .desk { grid-column: 2; } }
+  .num { width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 2px solid var(--brand); color: var(--brand); font: 700 15px/36px var(--font); text-align: center; }
+  .stephead { grid-column: 2 / -1; margin-bottom: -6px; }
+  .stephead b { font-size: 16px; }
+  .stephead .act { display: inline-block; margin-left: 10px; font-size: 13px; color: #3a4552; }
+  .stephead .act kbd { font: 600 12px var(--font); background: #fff; border: 1px solid #ccd5de; border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; }
+  .stephead code { display: block; margin-top: 4px; font: 12px var(--mono); color: #556373; }
+  .cap { font: 600 10.5px var(--mono); color: #6a7683; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 5px; }
+  .noteline { font-size: 13px; color: #3a4552; line-height: 1.5; margin-top: 8px; max-width: 760px; }
+  .phone { width: 330px; height: 640px; border-radius: 34px; background: #0f141a; padding: 10px; box-shadow: 0 14px 30px rgba(15,23,42,.18); }
+  .phone .scr { width: 100%; height: 100%; border-radius: 26px; overflow: hidden; background: var(--bg); position: relative; display: flex; flex-direction: column; color: var(--fg); font-size: 14px; }
+  .status { height: 26px; flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; font: 600 11px var(--font); background: var(--brand); color: #fff; }
+  .browser { border-radius: 10px; background: #fff; border: 1px solid #d5dbe2; box-shadow: 0 14px 30px rgba(15,23,42,.12); overflow: hidden; min-width: 0; }
+  .browser .chrome { height: 30px; background: #e9edf1; border-bottom: 1px solid #d5dbe2; display: flex; align-items: center; padding: 0 10px; }
+  .browser .url { flex: 1; height: 20px; border-radius: 6px; background: #fff; font: 11.5px var(--mono); color: #536171; display: flex; align-items: center; padding: 0 9px; overflow: hidden; white-space: nowrap; }
+  .browser .scr { height: 640px; background: var(--bg); position: relative; overflow: hidden; display: flex; flex-direction: column; color: var(--fg); font-size: 14px; }
+  .appbar { height: 50px; flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 12px; background: var(--brand); color: #fff; }
+  .appbar .brand { font-weight: 700; font-size: 15px; }
+  .appbar .mark { width: 22px; height: 22px; border-radius: 5px; background: #fff; color: var(--brand); font: 800 9px/22px var(--font); text-align: center; flex: 0 0 auto; }
+  .appbar .org { font-weight: 600; font-size: 13px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pagehead { display: flex; align-items: center; gap: 2px; margin: 0 0 8px; }
+  .pagehead .h1 { margin: 0; line-height: 1.25; }
+  .pagehead .back { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; flex: 0 0 auto; }
+  .ib { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; position: relative; font-size: 17px; }
+  .ib.av { background: rgba(255,255,255,.2); font: 700 12px var(--font); }
+  .ib .dot { position: absolute; top: 3px; right: 2px; min-width: 15px; height: 15px; border-radius: 8px; background: #fdf1dc; color: var(--warn); font: 700 9.5px/15px var(--font); text-align: center; }
+  .frame-body { flex: 1; display: flex; min-height: 0; }
+  .main { flex: 1; min-width: 0; overflow: auto; padding: 12px 12px 16px; position: relative; }
+  .browser .main { padding: 16px 20px 20px; }
+  .navbar { flex: 0 0 auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: #fff; border-top: 1px solid var(--line); height: 58px; }
+  .rail { flex: 0 0 auto; width: 84px; background: #fff; border-right: 1px solid var(--line); display: flex; flex-direction: column; padding-top: 10px; gap: 4px; }
+  .nv { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 10.5px; color: var(--muted); padding: 6px 0; position: relative; }
+  .nv .g { width: 44px; height: 26px; border-radius: 13px; display: grid; place-items: center; }
+  .nv.on { color: var(--brand); font-weight: 600; }
+  .nv.on .g { background: var(--b100); }
+  .nv svg { width: 20px; height: 20px; fill: currentColor; }
+  .h1 { font-size: 1.15rem; font-weight: 700; margin: 0; }
+  .intro { margin: 0 0 10px; font-size: .75rem; color: var(--muted); line-height: 1.4; }
+  .hit { outline: 3px solid #f3be26; outline-offset: 2px; border-radius: 12px; }
+  .panel { background: #fff; border-radius: 16px; border: 1px solid rgba(148,163,184,.22); box-shadow: 0 1px 2px #0f172a0d, 0 4px 14px #0f172a12; overflow: hidden; margin-bottom: 12px; }
+  .btn { font: inherit; font-size: 13px; min-height: 36px; padding: .45rem .8rem; border-radius: var(--radius); border: 1px solid var(--line); background: #fff; color: var(--fg); display: inline-flex; align-items: center; justify-content: center; }
+  .btn.p { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .card { background: #fff; border: 1px solid rgba(148,163,184,.25); border-radius: 14px; padding: 12px; margin-bottom: 10px; box-shadow: 0 1px 2px #0f172a0a; }
+  .card .ct { font-weight: 700; font-size: .85rem; margin-bottom: 8px; }
+  .cs { font-size: .72rem; color: #64748b; line-height: 1.35; }
+  .listrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid rgba(148,163,184,.18); font-size: .8rem; }
+  .listrow:last-child { border-bottom: 0; }
+  .note { background: #eef5fb; border: 1px solid #c6d9e8; color: var(--brand); border-radius: 12px; padding: 9px 12px; font-size: .72rem; margin-bottom: 10px; line-height: 1.4; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .sp { flex: 1; }
+  .crumbs { flex: 0 0 auto; background: #fff; border-bottom: 1px solid var(--line); padding: 0 12px; height: 28px; display: flex; align-items: center; font-size: 11.5px; }
+  .browser .crumbs { padding-left: 16px; height: 30px; font-size: 12.5px; }
+  .crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; min-width: 0; overflow: hidden; white-space: nowrap; }
+  .crumbs li { display: flex; align-items: center; color: var(--muted); }
+  .crumbs li + li::before { content: '›'; margin: 0 6px; color: #94a3b8; }
+  .crumbs a { color: var(--brand); font-weight: 600; }
+  .crumbs li[aria-current] { color: var(--fg); font-weight: 600; }
+  .mf { margin-bottom: 8px; }
+  .mf .l { font-size: .72rem; font-weight: 600; color: #374151; margin-bottom: 3px; }
+  .mf .l i { color: #f97316; font-style: normal; }
+  .mf .h { font-size: .68rem; color: #64748b; margin-top: 3px; }
+  .mf .o { border: 1px solid #79747e; border-radius: 4px; min-height: 32px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .78rem; background: #fff; }
+  .mf .o.ro { background: #f2f2f4; color: #6b6870; border-color: #c9c6cf; }
+  .kv { margin: 0 0 10px; border: 1px solid rgba(148,163,184,.32); border-radius: 12px; overflow: hidden; }
+  .kv div { display: grid; grid-template-columns: 108px 1fr; gap: 8px; padding: 6px 10px; font-size: .7rem; }
+  .kv div:not(:last-child) { border-bottom: 1px solid rgba(148,163,184,.32); }
+  .kv div:nth-child(2n) { background: #f8fafc; }
+  .kv b { font-weight: 600; color: #334155; }
+  .preview { display: flex; align-items: center; gap: 12px; background: var(--brand); color: #fff; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+  .preview .mark { width: 48px; height: 48px; border-radius: 10px; background: #fff; color: var(--brand); font: 800 16px/48px var(--font); text-align: center; flex: 0 0 auto; }
+  .preview .mark.empty { background: rgba(255,255,255,.16); color: #fff; border: 1px dashed rgba(255,255,255,.7); font-size: 11px; line-height: 1.15; display: grid; place-items: center; padding: 4px; }
+  .preview .who { font-size: .68rem; opacity: .85; }
+  .preview .nm { font-weight: 700; font-size: .95rem; }
+  .bar { height: 8px; border-radius: 99px; background: #e6ebf1; overflow: hidden; margin: 6px 0; }
+  .bar i { display: block; height: 100%; width: 0%; background: var(--brand); }
+  .scrim { position: absolute; inset: 0; background: #0f172a59; z-index: 4; }
+  .sheet { position: absolute; z-index: 5; background: #fff; box-shadow: 0 -8px 32px #0f172a1f; padding: 10px 16px 14px; display: flex; flex-direction: column; }
+  .phone .sheet { left: 0; right: 0; bottom: 0; border-radius: 20px 20px 0 0; max-height: 78%; }
+  .browser .sheet { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(440px, 86%); border-radius: 20px; padding: 16px 22px 18px; box-shadow: 0 18px 48px #0f172a33; }
+  .sheet .handle { width: 36px; height: 4px; border-radius: 999px; background: #cbd5e1; margin: 0 auto 10px; }
+  .browser .sheet .handle { display: none; }
+  .sheet .ttl { text-align: center; font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 12px; }
+  .acts { display: flex; gap: 8px; margin-top: 8px; }
+  .acts .btn { flex: 1; }
+  .strip { display: flex; align-items: center; gap: 8px; }
+  .strip .bar { flex: 1; margin: 0; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Organisation area</h1>
+  <p>Asha opens Administration and works through the organisation itself. Each screen writes one table. Identity is one card: the logo is previewed with the display name, and the names and language sit under that preview. Profile is how to reach the organisation. Registrations are the certificates. Settings holds the financial year, storage and the API limit.</p>
+  <div class="rules">
+    <div><b>Identity</b>One card. The preview shows the logo beside the display name, as on the app bar and the sign-in page. Replace and Remove save the logo immediately. Save writes the display name, legal name and default language to <code>tenant</code>. Code and the sign-in link are read-only.</div>
+    <div><b>Profile</b>Contact, address and time zone, saved to <code>organisation_profile</code>. The logo does not appear here. If the legal name is still empty, a line links to Identity. Confirm identity stays on the setup checklist.</div>
+    <div><b>Registrations</b>The list of certificates in <code>organisation_registration</code>. Add, edit and remove stay on this screen. The same type and number cannot be entered twice.</div>
+    <div><b>Settings</b>Three blocks, one Save, all in <code>tenant_setting</code>. The financial-year month is read-only once a year is open or a receipt exists. The storage bar is the sum of files kept. The API limit applies to each API key.</div>
+  </div>
+</header>
+<nav class="toc"><div id="toc"></div></nav>
+<main class="page" id="flows"></main>
+<script>
+const ICON = {
+  home: '<svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>',
+  records: '<svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>',
+  inbox: '<svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 12h-4a3 3 0 0 1-6 0H5V5h14v10z"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><path d="M6 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm12 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>',
+};
+const NAV = [['home', 'Home', 'home'], ['records', 'Records', 'records'], ['inbox', 'Inbox', 'inbox'], ['more', 'More', 'more']];
+const hit = (on) => (on ? ' hit' : '');
+function nav(k) {
+  const html = NAV.map(([key, label, icon]) => `<div class="nv${key === 'more' ? ' on' : ''}"><span class="g">${ICON[icon]}</span><span>${label}</span></div>`).join('');
+  return k === 'phone' ? `<div class="navbar">${html}</div>` : `<div class="rail">${html}</div>`;
+}
+function appbar() {
+  return `<div class="appbar"><span class="mark">DF</span><span class="brand">NGOOne</span><span class="org">Demo Foundation</span><span class="sp"></span><span class="ib">🔔<span class="dot">2</span></span><span class="ib av">AS</span></div>`;
+}
+function crumbs(s) {
+  const items = s.crumbs;
+  return `<nav class="crumbs" aria-label="Breadcrumb"><ol>${items.map((it, i) => i === items.length - 1 ? `<li aria-current="page">${it}</li>` : `<li><a>${it}</a></li>`).join('')}</ol></nav>`;
+}
+function frame(k, s) {
+  const head = `<div class="pagehead">${s.back ? '<span class="back" aria-hidden="true">←</span>' : ''}<div class="h1">${s.title}</div></div>`;
+  const body = `<div class="main">${head}${s.body(k)}${s.overlay ? s.overlay(k) : ''}</div>`;
+  return k === 'phone'
+    ? `<div class="phone"><div class="scr"><div class="status"><span>9:41</span><span>100%</span></div>${appbar()}${crumbs(s)}<div class="frame-body">${body}</div>${nav('phone')}</div></div>`
+    : `<div class="browser"><div class="chrome"><div class="url">${s.url}</div></div><div class="scr">${appbar()}${crumbs(s)}<div class="frame-body">${nav('desk')}${body}</div></div></div>`;
+}
+const field = (l, v, o = {}) => `<div class="mf"><div class="l">${l}${o.req ? ' <i>*</i>' : ''}</div><div class="o${o.ro ? ' ro' : ''}"><span>${v}</span>${o.icon ? `<span>${o.icon}</span>` : ''}</div>${o.hint ? `<div class="h">${o.hint}</div>` : ''}</div>`;
+const row = (title, sub, on) => `<div class="listrow${hit(on)}"><div><b>${title}</b><div class="cs">${sub}</div></div><span class="cs">›</span></div>`;
+
+function adminHome() {
+  return `<div class="card"><div class="strip"><b style="font-size:.8rem">Setup</b><span class="cs">4 of 5 required</span><span class="bar" style="flex:1"><i style="width:80%"></i></span></div><div class="cs" style="margin-top:6px">Registrations is still required.</div></div>
+    <p class="cap">Organisation</p>
+    <div class="panel">${row('Identity', 'Code, names and default language', true)}${row('Profile', 'Contact, address and time zone', false)}${row('Registrations', '12A, 80G and other registrations', false)}${row('Settings', 'Financial year, storage and API limits', false)}</div>
+    <p class="cap">People</p>
+    <div class="panel">${row('People', 'Add someone, invitations, roles', false)}${row('Roles', 'Who holds each role', false)}</div>
+    <p class="cap">Integrations</p>
+    <div class="panel">${row('Connectors', 'SMS, WhatsApp and webhooks', false)}${row('API keys', 'Let another system act as one role', false)}</div>
+    <p class="cap">Activity</p>
+    <div class="panel">${row('Background jobs', "Everyone's imports, bulk changes and rebuilds", false)}${row('Audit log', 'Who changed what, and when', false)}</div>`;
+}
+function preview(empty) {
+  const mark = empty ? '<span class="mark empty">Logo</span>' : '<span class="mark">DF</span>';
+  return `<div class="preview">${mark}<div><div class="who">App bar, sign-in and new receipts</div><div class="nm">Demo Foundation</div></div></div>`;
+}
+function identity(k) {
+  const facts = `<div class="kv"><div><b>Code</b>demo</div><div><b>Sign-in link</b>/o/demo/sign-in</div></div>`;
+  const actions = `<div class="row" style="margin-bottom:10px"><span class="btn${hit(true)}">Replace the logo</span><span class="btn">Remove logo</span></div><div class="cs" style="margin:-4px 0 10px">PNG, JPEG or WebP, at most 1 MB. Choosing a file saves the logo.</div>`;
+  const fields = `${field('Display name', 'Demo Foundation', { req: true })}${field('Legal name', 'Demo Foundation Trust', { req: true, hint: 'As it appears on the registration documents; printed on receipts' })}${field('Default language', 'English', { req: true, icon: '▾', hint: 'For new people and messages; each person can choose their own' })}`;
+  const save = `<div class="row"><span class="sp"></span><span class="btn p">Save</span></div>`;
+  return `<p class="intro">The name people see, the legal name on receipts, and the language used until someone chooses their own.</p><div class="card">${facts}${preview(false)}${actions}${fields}${save}</div>`;
+}
+function profile() {
+  const contact = `${field('Contact email', 'office@demo.foundation', { req: true })}${field('Phone', '+91 20 2567 0100')}${field('Website', 'https://demo.foundation', { hint: 'Starting with https://' })}`;
+  const address = `${field('Address line 1', '14 MG Road', { req: true })}${field('Address line 2', '')}${field('City', 'Pune', { req: true })}${field('State', 'Maharashtra')}${field('Postal code', '411001', { req: true })}${field('Country', 'IN', { req: true, hint: 'Two-letter country code, e.g. IN.' })}${field('Time zone', 'Asia/Kolkata', { req: true, icon: '▾' })}`;
+  const save = `<div class="row"><span class="sp"></span><span class="btn p${hit(true)}">Save profile</span></div>`;
+  return `<p class="intro">How to reach the organisation. The logo is on Identity.</p><div class="card"><div class="ct">Contact and address</div>${contact}${address}${save}</div>`;
+}
+function registrations() {
+  return `<p class="intro">Certificates such as 12A and 80G. Each one is kept on its own.</p>
+    <div class="card"><div class="row" style="margin-bottom:8px"><b>Registrations</b><span class="sp"></span><span class="btn p${hit(true)}">Add registration</span></div>
+    <div class="listrow" style="padding-left:0;padding-right:0"><div><b>12A · AAATD1234F</b><div class="cs">Issued 4 Jun 2020 · Income Tax Department</div></div><span class="cs">Edit · Remove</span></div>
+    <div class="cs">None yet for 80G.</div></div>`;
+}
+function settings() {
+  const fy = `<div class="card"><div class="ct">Financial year</div>${field('Financial year starts in', 'April', { req: true, ro: true, hint: 'Fixed: a financial year has been opened or a receipt issued, so closed years and receipt numbers stay as they are.' })}</div>`;
+  const storage = `<div class="card"><div class="row"><b>Storage</b><span class="sp"></span><span class="cs">0 MB of 1 GB used</span></div><div class="bar"><i style="width:2%"></i></div>${field('Storage quota (GB)', '1', { req: true })}</div>`;
+  const api = `<div class="card"><div class="ct">API</div>${field('API requests per minute, per key', '120', { req: true, hint: 'Each API key may make this many requests a minute. People signed in through the app are not counted.' })}</div>`;
+  return `<p class="intro">These apply to the whole organisation. Each one is stored as its own setting.</p>${fy}${storage}${api}<div class="row"><span class="sp"></span><span class="btn p${hit(true)}">Save</span></div>`;
+}
+function sheet(title, content, actions) {
+  return `<div class="scrim"></div><div class="sheet"><div class="handle"></div><div class="ttl">${title}</div>${content}<div class="acts">${actions}</div></div>`;
+}
+
+const STEPS = [
+  { id: 'admin', t: 'Administration', act: 'More → <kbd>Administration</kbd>', url: '/admin', title: 'Administration', back: true, crumbs: ['Administration'],
+    body: adminHome,
+    note: 'Organisation is four rows: Identity, Profile, Registrations and Settings. Policies and usage is gone. People, Integrations and Activity stay as they are. The setup strip still opens the checklist. The financial-year step opens Settings. The identity step opens Profile, and Profile links to Identity when the legal name is empty.' },
+  { id: 'identity', t: 'Identity', act: 'Tap <kbd>Identity</kbd>', url: '/admin/organisation/identity', title: 'Identity', back: true, crumbs: ['Administration', 'Identity'],
+    body: identity,
+    note: 'One card. The blue preview uses the current logo and the display name on the form, and it updates as the name is typed. Replace and Remove save the logo on their own. Save writes the display name, legal name and default language. The old /admin/settings address opens here.' },
+  { id: 'profile', t: 'Profile', act: 'Administration → <kbd>Profile</kbd>', url: '/admin/organisation/profile', title: 'Profile', back: true, crumbs: ['Administration', 'Profile'],
+    body: profile,
+    note: 'Contact, address and time zone are one save. There is no logo on this page. On a phone the fields follow in one scroll. A missing legal name shows a line at the top: Legal name is on Identity.' },
+  { id: 'registrations', t: 'Registrations', act: 'Administration → <kbd>Registrations</kbd>', url: '/admin/organisation/registrations', title: 'Registrations', back: true, crumbs: ['Administration', 'Registrations'],
+    body: registrations,
+    note: 'The list, Add, Edit and Remove are unchanged. Remove asks to confirm on the row. An empty list says there are no registrations yet and keeps Add registration.' },
+  { id: 'add', t: 'Add a registration', act: 'Tap <kbd>Add registration</kbd>', url: '/admin/organisation/registrations?add=1', title: 'Registrations', back: true, crumbs: ['Administration', 'Registrations'],
+    body: () => registrations().replaceAll(' hit', ''),
+    overlay: () => sheet('Add registration', `${field('Type', '80g', { req: true, hint: 'Lowercase letters, digits, - or _, e.g. 80g, 12a, fcra' })}${field('Number', '', { req: true })}${field('Issuing authority', '')}${field('Issued on', '')}${field('Expires on', '')}`, '<span class="btn">Cancel</span><span class="btn p hit">Save</span>'),
+    note: 'A bottom sheet on a phone and a centred panel on a wide screen. The expiry cannot be before the issue date. Save adds the row. Cancel returns to the list without writing.' },
+  { id: 'settings', t: 'Settings', act: 'Administration → <kbd>Settings</kbd>', url: '/admin/organisation/settings', title: 'Settings', back: true, crumbs: ['Administration', 'Settings'],
+    body: settings,
+    note: 'Three blocks and one Save. April is read-only because a financial year is open or a receipt has been issued. The storage bar is calculated from the files still kept. The quota and the API rate are the values Save writes. The old Language and financial year and Storage and API limits addresses redirect here. A role that can manage organisation settings sees all four Organisation rows.' },
+];
+
+const toc = document.getElementById('toc');
+const root = document.getElementById('flows');
+root.insertAdjacentHTML('beforeend', `<section class="flow"><div class="flabel">Administration</div><h2>Identity, profile, registrations and settings</h2><p>Phone and desktop show the same fields. The yellow outline marks what Asha taps next.</p>${STEPS.map((s, i) => {
+  toc.insertAdjacentHTML('beforeend', `<a href="#${s.id}">${i + 1} · ${s.t}</a>`);
+  return `<div class="step" id="${s.id}"><div class="num">${i + 1}</div><div class="stephead"><b>${s.t}</b><span class="act">${s.act}</span><code>${s.url}</code></div><div></div><div><p class="cap">Phone</p>${frame('phone', s)}</div><div class="desk"><p class="cap">Desktop</p>${frame('desk', s)}<div class="noteline">${s.note}</div></div></div>`;
+}).join('')}</section>`);
+</script>
+</body>
+</html>

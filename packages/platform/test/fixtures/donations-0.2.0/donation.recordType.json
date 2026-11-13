@@ -1,0 +1,67 @@
+{
+  "key": "donation",
+  "label": "Donation",
+  "pluralLabel": "Donations",
+  "titleField": "donorName",
+  "numbering": { "sequence": "donation", "format": "DON/{fy}/{seq:5}", "reset": "fiscal_year" },
+  "fields": [
+    { "key": "donor", "label": "Donor", "type": "reference", "referenceType": "donor", "help": "Choose a donor to fill in their details" },
+    {
+      "key": "donorName",
+      "label": "Donor name",
+      "type": "text",
+      "required": true,
+      "maxLength": 200,
+      "searchable": true,
+      "copyFrom": { "reference": "donor", "field": "name" },
+      "editableWhen": "isEmpty(record.donor)"
+    },
+    { "key": "donorEmail", "label": "Donor email", "type": "email", "copyFrom": { "reference": "donor", "field": "email" }, "editableWhen": "isEmpty(record.donor)" },
+    { "key": "donorPhone", "label": "Donor phone", "type": "phone", "copyFrom": { "reference": "donor", "field": "phone" }, "editableWhen": "isEmpty(record.donor)" },
+    {
+      "key": "donorPan",
+      "label": "Donor PAN",
+      "type": "text",
+      "maxLength": 10,
+      "sensitive": true,
+      "pattern": "[A-Z]{5}[0-9]{4}[A-Z]",
+      "patternMessage": "Enter the PAN as five letters, four digits and a letter, for example ABCDE1234F.",
+      "copyFrom": { "reference": "donor", "field": "pan" },
+      "editableWhen": "isEmpty(record.donor)"
+    },
+    { "key": "amount", "label": "Amount", "type": "money", "required": true, "min": 1, "editableWhen": "status == 'raised'" },
+    {
+      "key": "method",
+      "label": "Payment method",
+      "type": "choice",
+      "visibleWhen": "status == 'paid'",
+      "choices": [
+        { "value": "upi", "label": "UPI" },
+        { "value": "cash", "label": "Cash" },
+        { "value": "bank_transfer", "label": "Bank transfer" },
+        { "value": "cheque", "label": "Cheque" },
+        { "value": "online", "label": "Online (gateway)" }
+      ]
+    },
+    { "key": "paidOn", "label": "Paid on", "type": "date", "visibleWhen": "status == 'paid'" },
+    { "key": "reference", "label": "Payment reference", "type": "text", "maxLength": 100, "visibleWhen": "status == 'paid'" },
+    { "key": "fee", "label": "Processing fee", "type": "money", "min": 0, "editableWhen": "status == 'raised'" },
+    { "key": "netAmount", "label": "Net amount", "type": "money", "calculated": "record.amount == null ? null : record.amount - coalesce(record.fee, 0)" },
+    { "key": "notes", "label": "Notes", "type": "longText" }
+  ],
+  "rules": [
+    {
+      "key": "feeNotAboveAmount",
+      "when": "record.fee != null",
+      "expression": "record.fee <= record.amount",
+      "message": "The processing fee cannot be more than the donation.",
+      "field": "fee"
+    },
+    {
+      "key": "referenceForUpi",
+      "when": "status == 'paid' and record.method == 'upi'",
+      "expression": "not isEmpty(record.reference)",
+      "message": "Enter the UPI transaction reference."
+    }
+  ]
+}

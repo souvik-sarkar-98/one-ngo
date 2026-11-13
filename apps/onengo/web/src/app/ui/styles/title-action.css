@@ -1,0 +1,22 @@
+.admin__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.admin__line--title {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+.admin__line--title > app-screen-heading {
+  min-width: 0;
+  --screen-heading-gap: 0;
+}
+.admin__grow {
+  flex: 1;
+}
+.admin__title-action {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+  white-space: nowrap;
+}

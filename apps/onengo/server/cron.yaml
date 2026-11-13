@@ -1,0 +1,6 @@
+cron:
+  - description: Run background jobs, outbox, retention, and scheduled workflows
+    url: /internal/tick
+    target: default
+    schedule: every 60 minutes
+    timezone: Etc/UTC

@@ -1,0 +1,147 @@
+{
+  "$id": "scriptEffects",
+  "title": "Script result with proposed effects",
+  "description": "What a script hands back to the platform: optional changes to the record being saved, and a list of proposed effects. The script never applies an effect itself; the platform checks each one and applies it through the owning engine in the same transaction as the save. Not a definition kind: it describes a script's output, not a stored definition.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["effects"],
+  "properties": {
+    "record": {
+      "type": "object",
+      "description": "The record's new values. Allowed only on hooks that may change the record (before save, custom button)"
+    },
+    "effects": {
+      "type": "array",
+      "maxItems": 20,
+      "description": "Proposed effects, applied in this order after the record is written. Empty when the script proposes nothing",
+      "items": { "$ref": "#/definitions/effect" }
+    }
+  },
+  "definitions": {
+    "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,62}$" },
+    "money": {
+      "type": ["string", "number"],
+      "pattern": "^(0|[1-9][0-9]{0,10})(\\.[0-9]{1,2})?$",
+      "minimum": 0,
+      "maximum": 99999999999.99,
+      "description": "A positive amount in rupees with at most two decimals, preferably as a string such as \"1500.00\""
+    },
+    "effect": {
+      "type": "object",
+      "required": ["type"],
+      "description": "One proposed effect; its type says which engine applies it",
+      "properties": {
+        "type": {
+          "enum": ["ledger.propose", "records.create", "records.update", "notify", "connector.call"],
+          "description": "Post a journal entry, create or update a record, notify people, or call an approved connector"
+        }
+      },
+      "allOf": [
+        { "if": { "type": "object", "required": ["type"], "properties": { "type": { "const": "ledger.propose" } } }, "then": { "$ref": "#/definitions/ledgerPropose" } },
+        { "if": { "type": "object", "required": ["type"], "properties": { "type": { "const": "records.create" } } }, "then": { "$ref": "#/definitions/recordsCreate" } },
+        { "if": { "type": "object", "required": ["type"], "properties": { "type": { "const": "records.update" } } }, "then": { "$ref": "#/definitions/recordsUpdate" } },
+        { "if": { "type": "object", "required": ["type"], "properties": { "type": { "const": "notify" } } }, "then": { "$ref": "#/definitions/notify" } },
+        { "if": { "type": "object", "required": ["type"], "properties": { "type": { "const": "connector.call" } } }, "then": { "$ref": "#/definitions/connectorCall" } }
+      ]
+    },
+    "ledgerPropose": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "date", "lines"],
+      "description": "A journal entry for the ledger. It must balance, every account must exist and be active, and its financial year must be open",
+      "properties": {
+        "type": { "const": "ledger.propose", "description": "Post a journal entry" },
+        "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "Entry date as an ISO date; its financial year must be open" },
+        "memo": { "type": "string", "maxLength": 200, "description": "Narration shown on the entry" },
+        "lines": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 20,
+          "description": "Debits and credits; total debits must equal total credits",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["account"],
+            "properties": {
+              "account": { "type": "string", "minLength": 1, "maxLength": 40, "description": "Ledger account code" },
+              "debit": { "$ref": "#/definitions/money" },
+              "credit": { "$ref": "#/definitions/money" },
+              "fund": { "type": ["string", "null"], "maxLength": 40, "description": "Fund code, or null for unrestricted" }
+            },
+            "oneOf": [{ "required": ["debit"] }, { "required": ["credit"] }]
+          }
+        }
+      }
+    },
+    "recordsCreate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "recordType", "data"],
+      "description": "A new record, saved through the full save pipeline with the permissions of the person saving",
+      "properties": {
+        "type": { "const": "records.create", "description": "Create a record" },
+        "recordType": { "$ref": "#/definitions/key", "description": "Record type to create; must be published" },
+        "data": { "type": "object", "maxProperties": 100, "description": "Field values of the new record; validated like a save from the screens" }
+      }
+    },
+    "recordsUpdate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "recordType", "id", "expectedVersion", "data"],
+      "description": "A change to another existing record at the version the script read, saved through the full save pipeline with the same permissions as a created record. Never the record being saved",
+      "properties": {
+        "type": { "const": "records.update", "description": "Update a record" },
+        "recordType": { "$ref": "#/definitions/key", "description": "Record type of the record; must match it" },
+        "id": { "type": "string", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", "description": "Id of the record to update" },
+        "expectedVersion": { "type": "integer", "minimum": 1, "description": "The version the script read; a newer one refuses the save" },
+        "data": { "type": "object", "maxProperties": 100, "description": "Field values to change; validated like a save from the screens" }
+      }
+    },
+    "notify": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "template", "to"],
+      "description": "A notification from a published template, queued in the save and sent after it commits",
+      "properties": {
+        "type": { "const": "notify", "description": "Notify people" },
+        "template": { "$ref": "#/definitions/key", "description": "Published message template to send" },
+        "to": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "description": "Who is notified. Addresses always come from people or from the record, never from the script",
+          "properties": {
+            "roles": { "type": "array", "maxItems": 10, "uniqueItems": true, "items": { "type": "string" }, "description": "Everyone with these roles" },
+            "users": { "type": "array", "maxItems": 20, "uniqueItems": true, "items": { "type": "string" }, "description": "These people, by user id; each must belong to the organisation" },
+            "creator": { "type": "boolean", "description": "The person who created the record" },
+            "field": { "$ref": "#/definitions/key", "description": "A person, email or phone field of the saved record whose value is notified" },
+            "named": { "type": "array", "maxItems": 10, "uniqueItems": true, "items": { "$ref": "#/definitions/key" }, "description": "Named fixed recipients an administrator keeps in the organisation settings, such as the auditor; each must be declared by the script" }
+          }
+        },
+        "channels": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["inApp", "email", "sms", "whatsapp"] },
+          "description": "How it is sent; default in-app and email"
+        },
+        "values": {
+          "type": "object",
+          "maxProperties": 20,
+          "additionalProperties": { "type": ["string", "number", "boolean", "null"] },
+          "description": "Extra values the template can show as script.<name>"
+        }
+      }
+    },
+    "connectorCall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "connector", "body"],
+      "description": "A call to an http (send mode) or webhook connector the script declares and an administrator has enabled; queued in the save and delivered after it commits",
+      "properties": {
+        "type": { "const": "connector.call", "description": "Call a connector" },
+        "connector": { "$ref": "#/definitions/key", "description": "Connector to call; must be in the script's declared connectors" },
+        "body": { "type": "object", "maxProperties": 50, "description": "Values sent next to the record reference: the webhook body, or values an http connector's templates read as record.<name>" }
+      }
+    }
+  }
+}

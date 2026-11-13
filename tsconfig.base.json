@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": false,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "paths": {
+      "@onengo/kernel": ["./packages/kernel/src/index.ts"],
+      "@onengo/kernel/*": ["./packages/kernel/src/*/index.ts"],
+      "@onengo/platform/main": ["./packages/platform/src/api/main.ts"],
+      "@onengo/platform/operator": ["./packages/platform/src/api/operator.ts"],
+      "@onengo/platform/contracts": ["./packages/platform/src/api/contracts.ts"],
+      "@onengo/platform/browser": ["./packages/platform/src/api/browser.ts"],
+      "@onengo/platform/deployment": ["./packages/platform/src/api/deployment.ts"],
+      "@onengo/platform/testing": ["./packages/platform/src/api/testing.ts"],
+      "@onengo/platform/icons": ["./packages/platform/src/runtime/definitions/icon-names.ts"],
+      "@onengo/server/*": ["./apps/onengo/server/src/*"]
+    }
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "$id": "workflow",
+  "title": "Workflow",
+  "description": "The states a record moves through and the steps that move it, with who may run each step and which steps need approval.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["key", "recordType", "initial", "states", "transitions"],
+  "properties": {
+    "key": { "$ref": "#/definitions/key", "description": "Stable name of the workflow", "x-order": 1 },
+    "recordType": { "$ref": "#/definitions/key", "description": "The record type that follows this workflow", "x-ref": "recordType", "x-order": 2 },
+    "role": {
+      "enum": ["primary", "parallel"],
+      "description": "Primary workflows hold the record's status; a parallel workflow runs beside it, for example case closure beside intake. Default primary",
+      "x-order": 3
+    },
+    "appliesWhen": {
+      "type": "string",
+      "description": "Primary only: new records for which this is true follow this workflow. Needed when a record type has several primary workflows",
+      "x-expression": { "recordType": "/recordType" },
+      "x-order": 4
+    },
+    "startsWhen": {
+      "type": "string",
+      "description": "Parallel only: the workflow starts when this becomes true on a save; when empty it starts on create",
+      "x-expression": { "recordType": "/recordType" },
+      "x-order": 5
+    },
+    "initial": { "type": "string", "description": "State new records start in", "x-order": 6 },
+    "states": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Where a record can be, in order",
+      "x-order": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "label"],
+        "properties": {
+          "key": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,40}$", "description": "Stable name of the state, stored on the record" },
+          "label": { "type": "string", "description": "Name shown to people" },
+          "final": { "type": "boolean", "description": "The work is finished; no steps lead out" },
+          "locked": { "type": "boolean", "description": "Records in this state cannot be edited, only transitioned" }
+        }
+      }
+    },
+    "transitions": {
+      "type": "array",
+      "description": "Steps people take to move a record from one state to another",
+      "x-order": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "label", "from", "to"],
+        "properties": {
+          "key": { "$ref": "#/definitions/key", "description": "Stable name of the step; part of its permission" },
+          "label": { "type": "string", "description": "Button text" },
+          "from": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "States the step can start from" },
+          "to": { "type": "string", "description": "State the record moves to" },
+          "guard": { "type": "string", "description": "Expression that must be true", "x-expression": { "recordType": "/recordType" } },
+          "guardMessage": { "type": "string", "description": "Shown when the expression is false" },
+          "requiredFields": { "type": "array", "items": { "type": "string" }, "description": "Fields that must be filled in before the step", "x-ref": "field" },
+          "permission": { "type": "string", "description": "Defaults to record:<type>:transition:<key>", "x-ref": "permission" },
+          "approval": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "The step waits for approval by someone other than the requester",
+            "properties": {
+              "roles": { "type": "array", "items": { "type": "string" }, "description": "People with these roles may approve", "x-ref": "role" },
+              "users": { "type": "array", "items": { "type": "string" }, "description": "These people may approve" },
+              "count": { "type": "integer", "minimum": 1, "maximum": 5, "description": "How many approvals are needed; default 1" },
+              "when": { "type": "string", "description": "Approval is needed only when this is true", "x-expression": { "recordType": "/recordType" } }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,62}$" }
+  }
+}

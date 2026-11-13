@@ -1,0 +1,12 @@
+.tr-head { display: flex; flex-flow: row nowrap; align-items: center; gap: 2px; margin: 0 0 .75rem; }
+.tr-title { margin: 0; }
+.tr-body { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem; margin: .75rem 0; }
+.tr-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .9rem; margin-bottom: .75rem; }
+.tr-search { flex: 1 1 16rem; min-width: 12rem; }
+.tr-check { font-weight: 400; display: inline-flex; align-items: center; gap: .35rem; }
+.tr-stale { margin: .35rem 0; padding-left: 1.2rem; }
+.tr-panel { display: flex; flex-direction: column; gap: .6rem; }
+.tr-label { font-weight: 600; }
+.tr-english { margin: 0; padding: .4rem .6rem; background: var(--bg, #f5f7fa); border-radius: var(--radius); white-space: pre-wrap; }
+.tr-panel textarea { width: 100%; font: inherit; }
+.tr-more { margin-top: .75rem; }

@@ -1,0 +1,13 @@
+.access-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin: .5rem 0 .75rem; }
+.access-filters input[type='search'] { flex: 1 1 16rem; }
+.access-check { display: inline-flex; align-items: center; gap: .35rem; }
+.access-table { width: 100%; border-collapse: collapse; }
+.access-table th, .access-table td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+.access-table tr.sel td { background: color-mix(in srgb, var(--brand) 8%, transparent); }
+.access-group th { background: var(--bg, var(--card)); font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.access-edit { display: flex; gap: .4rem; margin-top: .35rem; }
+.access-role { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem); gap: 1rem; }
+.access-summary { list-style: none; display: flex; flex-direction: column; gap: .6rem; line-height: 1.6; }
+.access-area { display: inline-block; margin-right: 1rem; color: var(--muted); }
+.access-area.on { color: inherit; }
+@media (max-width: 840px) { .access-role { grid-template-columns: 1fr; } }

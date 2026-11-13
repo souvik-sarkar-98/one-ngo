@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Consent and erasure — Business Document</title>
+    <style>
+      :root {
+        --bg: #f7f6f3;
+        --ink: #1c1b19;
+        --muted: #5c574f;
+        --line: #d9d4cb;
+        --accent: #0f5c4c;
+        --warn: #8a4b00;
+        --card: #fffefb;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+        color: var(--ink);
+        background: linear-gradient(180deg, #eef3f1 0%, var(--bg) 40%);
+        line-height: 1.55;
+      }
+      main { max-width: 52rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+      h1 { font-size: 1.85rem; margin: 0 0 0.35rem; color: var(--accent); }
+      .meta { color: var(--muted); font-size: 0.95rem; margin-bottom: 0.75rem; }
+      .badge {
+        display: inline-block; font-size: 0.75rem; letter-spacing: 0.02em;
+        background: #e2ece8; color: var(--accent); border: 1px solid var(--line);
+        border-radius: 999px; padding: 0.1rem 0.6rem; margin: 0 0.3rem 1.5rem 0;
+      }
+      .gate { background: #fff4e5; border: 1px solid #e8c48f; border-radius: 6px; padding: 0.75rem 1rem; margin: 1rem 0; }
+      h2 {
+        font-size: 1.15rem; margin: 2rem 0 0.65rem; padding-bottom: 0.35rem;
+        border-bottom: 1px solid var(--line);
+      }
+      h3 { font-size: 1rem; margin: 1.1rem 0 0.4rem; }
+      ul { padding-left: 1.2rem; }
+      table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 0.92rem; }
+      th, td { border: 1px solid var(--line); padding: 0.55rem 0.65rem; text-align: left; vertical-align: top; }
+      th { background: #e8efec; }
+      code { font-family: ui-monospace, Consolas, monospace; font-size: 0.86em; background: #eceae4; padding: 0.05rem 0.3rem; border-radius: 3px; }
+      .src { color: var(--muted); font-size: 0.85rem; }
+      .warn { color: var(--warn); }
+      .tc { background: #f2f7f5; }
+      .tc td:first-child { font-weight: 600; white-space: nowrap; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Consent and erasure</h1>
+      <p class="meta">Domain: privacy · Entity: consent-and-erasure</p>
+      <span class="badge">Implementation-independent · reconciled against backend (no screens yet)</span>
+
+      <div class="gate">
+        <strong class="warn">Awaiting approval.</strong> The erasure rules in section 4 are <em>proposed</em> and await
+        product-owner approval. The financial retention period (8 years) is a default <em>pending counsel confirmation</em>.
+        Both are in force in the software so they can be tried, but neither is a confirmed policy.
+      </div>
+
+      <h2>1. Purpose</h2>
+      <p>
+        Lets an organisation show, for each person it holds data about, what that person agreed to and when; and honour a
+        request to be forgotten by replacing the person's identifying details with a pseudonym, while keeping the money
+        trail (amounts, dates, receipt numbers and the books) intact for as long as the law requires.
+      </p>
+
+      <h2>2. Actors</h2>
+      <ul>
+        <li><strong>Privacy officer</strong> with <code>privacy:consent:record</code> — records a consent granted or withdrawn.</li>
+        <li><strong>Anyone with <code>privacy:consent:read</code></strong> — sees a person's current consent and its full history.</li>
+        <li><strong>Privacy officer</strong> with <code>privacy:erase</code> — erases a data subject. Usually a senior role; administrators hold it through <code>*</code>.</li>
+        <li><strong>The data subject</strong> — a donor, beneficiary or other person kept as a record, or a member of the organisation. They do not act in the system; staff act on their request.</li>
+      </ul>
+
+      <h2>3. Domain model</h2>
+      <table>
+        <thead><tr><th>Concept</th><th>Business meaning</th></tr></thead>
+        <tbody>
+          <tr><td>Data subject</td><td>The person data is about: either a record (for example a donor or a beneficiary) or a member of the organisation. Named only by its kind and id.</td></tr>
+          <tr><td>Purpose</td><td>What the person agrees to, in a short lower-case name chosen by the organisation, for example <code>newsletter</code> or <code>donation.receipts</code>.</td></tr>
+          <tr><td>Consent event</td><td>One fact: purpose granted or withdrawn, with its source (form, paper, email, phone, in person, import, API, or erasure), who recorded it, and when. Never changed or removed.</td></tr>
+          <tr><td>Current consent</td><td>For each purpose, the latest consent event.</td></tr>
+          <tr><td>Erasure</td><td>The completed pseudonymisation of one data subject: when, by whom, why, and a summary of what changed and what was kept. One per subject; never changed or removed.</td></tr>
+          <tr><td>Pseudonym</td><td>"Erased person" followed by an eight-character code unique to the erasure, used wherever a name must remain.</td></tr>
+          <tr><td>Financial records</td><td>Journals and their lines, receipts and their issuer snapshots, payments and payment events, transfers, money accounts, ledger accounts and financial years.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>4. Business rules</h2>
+      <h3>Consent</h3>
+      <ul>
+        <li>Consent history is append-only. A change of mind is a new event; earlier events stay.</li>
+        <li>Consent can be recorded only for a record or member that exists in the organisation. Profiles are not subjects: name the member instead.</li>
+        <li>No free text is kept with consent, so the history holds nothing personal and survives erasure.</li>
+        <li>Consent cannot be recorded for a person who has been erased.</li>
+        <li>Consent is per organisation; another organisation never sees it.</li>
+      </ul>
+
+      <h3>Erasure (proposed, awaiting product-owner approval)</h3>
+      <ul>
+        <li><strong>Who:</strong> only with <code>privacy:erase</code>. A member must be suspended first.</li>
+        <li><strong>All or nothing:</strong> one erasure is done completely or not at all.</li>
+        <li><strong>Once:</strong> asking again returns the first result and changes nothing.</li>
+        <li><strong>The subject's own record</strong> (or a member's profile): every personal field is erased. A field is personal when it is
+          text, long text, rich text, email, phone, location, signature, a file, or marked sensitive — unless the field definition says
+          it is not personal. A field of another type (for example a date of birth) is personal when its definition says so. Totals kept
+          from other records are never personal.</li>
+        <li><strong>How a value is erased:</strong> a required text, email or phone field gets the pseudonym (an email becomes
+          <code>erased-&lt;code&gt;@erased.invalid</code>); any other erased value is removed. Values that are kept encrypted stay
+          encrypted: a pseudonym is encrypted under the current key, and removed values leave nothing behind, including their lookup hash.</li>
+        <li><strong>Copies in other records:</strong> where another record points at the subject and copied a value from one of the
+          erased fields (a donation's donor name, email, phone and PAN), that copy is erased the same way, so the donation shows the same pseudonym as the donor.</li>
+        <li><strong>Kept:</strong> amounts, dates, record numbers, statuses, choices, links between records, totals, and fields marked not personal.</li>
+        <li><strong>Files</strong> in erased file fields are detached and removed by the regular file clean-up.</li>
+        <li><strong>History:</strong> earlier change history of the erased records keeps who changed what and when, but the erased fields' old values are replaced by "[erased]".</li>
+        <li><strong>Messages</strong> about the erased records lose their address, subject and body.</li>
+        <li><strong>Consent:</strong> every purpose currently granted is withdrawn, with source "erasure".</li>
+        <li><strong>Members:</strong> when the person belongs to no other organisation, their account's name and email are pseudonymised,
+          the account is switched off, sign-in links and sessions end and provider sign-in links are removed. When they also belong to
+          another organisation, the account is left as it is, because it is not this organisation's to erase.</li>
+        <li><strong>Audit:</strong> the erasure itself is recorded, naming the fields erased but never their values.</li>
+      </ul>
+
+      <h3>What stays, because the books may not change</h3>
+      <ul>
+        <li>Issued receipts and posted journals can never be changed or deleted. Receipts hold no donor details themselves; they point to the donation, which is pseudonymised, so a reprinted receipt shows the pseudonym.</li>
+        <li class="warn">The description of a posted journal entry keeps the text it was posted with. The donations module writes "Donation &lt;number&gt; from &lt;donor name&gt;", so the donor's name <strong>remains</strong> in that description after erasure.</li>
+        <li class="warn">Payment provider event payloads are kept as received and may contain the payer's email or phone.</li>
+        <li>Data copied by hand into records that do not point at the subject (a donation typed without choosing the donor) is not found and not erased.</li>
+        <li>Background job items, import files still kept, outgoing connector deliveries and archived audit files are not changed.</li>
+      </ul>
+
+      <h3>Retention of financial records (period pending counsel confirmation)</h3>
+      <ul>
+        <li>Financial records are never deleted by retention or by erasure. The database already refuses to delete posted journals and issued receipts.</li>
+        <li>The retention period is <strong>8 years</strong> after the record's date by default, reflecting common Indian statutory practice for books of account. <span class="warn">Pending counsel confirmation.</span> Each installation can set its own period.</li>
+        <li>Each erasure reports how many receipts, journal entries and payments it kept, and the date until which they must be kept.</li>
+        <li>No step yet deletes financial records after the period ends.</li>
+      </ul>
+
+      <h2>5. User flows</h2>
+      <h3>Find / view</h3>
+      <p>A privacy officer looks up a person by kind and id and sees, for each purpose, the current state, and below it every event in order.</p>
+      <h3>Create</h3>
+      <p>Recording consent: choose the person, the purpose, granted or withdrawn, and where it came from.</p>
+      <h3>Update</h3>
+      <p>Consent is never edited; a new event replaces the current state.</p>
+      <h3>Other actions</h3>
+      <p>Erasure: suspend a member first if the person is a member; then erase, giving a reason (the person asked, consent withdrawn, or other). The result lists the records and fields erased and the financial records kept.</p>
+
+      <h2>6. Fields &amp; validation</h2>
+      <table>
+        <thead><tr><th>Field</th><th>Rules</th><th>Visibility / conditions</th></tr></thead>
+        <tbody>
+          <tr><td>Subject kind</td><td>Required; record or member.</td><td>—</td></tr>
+          <tr><td>Subject id</td><td>Required; an existing record (not a profile) or member of this organisation.</td><td>—</td></tr>
+          <tr><td>Purpose</td><td>Required; starts with a lower-case letter, then up to 63 lower-case letters, digits, dots, dashes or underscores.</td><td>—</td></tr>
+          <tr><td>State</td><td>Required; granted or withdrawn.</td><td>—</td></tr>
+          <tr><td>Source</td><td>Required; form, paper, email, phone, in person, import or API. "Erasure" is set only by an erasure.</td><td>—</td></tr>
+          <tr><td>Erasure reason</td><td>Optional; the person asked (default), consent withdrawn, or other.</td><td>—</td></tr>
+          <tr><td>Personal (field setting)</td><td>Optional on any record field; adds a field to, or keeps it out of, erasure.</td><td>Set in the Builder's definition.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>7. Out of scope / non-goals</h2>
+      <ul>
+        <li>Screens for consent and erasure (the web app has none yet).</li>
+        <li>Deleting financial records once their retention period ends.</li>
+        <li>Erasing an account shared with other organisations.</li>
+        <li>Rewriting posted journal descriptions or provider payment payloads.</li>
+        <li>Requests from the person themselves without staff (self-service).</li>
+      </ul>
+
+      <h2>8. Testable scenarios (for test generation)</h2>
+      <p class="src">"BE" = backend-enforced, "FE" = frontend-enforced, "E2E" = end-to-end.</p>
+      <table>
+        <thead><tr><th>ID</th><th>Given</th><th>When</th><th>Then (expected)</th><th>Layer</th></tr></thead>
+        <tbody class="tc">
+          <tr><td>PRV-01</td><td>A donor granted then withdrew "newsletter"</td><td>The consent is read</td><td>Current is withdrawn; history shows both events in order</td><td>BE</td></tr>
+          <tr><td>PRV-02</td><td>A purpose written "News Letter"</td><td>Consent is recorded</td><td>Refused with a message about the purpose</td><td>BE</td></tr>
+          <tr><td>PRV-03</td><td>A donor with a paid, receipted donation</td><td>The donor is erased</td><td>Donor and donation show the same pseudonym; email, phone, PAN, address gone; amount, number, receipt and books unchanged</td><td>BE</td></tr>
+          <tr><td>PRV-04</td><td>An erased donor</td><td>Erasure is asked again</td><td>The first result comes back; nothing changes</td><td>BE</td></tr>
+          <tr><td>PRV-05</td><td>An active member</td><td>Erasure is asked</td><td>Refused: suspend first</td><td>BE</td></tr>
+          <tr><td>PRV-06</td><td>A suspended member in no other organisation</td><td>The member is erased</td><td>Profile personal fields cleared; account name and email pseudonymised; account switched off</td><td>BE</td></tr>
+          <tr><td>PRV-07</td><td>Someone without the erase permission</td><td>Erasure is asked</td><td>Refused</td><td>BE</td></tr>
+          <tr><td>PRV-08</td><td>An erased donor with granted consent</td><td>Erasure completes</td><td>Consent withdrawn with source erasure; new consent refused</td><td>BE</td></tr>
+        </tbody>
+      </table>
+
+      <h2>9. Discrepancies (backend vs frontend)</h2>
+      <p class="src">Where the two implementations disagree. Backend enforcement is authoritative for correctness.</p>
+      <table>
+        <thead><tr><th>Topic</th><th>Backend behavior</th><th>Frontend behavior</th><th>Resolution</th></tr></thead>
+        <tbody>
+          <tr><td class="warn">Consent and erasure screens</td><td>Routes under <code>/api/privacy/</code></td><td>None yet</td><td>Backend is authoritative; screens to follow.</td></tr>
+          <tr><td class="warn">"Personal" field setting</td><td>Accepted in record type definitions</td><td>The Builder has no switch for it yet</td><td>Set in definition files until the Builder offers it.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>10. Revision history</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Change (why)</th><th>Side</th><th>Code drivers</th></tr></thead>
+        <tbody>
+          <tr><td>2026-10-26</td><td>Created: consent history, erasure by pseudonymisation and financial retention (block S3). Erasure rules proposed, awaiting product-owner approval; retention period pending counsel.</td><td>backend</td><td class="src"><code>src/application/privacy/privacy-service.ts</code>, <code>src/infrastructure/postgres/stores/privacy-store.ts</code>, <code>migrations/020_consent_erasure.sql</code>, <code>src/kernel/retention.ts</code>, <code>src/http/plugins/privacy.ts</code>, <code>src/http/contracts/privacy.ts</code></td></tr>
+        </tbody>
+      </table>
+
+      <h2>11. Learning log</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Learning</th><th>How it was inferred</th></tr></thead>
+        <tbody>
+          <tr><td>2026-10-26</td><td>Receipts carry no donor identity of their own; the printed receipt reads the donation, so pseudonymising the donation pseudonymises reprints.</td><td>backend: <code>migrations/001_core.sql</code> receipt table; <code>src/engines/actions/receipt-print.ts</code></td></tr>
+          <tr><td>2026-10-26</td><td>The donation posting rule writes the donor's name into the journal description, which can never change once posted, so the name outlives erasure there.</td><td>backend: <code>modules/donations/donation-paid.postingRule.json</code>; <code>journal_is_immutable</code> trigger in <code>migrations/001_core.sql</code></td></tr>
+          <tr><td>2026-10-26</td><td>Change history snapshots of records hold non-sensitive personal values (names, emails), so erasure must clear them too; sensitive ones were already masked.</td><td>backend: <code>src/runtime/records/save/audit.ts</code></td></tr>
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

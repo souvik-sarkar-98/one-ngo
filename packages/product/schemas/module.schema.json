@@ -1,0 +1,72 @@
+{
+  "$id": "module",
+  "title": "Module package manifest",
+  "description": "A package of definitions shipped together, such as Donations, with the accounts, roles and receipt series it needs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["key", "version", "label", "engine", "definitions"],
+  "properties": {
+    "key": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,62}$", "description": "Stable name of the module" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$", "description": "Module version, for example 1.2.0" },
+    "label": { "type": "string", "description": "Name shown to administrators" },
+    "description": { "type": "string", "description": "What the module adds" },
+    "engine": { "type": "string", "description": "Minimum engine version, e.g. 0.1.0" },
+    "dependsOn": { "type": "array", "items": { "type": "string" }, "description": "Modules that must be turned on first" },
+    "definitions": {
+      "type": "array",
+      "description": "Files relative to the manifest. File name ends with .<kind>.json",
+      "items": { "type": "string", "pattern": "^[A-Za-z0-9_./-]+\\.(recordType|workflow|postingRule|receiptRule|script|automation|template|theme|listView|recordGroup|translation|action|page|report|reportGroup|dataFeed)\\.json$" }
+    },
+    "setup": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Applied to a tenant when the module is enabled. Existing items are left unchanged.",
+      "properties": {
+        "accounts": {
+          "type": "array",
+          "description": "Ledger accounts to create",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "name", "type"],
+            "properties": {
+              "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,30}$", "description": "Account code used in posting rules" },
+              "name": { "type": "string", "description": "Account name" },
+              "type": { "enum": ["asset", "liability", "equity", "income", "expense"], "description": "Kind of account" }
+            }
+          }
+        },
+        "roles": {
+          "type": "array",
+          "description": "Roles to create",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "label", "permissions"],
+            "properties": {
+              "key": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{0,40}$", "description": "Stable name of the role" },
+              "label": { "type": "string", "description": "Role name" },
+              "permissions": { "type": "array", "items": { "type": "string" }, "description": "Permissions the role holds", "x-ref": "permission" },
+              "requireTwoStep": { "type": "boolean", "description": "Members must sign in with a second step" }
+            }
+          }
+        },
+        "receiptSeries": {
+          "type": "array",
+          "description": "Receipt number series to create",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "prefix", "label"],
+            "properties": {
+              "key": { "type": "string", "description": "Stable name of the series, used by receipt rules" },
+              "prefix": { "type": "string", "description": "Text before the number, for example RCPT" },
+              "label": { "type": "string", "description": "Series name" },
+              "reset": { "enum": ["fiscal_year", "never"], "description": "Start again from 1 each financial year, or never" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OneNGO user guide</title>
+  <meta name="description" content="Task guide for OneNGO users, NGO administrators, and operators." />
+  <style>
+    :root {
+      --ink: #1c1917;
+      --muted: #57534e;
+      --line: #e7e0d6;
+      --paper: #f7f3ec;
+      --card: #fffdf8;
+      --teal: #0f5c56;
+      --teal-soft: #e5f3f1;
+      --amber: #8a4b12;
+      --amber-soft: #fbf1e4;
+      --red: #8f2d2d;
+      --red-soft: #f8e8e6;
+      --shadow: 0 1px 2px rgba(28, 25, 23, 0.06), 0 8px 24px rgba(28, 25, 23, 0.05);
+      --serif: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+      --sans: "Segoe UI", system-ui, sans-serif;
+      --mono: "Cascadia Code", Consolas, ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font: 17px/1.55 var(--sans);
+    }
+    a { color: var(--teal); }
+    a:hover { text-decoration-thickness: 2px; }
+    :focus-visible {
+      outline: 3px solid #c47b2b;
+      outline-offset: 3px;
+    }
+    .skip {
+      position: absolute;
+      left: 12px;
+      top: -40px;
+      background: var(--ink);
+      color: #fff;
+      padding: 8px 12px;
+      z-index: 5;
+    }
+    .skip:focus { top: 12px; }
+    header.mast {
+      background: #14332f;
+      color: #f6f1e8;
+      padding: 28px 24px 22px;
+    }
+    header.mast a { color: #d7efe9; }
+    .wrap { max-width: 1080px; margin: 0 auto; }
+    .kicker {
+      margin: 0 0 6px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #b7d9d2;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-family: var(--serif);
+      font-size: clamp(2rem, 4vw, 3.1rem);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+    .lede { margin: 0; max-width: 42rem; color: #efe7db; }
+    .layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 28px;
+      padding: 24px;
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+    nav.toc {
+      position: sticky;
+      top: 16px;
+      align-self: start;
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+      padding: 14px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+    }
+    nav.toc p {
+      margin: 0 0 8px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    nav.toc a {
+      display: block;
+      padding: 6px 8px;
+      border-radius: 8px;
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 0.92rem;
+    }
+    nav.toc a:hover, nav.toc a:focus-visible { background: var(--teal-soft); }
+    nav.toc .group { margin: 12px 0 4px; padding: 0 8px; font-size: 0.78rem; font-weight: 700; color: var(--teal); }
+    main { min-width: 0; }
+    .switcher {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 18px;
+    }
+    .switcher button {
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font: inherit;
+      cursor: pointer;
+    }
+    .switcher button[aria-pressed="true"] {
+      background: var(--teal);
+      border-color: var(--teal);
+      color: #fff;
+    }
+    section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 22px 24px 8px;
+      margin: 0 0 16px;
+      box-shadow: var(--shadow);
+    }
+    h2, h3 { font-family: var(--serif); font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+    h2 { margin: 0 0 8px; font-size: 1.7rem; }
+    h3 { margin: 22px 0 8px; font-size: 1.2rem; }
+    p, li { max-width: 68ch; }
+    ol.steps { padding-left: 1.2rem; }
+    ol.steps li { margin: 0 0 8px; }
+    ol.steps li::marker { color: var(--teal); font-weight: 700; }
+    .note, .warn, .stop {
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin: 12px 0 16px;
+    }
+    .note { background: var(--teal-soft); }
+    .warn { background: var(--amber-soft); }
+    .stop { background: var(--red-soft); }
+    .note strong, .warn strong, .stop strong { display: block; margin-bottom: 2px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 16px;
+      font-size: 0.95rem;
+    }
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+    th { font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+    caption {
+      caption-side: bottom;
+      padding-top: 8px;
+      text-align: left;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    pre {
+      overflow: auto;
+      background: #17211f;
+      color: #f3efe6;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font: 0.86rem/1.45 var(--mono);
+    }
+    code { font-family: var(--mono); font-size: 0.92em; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 12px 0 18px;
+    }
+    .cards a {
+      display: block;
+      padding: 14px;
+      border-radius: 14px;
+      background: var(--paper);
+      color: inherit;
+      text-decoration: none;
+      border: 1px solid var(--line);
+    }
+    .cards a:hover { border-color: var(--teal); }
+    .cards strong { display: block; font-family: var(--serif); font-size: 1.15rem; margin-bottom: 4px; }
+    .cards span { color: var(--muted); font-size: 0.92rem; }
+    footer {
+      padding: 8px 24px 32px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    body[data-audience="users"] [data-for]:not([data-for~="users"]),
+    body[data-audience="admins"] [data-for]:not([data-for~="admins"]),
+    body[data-audience="operators"] [data-for]:not([data-for~="operators"]) { display: none; }
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; padding: 16px; }
+      nav.toc { position: static; max-height: none; }
+      .cards { grid-template-columns: 1fr; }
+    }
+    @media print {
+      header.mast, nav.toc, .switcher, .skip { display: none !important; }
+      body { background: #fff; }
+      .layout { display: block; padding: 0; }
+      section { break-inside: avoid; box-shadow: none; }
+      body[data-audience] [data-for] { display: block !important; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#content">Skip to the guide</a>
+  <header class="mast">
+    <div class="wrap">
+      <p class="kicker">OneNGO</p>
+      <h1>User guide</h1>
+      <p class="lede">How to sign in and work with records, how an NGO administrator runs the organisation, and how an operator opens and looks after an organisation.</p>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Guide contents">
+      <p>Contents</p>
+      <a href="#start">Start here</a>
+      <div class="group" data-for="users">Users</div>
+      <a data-for="users" href="#sign-in">Sign in</a>
+      <a data-for="users" href="#move">Move around</a>
+      <a data-for="users" href="#home">Home</a>
+      <a data-for="users" href="#records">Records</a>
+      <a data-for="users" href="#inbox">Inbox</a>
+      <a data-for="users" href="#account">Your account</a>
+      <div class="group" data-for="admins">NGO administrators</div>
+      <a data-for="admins" href="#admin-home">Administration</a>
+      <a data-for="admins" href="#setup">Finish setup</a>
+      <a data-for="admins" href="#people">People and invitations</a>
+      <a data-for="admins" href="#roles">Roles</a>
+      <a data-for="admins" href="#connectors">Connectors</a>
+      <a data-for="admins" href="#api-keys">API keys</a>
+      <a data-for="admins" href="#jobs">Jobs and the audit log</a>
+      <a data-for="admins" href="#settings">Organisation settings</a>
+      <a data-for="admins" href="#builder">Builder</a>
+      <div class="group" data-for="operators">Operators</div>
+      <a data-for="operators" href="#operator-sign-in">Operator sign-in</a>
+      <a data-for="operators" href="#find">Find an organisation</a>
+      <a data-for="operators" href="#onboard">Onboard</a>
+      <a data-for="operators" href="#lifecycle">Suspend, reactivate, close</a>
+    </nav>
+
+    <main id="content">
+      <div class="switcher" role="group" aria-label="Show a part of the guide">
+        <button type="button" data-audience="all" aria-pressed="true">Entire guide</button>
+        <button type="button" data-audience="users" aria-pressed="false">Users</button>
+        <button type="button" data-audience="admins" aria-pressed="false">NGO administrators</button>
+        <button type="button" data-audience="operators" aria-pressed="false">Operators</button>
+      </div>
+
+      <section id="start" data-for="users admins operators">
+        <h2>Start here</h2>
+        <p>OneNGO keeps an organisation’s records, people, and money in one place. What you can open depends on the role you were given. Record names, pages, and workflow steps are set by that organisation, so the lists you see may differ from the examples here.</p>
+        <div class="cards">
+          <a href="#sign-in"><strong>Users</strong><span>Sign in, keep records, and approve work.</span></a>
+          <a href="#admin-home"><strong>NGO administrators</strong><span>Invite people, set roles, and finish organisation setup.</span></a>
+          <a href="#operator-sign-in"><strong>Operators</strong><span>Open a new organisation and suspend, reactivate, or close one.</span></a>
+        </div>
+        <table>
+          <caption>The three places people work</caption>
+          <thead>
+            <tr><th>Who</th><th>Where</th><th>What they do</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>User</td><td>The organisation’s own sign-in page</td><td>Home, Records, Inbox, and More.</td></tr>
+            <tr><td>NGO administrator</td><td>More, then Administration</td><td>People, roles, connectors, API keys, jobs, the audit log, and settings. Builder, if their role includes setup.</td></tr>
+            <tr><td>Operator</td><td>The separate console, One NGO Console</td><td>Find an organisation, onboard one, retry a failed opening, and change its lifecycle.</td></tr>
+          </tbody>
+        </table>
+        <div class="note"><strong>One organisation at a time</strong>Sign in with the organisation code from your invitation or administrator. OneNGO does not publish a list of organisations.</div>
+      </section>
+
+      <section id="sign-in" data-for="users admins">
+        <h2>Sign in</h2>
+        <p>Open the link your administrator sent. It looks like the organisation’s own page, with the organisation’s name and logo when those have been set. You can also start from the general sign-in page and type the organisation code yourself.</p>
+        <h3>With a password</h3>
+        <ol class="steps">
+          <li>Stay on the Password tab.</li>
+          <li>Enter the email address on your invitation and your password.</li>
+          <li>Choose Sign in.</li>
+        </ol>
+        <h3>With an email code</h3>
+        <ol class="steps">
+          <li>Open the Email code tab.</li>
+          <li>Enter your email and choose Email me a code.</li>
+          <li>Enter the code from the message. It expires in 10 minutes.</li>
+          <li>Choose Sign in.</li>
+        </ol>
+        <p>The page always says a code is on its way if the address might belong to a member. That wording does not confirm whether the address is registered.</p>
+        <h3>With your organisation’s identity provider</h3>
+        <p>If the organisation has connected a provider, the sign-in page shows Sign in with that provider. You still need to be an existing member. A role that requires two-step sign-in still asks for the authenticator code afterwards. That extra step stays available for 5 minutes.</p>
+        <h3>Forgot your password</h3>
+        <ol class="steps">
+          <li>On the Password tab, choose Forgot password?</li>
+          <li>Enter your email and choose Email me a reset link.</li>
+          <li>Open the link. It works once and expires in 30 minutes.</li>
+          <li>Choose a new password of at least 10 characters, type it again, and save it.</li>
+          <li>Sign in with the new password. Saving it signs you out of every device.</li>
+        </ol>
+        <p>A short sentence you can remember is easier to keep and harder to guess than a short jumble. The organisation rejects passwords that are too short, too common, too predictable, or built from your name or the organisation’s name.</p>
+        <h3>First visit from an invitation</h3>
+        <ol class="steps">
+          <li>Open the invitation link. It is valid for 7 days and works once.</li>
+          <li>Set a password, using the same rules as a reset.</li>
+          <li>Go to sign in and use that password.</li>
+        </ol>
+        <div class="warn"><strong>Two-step sign-in</strong>If your role requires an authenticator and it is not set up, sign-in stops and tells you to ask an administrator. The app shows whether two-step is On or Off under More. It does not include a screen for scanning a setup code. When two-step is already on, sign-in asks for the 6-digit code from your authenticator app.</div>
+        <p>Choose Use another organisation when you need a different organisation code. The general sign-in page remembers the last organisation unless you do that.</p>
+      </section>
+
+      <section id="move" data-for="users admins">
+        <h2>Move around</h2>
+        <p>After sign-in, the bar along the bottom of a phone, or the side on a larger screen, has the places your role allows.</p>
+        <table>
+          <thead><tr><th>Place</th><th>Use it to</th></tr></thead>
+          <tbody>
+            <tr><td>Home</td><td>See the organisation’s home page and the lists you have pinned.</td></tr>
+            <tr><td>Records</td><td>Open a record type, search, and create or update records.</td></tr>
+            <tr><td>Inbox</td><td>Decide approvals and read notifications. A number appears when approvals are waiting.</td></tr>
+            <tr><td>More</td><td>Open your profile, language, extra pages, and, when allowed, Administration and Builder.</td></tr>
+          </tbody>
+        </table>
+        <p>A back arrow returns you from a list or a settings page to the place you came from. The breadcrumb shows the trail on a larger screen.</p>
+        <p>The app can be installed on a phone. If you are offline, what is already on screen stays there. Changes cannot be saved until the connection returns. When a new version is ready, the app asks you to reload.</p>
+      </section>
+
+      <section id="home" data-for="users admins">
+        <h2>Home</h2>
+        <p>Home greets you by name and shows the pages and figures your role is allowed to see. If you have no access to records yet, Home says so and asks you to get a role from an administrator.</p>
+        <h3>Pin a list</h3>
+        <ol class="steps">
+          <li>Open the record list you use often.</li>
+          <li>Choose Pin to my Home.</li>
+          <li>Return to Home. Rename the pin, move it up or down, or unpin it from there.</li>
+        </ol>
+        <p>Pin to everyone’s Home adds the list to a draft of the shared home page. It appears for other people only after someone publishes that page in the Builder.</p>
+      </section>
+
+      <section id="records" data-for="users admins">
+        <h2>Records</h2>
+        <p>Records groups the types you can read. Types that are not in a group appear under Other. Search the type names if the list is long.</p>
+        <h3>Find a record</h3>
+        <ol class="steps">
+          <li>Choose the record type.</li>
+          <li>Search the list, or open Filters and set status, dates, amounts, or other fields the list offers.</li>
+          <li>On a larger screen, switch between Cards and Table. Phones use cards.</li>
+          <li>Open a row to see the record.</li>
+        </ol>
+        <p>Assigned to me and Shared with me narrow the list to work that involves you. Active filters stay visible so you can remove one without clearing the rest.</p>
+        <h3>Create or edit</h3>
+        <ol class="steps">
+          <li>Choose New, and complete the required fields. The form names any field you still need.</li>
+          <li>Save. The record is created, or your changes are saved.</li>
+          <li>To change an existing record, choose Edit, then Save changes. Cancel edit leaves it as it was.</li>
+        </ol>
+        <p>Some fields are calculated, copied, or read-only. A link field lets you pick another record or start a related one. File fields accept a drag, a chosen file, or a photo, and reject a type or size the field does not allow. Location fields can use your device’s location or coordinates you type. Signature fields take a signature on the line. Rich text fields offer bold, lists, headings, quotes, and web or email links.</p>
+        <h3>Move a record through its workflow</h3>
+        <ol class="steps">
+          <li>Open the record.</li>
+          <li>Fill in what the step asks for.</li>
+          <li>Choose the step name.</li>
+        </ol>
+        <p>If the step needs approval, it is sent to Inbox and waits until enough different people approve it. You cannot approve your own request. If the record changes while the request is open, refresh and try again. A step that issues a receipt tells you the receipt number. Open Receipts on the record, then Print. A voided receipt shows the reason. Anyone who can print can copy a public link. The donor opens that address without an account and sees the same receipt as Print, including the donor name and the signatory kept with that receipt. Revoke public link stops that address. A new link uses a different address.</p>
+        <p>Other actions on the record, such as sending a reminder, appear when your role allows them and the record is in a state that offers them. The row menu on a list can run the same actions.</p>
+        <h3>Share a record</h3>
+        <ol class="steps">
+          <li>Open the record and choose Share.</li>
+          <li>Type a person’s name, email, or a role.</li>
+          <li>Choose Can view or Can edit.</li>
+          <li>Leave Ends on empty, or pick today or a later day. The share ends after that day.</li>
+          <li>Choose Share. Remove a person or role from the same panel when the share should stop.</li>
+        </ol>
+        <h3>Import and export</h3>
+        <ol class="steps">
+          <li>On the list, choose Import.</li>
+          <li>Upload a CSV file of at most 10 MB and 20,000 rows, or download the sample file for this list’s columns.</li>
+          <li>Match each column to a field, or leave it as Not imported. Match at least one column.</li>
+          <li>Choose whether a matching field updates an existing record, or whether every row creates a new one.</li>
+          <li>Check the counts for create, update, and problems. Rows with problems are skipped.</li>
+          <li>Decide whether automations should run, then start the import.</li>
+        </ol>
+        <p>You can close the panel and keep working. A notification opens the result. Cancel stops the import before the end. Download the failed rows, fix them, and import that file again. Export downloads the current list, or runs in the background and brings the file in a notification when the list is large.</p>
+        <h3>Change many records</h3>
+        <ol class="steps">
+          <li>Select the rows, or select every record that matches the current filters.</li>
+          <li>Choose Edit fields or Share.</li>
+          <li>Fill in only the fields that should change, or name who to share with.</li>
+          <li>Apply. Each record goes through the same checks as a single edit.</li>
+        </ol>
+        <p>You can close the panel. A notification arrives when the job finishes. Some rows may be done, waiting for approval, or failed. Stop ends the job before the last row.</p>
+      </section>
+
+      <section id="inbox" data-for="users admins">
+        <h2>Inbox</h2>
+        <p>Inbox has two lists: Approvals and Notifications. The number on Inbox is the approvals waiting for you. It refreshes when you move around the app and about once a minute while the app is open.</p>
+        <h3>Decide an approval</h3>
+        <ol class="steps">
+          <li>Open Approvals. Search or filter if the list is long.</li>
+          <li>Read who requested the step, how long it has waited, and how many approvals are still needed.</li>
+          <li>Open the record if you need the detail.</li>
+          <li>Choose Approve, or Reject and add a reason if you want one.</li>
+        </ol>
+        <p>Your approval is recorded immediately. The step is applied when the request has enough distinct approvals. If someone else has already changed the request, refresh and decide again.</p>
+        <p>Notifications can be marked read one by one or all at once. A finished import, export, or bulk change can open from its notification.</p>
+      </section>
+
+      <section id="account" data-for="users admins">
+        <h2>Your account</h2>
+        <p>More shows your name, email, and organisation. Choose your card to open My profile. Your name and email are changed by an administrator. Other profile fields appear when the organisation has set them, and you can save the ones you are allowed to edit. If none are editable, the profile says there is nothing there you can change.</p>
+        <h3>Language</h3>
+        <p>Under Settings, open Language and choose English, Hindi, Tamil, Telugu, Bengali, or Marathi. The choice is yours. The organisation’s default language applies to new people and to messages until someone chooses their own. Screen text falls back to English where a translation is not published yet.</p>
+        <p>Two-step sign-in on the same list shows On or Off. About this app shows the version you are using. Sign out ends the session on this device. You will need to sign in again here. It does not sign out your other devices.</p>
+        <h3>If something will not open</h3>
+        <ul>
+          <li>This could not be loaded, or you are offline: check the connection and try again. Unsaved edits wait until you are back online.</li>
+          <li>You do not have access: your role does not include that record, page, or area. Ask an administrator.</li>
+          <li>A link says it is incomplete, expired, or already used: ask for a new invitation or reset link.</li>
+          <li>The organisation is not available for sign-in: the code is wrong, or an operator has suspended or closed the organisation.</li>
+          <li>Your role requires two-step sign-in: ask an administrator. There is no setup screen in the app.</li>
+        </ul>
+      </section>
+
+      <section id="admin-home" data-for="admins">
+        <h2>Administration</h2>
+        <p>Open More, then Administration. You only see the areas your role allows. A person who can manage people or roles can open Roles. The other areas each need their own permission.</p>
+        <table>
+          <thead><tr><th>Area</th><th>Use it for</th></tr></thead>
+          <tbody>
+            <tr><td>People</td><td>Add someone, send an invitation, change roles, suspend, or reactivate.</td></tr>
+            <tr><td>Roles</td><td>See who holds each role, and add or remove people. Permissions themselves are set in the Builder.</td></tr>
+            <tr><td>Connectors</td><td>SMS, WhatsApp, and webhooks.</td></tr>
+            <tr><td>API keys</td><td>Let another system act as one role.</td></tr>
+            <tr><td>Background jobs</td><td>Everyone’s imports, bulk changes, and rebuilds.</td></tr>
+            <tr><td>Audit log</td><td>Who changed what, and when.</td></tr>
+            <tr><td>Organisation settings</td><td>Identity, registrations, logo, authorised signatory, language, storage, the API limit, and the financial year.</td></tr>
+          </tbody>
+        </table>
+        <p>If your role can change how the organisation works, Administration also links to roles in the Builder, and More includes Builder. The Builder list is usable on a phone. Editing a definition needs a larger screen.</p>
+      </section>
+
+      <section id="setup" data-for="admins">
+        <h2>Finish setup</h2>
+        <p>Administration home shows setup as a progress strip. View checklist opens each row. Choosing a row opens the screen for that step. When every required row is done, the strip says setup is complete.</p>
+        <ol class="steps">
+          <li>Fill in the legal name, contact email, and registered address, then choose Confirm the identity. The legal name is printed on receipts.</li>
+          <li>Add at least one registration, such as 12A, 80G, or FCRA. Use a short lowercase type such as <code>80g</code>, <code>12a</code>, or <code>fcra</code>.</li>
+          <li>Confirm the current financial year is open. The month it starts is chosen when the organisation is opened, and it is fixed once a year is open or a receipt has been issued.</li>
+          <li>Review the receipt numbering and choose I have reviewed the receipt series.</li>
+          <li>Give someone besides the administrator a working role, such as Finance, so daily work does not all sit with one account.</li>
+        </ol>
+        <p>Outgoing email and online payments are optional. Email is sent through the organisation’s connector, through OneNGO’s email service, or not at all until a connector exists. The checklist says which of those is true.</p>
+      </section>
+
+      <section id="people" data-for="admins">
+        <h2>People and invitations</h2>
+        <p>Administration, then People, is the only people list. It shows names, roles, contact details, status, two-step, and dates.</p>
+        <h3>Add a person</h3>
+        <ol class="steps">
+          <li>Choose Add a person.</li>
+          <li>Enter their name and email, and choose at least one role.</li>
+          <li>Leave Send the invitation email now selected when they should set a password immediately.</li>
+          <li>Choose Add and invite.</li>
+        </ol>
+        <p>The invitation link is valid for 7 days. Resend invitation replaces an unused link. A suspended person must be reactivated before a new invitation can be sent.</p>
+        <h3>Change access</h3>
+        <ul>
+          <li>Change roles on one person, or select several and add or remove a role for all of them.</li>
+          <li>Suspend signs that person out on every device. They cannot sign in until you reactivate them. Their profile stays, read-only, and their name stays on records, approvals, and the audit log.</li>
+          <li>Reactivate lets them sign in again. It does not restore a session that suspension ended.</li>
+        </ul>
+        <p>The Two-step column shows Required · not set when a role demands an authenticator and the person has not got one. They cannot finish sign-in until that is resolved. The app does not provide an enrolment screen for them or for you.</p>
+      </section>
+
+      <section id="roles" data-for="admins">
+        <h2>Roles</h2>
+        <p>Open a role to see what it allows and who has it. Add active or invited people from that page. Removing someone takes that role away at once. A role marked Requires two-step sign-in tells you that people without an authenticator will be asked about it the next time they sign in. In practice, sign-in stops and tells them to ask an administrator, because there is no setup screen.</p>
+        <div class="note"><strong>Where permissions are edited</strong>This page shows the result. To change what a role may do, open Builder, then Roles, or follow What each role allows from Administration. Publish the change before it takes effect.</div>
+      </section>
+
+      <section id="connectors" data-for="admins">
+        <h2>Connectors</h2>
+        <p>Nothing is sent until a connector is set up and switched on. The list shows the kind, what uses it, and the last delivery.</p>
+        <ol class="steps">
+          <li>Choose New connector, or open an existing one.</li>
+          <li>Pick SMS, WhatsApp, or Webhook.</li>
+          <li>Enter the address and identifiers the kind asks for. Put secrets in the secret fields. A saved secret is shown as Set, and you replace it rather than read it back.</li>
+          <li>Switch it on, save, and send a test where the form offers one.</li>
+        </ol>
+        <p>Deliveries are listed as retrying, delivered, or failed. Retry now sends a failed delivery again.</p>
+      </section>
+
+      <section id="api-keys" data-for="admins">
+        <h2>API keys</h2>
+        <ol class="steps">
+          <li>Choose New API key.</li>
+          <li>Name it. Changes made with the key are recorded under <code>api:</code> followed by that name.</li>
+          <li>Choose the role it acts as. The key can do only what that role allows.</li>
+          <li>Create the key and copy the secret immediately. It is shown once.</li>
+          <li>Send it as <code>Authorization: ApiKey &lt;id&gt;.&lt;secret&gt;</code>. The page shows this header when the key is created.</li>
+        </ol>
+        <div class="stop"><strong>Revoking a key</strong>Revoke stops every system using that key at once. It cannot be undone. Create a new key if the system should keep working.</div>
+        <p>The API requests per minute limit, per key, is set under Organisation settings.</p>
+      </section>
+
+      <section id="jobs" data-for="admins">
+        <h2>Jobs and the audit log</h2>
+        <p>Background jobs lists imports, bulk changes, and rebuilds for the whole organisation. A job is Waiting, Running, Done, Failed, or Cancelled. Open a failed job to see the failed rows. Cancel job stops one that is still going.</p>
+        <p>The audit log answers who did what, in which area, and when. Filter by person, record type, date, or area. Areas include records, people, roles, setup, connectors, API keys, money, files, and the organisation. Use it when a receipt, a role change, or a setting needs to be traced. It is a record of what happened, not a place to undo it.</p>
+      </section>
+
+      <section id="settings" data-for="admins">
+        <h2>Organisation settings</h2>
+        <h3>Identity, registrations, and logo</h3>
+        <ul>
+          <li>The organisation code and the sign-in link are shown so you can send people to the right page. The code itself is not edited here.</li>
+          <li>Legal name, contact email, phone, website, address, and time zone are the details printed and used for the organisation. Save identity after a change, then confirm it on the checklist when you are ready.</li>
+          <li>The country is the two-letter code, such as <code>IN</code>. A website starts with <code>https://</code>.</li>
+          <li>A registration needs a type and a number. Issue and expiry dates are optional, and the expiry cannot be earlier than the issue date. The same type and number cannot be entered twice.</li>
+          <li>The logo is a PNG, JPEG, or WebP image of at most 1 MB. It appears in the app, on the sign-in page, and on new receipts.</li>
+          <li>The authorised signatory is a name, a designation, and a PNG signature of at most 200 kB. An administrator uploads it under Organisation settings. A receipt keeps the signatory it was issued with. Receipts issued before a signatory was saved keep a blank line.</li>
+        </ul>
+        <h3>Language, storage, API, and the financial year</h3>
+        <ul>
+          <li>Display name is the name people see in the app.</li>
+          <li>Default language applies to new people and to messages. Each person can still choose their own under More.</li>
+          <li>Storage shows how much of the quota is used. The quota is a whole number of gigabytes.</li>
+          <li>API requests per minute is the limit for each API key.</li>
+          <li>Financial year starts in sets when books, receipt numbers, and record numbers begin a new year. After a year is opened or a receipt is issued, that month stays fixed so closed years and receipt numbers do not move.</li>
+        </ul>
+      </section>
+
+      <section id="builder" data-for="admins">
+        <h2>Builder</h2>
+        <p>Builder is where the organisation’s record types, workflows, pages, and roles are defined. Open it from More. You need the setup permission. The home is a directory of groups. Choosing a kind lists those definitions, and choosing one opens it. Theme, layout, translations, access, and modules open their own screens. On a phone you can browse. Edit on a larger screen.</p>
+        <p>Changes are drafts until you publish them. A published change is live. You can check a draft, discard it, look at history, and restore an older published version so that it becomes the newest one.</p>
+        <p>The <a href="builder-guide.html">Builder guide</a> explains every Builder screen, button, and field in plain words.</p>
+        <table>
+          <thead><tr><th>Kind</th><th>What it controls</th></tr></thead>
+          <tbody>
+            <tr><td>Record types</td><td>Fields, numbers, and rules for a kind of record.</td></tr>
+            <tr><td>Workflows</td><td>The steps a record moves through, including approvals.</td></tr>
+            <tr><td>List views</td><td>Columns, filters, and the layout of a record list.</td></tr>
+            <tr><td>Record groups</td><td>How record types are grouped under Records.</td></tr>
+            <tr><td>Pages</td><td>Home and the extra pages under More.</td></tr>
+            <tr><td>Actions</td><td>Buttons on a record, such as a reminder or a receipt.</td></tr>
+            <tr><td>Automations</td><td>Work the system starts when a record changes.</td></tr>
+            <tr><td>Message templates</td><td>The text of those messages.</td></tr>
+            <tr><td>Posting rules and receipt rules</td><td>How money is recorded and how receipt numbers are issued.</td></tr>
+            <tr><td>Scripts and themes</td><td>Extra behaviour, and the organisation’s colours.</td></tr>
+            <tr><td>Translations</td><td>The words people see, beyond the shipped languages.</td></tr>
+            <tr><td>Roles and the access map</td><td>What each role may do, and a picture of who can reach what.</td></tr>
+            <tr><td>Modules</td><td>Shipped packages, such as Donations, that add record types, roles, and rules together.</td></tr>
+          </tbody>
+        </table>
+        <div class="note"><strong>Shipped definitions</strong>A definition that came with a module stays attached to that module. Your edits are kept as a patch, so a later product update can still arrive. Its row names the module.</div>
+        <h3>Change a role’s permissions</h3>
+        <ol class="steps">
+          <li>Open Administration, then Roles, and open the role.</li>
+          <li>Change the name, whether two-step sign-in is required, and the permissions.</li>
+          <li>Save the draft and publish it.</li>
+          <li>Use the access map to check the result against record types and actions.</li>
+        </ol>
+        <p>Publishing a role does not by itself put people in it. Add people from Administration, then Roles, or from the person’s page.</p>
+        <h3>Donations, as an example</h3>
+        <p>An installation can ship the Donations module. When it is enabled, people with the right role see donors and donations under a Fundraising group, can move a donation through its workflow, post it, and issue a numbered receipt. Finance can do that work. Viewer can read donors and donations. Those names appear only when that module is on. Another organisation may publish different record types instead.</p>
+      </section>
+
+      <section id="operator-sign-in" data-for="operators">
+        <h2>Console sign-in</h2>
+        <p>Operators use a separate console, One NGO Console. It is not the organisation app, and it does not share a sign-in with members. Two-factor authentication is required on every sign-in.</p>
+        <ol class="steps">
+          <li>Open the console address your installation gave you.</li>
+          <li>Choose Continue to identity provider.</li>
+          <li>Complete that provider’s sign-in, including a fresh two-factor check.</li>
+        </ol>
+        <div class="note"><strong>What you are allowed to do</strong>The console shows an action only when your operator account includes it. You may be able to look up an organisation without being able to suspend or close it. Sign out ends the operator session.</div>
+      </section>
+
+      <section id="find" data-for="operators">
+        <h2>Find an organisation</h2>
+        <ol class="steps">
+          <li>Open Find.</li>
+          <li>Enter the organisation code, or switch the list to Request ID and enter the onboarding request id.</li>
+          <li>Choose Find.</li>
+        </ol>
+        <p>Organisation status shows the organisation, the onboarding request, and recent history. There is no such organisation or onboarding request when neither matches. A request that has not created an organisation yet can still be opened by its request id.</p>
+      </section>
+
+      <section id="onboard" data-for="operators">
+        <h2>Onboard an organisation</h2>
+        <p>Onboarding creates one organisation from one approved request: its profile, the administrator role, the modules you name, the financial year, and the first administrator. The administrator receives an invitation to set a password. Validate the request before anything is written. Provision stays unavailable until validation succeeds. Editing the text asks you to validate again.</p>
+        <ol class="steps">
+          <li>Open Onboard.</li>
+          <li>Paste the request. Use a new request id for a new organisation.</li>
+          <li>Choose Validate. Fix every field the page reports.</li>
+          <li>Choose Provision.</li>
+          <li>Copy the organisation code and the request id from the result.</li>
+          <li>Open Find with that code and confirm the organisation is active and the invitation is sent.</li>
+        </ol>
+        <p>The same request id with the same contents resumes a request that stopped, or returns the organisation it already made. The same request id with different contents is refused. Do not invent a second id for a retry of the same approved request.</p>
+        <h3>What to put in the request</h3>
+        <ul>
+          <li><code>requestId</code>: 3 to 100 letters, digits, or <code>. _ : -</code>, starting with a letter or digit.</li>
+          <li><code>organisation.code</code>: 3 to 40 characters, lowercase letters, digits, and single dashes, starting with a letter. These codes are reserved: admin, api, app, internal, onengo, operator, sign-in, support, www.</li>
+          <li>Display name, legal name, contact email, and a full address. Country is a two-letter code. Time zone is a name such as <code>Asia/Kolkata</code>.</li>
+          <li><code>defaultLanguage</code>: <code>en</code>, <code>hi</code>, <code>ta</code>, <code>te</code>, <code>bn</code>, or <code>mr</code>.</li>
+          <li><code>region</code>: the hosting region for this installation, such as <code>asia-south1</code>.</li>
+          <li><code>modules</code>: module keys this installation ships and has published. The list may be empty. A module that depends on another must include that dependency. <code>donations</code> is the donations package when this installation publishes it.</li>
+          <li><code>financialYear.startMonth</code>: 1 for January through 12. <code>current</code> is a year such as <code>2026</code> when the year starts in January, or <code>2026-27</code> when it starts in a later month.</li>
+          <li><code>receiptPrefix</code>: optional. Use it only when one of the modules issues receipts. 1 to 12 capital letters, digits, or dashes, starting with a letter or digit.</li>
+          <li>Registrations are optional at this step and limited to 20. The NGO administrator confirms them during setup.</li>
+        </ul>
+        <pre><code>{
+  "requestId": "riverbank-2026-10-31",
+  "organisation": {
+    "code": "riverbank",
+    "displayName": "Riverbank Trust",
+    "legalName": "Riverbank Charitable Trust",
+    "contact": {
+      "email": "office@riverbank.example",
+      "phone": "+91 80 4000 1200"
+    },
+    "address": {
+      "line1": "12 Lake Road",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "postalCode": "560001",
+      "country": "IN"
+    },
+    "timezone": "Asia/Kolkata",
+    "defaultLanguage": "en",
+    "region": "asia-south1"
+  },
+  "administrator": {
+    "name": "Asha Menon",
+    "email": "asha@riverbank.example"
+  },
+  "modules": ["donations"],
+  "financialYear": { "startMonth": 4, "current": "2026-27" },
+  "receiptPrefix": "RCPT"
+}</code></pre>
+        <h3>Retry a request that stopped</h3>
+        <ol class="steps">
+          <li>Find the organisation by request id.</li>
+          <li>If your account may retry, choose Retry failed work.</li>
+          <li>Read the status again. The request continues from the last step it finished. It does not start a second organisation.</li>
+        </ol>
+        <p>The steps, in order, are the request, the organisation, its profile, the administrator role, modules, the receipt prefix, the financial year, the administrator, readiness, and active.</p>
+      </section>
+
+      <section id="lifecycle" data-for="operators">
+        <h2>Suspend, reactivate, or close</h2>
+        <p>Open the organisation by its code. Lifecycle actions appear only when your account includes them. None of these actions deletes the organisation’s records.</p>
+        <div class="warn"><strong>Enter the reason after the extra sign-in</strong>The first click sends you to the identity provider for a fresh check. When you return, type the reason and click the same action again. The reason is not kept across that check. Suspend and close require a reason of at most 500 characters. The reason is stored in the audit.</div>
+        <h3>Suspend</h3>
+        <p>Only an active organisation can be suspended. Suspension signs every member out, stops the organisation’s API keys, and blocks sign-in. Tell the NGO administrator before you do it, unless the reason is an incident that cannot wait.</p>
+        <h3>Reactivate</h3>
+        <p>Only a suspended organisation can be reactivated. Members can sign in again. Sessions that ended, and API keys that were stopped, are not restored. The administrator creates new keys if a system should connect again.</p>
+        <h3>Close</h3>
+        <p>Close is permanent. A closed organisation does not open again. Suspend it first. An organisation whose provisioning failed can also be closed. Closing keeps every row for export and retention. It removes the organisation from sign-in.</p>
+        <table>
+          <thead><tr><th>From</th><th>Action</th><th>Result</th></tr></thead>
+          <tbody>
+            <tr><td>Active</td><td>Suspend, with a reason</td><td>Suspended. Sessions ended. API keys stopped.</td></tr>
+            <tr><td>Suspended</td><td>Reactivate</td><td>Active. Old sessions and stopped keys stay stopped.</td></tr>
+            <tr><td>Suspended, or provisioning failed</td><td>Close, with a reason</td><td>Closed. Data kept. Sign-in ends for good.</td></tr>
+          </tbody>
+        </table>
+        <p>If the page says a fresh multi-factor step-up is required, return to the status page and start the action again. Each check can be used once, and only for the action and organisation it was requested for.</p>
+      </section>
+    </main>
+  </div>
+  <footer class="wrap">
+    <p>Written for the OneNGO application in this repository: the organisation app, Administration, Builder, and the operator console. Record types and pages follow whatever that organisation has published.</p>
+  </footer>
+  <script>
+    const buttons = document.querySelectorAll(".switcher button");
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const audience = button.getAttribute("data-audience");
+        document.body.dataset.audience = audience === "all" ? "" : audience;
+        buttons.forEach((item) => item.setAttribute("aria-pressed", item === button ? "true" : "false"));
+      });
+    });
+  </script>
+</body>
+</html>

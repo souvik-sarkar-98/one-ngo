@@ -1,0 +1,26 @@
+# What gcloud app deploy does not upload.
+# App Engine installs "dependencies" from package.json itself, so neither
+# node_modules/ is needed in the upload.
+
+.git/
+.gitignore
+.vscode/
+
+node_modules/
+apps/*/web/node_modules/
+
+.data/
+.env
+.env.example
+
+test/
+coverage/
+
+# Angular build input is not needed; server artifacts contain the compiled web
+# output produced before deployment.
+apps/*/web/src/
+apps/*/web/e2e/
+
+*.log
+test-output.txt
+typecheck-output.txt

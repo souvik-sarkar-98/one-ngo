@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>One NGO — connector runtime (low-level design)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --ink:#1b2430; --mute:#5c6b7a; --line:#d5dee8; --bg:#f4f7fb; --paper:#fff;
+    --navy:#10243e; --navy-2:#1c3a5f;
+    --send:#0f6e56; --send-bg:#e7f6f1;
+    --look:#9a3412; --look-bg:#fff4ed;
+    --auth:#1d4e89; --auth-bg:#e8f1fb;
+    --hold:#5b6570; --hold-bg:#f3f5f7;
+    --warn:#9a3412;
+    --shadow: 0 1px 2px rgba(16,36,62,.06);
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; color:var(--ink); background:#fff; font:15px/1.55 "Segoe UI", system-ui, sans-serif; }
+  header { background:var(--navy); color:#fff; padding:28px 40px 24px; }
+  header h1 { margin:0 0 8px; font-size:26px; font-weight:650; letter-spacing:-.02em; }
+  header p { margin:0; max-width:760px; color:#c9d6e8; }
+  header .kicker { font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#8fb0d4; margin-bottom:8px; }
+  nav { position:sticky; top:0; z-index:5; background:var(--bg); border-bottom:1px solid var(--line); padding:8px 40px; display:flex; flex-wrap:wrap; gap:8px 16px; font-size:13px; }
+  nav a { color:#1d4e89; text-decoration:none; }
+  main { max-width:1120px; margin:0 auto; padding:8px 40px 72px; }
+  h2 { margin:40px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--line); font-size:20px; }
+  h3 { margin:26px 0 8px; font-size:16px; }
+  p { margin:8px 0 12px; }
+  code, .mono { font-family:ui-monospace, Consolas, monospace; font-size:12.5px; }
+  p code, li code, td code { background:#eef2f6; padding:1px 5px; border-radius:4px; }
+  .lead { font-size:17px; line-height:1.5; }
+  .note, .warn { border-left:4px solid #1d4e89; background:#eef5ff; padding:10px 14px; margin:14px 0; border-radius:0 6px 6px 0; }
+  .warn { border-color:var(--warn); background:#fff6ed; }
+  table { border-collapse:collapse; width:100%; margin:12px 0 20px; font-size:13.5px; }
+  th, td { border:1px solid var(--line); padding:8px 10px; vertical-align:top; text-align:left; }
+  th { background:var(--bg); }
+  .tag { display:inline-block; font-size:11px; font-weight:650; letter-spacing:.04em; text-transform:uppercase; padding:2px 7px; border-radius:99px; }
+  .tag.send { background:var(--send-bg); color:var(--send); }
+  .tag.look { background:var(--look-bg); color:var(--look); }
+  .tag.auth { background:var(--auth-bg); color:var(--auth); }
+  .tag.hold { background:var(--hold-bg); color:var(--hold); }
+
+  .map { display:grid; grid-template-columns: 200px 1fr 220px; gap:14px; align-items:stretch; margin:16px 0 8px; }
+  .col { display:flex; flex-direction:column; gap:8px; }
+  .box { background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:10px 12px; box-shadow:var(--shadow); }
+  .box b { display:block; font-size:13px; }
+  .box span { display:block; color:var(--mute); font-size:12px; margin-top:2px; }
+  .box.engine { border-top:3px solid var(--navy); }
+  .box.new { border-top:3px solid #c2410c; background:#fffaf7; }
+  .box.ext { border-style:dashed; background:var(--bg); }
+  .col h4 { margin:0 0 4px; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--mute); }
+  .arrow { align-self:center; color:var(--mute); font-size:18px; padding-top:22px; }
+
+  .lanes { display:grid; grid-template-columns: 150px 1fr; gap:0 12px; margin:8px 0 18px; }
+  .lane-name { font-size:12px; font-weight:650; color:var(--navy); padding-top:8px; }
+  .steps { border-left:2px solid var(--line); padding-left:14px; }
+  .step { position:relative; margin:0 0 8px; background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:8px 12px; }
+  .step::before { content:""; position:absolute; left:-19px; top:14px; width:8px; height:8px; border-radius:50%; background:var(--navy); }
+  .step.send::before { background:var(--send); }
+  .step.look::before { background:var(--look); }
+  .step.auth::before { background:var(--auth); }
+  .step b { font-size:13.5px; }
+  .step span { display:block; color:var(--mute); font-size:12.5px; }
+
+  pre { background:#0f1b2b; color:#e6edf7; padding:14px 16px; border-radius:8px; overflow:auto; font-size:12.5px; line-height:1.45; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:860px) {
+    header, nav, main { padding-left:18px; padding-right:18px; }
+    .map, .grid2, .lanes { grid-template-columns:1fr; }
+    .arrow { display:none; }
+  }
+  .small { color:var(--mute); font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="kicker">Low-level design · no vendor modules</div>
+  <h1>Connector runtime</h1>
+  <p>One HTTPS caller and one OAuth credential store. Slack, OneSignal, an IFSC lookup, Gmail, Calendar and Drive are saved configuration. Money, sign-in and files stay in the engines that already own them.</p>
+</header>
+<nav>
+  <a href="#shape">Shape</a>
+  <a href="#modes">Two modes</a>
+  <a href="#send">Send path</a>
+  <a href="#lookup">Lookup path</a>
+  <a href="#oauth">OAuth</a>
+  <a href="#model">Data</a>
+  <a href="#bind">Binding</a>
+  <a href="#hooks">Hooks</a>
+  <a href="#templates">Templates</a>
+  <a href="#kept">Stays an engine</a>
+  <a href="#rules">Rules</a>
+</nav>
+<main>
+
+<h2 id="shape">1. Shape</h2>
+<p class="lead">The product gains two connector types, <code>http</code> and <code>oauth</code>, on the table that already exists. Callers never open a socket. They name a connector key and a binding. The runtime renders the request, calls HTTPS, and either queues a delivery or writes mapped fields back onto the record.</p>
+
+<div class="map">
+  <div class="col">
+    <h4>Callers, already in the product</h4>
+    <div class="box engine"><b>Automation action</b><span>webhook step becomes a connector step</span></div>
+    <div class="box engine"><b>Script effect</b><span><code>connector.call</code> stays an outbox event</span></div>
+    <div class="box engine"><b>Notification</b><span>a channel may name an http connector</span></div>
+    <div class="box engine"><b>Record save</b><span>a lookup runs before the write commits</span></div>
+  </div>
+  <div class="col">
+    <h4>New runtime, one process</h4>
+    <div class="box new"><b>Template</b><span>fills <code>{{record.*}}</code>, <code>{{secrets.*}}</code>, <code>{{credential.accessToken}}</code></span></div>
+    <div class="box new"><b>Planner</b><span>method, URL, headers, body. Refuses an unknown placeholder</span></div>
+    <div class="box new"><b>Caller</b><span>today's <code>connectorHttp</code>: HTTPS, no redirect, public addresses only</span></div>
+    <div class="box new"><b>Binder</b><span>lookup mode copies JSON paths onto record fields</span></div>
+    <div class="box new"><b>OAuth store</b><span>code exchange and refresh, tokens encrypted in <code>secret_enc</code></span></div>
+    <div class="box new"><b>Delivery log</b><span><code>connector_delivery</code>, same retry row per outbox event</span></div>
+  </div>
+  <div class="col">
+    <h4>Outside</h4>
+    <div class="box ext"><b>Customer HTTPS API</b><span>Slack, OneSignal, Razorpay IFSC, Google APIs</span></div>
+    <div class="box ext"><b>OAuth provider</b><span>Google accounts, or any authorization-code issuer</span></div>
+  </div>
+</div>
+<p class="small">Existing kinds <code>sms</code>, <code>whatsapp</code> and <code>webhook</code> keep working. New customer integrations use <code>http</code>. SMS and WhatsApp can later be stored as <code>http</code> templates; that move is separate from this design.</p>
+
+<h2 id="modes">2. Two modes</h2>
+<div class="grid2">
+  <div class="box">
+    <span class="tag send">send</span>
+    <p>After the record commits. An outbox event <code>connector.http</code> is delivered by the dispatcher, retried up to five times, and logged. A failed Slack call does not undo the donation.</p>
+    <p class="small">Used by automations, script <code>connector.call</code>, and notifications.</p>
+  </div>
+  <div class="box">
+    <span class="tag look">lookup</span>
+    <p>During the save, before the write. The HTTP call happens <em>outside</em> the database transaction so a slow bank API does not hold a connection. Mapped fields are then written in the save, with the usual version check. A non-success answer refuses the save.</p>
+    <p class="small">Used by the IFSC lookup and any other "fill these fields from this API" step.</p>
+  </div>
+</div>
+<div class="warn">A lookup connector cannot be used as a send, and the reverse. The mode is part of the saved config. An automation that names the wrong mode is a configuration error, not a runtime guess.</div>
+
+<h2 id="send">3. Send path</h2>
+<p>Same outbox the product already uses for <code>connector.webhook</code>. The event name becomes <code>connector.http</code>. The body is a binding, not a finished HTTP request. The dispatcher is the only component that decrypts secrets.</p>
+<div class="lanes">
+  <div class="lane-name">Save transaction</div>
+  <div class="steps">
+    <div class="step send"><b>1. Caller enqueues</b><span>Automation, script effect, or notification writes <code>outbox_event</code> type <code>connector.http</code> in the same transaction as the record. Payload: connector key, event name, record id, binding object. No secret, no rendered URL.</span></div>
+  </div>
+  <div class="lane-name">Dispatcher</div>
+  <div class="steps">
+    <div class="step send"><b>2. Load</b><span>Claim the event. Load <code>connector</code> where <code>type = 'http'</code> and <code>enabled</code>. If the config names a credential, load that <code>oauth</code> row and refresh the access token when it is inside a minute of expiry.</span></div>
+    <div class="step send"><b>3. Render</b><span>Planner fills the URL, headers and body. Unknown placeholder, non-HTTPS URL, or a private address stops the attempt and marks the delivery failed on the last try.</span></div>
+    <div class="step send"><b>4. Call</b><span><code>connectorHttp</code>. Timeout from config, default 8 seconds. Redirects are not followed.</span></div>
+    <div class="step send"><b>5. Log</b><span>Insert or update <code>connector_delivery</code> on <code>outbox_event_id</code>. Status <code>sent</code> on 2xx, else <code>pending</code> until the fifth attempt, then <code>failed</code>. Response body kept to 300 characters, with secret values stripped.</span></div>
+  </div>
+</div>
+
+<h2 id="lookup">4. Lookup path</h2>
+<p>The HTTP call is not inside <code>withTenant</code>. The write that follows uses the record's <code>expectedVersion</code>, so a concurrent edit is rejected instead of being overwritten with a stale lookup.</p>
+<div class="lanes">
+  <div class="lane-name">Before the write</div>
+  <div class="steps">
+    <div class="step look"><b>1. Definition says which connector</b><span>A field group or a before-save hook lists <code>{ connector, inputs }</code>. Inputs are record fields the template may read. Anything else is absent from the binding.</span></div>
+    <div class="step look"><b>2. Call with no row lock</b><span>Render and call. Cap the wait at the config timeout. Parse JSON only when <code>content-type</code> is JSON and the status is in <code>success</code>.</span></div>
+    <div class="step look"><b>3. Map</b><span><code>responseMap</code> is <code>{ recordField: "JSON.path" }</code>. Missing path, non-scalar value, or a value that fails the field's own validation becomes a field error. Nothing is written yet.</span></div>
+  </div>
+  <div class="lane-name">Save transaction</div>
+  <div class="steps">
+    <div class="step look"><b>4. Merge and commit</b><span>Copy mapped values onto <code>record.data</code> and continue the normal save. Version mismatch rolls the save back; the caller may repeat the lookup once.</span></div>
+    <div class="step look"><b>5. Failure log</b><span>A refused lookup is the save error the user sees. A short separate transaction writes <code>connector_delivery</code> status <code>failed</code> so the attempt survives the rollback. <code>outbox_event_id</code> stays null. These rows are not retried; the user saves again.</span></div>
+  </div>
+</div>
+
+<h2 id="oauth">5. OAuth credential</h2>
+<p>An <code>oauth</code> connector does not send a business payload. An <code>http</code> connector names it in <code>config.credential</code>. The product owns the callback URL. The customer supplies client id, client secret, scopes, and the provider's authorize and token addresses.</p>
+<div class="lanes">
+  <div class="lane-name">Connect, once</div>
+  <div class="steps">
+    <div class="step auth"><b>1. Administrator starts</b><span><code>POST /api/admin/connectors/:key/oauth/start</code> with permission <code>admin:connectors</code> returns <code>{ url }</code>. Insert a single-use state row: state hash, tenant, connector key, PKCE code verifier, expiry of 10 minutes.</span></div>
+    <div class="step auth"><b>2. Browser</b><span>Redirect to <code>authorizationUrl</code> with client id, redirect URI <code>{PUBLIC_BASE_URL}/api/connectors/oauth/callback</code>, scopes, the PKCE code challenge, <code>access_type=offline</code>, and the state.</span></div>
+    <div class="step auth"><b>3. Callback</b><span>Public <code>GET /api/connectors/oauth/callback</code> (no session; the state identifies the organisation). Check state, exchange the code at <code>tokenUrl</code>, use the state up, and redirect to <code>/admin/connectors/:key?connected=1</code> or <code>?error=</code>. Encrypt <code>{ clientSecret, refreshToken, accessToken, accessTokenExpiresAt }</code> into <code>connector.secret_enc</code>. Audit <code>connector.saved</code>.</span></div>
+  </div>
+  <div class="lane-name">On each send or lookup</div>
+  <div class="steps">
+    <div class="step auth"><b>4. Refresh under a lock</b><span><code>SELECT … FOR UPDATE</code> on that connector row. If the access token expires within 60 seconds, POST the refresh token, write the new ciphertext, commit, then release the lock before the business HTTP call. Two workers cannot refresh the same token at once.</span></div>
+    <div class="step auth"><b>5. Use</b><span>The planner substitutes <code>{{credential.accessToken}}</code> into the header the template declared, usually <code>Authorization: Bearer …</code>. The token is never written to <code>connector_delivery</code> or the audit <code>after</code> payload.</span></div>
+  </div>
+</div>
+<p class="small">Refresh failure marks the credential <code>enabled = false</code> is the wrong lever: the HTTP connector stays enabled and the delivery fails with "credential needs reconnect". The administrator repeats Connect. Scopes are whatever was granted; a later save cannot silently add scopes without a new consent.</p>
+
+<h2 id="model">6. Data</h2>
+<p>No new database. The check on <code>connector.type</code> grows by two values. Credential link and HTTP shape live in <code>config jsonb</code>, which is already how sms and webhook are stored. Secrets stay in <code>secret_enc</code>.</p>
+<pre>alter table connector drop constraint connector_type_check;
+alter table connector add constraint connector_type_check
+  check (type in (
+    'smtp','razorpay','cashfree','webhook','oidc','sms','whatsapp',
+    'http','oauth'
+  ));
+
+create table connector_oauth_state (
+  state_hash text primary key,
+  tenant_id uuid not null references tenant(id),
+  connector_key text not null,
+  expires_at timestamptz not null,
+  foreign key (tenant_id, connector_key) references connector(tenant_id, key)
+);</pre>
+<p><code>connector_oauth_state</code> is tenant-scoped with the same RLS policy as <code>connector</code>. Rows older than a day are deleted by the existing retention sweep.</p>
+
+<h3>http config</h3>
+<pre>{
+  "mode": "send",
+  "method": "POST",
+  "url": "https://hooks.slack.com/services/{{secrets.path}}",
+  "headers": { "content-type": "application/json" },
+  "contentType": "json",
+  "body": "{ \"text\": \"{{message.text}}\" }",
+  "credential": null,
+  "timeoutMs": 8000,
+  "success": [200]
+}</pre>
+
+<h3>oauth config</h3>
+<pre>{
+  "authorizationUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+  "tokenUrl": "https://oauth2.googleapis.com/token",
+  "scopes": [
+    "https://www.googleapis.com/auth/gmail.send",
+    "https://www.googleapis.com/auth/calendar.events"
+  ],
+  "clientId": "….apps.googleusercontent.com"
+}</pre>
+<p class="small"><code>clientSecret</code>, <code>refreshToken</code> and <code>accessToken</code> are secrets. <code>GET</code> returns secret names only, which the admin API already does.</p>
+
+<h2 id="bind">7. Binding</h2>
+<p>The caller passes a binding. The template may only read names that are in it. An empty substitution is allowed for an optional record field. An unknown name, or a missing secret, refuses the call.</p>
+<table>
+  <tr><th>Placeholder</th><th>Comes from</th><th>Encoding</th></tr>
+  <tr><td><code>{{record.&lt;field&gt;}}</code></td><td>Allow-listed fields on the saved record</td><td>URL-encoded in the URL, JSON-string-escaped in a JSON body, CRLF stripped in a header</td></tr>
+  <tr><td><code>{{message.to}}</code> <code>{{message.title}}</code> <code>{{message.text}}</code></td><td>Notification channel only</td><td>Same rules. Text capped at 1600 characters</td></tr>
+  <tr><td><code>{{secrets.&lt;name&gt;}}</code></td><td><code>secret_enc</code> of this connector</td><td>Placed in the request, then redacted from logs</td></tr>
+  <tr><td><code>{{credential.accessToken}}</code></td><td>Named oauth connector, after refresh</td><td>Header or body. Never logged</td></tr>
+  <tr><td><code>{{organisation.name}}</code></td><td>Tenant row</td><td>Same encoding rules</td></tr>
+</table>
+<p>Definitions name the connector in the same way scripts already declare <code>effects.allow</code>. A published automation or script that calls a connector key the organisation has not saved fails closed at publish time when the connector is missing, and at run time when it is disabled.</p>
+
+<h2 id="hooks">8. Where it attaches</h2>
+<table>
+  <tr><th>Existing piece</th><th>Change</th></tr>
+  <tr><td><code>ConnectorService</code></td><td>Accept kind <code>http</code> and <code>oauth</code> on the admin save already at <code>PUT /api/admin/connectors/:key</code>. <code>oauth</code> has Connect, and its Test renews the access token or reports "Reconnect needed".</td></tr>
+  <tr><td><code>connectorHttp</code></td><td>Unchanged guard: HTTPS, no redirects, public addresses, <code>CONNECTOR_ALLOWED_HOSTS</code> for an exception.</td></tr>
+  <tr><td>Outbox <code>connector.webhook</code></td><td>Keep the handler. Add <code>connector.http</code> beside it. Old webhook rows keep their signed envelope.</td></tr>
+  <tr><td>Automation <code>{ type: 'webhook' }</code></td><td>Keep. New step <code>{ type: 'connector', connector, body }</code> enqueues <code>connector.http</code> with that binding as the body source.</td></tr>
+  <tr><td>Script <code>connector.call</code></td><td>Enqueue <code>connector.http</code> when the named connector is <code>http</code> mode <code>send</code>. Lookup connectors are refused here: a script effect cannot wait on the network.</td></tr>
+  <tr><td>Notification channels</td><td>Add optional <code>connector</code> on a notify action. The channel still renders the template text; the connector receives <code>message.to</code>, <code>message.title</code>, <code>message.text</code> and the person id as <code>record</code> fields the definition listed.</td></tr>
+  <tr><td>Record save</td><td>New pre-write step, only when the published record type lists lookup connectors. It does not run for unrelated types.</td></tr>
+</table>
+
+<h2 id="templates">9. Customer templates</h2>
+<p>These are rows an administrator saves. They are not modules.</p>
+<table>
+  <tr><th>Need</th><th>Type</th><th>Mode</th><th>What the row contains</th></tr>
+  <tr><td>Slack alert</td><td><code>http</code></td><td><span class="tag send">send</span></td><td><code>POST</code> the incoming-webhook URL. Body <code>{"text":"{{message.text}}"}</code>. Secret is the webhook path, not a signing secret the product invents.</td></tr>
+  <tr><td>OneSignal push</td><td><code>http</code></td><td><span class="tag send">send</span></td><td><code>POST https://api.onesignal.com/notifications</code>. Header <code>Authorization: Key {{secrets.apiKey}}</code>. Body uses <code>{{secrets.appId}}</code>, <code>{{message.title}}</code>, <code>{{message.text}}</code>, and the person id the notify binding supplies.</td></tr>
+  <tr><td>Newsletter subscribe</td><td><code>http</code></td><td><span class="tag send">send</span></td><td><code>POST</code> the provider's list endpoint. Binding is the email field the public form saved.</td></tr>
+  <tr><td>IFSC bank and branch</td><td><code>http</code></td><td><span class="tag look">lookup</span></td><td><code>GET https://ifsc.razorpay.com/{{record.ifsc}}</code>. <code>responseMap</code>: <code>bankName ← BANK</code>, <code>branch ← BRANCH</code>. Status 404 is a field error, not a retry.</td></tr>
+  <tr><td>Gmail send</td><td><code>oauth</code> + <code>http</code></td><td><span class="tag send">send</span></td><td>Credential scopes include <code>gmail.send</code>. HTTP <code>POST https://gmail.googleapis.com/gmail/v1/users/me/messages/send</code> with <code>Authorization: Bearer {{credential.accessToken}}</code>. The body is the RFC 822 message the template builds.</td></tr>
+  <tr><td>Calendar and Meet</td><td><code>oauth</code> + <code>http</code></td><td><span class="tag send">send</span></td><td>Same credential, scope <code>calendar.events</code>. <code>POST</code> the events insert URL with <code>conferenceDataVersion=1</code> when the template asks for a Meet link.</td></tr>
+  <tr><td>Drive upload</td><td><code>oauth</code> + <code>http</code></td><td><span class="tag send">send</span></td><td>Scope <code>drive.file</code>. Multipart upload is a later content type on the same caller. Until that content type exists, Drive metadata calls work and raw bytes do not.</td></tr>
+</table>
+<div class="note">Drive file bytes are the one gap inside this design. The caller today sends a string body. A <code>contentType: file</code> that streams a <code>file_object</code> the record already stores is a small extension of the planner, still with no Google-specific code. It is not required for Slack, OneSignal, IFSC, Gmail or Calendar.</div>
+
+<h2 id="kept">10. What stays an engine</h2>
+<table>
+  <tr><th>Concern</th><th>Why it is not a connector template</th><th>What the customer uses</th></tr>
+  <tr><td>Collecting a payment</td><td>A successful charge has to post the ledger, issue a receipt and ignore a replay. A template that only sees HTTP cannot keep those invariants.</td><td>Razorpay and Cashfree gateway rows, already saved on <code>connector</code> with their own service.</td></tr>
+  <tr><td>Member sign-in</td><td>Sessions, assurance and "this email is already a member" are identity rules.</td><td>Built-in sign-in, plus the OpenID Connect provider already implemented. Google is <code>GOOGLE_CLIENT_ID</code>. Auth0, if a customer requires it, is that same provider with Auth0's issuer. It matches an existing member. It does not provision Auth0 users.</td></tr>
+  <tr><td>reCAPTCHA</td><td>Every public form uses one check. The result allows or refuses the request. It is not a per-record delivery.</td><td>One installation setting when public forms need it. Not a connector kind.</td></tr>
+  <tr><td>File storage</td><td>Uploads, signed downloads and retention already go through the file engine.</td><td><code>FILE_STORE_BUCKET</code>. A Firebase Storage bucket is a Cloud Storage bucket the instance identity can write.</td></tr>
+  <tr><td>Auth0 Management API</td><td>Creating and deleting directory users was replaced on purpose.</td><td>People and members in this product.</td></tr>
+</table>
+
+<h2 id="rules">11. Rules the caller must keep</h2>
+<table>
+  <tr><th>Rule</th><th>Where it is enforced</th></tr>
+  <tr><td>HTTPS only. No redirect. No private or link-local address.</td><td>Existing <code>connectorHttp</code>, used by both modes.</td></tr>
+  <tr><td>Secrets encrypted with <code>ENCRYPTION_KEY</code>. API returns names, never values.</td><td>Existing secret box. Audit <code>after</code> lists names only.</td></tr>
+  <tr><td>Placeholder that is not in the binding refuses the call.</td><td>Planner, before any socket.</td></tr>
+  <tr><td>Lookup does not hold a pooled connection during the HTTP wait.</td><td>Record save: call, then open the write.</td></tr>
+  <tr><td>Send never rolls back the business transaction.</td><td>Outbox after commit. Retry updates one <code>connector_delivery</code> row.</td></tr>
+  <tr><td>OAuth refresh is serialized per credential.</td><td><code>FOR UPDATE</code> on the oauth row, released before the business call.</td></tr>
+  <tr><td>A script cannot perform a lookup.</td><td><code>connector.call</code> accepts send mode only. Lookups are declared on the record type.</td></tr>
+  <tr><td>Disabled or unfinished connector sends nothing.</td><td>Same rule as today: delivery row "Not sent: the connector is not enabled."</td></tr>
+</table>
+<p class="small">This design does not add a plugin host, a second sandbox, or a package per vendor. The only code is the runtime in sections 3 to 5. Each customer integration after that is a connector row.</p>
+</main>
+</body>
+</html>

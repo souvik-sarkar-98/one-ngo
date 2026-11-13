@@ -1,0 +1,21 @@
+:host { display: block; min-width: 0; }
+.live-preview__views { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.live-preview__view {
+  border: 1px solid var(--line, #d7dee6); border-radius: 999px; background: var(--card, #fff);
+  padding: 2px 10px; font: inherit; font-size: .8rem; cursor: pointer;
+}
+.live-preview__view--on { background: var(--brand, #1f5f8b); border-color: var(--brand, #1f5f8b); color: var(--brand-fg, #fff); }
+.live-preview__frame {
+  border: 1px solid var(--line, #d7dee6); border-radius: 14px; background: var(--bg, #f6f8fa);
+  overflow: hidden; margin: 0 auto; max-height: 36rem; overflow-y: auto;
+}
+.live-preview__frame--phone { max-width: 340px; }
+.live-preview__frame--tablet { max-width: 560px; }
+.live-preview__frame--panel, .live-preview__frame--create { max-width: 420px; padding: 10px 12px; background: var(--card, #fff); }
+.live-preview__bar { background: var(--brand, #1f5f8b); color: var(--brand-fg, #fff); font-weight: 600; padding: 10px 12px; }
+.live-preview__cards { display: flex; flex-direction: column; }
+.live-preview__card { display: block; width: 100%; padding: 0; border: 0; background: none; text-align: start; font: inherit; color: inherit; cursor: pointer; }
+.live-preview__card:focus-visible { outline: 2px solid var(--brand, #1f5f8b); outline-offset: -2px; }
+.live-preview__record { margin: 0 0 8px; font-size: 1rem; }
+.live-preview__note { color: var(--muted, #64748b); font-size: .85rem; padding: 10px 12px; margin: 0; }
+.live-preview cf-form-stepper { display: block; margin-bottom: 14px; }

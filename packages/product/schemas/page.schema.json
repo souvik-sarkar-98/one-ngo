@@ -1,0 +1,173 @@
+{
+  "$id": "page",
+  "title": "Page",
+  "description": "The Home screen (key home) or another page opened from the navigation: counts, totals, charts, pinned lists, links and the record groups, top to bottom.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["key", "label", "widgets"],
+  "properties": {
+    "key": { "$ref": "#/definitions/key", "description": "Stable name; home is the Home screen", "x-order": 1 },
+    "label": { "type": "string", "minLength": 1, "maxLength": 60, "description": "Page title", "x-order": 2 },
+    "audience": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string" },
+      "description": "Roles that see this page; empty means everyone",
+      "x-ref": "role",
+      "x-order": 4
+    },
+    "widgets": {
+      "type": "array",
+      "maxItems": 24,
+      "description": "Laid out top to bottom; two per row on wide screens",
+      "x-order": 5,
+      "x-preview": "page",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type"],
+            "description": "The record groups",
+            "properties": { "type": { "const": "groups", "description": "Record groups" }, "permission": { "$ref": "#/definitions/permission" } }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "label", "recordType", "measure"],
+            "description": "A single number: how many records, or the total of a field",
+            "properties": {
+              "type": { "const": "stat", "description": "A number" },
+              "label": { "$ref": "#/definitions/label" },
+              "permission": { "$ref": "#/definitions/permission" },
+              "recordType": { "$ref": "#/definitions/recordType" },
+              "view": { "$ref": "#/definitions/view" },
+              "measure": { "$ref": "#/definitions/measure" },
+              "field": { "$ref": "#/definitions/field" }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "label", "recordType", "measure", "groupBy", "chart"],
+            "description": "A bar or line chart of counts or totals by a field or a period",
+            "properties": {
+              "type": { "const": "chart", "description": "A chart" },
+              "label": { "$ref": "#/definitions/label" },
+              "permission": { "$ref": "#/definitions/permission" },
+              "recordType": { "$ref": "#/definitions/recordType" },
+              "view": { "$ref": "#/definitions/view" },
+              "measure": { "$ref": "#/definitions/measure" },
+              "field": { "$ref": "#/definitions/field" },
+              "groupBy": {
+                "description": "Split by a field's values, or by a period of a date field",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["field"],
+                    "properties": { "field": { "type": "string", "description": "A choice, yes/no or reference field", "x-ref": "field" } }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["period", "dateField"],
+                    "properties": {
+                      "period": { "enum": ["day", "week", "month", "financialYear"], "description": "Period of each bar or point" },
+                      "dateField": { "type": "string", "description": "A date field, or createdAt", "x-ref": "field" }
+                    }
+                  }
+                ]
+              },
+              "chart": { "enum": ["bar", "line"], "description": "Chart style" }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "label", "listView", "limit"],
+            "description": "The first rows of a list, with See all",
+            "properties": {
+              "type": { "const": "list", "description": "A pinned list" },
+              "label": { "$ref": "#/definitions/label" },
+              "permission": { "$ref": "#/definitions/permission" },
+              "listView": { "type": "string", "description": "List view to show", "x-ref": "listView" },
+              "view": { "$ref": "#/definitions/view" },
+              "limit": { "type": "integer", "minimum": 1, "maximum": 20, "description": "Rows shown" }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "label", "items"],
+            "description": "Links to screens in the app",
+            "properties": {
+              "type": { "const": "links", "description": "Links" },
+              "label": { "$ref": "#/definitions/label" },
+              "permission": { "$ref": "#/definitions/permission" },
+              "items": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 12,
+                "description": "Links, top to bottom",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["label", "to"],
+                  "properties": {
+                    "label": { "type": "string", "minLength": 1, "description": "Link text" },
+                    "to": { "type": "string", "pattern": "^/(?!/)[^\\s]*$", "maxLength": 500, "description": "An address inside the app, for example /records/donation?chip=outstanding" },
+                    "permission": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "description": "Link shown only to people with this permission",
+                      "x-ref": "permission"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,62}$" },
+    "label": { "type": "string", "minLength": 1, "maxLength": 60, "description": "Heading shown on the widget" },
+    "permission": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Widget shown only to people with this permission, besides the page audience; its counts are refused to others",
+      "x-ref": "permission"
+    },
+    "recordType": { "type": "string", "description": "Record type counted", "x-ref": "recordType" },
+    "measure": { "enum": ["count", "sum"], "description": "How many records, or the total of a field" },
+    "field": { "type": "string", "description": "Number or money field to total", "x-ref": "field" },
+    "view": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Which records: a chip of the record type's list view, filters, or only the person's own",
+      "properties": {
+        "chip": { "type": "string", "description": "A chip of the record type's list view" },
+        "filters": {
+          "type": "object",
+          "description": "Filters by field, the same as the list's",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "in": { "type": "array", "items": { "type": ["string", "number", "boolean"] }, "description": "Any of these values" },
+              "eq": { "type": ["string", "number", "boolean", "null"], "description": "Exactly this value" },
+              "from": { "type": ["string", "number", "null"], "description": "From this value" },
+              "to": { "type": ["string", "number", "null"], "description": "Up to this value" }
+            }
+          }
+        },
+        "owner": { "enum": ["me"], "description": "Only the person's own records" }
+      }
+    }
+  }
+}

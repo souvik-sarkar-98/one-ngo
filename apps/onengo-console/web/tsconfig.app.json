@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/app",
+    "types": ["node"],
+    "paths": {
+      "@onengo/platform/contracts": ["../../../packages/platform/src/api/contracts.ts"],
+      "@onengo/web-kit": ["../../../packages/web-kit/src/public-api.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "../../../packages/web-kit/src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"]
+}

@@ -1,0 +1,35 @@
+{
+  "key": "donationRegister",
+  "label": "Donation register",
+  "parameters": [
+    { "key": "from", "label": "From", "type": "date", "required": true },
+    { "key": "to", "label": "To", "type": "date", "required": true }
+  ],
+  "datasets": [
+    {
+      "key": "donations",
+      "label": "Donations",
+      "source": "query",
+      "recordType": "donation",
+      "statusIn": ["paid"],
+      "filters": { "paidOn": { "from": "params.from", "to": "params.to" } },
+      "sort": { "field": "paidOn", "dir": "asc" },
+      "fields": ["donorName", "amount", "paidOn", "method"]
+    }
+  ],
+  "outputs": {
+    "excel": {
+      "sheets": [
+        {
+          "dataset": "donations",
+          "columns": [
+            { "field": "donorName", "header": "Donor", "format": "text" },
+            { "field": "amount", "header": "Amount", "format": "money", "total": true },
+            { "field": "paidOn", "header": "Paid on", "format": "date" },
+            { "field": "method", "header": "Method", "format": "text" }
+          ]
+        }
+      ]
+    }
+  }
+}

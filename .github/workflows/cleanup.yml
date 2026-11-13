@@ -1,0 +1,115 @@
+name: Cleanup (production)
+
+# Same idea as the deploy repository's ops-gcp-cleanup, for this one project.
+# A release never deletes versions. This workflow does, and only when a person
+# asks it to.
+#
+# Monday, Wednesday and Friday at 17:00 UTC it reports and deletes nothing.
+# Run it by hand and untick dry run to delete. The prod environment's required
+# reviewers approve either kind of run before any Google Cloud call.
+#
+# The schedule runs the workflow on the repository's default branch.
+
+on:
+  schedule:
+    - cron: '0 17 * * 1,3,5'
+  workflow_dispatch:
+    inputs:
+      keep_versions:
+        description: 'Newest App Engine versions to keep per service'
+        required: false
+        type: number
+        default: 5
+      stale_days:
+        description: 'Delete staging-bucket files older than this many days'
+        required: false
+        type: number
+        default: 3
+      dry_run:
+        description: 'Dry run: report, do not delete'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  cleanup:
+    name: Clean production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: prod
+    steps:
+      - uses: actions/checkout@v4
+
+      # A scheduled run is always a dry run. A manual run deletes only when
+      # dry run is unticked. A false input cannot be written as
+      # `inputs.dry_run || 'true'`, because a false input falls through.
+      - name: Decide what this run may delete
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_KEEP: ${{ github.event_name == 'workflow_dispatch' && inputs.keep_versions || '5' }}
+          INPUT_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.stale_days || '3' }}
+          INPUT_DRY: ${{ github.event_name != 'workflow_dispatch' && 'true' || inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          case "$INPUT_KEEP" in ''|*[!0-9]*) echo "::error::keep_versions must be a number"; exit 1 ;; esac
+          case "$INPUT_DAYS" in ''|*[!0-9]*) echo "::error::stale_days must be a number"; exit 1 ;; esac
+          case "$INPUT_DRY" in true|false) ;; *) echo "::error::dry_run must be true or false"; exit 1 ;; esac
+          {
+            echo "keep_versions=$INPUT_KEEP"
+            echo "stale_days=$INPUT_DAYS"
+            echo "dry_run=$INPUT_DRY"
+          } >> "$GITHUB_OUTPUT"
+          echo "keep=$INPUT_KEEP days=$INPUT_DAYS dry_run=$INPUT_DRY"
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Prune old App Engine versions
+        id: gae
+        env:
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          KEEP_VERSIONS: ${{ steps.plan.outputs.keep_versions }}
+          DRY_RUN: ${{ steps.plan.outputs.dry_run }}
+          TARGET_ENV: prod
+        run: bash .github/scripts/gcp-cleanup-gae.sh
+
+      - name: Delete stale staging files
+        id: gcs
+        env:
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          STALE_DAYS: ${{ steps.plan.outputs.stale_days }}
+          DRY_RUN: ${{ steps.plan.outputs.dry_run }}
+        run: bash .github/scripts/gcp-cleanup-gcs.sh
+
+      - name: Delete untagged images
+        id: images
+        env:
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          DRY_RUN: ${{ steps.plan.outputs.dry_run }}
+        run: bash .github/scripts/gcp-cleanup-registry.sh
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cleanup-report-${{ github.run_id }}
+          path: cleanup-summary.md
+          retention-days: 7
+
+      - name: Summary
+        if: always()
+        env:
+          TARGET_ENV: prod
+          DRY_RUN: ${{ steps.plan.outputs.dry_run }}
+          GAE_DELETED: ${{ steps.gae.outputs.gae_deleted }}
+          GCS_DELETED: ${{ steps.gcs.outputs.gcs_deleted }}
+          AR_DELETED: ${{ steps.images.outputs.ar_deleted }}
+        run: bash .github/scripts/gcp-cleanup-summary.sh

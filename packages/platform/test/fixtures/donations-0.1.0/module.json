@@ -1,0 +1,34 @@
+{
+  "key": "donations",
+  "version": "0.1.0",
+  "label": "Donations",
+  "description": "Record donations from raised to paid, post them to the books, and issue numbered receipts.",
+  "engine": "0.1.0",
+  "definitions": [
+    "donation.recordType.json",
+    "donation.workflow.json",
+    "donation-paid.postingRule.json",
+    "donation-paid.receiptRule.json",
+    "donation-thanks.template.json",
+    "donation-thanks.automation.json",
+    "donations.listView.json"
+  ],
+  "setup": {
+    "roles": [
+      {
+        "key": "finance",
+        "label": "Finance",
+        "permissions": ["record:donation:*", "record:donation:transition:*", "payments:create", "payments:confirm", "money:accounts:read"]
+      },
+      { "key": "viewer", "label": "Viewer", "permissions": ["record:donation:read"] }
+    ],
+    "accounts": [
+      { "code": "BANK", "name": "Bank account", "type": "asset" },
+      { "code": "CASH", "name": "Cash in hand", "type": "asset" },
+      { "code": "DONATION_INCOME", "name": "Donations received", "type": "income" }
+    ],
+    "receiptSeries": [
+      { "key": "donation-receipt", "prefix": "RCPT", "label": "Donation acknowledgement", "reset": "fiscal_year" }
+    ]
+  }
+}

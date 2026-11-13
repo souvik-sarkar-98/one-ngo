@@ -1,0 +1,240 @@
+{
+  "$id": "recordType",
+  "title": "Record type",
+  "description": "A kind of record the organisation keeps, such as a donation or a beneficiary: its fields, numbering, rules, and who can see records.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["key", "label", "fields"],
+  "properties": {
+    "key": { "$ref": "#/definitions/key", "description": "Stable name used in addresses and permissions" },
+    "label": { "type": "string", "minLength": 1, "description": "Name of one record, for example Donation" },
+    "pluralLabel": { "type": "string", "description": "Name of several records, for example Donations" },
+    "description": { "type": "string", "description": "Shown under the name on the Records screen" },
+    "numbering": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "format"],
+      "description": "How records are numbered",
+      "properties": {
+        "sequence": { "$ref": "#/definitions/key", "description": "Counter the numbers come from" },
+        "format": { "type": "string", "minLength": 1, "description": "Tokens: {seq}, {seq:5}, {fy}, {period}" },
+        "reset": { "enum": ["fiscal_year", "never"], "description": "Start again from 1 each financial year, or never" }
+      }
+    },
+    "titleField": { "type": "string", "description": "Field used as the record's title", "x-ref": "field" },
+    "visibility": {
+      "enum": ["organisation", "restricted"],
+      "description": "Who can see records: everyone with access, or only their own, those shared with them, and everything for people allowed to see all"
+    },
+    "public": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "What someone who has not signed in may do. Each operation is off unless it is set. View, edit and delete apply only to the visitor's own submission.",
+      "properties": {
+        "create": { "type": "boolean", "description": "Anyone can submit a new record" },
+        "view": { "type": "boolean", "description": "After submitting, the visitor gets a link to their own record. Requires create" },
+        "edit": { "type": "boolean", "description": "That link can change the public fields. Requires view" },
+        "delete": { "type": "boolean", "description": "That link can delete the submission. Requires view" },
+        "fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" },
+          "description": "Fields the public form shows and accepts",
+          "x-ref": "field"
+        },
+        "thanks": { "type": "string", "maxLength": 500, "description": "Shown when a submit does not issue a link" },
+        "catalogue": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fields", "statusIn"],
+          "description": "Search of existing records. Present means search is on",
+          "properties": {
+            "fields": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "string" },
+              "description": "What a search result shows",
+              "x-ref": "field"
+            },
+            "search": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": { "type": "string" },
+              "description": "Fields the search box matches. All of fields when omitted",
+              "x-ref": "field"
+            },
+            "statusIn": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": { "type": "string" },
+              "description": "Only records in these statuses are listed. At least one is required to publish"
+            },
+            "request": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["recordType", "field"],
+              "description": "A result opens this public form with this reference field filled",
+              "properties": {
+                "recordType": { "$ref": "#/definitions/key", "description": "The public form", "x-ref": "recordType" },
+                "field": { "type": "string", "description": "Its public reference field" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "fields": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Fields of the record, in form order",
+      "items": { "$ref": "#/definitions/field" }
+    },
+    "rules": {
+      "type": "array",
+      "description": "Checks a record must pass to be saved",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "expression", "message"],
+        "properties": {
+          "key": { "$ref": "#/definitions/key", "description": "Stable name of the rule" },
+          "when": { "type": "string", "description": "Expression; the rule applies only when this is true", "x-expression": { "recordType": "/key" } },
+          "expression": { "type": "string", "description": "Must be true for the record to save", "x-expression": { "recordType": "/key" } },
+          "message": { "type": "string", "description": "Shown when the rule fails" },
+          "field": { "type": "string", "description": "Field the message belongs to when the rule fails", "x-ref": "field" }
+        }
+      }
+    },
+    "lookups": {
+      "type": "array",
+      "description": "Values filled from an http connector in lookup mode, for example a bank's name from an IFSC code",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "connector", "inputs", "map"],
+        "properties": {
+          "key": { "$ref": "#/definitions/key", "description": "Stable name of the lookup" },
+          "connector": { "type": "string", "description": "Http connector in lookup mode to call", "x-ref": "connector" },
+          "inputs": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string" },
+            "description": "Fields of this record type sent to the connector",
+            "x-ref": "field"
+          },
+          "map": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": { "type": "string" },
+            "description": "Field of this record type to fill, and the connector's response value (a responseMap name, not a JSON path) it is filled from"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,62}$" },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "label", "type"],
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_]{0,62}$", "description": "Stable name of the field" },
+        "label": { "type": "string", "description": "Label shown on forms and lists" },
+        "type": {
+          "enum": ["text", "longText", "number", "money", "date", "boolean", "choice", "email", "phone", "reference", "multiChoice", "file", "location", "signature", "richText", "person"],
+          "description": "Kind of value"
+        },
+        "required": { "type": "boolean", "description": "Must be filled in" },
+        "choices": {
+          "type": "array",
+          "description": "Options for choice and multiple-choice fields",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value", "label"],
+            "properties": {
+              "value": { "type": "string", "description": "Stored value" },
+              "label": { "type": "string", "description": "Shown to people" }
+            }
+          }
+        },
+        "referenceType": { "type": "string", "description": "Record type chosen in a reference field", "x-ref": "recordType" },
+        "min": { "type": "number", "description": "Smallest number allowed" },
+        "max": { "type": "number", "description": "Largest number allowed" },
+        "maxLength": { "type": "integer", "minimum": 1, "description": "Longest text allowed" },
+        "calculated": { "type": "string", "description": "Expression; the field is read-only and computed on save", "x-expression": { "recordType": "/key" } },
+        "sensitive": { "type": "boolean", "description": "Masked unless the viewer has record:<type>:sensitive; the same as readPermission record:<type>:sensitive unless readPermission is set" },
+        "personal": { "type": "boolean", "description": "Whether erasing the person this record is about clears this field. By default text, email, phone, location, signature, file and sensitive fields are cleared; true adds a field of another type, false keeps one" },
+        "readPermission": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Who can see: without this permission the value is masked and the field cannot be filtered, sorted, totalled or grouped by",
+          "x-ref": "permission"
+        },
+        "editPermission": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Who can change: without this permission the field is read-only; not for calculated or rollup fields",
+          "x-ref": "permission"
+        },
+        "searchable": { "type": "boolean", "description": "Matched by the list's search box" },
+        "help": { "type": "string", "description": "Hint under the field" },
+        "placeholder": { "type": "string", "maxLength": 200, "description": "Grey example text shown in an empty field, for example ABCDE1234F. Not for boolean, multiple choice, file, location, signature or rich text fields" },
+        "visibleWhen": { "type": "string", "description": "Expression on the record being saved; when false the field is hidden and submitted values are ignored", "x-expression": { "recordType": "/key" } },
+        "editableWhen": { "type": "string", "description": "Expression on the record as stored; when false the field cannot be changed", "x-expression": { "recordType": "/key" } },
+        "copyFrom": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reference", "field"],
+          "description": "Filled from the record chosen in a reference field of this record type whenever that choice changes",
+          "properties": {
+            "reference": { "type": "string", "description": "A reference field of this record type", "x-ref": "field" },
+            "field": { "type": "string", "description": "The field to copy from the chosen record" }
+          }
+        },
+        "follow": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["via", "field"],
+          "description": "Kept equal to a source field. via is a reference or person field on this record type. When that source changes, this field is updated. It is filled by the sync, not typed, and cannot also be calculated, a rollup, or copyFrom.",
+          "properties": {
+            "via": { "type": "string", "description": "A reference or person field of this record type", "x-ref": "field" },
+            "field": { "type": "string", "description": "A field on the referenced record, or an account field (id, name, email) when via is a person field" }
+          }
+        },
+        "unique": { "type": "boolean", "description": "No two records may share a value; blanks are allowed. Text, email, phone and number fields" },
+        "pattern": { "type": "string", "minLength": 1, "maxLength": 200, "description": "Regular expression the whole value must match, for example [A-Z]{5}[0-9]{4}[A-Z]. Text fields" },
+        "patternMessage": { "type": "string", "maxLength": 200, "description": "Shown under the field when the value does not match the pattern" },
+        "rollup": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["recordType", "reference", "measure"],
+          "description": "Read-only number kept up to date from the records that point at this one, for example a donor's total given",
+          "properties": {
+            "recordType": { "type": "string", "description": "Record type of the records counted", "x-ref": "recordType" },
+            "reference": { "type": "string", "description": "Their reference field that points at this record type" },
+            "measure": { "enum": ["count", "sum"], "description": "How many there are, or the total of a field" },
+            "field": { "type": "string", "description": "Number or money field to add up" },
+            "where": { "type": "string", "description": "Only records for which this expression is true, for example record.status == 'paid'", "x-expression": { "recordType": "0/recordType" } }
+          }
+        },
+        "multiple": { "type": "boolean", "description": "File fields: allow several files" },
+        "accept": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["image", "pdf", "document", "spreadsheet"] },
+          "description": "File fields: kinds of file accepted"
+        },
+        "maxSizeMb": { "type": "number", "exclusiveMinimum": 0, "maximum": 25, "description": "File fields: largest file in megabytes" },
+        "typedCoordinates": { "type": "boolean", "description": "Location fields: people may type coordinates instead of using the device location (default true)" },
+        "typedName": { "type": "boolean", "description": "Signature fields: ask for the signer's typed name, for someone signing on another person's device" }
+      }
+    }
+  }
+}

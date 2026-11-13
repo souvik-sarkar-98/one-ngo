@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>one-ngo · Service sandbox</title>
+  <style>
+    :root {
+      --fg: #1d2733;
+      --muted: #5b6878;
+      --line: #d8dee6;
+      --bg: #f5f7fa;
+      --card: #fff;
+      --brand: #1f5f8b;
+      --brand-fg: #fff;
+      --ok: #1d7a46;
+      --warn: #9a6200;
+      --bad: #b3261e;
+      --font: "Segoe UI", Roboto, "Noto Sans", "Noto Sans Devanagari", Helvetica, Arial, sans-serif;
+      --font-mono: Consolas, "Cascadia Mono", "Courier New", monospace;
+      --body-size: 14px;
+      --title-size: 1.15rem;
+      --card-border: rgba(148, 163, 184, .25);
+      --card-radius: 14px;
+      --card-shadow: 0 1px 2px #0f172a0a;
+      --panel-border: rgba(148, 163, 184, .22);
+      --panel-radius: 16px;
+      --panel-shadow: 0 1px 2px #0f172a0d, 0 4px 14px #0f172a12;
+      --divider: rgba(148, 163, 184, .2);
+      --focus-ring: 2px solid var(--brand);
+      --th-bg: #f8fafc;
+      --th-fg: #64748b;
+      --row-line: rgba(148, 163, 184, .18);
+      --badge-bg: #e8edf3;
+      --notice-info-bg: #eef5fb;
+      --notice-info-border: #c6d9e8;
+      --ok-bg: #e3f4ea;
+      --warn-bg: #fdf1dc;
+      --section-bg: color-mix(in srgb, var(--brand) 12%, #fff);
+      --row-hover: color-mix(in srgb, var(--brand) 8%, #fff);
+      --content-max: 1180px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; color: var(--fg); background: var(--bg); font: var(--body-size)/1.45 var(--font); -webkit-font-smoothing: antialiased; }
+    a { color: var(--brand); }
+    :focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+    .skip { position: absolute; left: 12px; top: -40px; background: var(--brand); color: var(--brand-fg); padding: 8px 12px; z-index: 6; }
+    .skip:focus { top: 12px; }
+
+    .app-bar { position: sticky; top: 0; z-index: 4; height: 56px; display: flex; align-items: center; padding: 0 16px; background: var(--brand); color: var(--brand-fg); }
+    .app-bar__brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .app-bar__product { font-size: 1rem; font-weight: 700; }
+    .app-bar__org { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-inline-start: 10px; border-inline-start: 1px solid rgba(255, 255, 255, .35); font-size: .95rem; font-weight: 600; }
+
+    main { max-width: var(--content-max); margin: 0 auto; padding: 16px 16px 64px; }
+    .page-head { margin-bottom: 14px; }
+    h1 { margin: 0 0 6px; font-size: var(--title-size); font-weight: 700; }
+    h2 { margin: 0 0 8px; font-size: 1rem; font-weight: 700; }
+    .lede, .panel-intro { color: var(--muted); margin: 0; max-width: 46rem; }
+    .stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .stat { background: var(--card); border: 1px solid var(--card-border); border-radius: var(--card-radius); box-shadow: var(--card-shadow); padding: 8px 12px; min-width: 7rem; }
+    .stat b { display: block; color: var(--brand); font-size: var(--title-size); font-weight: 700; }
+    .stat span { color: var(--muted); font-size: .75rem; }
+
+    section.panel, .area { background: var(--card); border: 1px solid var(--panel-border); border-radius: var(--panel-radius); box-shadow: var(--panel-shadow); margin: 0 0 14px; }
+    section.panel { padding: 14px 14px 10px; }
+    .area { padding: 4px 14px 14px; }
+    .area-head { padding-top: 12px; display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+    .panel-intro { margin-bottom: 10px; font-size: .85rem; }
+    p { margin: 8px 0; }
+
+    ul, ol { margin: 0; padding-left: 1.2rem; }
+    li { margin: 4px 0; }
+    code { font-family: var(--font-mono); font-size: .9em; }
+    pre { margin: 10px 0 4px; padding: 12px 14px; background: var(--th-bg); border: 1px solid var(--card-border); border-radius: 12px; overflow: auto; font: .78rem/1.5 var(--font-mono); }
+
+    .table-wrap { overflow-x: auto; border: 1px solid var(--card-border); border-radius: var(--card-radius); margin: 8px 0 4px; }
+    table { width: 100%; border-collapse: collapse; background: var(--card); }
+    th, td { padding: 10px 12px; border-bottom: 1px solid var(--row-line); vertical-align: top; text-align: left; font-size: .8rem; }
+    th { font-size: .64rem; color: var(--th-fg); font-weight: 700; letter-spacing: .03em; text-transform: uppercase; background: var(--th-bg); }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover td { background: var(--row-hover); }
+    td a { font-weight: 600; text-decoration: none; }
+    td a:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: .56rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; line-height: 1; background: var(--badge-bg); color: var(--muted); white-space: nowrap; }
+    .badge.area-tag { background: var(--section-bg); color: var(--brand); }
+    .badge.ready { background: var(--ok-bg); color: var(--ok); }
+    .badge.setup { background: var(--warn-bg); color: var(--warn); }
+    .badge.env { background: var(--notice-info-bg); color: var(--brand); }
+
+    .notice { border: 1px solid var(--notice-info-border); background: var(--notice-info-bg); border-radius: 12px; padding: 9px 12px; font-size: .8rem; margin: 0 0 14px; }
+    .gap { color: var(--warn); background: var(--warn-bg); border: 1px solid #ead7a8; border-radius: 12px; padding: 9px 12px; font-size: .8rem; margin: 0 0 14px; }
+
+    .scenario { border-top: 1px solid var(--divider); padding: 8px 0; scroll-margin-top: 64px; }
+    .scenario:first-of-type { border-top: 0; }
+    .scenario summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 4px 6px; border-radius: 8px; list-style: none; }
+    .scenario summary::-webkit-details-marker { display: none; }
+    .scenario summary::before { content: "▸"; color: var(--brand); width: 1rem; }
+    .scenario[open] summary::before { content: "▾"; }
+    .scenario summary:hover { background: var(--row-hover); }
+    .scenario:target summary { background: var(--section-bg); }
+    .stitle { flex: 1 0 14rem; font-weight: 700; }
+    .body { padding: 4px 0 8px 22px; }
+    .body h4 { margin: 12px 0 4px; font-size: .68rem; letter-spacing: .03em; text-transform: uppercase; color: var(--brand); }
+    .body .table-wrap { margin: 10px 0 4px; }
+
+    @media (max-width: 800px) { .body { padding-left: 0; } }
+    @media print {
+      .app-bar { position: static; background: #fff; color: #000; border-bottom: 1px solid #ccc; }
+      .scenario { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="app-bar">
+    <div class="app-bar__brand">
+      <span class="app-bar__product">one-ngo</span>
+      <span class="app-bar__org">Service sandbox</span>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="page-head">
+      <h1>Service sandbox</h1>
+      <p class="lede">Local stand-ins for the outside services one-ngo calls. Each capability below names the production system it replaces, what the stand-in does, and how to connect it to the NGO app or the operator console.</p>
+      <div class="stats">
+        <div class="stat"><b>13</b><span>capabilities</span></div>
+        <div class="stat"><b>8095</b><span>default HTTPS port</span></div>
+        <div class="stat"><b>2525</b><span>default SMTP port</span></div>
+        <div class="stat"><b>Local</b><span>this machine only</span></div>
+      </div>
+    </div>
+
+    <p class="gap">For local development and tests only. Every service answers on this machine with fixed demo credentials. Nothing here talks to a real Razorpay, Cashfree, Google, Cloud Storage, or Have I Been Pwned account.</p>
+
+    <section class="panel" id="start" aria-labelledby="start-title">
+      <h2 id="start-title">Start it</h2>
+      <p><code>npm run dev</code> from the repository root starts the sandbox on HTTPS <code>8095</code> and SMTP <code>2525</code>, waits until it answers, then starts the API, the web app, and the operator console. Pass <code>--no-web</code> or <code>--no-console</code> to leave one out. Prepare the database once with <code>npm run dev:setup</code>. The examples on this page use the default ports. Files stay in <code>.data/service-sandbox</code>.</p>
+      <p>To run the sandbox alone, use <code>npm run demo:integrations</code> from the repository root, or <code>npm run dev</code> in <code>apps/service-sandbox/server</code>. Pass <code>--https-port</code> and <code>--smtp-port</code> to change its ports.</p>
+      <p>The sandbox home page is <code>https://127.0.0.1:8095/</code>. It shows the settings block, orders, mail, and a log. <code>/api/log</code> returns the same log as JSON. The browser warns about the certificate once; accepting it covers that session, and the API trusts the same certificate through <code>NODE_EXTRA_CA_CERTS</code>.</p>
+    </section>
+
+    <section class="panel" id="overview" aria-labelledby="overview-title">
+      <h2 id="overview-title">Capabilities</h2>
+      <p class="panel-intro">
+        <span class="badge ready">Ready</span> works with <code>npm run dev</code> alone.
+        <span class="badge setup">Save in app</span> needs a setting saved in one-ngo.
+        <span class="badge env">.env</span> needs a value in <code>.env</code>.
+      </p>
+      <div class="table-wrap"><table>
+        <thead>
+          <tr><th>Capability</th><th>Area</th><th>Production system</th><th>Set-up</th><th>What you get</th><th>Answers at</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><a href="#google-sign-in">Google sign-in</a></td><td><span class="badge area-tag">Sign-in</span></td><td>Google, <code>accounts.google.com</code></td><td><span class="badge setup">Save in app</span></td><td>A sign-in page that returns a verified ID token for an existing member.</td><td><code>/oauth2/authorize</code></td></tr>
+          <tr><td><a href="#operator-sign-in">Operator sign-in</a></td><td><span class="badge area-tag">Sign-in</span></td><td>Operator identity provider (Auth0 by default)</td><td><span class="badge ready">Ready</span></td><td>The same provider, second client. Tokens report multi-factor sign-in.</td><td><code>/oauth2/authorize</code></td></tr>
+          <tr><td><a href="#razorpay">Razorpay</a></td><td><span class="badge area-tag">Payments</span></td><td>Razorpay, <code>api.razorpay.com</code></td><td><span class="badge setup">Save in app</span></td><td>Order creation, then a signed Capture or Fail webhook.</td><td><code>POST /v1/orders</code></td></tr>
+          <tr><td><a href="#cashfree">Cashfree</a></td><td><span class="badge area-tag">Payments</span></td><td>Cashfree sandbox and production</td><td><span class="badge setup">Save in app</span></td><td>Order creation, then a signed Capture or Fail webhook.</td><td><code>POST /pg/orders</code></td></tr>
+          <tr><td><a href="#email">Email</a></td><td><span class="badge area-tag">Messaging</span></td><td>The installation SMTP server</td><td><span class="badge ready">Ready</span></td><td>An SMTP inbox kept in memory.</td><td><code>127.0.0.1:2525</code></td></tr>
+          <tr><td><a href="#sms">SMS</a></td><td><span class="badge area-tag">Connectors</span></td><td>The organisation's SMS gateway</td><td><span class="badge setup">Save in app</span></td><td>Accepts a send and returns a queued id.</td><td><code>POST /sms</code></td></tr>
+          <tr><td><a href="#whatsapp">WhatsApp</a></td><td><span class="badge area-tag">Connectors</span></td><td>WhatsApp Business Cloud API</td><td><span class="badge setup">Save in app</span></td><td>Accepts a Cloud API style message send.</td><td><code>POST /whatsapp/…/messages</code></td></tr>
+          <tr><td><a href="#webhook">Webhook</a></td><td><span class="badge area-tag">Connectors</span></td><td>The organisation's webhook receiver</td><td><span class="badge setup">Save in app</span></td><td>Checks the signature on an outbound webhook.</td><td><code>POST /hooks/in</code></td></tr>
+          <tr><td><a href="#pincode">Pincode lookup</a></td><td><span class="badge area-tag">Connectors</span></td><td>An HTTPS lookup the organisation configures</td><td><span class="badge setup">Save in app</span></td><td>Area, district, and state for four PIN codes.</td><td><code>GET /lookup/&lt;pincode&gt;</code></td></tr>
+          <tr><td><a href="#connector-oauth">Connector OAuth</a></td><td><span class="badge area-tag">Connectors</span></td><td>An OAuth provider, such as Google</td><td><span class="badge setup">Save in app</span></td><td>A consent page, then an access token.</td><td><code>/connector-oauth/authorize</code></td></tr>
+          <tr><td><a href="#cloud-storage">Cloud Storage</a></td><td><span class="badge area-tag">Files</span></td><td>Google Cloud Storage, <code>storage.googleapis.com</code></td><td><span class="badge env">.env</span></td><td>Upload, download, and delete. Files survive a restart.</td><td><code>/upload/storage/v1/b/…/o</code></td></tr>
+          <tr><td><a href="#metadata-token">Metadata token</a></td><td><span class="badge area-tag">Files</span></td><td>Compute Engine metadata, <code>metadata.google.internal</code></td><td><span class="badge ready">Ready</span></td><td>The token Cloud Storage calls expect.</td><td><code>GET /token</code></td></tr>
+          <tr><td><a href="#breached-passwords">Breached passwords</a></td><td><span class="badge area-tag">Security</span></td><td>Have I Been Pwned, <code>api.pwnedpasswords.com</code></td><td><span class="badge ready">Ready</span></td><td>Only the word <code>password</code> counts as breached.</td><td><code>GET /range/&lt;prefix&gt;</code></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="area" aria-labelledby="details-title">
+      <div class="area-head">
+        <h2 id="details-title">Capability details</h2>
+      </div>
+      <p class="panel-intro">Open a capability to see which production system it stands in for, what it does, and how to connect it. The API <code>npm run dev</code> script sets the environment each section names, using sandbox port <code>8095</code>. Pass <code>--fixture-port</code> to the API and the console when the sandbox is on another port.</p>
+
+      <details class="scenario" id="google-sign-in">
+        <summary><span class="stitle">Google sign-in</span><span class="badge area-tag">Sign-in</span><span class="badge setup">Save in app</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>Google OpenID Connect at <code>https://accounts.google.com</code>, the default member sign-in issuer. Any other OpenID Connect issuer set as <code>OIDC_ISSUER</code> works the same way, and the host rewrite does not touch Google. <code>npm run dev</code> sets <code>OIDC_ISSUER</code> to the sandbox.</p>
+          <h4>What it does</h4>
+          <p>Stands in for that issuer on the sandbox origin. It serves discovery at <code>/.well-known/openid-configuration</code>, the sign-in page at <code>/oauth2/authorize</code>, the code exchange at <code>/oauth2/token</code>, and the signing keys at <code>/oauth2/jwks</code>. The sign-in page asks only for an email. The ID token marks that email verified, and its subject is <code>demo-</code> plus the first 20 hex characters of the SHA-256 of the lower-cased email. An authorization code lasts 5 minutes and the ID token lasts 1 hour. The sandbox does not create a member.</p>
+          <h4>How to integrate it</h4>
+          <p><code>npm run dev</code> sets <code>OIDC_ISSUER</code> to the sandbox, <code>OIDC_CLIENT_ID=demo-google</code>, <code>OIDC_CLIENT_SECRET=demo-google-secret</code>, <code>OIDC_PROVIDER_ID=google</code>, <code>OIDC_PROVIDER_LABEL=Google</code>, and <code>NODE_EXTRA_CA_CERTS</code>. In the operator console, open the organisation's sign-in settings and turn on the shared Google provider for that organisation. Then open the organisation sign-in page in the NGO app and choose Google.</p>
+          <p>On the sandbox page, enter the email of a member who already exists in that organisation. one-ngo refuses an email it does not already have.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="operator-sign-in">
+        <summary><span class="stitle">Operator sign-in</span><span class="badge area-tag">Sign-in</span><span class="badge ready">Ready</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>The operator console's identity provider. Production uses an external provider that can prove multi-factor sign-in, and Auth0 is the one named for that role. Google used on its own is not accepted for operators. <code>OPERATOR_OIDC_ISSUER</code> holds the provider's address, and <code>npm run dev</code> points it at the sandbox.</p>
+          <h4>What it does</h4>
+          <p>Uses the same OpenID Connect endpoints as Google sign-in, with a second client: id and audience <code>demo-operator</code>, secret <code>demo-operator-secret</code>. The ID token includes <code>amr</code> values of <code>pwd</code> and <code>mfa</code>, which the operator console requires. The page does not ask for a password or a second factor; it writes those claims itself. The console still decides what the person may do, so a token for an email that was never linked does not create a session.</p>
+          <h4>How to integrate it</h4>
+          <p>The console <code>npm run dev</code> script sets <code>OPERATOR_OIDC_ISSUER</code>, <code>OPERATOR_OIDC_CLIENT_ID</code>, <code>OPERATOR_OIDC_CLIENT_SECRET</code>, and <code>OPERATOR_OIDC_AUDIENCE</code>. <code>npm run dev:setup</code> links one account, display name "Local operator", to <code>operator.full@onengo.local</code> and grants every console action.</p>
+          <p>Open <code>http://localhost:9090</code>, then enter <code>operator.full@onengo.local</code> on the sandbox page. A different email produces a different subject, and the console finds no account for it.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="razorpay">
+        <summary><span class="stitle">Razorpay</span><span class="badge area-tag">Payments</span><span class="badge setup">Save in app</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>The Razorpay Orders API at <code>https://api.razorpay.com</code>. Production calls that host. <code>RAZORPAY_API_BASE</code> replaces it with the sandbox, and the host rewrite does not touch Razorpay.</p>
+          <h4>What it does</h4>
+          <p>Stands in for order creation at <code>POST /v1/orders</code>. It accepts HTTP basic auth with key id <code>rzp_test_demo</code> and key secret <code>demo-key-secret</code>, requires an amount of at least 100 paise and the currency <code>INR</code>, and rejects any other key. Orders are kept in memory and listed on the sandbox home page; restarting the sandbox clears them. <strong>Capture</strong> posts a <code>payment.captured</code> webhook and <strong>Fail</strong> posts <code>payment.failed</code>. Both are signed with <code>demo-webhook-secret</code>.</p>
+          <h4>How to integrate it</h4>
+          <p><code>npm run dev</code> sets <code>RAZORPAY_API_BASE</code> to <code>https://127.0.0.1:8095</code>. Then, as a member who can manage payment gateways such as a treasurer, save the gateway with <code>PUT /api/admin/payment-gateways/razorpay</code>:</p>
+          <pre><code>{ "keyId": "rzp_test_demo", "keySecret": "demo-key-secret", "webhookSecret": "demo-webhook-secret" }</code></pre>
+          <p>Start a payment in the NGO app. The order appears on the sandbox home page with its amount and reference. Leave the organisation box as <code>demo</code>, or type another organisation key such as <code>harbour</code>, and click <strong>Capture</strong> or <strong>Fail</strong>. The sandbox posts to <code>http://localhost:&lt;backend port&gt;/webhooks/payments/razorpay/&lt;org&gt;</code>. The order status changes only when one-ngo answers with a success status, and the home page log records the result.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="cashfree">
+        <summary><span class="stitle">Cashfree</span><span class="badge area-tag">Payments</span><span class="badge setup">Save in app</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>Cashfree at <code>https://sandbox.cashfree.com</code> when the saved environment is <code>sandbox</code>, which is the default, and <code>https://api.cashfree.com</code> when it is <code>production</code>. <code>CASHFREE_API_BASE</code> replaces both hosts with the sandbox, and the host rewrite does not touch Cashfree.</p>
+          <h4>What it does</h4>
+          <p>Stands in for order creation at <code>POST /pg/orders</code>. Requests must carry <code>x-client-id: cf_demo</code>, <code>x-client-secret: demo-cf-secret</code>, and an <code>x-api-version</code> header, and the amount must be at least 1 rupee in <code>INR</code>. As with Razorpay, <strong>Capture</strong> and <strong>Fail</strong> on the home page post a webhook signed with the client secret, and the order status changes only when one-ngo answers with a success status.</p>
+          <h4>How to integrate it</h4>
+          <p><code>npm run dev</code> sets <code>CASHFREE_API_BASE</code> to the sandbox origin. Save the gateway with <code>PUT /api/admin/payment-gateways/cashfree</code>:</p>
+          <pre><code>{ "keyId": "cf_demo", "keySecret": "demo-cf-secret", "environment": "sandbox" }</code></pre>
+          <p>Start a payment in the NGO app, then click <strong>Capture</strong> or <strong>Fail</strong> on the sandbox home page. The webhook goes to <code>http://localhost:&lt;backend port&gt;/webhooks/payments/cashfree/&lt;org&gt;</code>, so set the organisation box to the key that owns the payment. The home page log records the answer or a connection error.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="email">
+        <summary><span class="stitle">Email</span><span class="badge area-tag">Messaging</span><span class="badge ready">Ready</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>The installation's SMTP server, whatever <code>SMTP_HOST</code> names. The product does not name a mail vendor, and the usual production port is 587. <code>npm run dev</code> points <code>SMTP_HOST</code> and <code>SMTP_PORT</code> at this listener.</p>
+          <h4>What it does</h4>
+          <p>Accepts SMTP on <code>127.0.0.1</code> and the SMTP port, without TLS. The login is <code>demo</code> / <code>demo</code>, AUTH PLAIN and AUTH LOGIN both work, and the From address is <code>demo@localhost</code>. Each message is kept in memory, up to 10 MB, and listed on the sandbox home page. <code>GET /mail/&lt;id&gt;</code> returns the raw source. Restarting the sandbox clears the mailbox.</p>
+          <h4>How to integrate it</h4>
+          <p><code>npm run dev</code> sets <code>SMTP_HOST</code>, <code>SMTP_PORT</code>, <code>SMTP_SECURE=0</code>, <code>SMTP_USER</code>, <code>SMTP_PASSWORD</code>, and <code>SMTP_FROM</code> on the API. Nothing is saved in the app. Do something in the NGO app that sends mail, such as an invitation or a password reset, then open the sandbox home page and click the message. Nothing reaches a real inbox.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="sms">
+        <summary><span class="stitle">SMS</span><span class="badge area-tag">Connectors</span><span class="badge setup">Save in app</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>The HTTPS SMS gateway saved on the organisation's <code>sms</code> connector. one-ngo does not call a named SMS vendor, so the connector URL is the production system. When you leave the sandbox, point that URL at the real gateway; the same <code>{{to}}</code> and <code>{{message}}</code> placeholders apply.</p>
+          <h4>What it does</h4>
+          <p><code>POST /sms</code> accepts a JSON body and returns a queued id such as <code>sms_…</code>. The request must send <code>Authorization: Bearer demo-sms-key</code>, and a wrong key is refused. Every send is written to the sandbox log.</p>
+          <h4>How to integrate it</h4>
+          <p><code>npm run dev</code> adds <code>127.0.0.1</code> to <code>CONNECTOR_ALLOWED_HOSTS</code>, and the API refuses to call this address without it. In the NGO app, open <strong>Administration → Connectors</strong>, create a connector with key <code>sms</code>, and save this definition:</p>
+          <pre><code>{
+  "kind": "sms",
+  "enabled": true,
+  "config": {
+    "url": "https://127.0.0.1:8095/sms",
+    "method": "POST",
+    "headers": { "Authorization": "Bearer {{secrets.apiKey}}" },
+    "body": "{\"to\":\"{{to}}\",\"message\":\"{{message}}\"}",
+    "contentType": "json"
+  },
+  "secrets": { "apiKey": "demo-sms-key" }
+}</code></pre>
+          <p>Use that connector from the feature that sends SMS. The sandbox log shows the body it received.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="whatsapp">
+        <summary><span class="stitle">WhatsApp</span><span class="badge area-tag">Connectors</span><span class="badge setup">Save in app</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>The WhatsApp Business Cloud API. In production, <code>baseUrl</code> is that API's address including its version, and <code>phoneNumberId</code> comes from WhatsApp Business. The sandbox uses phone number id <code>1234567890</code> and token <code>demo-whatsapp-token</code> in place of those production values.</p>
+          <h4>What it does</h4>
+          <p>Stands in for a Cloud API send at <code>POST /whatsapp/1234567890/messages</code>. A request with <code>Authorization: Bearer demo-whatsapp-token</code> returns a <code>wamid.demo…</code> id, and a wrong token is refused. The sandbox log shows the recorded body.</p>
+          <h4>How to integrate it</h4>
+          <p>Confirm <code>127.0.0.1</code> is in <code>CONNECTOR_ALLOWED_HOSTS</code>; <code>npm run dev</code> adds it. In <strong>Administration → Connectors</strong>, create key <code>whatsapp</code> and save this definition:</p>
+          <pre><code>{
+  "kind": "whatsapp",
+  "enabled": true,
+  "config": {
+    "baseUrl": "https://127.0.0.1:8095/whatsapp",
+    "phoneNumberId": "1234567890"
+  },
+  "secrets": { "accessToken": "demo-whatsapp-token" }
+}</code></pre>
+          <p>Send a WhatsApp message from the NGO app and check the sandbox log.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="webhook">
+        <summary><span class="stitle">Webhook</span><span class="badge area-tag">Connectors</span><span class="badge setup">Save in app</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>The HTTPS receiver the organisation names on a <code>webhook</code> connector. That is the customer's own endpoint, or any service that checks <code>x-ngo-signature</code>. one-ngo signs the raw body with the connector's signing secret, and the sandbox checks that same signature.</p>
+          <h4>What it does</h4>
+          <p><code>POST /hooks/in</code> receives outbound webhooks from one-ngo. It reads the header <code>x-ngo-signature</code>, which must be <code>sha256=</code> followed by the HMAC-SHA256 of the raw body with <code>demo-signing-secret</code>. A match returns success and any other signature is refused. Both outcomes are written to the sandbox log, along with the event name.</p>
+          <h4>How to integrate it</h4>
+          <p>Confirm <code>127.0.0.1</code> is in <code>CONNECTOR_ALLOWED_HOSTS</code>. In <strong>Administration → Connectors</strong>, create key <code>webhook</code> and save this definition:</p>
+          <pre><code>{
+  "kind": "webhook",
+  "enabled": true,
+  "config": { "url": "https://127.0.0.1:8095/hooks/in" },
+  "secrets": { "signingSecret": "demo-signing-secret" }
+}</code></pre>
+          <p>Trigger the event in the NGO app that calls this connector, then check the sandbox log.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="pincode">
+        <summary><span class="stitle">Pincode lookup</span><span class="badge area-tag">Connectors</span><span class="badge setup">Save in app</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>An HTTPS lookup the organisation saves on an <code>http</code> connector in lookup mode. one-ngo does not call a postal service itself, so the connector URL is the production system. This stand-in answers four India PIN codes so a record can fill its area and district. A production lookup, such as a bank or postal API, fills its own fields from its own address.</p>
+          <h4>What it does</h4>
+          <p><code>GET /lookup/&lt;pincode&gt;</code> returns <code>{"data":{"code","name","district","state"}}</code> for the four PIN codes below. Any other PIN code returns 404.</p>
+          <div class="table-wrap"><table>
+            <thead><tr><th>PIN code</th><th>Area</th><th>District</th><th>State</th></tr></thead>
+            <tbody>
+              <tr><td><code>110001</code></td><td>Connaught Place</td><td>New Delhi</td><td>Delhi</td></tr>
+              <tr><td><code>400001</code></td><td>Fort</td><td>Mumbai</td><td>Maharashtra</td></tr>
+              <tr><td><code>560001</code></td><td>Bengaluru GPO</td><td>Bengaluru Urban</td><td>Karnataka</td></tr>
+              <tr><td><code>700001</code></td><td>BBD Bagh</td><td>Kolkata</td><td>West Bengal</td></tr>
+            </tbody>
+          </table></div>
+          <h4>How to integrate it</h4>
+          <p>Confirm <code>127.0.0.1</code> is in <code>CONNECTOR_ALLOWED_HOSTS</code>. In <strong>Administration → Connectors</strong>, create key <code>pincode</code> and save this definition. The response map copies <code>data.name</code> to area and <code>data.district</code> to district.</p>
+          <pre><code>{
+  "kind": "http",
+  "enabled": true,
+  "config": {
+    "mode": "lookup",
+    "method": "GET",
+    "url": "https://127.0.0.1:8095/lookup/{{record.pincode}}",
+    "inputs": ["pincode"],
+    "responseMap": { "area": "data.name", "district": "data.district" }
+  }
+}</code></pre>
+          <p>On a record that uses this lookup, enter one of the PIN codes above. A code outside the table comes back as not found.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="connector-oauth">
+        <summary><span class="stitle">Connector OAuth</span><span class="badge area-tag">Connectors</span><span class="badge setup">Save in app</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>The OAuth authorization-code provider named on an <code>oauth</code> connector, with that connector's <code>authorizationUrl</code> and <code>tokenUrl</code>. For Google those are <code>https://accounts.google.com/o/oauth2/v2/auth</code> and <code>https://oauth2.googleapis.com/token</code>. The sandbox consent page stands in for that provider.</p>
+          <h4>What it does</h4>
+          <p><code>/connector-oauth/authorize</code> shows Allow and Deny for scope <code>demo.read</code>, with client id <code>demo-connector</code> and secret <code>demo-connector-secret</code>. <code>/connector-oauth/token</code> exchanges the code, or a refresh token, for an access token. A code lasts 5 minutes and an access token lasts 1 hour. Deny returns <code>access_denied</code> and no token.</p>
+          <h4>How to integrate it</h4>
+          <p>Confirm <code>127.0.0.1</code> is in <code>CONNECTOR_ALLOWED_HOSTS</code>. In <strong>Administration → Connectors</strong>, create key <code>demoOauth</code> and save this definition:</p>
+          <pre><code>{
+  "kind": "oauth",
+  "enabled": true,
+  "config": {
+    "authorizationUrl": "https://127.0.0.1:8095/connector-oauth/authorize",
+    "tokenUrl": "https://127.0.0.1:8095/connector-oauth/token",
+    "clientId": "demo-connector",
+    "scopes": ["demo.read"]
+  },
+  "secrets": { "clientSecret": "demo-connector-secret" }
+}</code></pre>
+          <p>Start the connector's connect action in the NGO app. On the sandbox consent page, click Allow.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="cloud-storage">
+        <summary><span class="stitle">Cloud Storage</span><span class="badge area-tag">Files</span><span class="badge env">.env</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>The Google Cloud Storage JSON API at <code>storage.googleapis.com</code>. With <code>INTEGRATION_FIXTURE_ORIGIN</code> set, the API rewrites those calls to the sandbox. A deployment never sets that variable, so production talks to Cloud Storage.</p>
+          <h4>What it does</h4>
+          <p>Stands in for that API for upload, metadata, download, and delete. Objects are stored as files under <code>.data/service-sandbox/&lt;fixture port&gt;/files/&lt;bucket&gt;/</code> and survive a restart. Calls must send the bearer token <code>demo-gcs-token</code>, which the <a href="#metadata-token">metadata token</a> endpoint hands out.</p>
+          <h4>How to integrate it</h4>
+          <p>Set <code>FILE_STORE_BUCKET</code> in <code>.env</code>. <code>FILE_STORE_PREFIX</code> is optional. Without a bucket, the API keeps files on local disk and does not call this stand-in. <code>npm run dev</code> sets <code>INTEGRATION_FIXTURE_ORIGIN</code>, which rewrites calls to <code>storage.googleapis.com</code> to the sandbox.</p>
+          <p>Restart the dev stack after changing <code>.env</code>, then upload or download a file in the NGO app. The sandbox log names the bucket, object, and size.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="metadata-token">
+        <summary><span class="stitle">Metadata token</span><span class="badge area-tag">Files</span><span class="badge ready">Ready</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>The Compute Engine metadata server at <code>metadata.google.internal</code>, path <code>/computeMetadata/v1/instance/service-accounts/default/token</code>. The host rewrite sends that path to <code>GET /token</code> on the sandbox. On App Engine or Compute Engine, production receives a real token from that host.</p>
+          <h4>What it does</h4>
+          <p><code>GET /token</code> with the header <code>Metadata-Flavor: Google</code> returns <code>{"access_token":"demo-gcs-token","expires_in":3599,"token_type":"Bearer"}</code>. A request without the header is refused.</p>
+          <h4>How to integrate it</h4>
+          <p>Nothing to save in the app. <code>npm run dev</code> sets <code>INTEGRATION_FIXTURE_ORIGIN</code>, and the API then sends its metadata token request here. Upload a file after <code>FILE_STORE_BUCKET</code> is set; the sandbox log shows "Metadata token issued" before the object is stored.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="breached-passwords">
+        <summary><span class="stitle">Breached passwords</span><span class="badge area-tag">Security</span><span class="badge ready">Ready</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>Have I Been Pwned's Pwned Passwords range API at <code>https://api.pwnedpasswords.com/range/&lt;5 hex characters&gt;</code>. The host rewrite sends only <code>/range/…</code> to the sandbox, so with the check left on, production calls Have I Been Pwned.</p>
+          <h4>What it does</h4>
+          <p><code>GET /range/&lt;5 hex characters&gt;</code> answers in the same <code>SUFFIX:COUNT</code> line format. Only the exact word <code>password</code> is reported breached, and every other password is reported clear.</p>
+          <h4>How to integrate it</h4>
+          <p>Leave <code>BREACHED_PASSWORD_CHECK</code> unset or set it to <code>online</code>. <code>npm run dev</code> rewrites <code>api.pwnedpasswords.com/range/…</code> to the sandbox through <code>INTEGRATION_FIXTURE_ORIGIN</code>. Set or change a password in the NGO app: <code>password</code> is refused as breached, and any other password passes this check. To skip the check, set <code>BREACHED_PASSWORD_CHECK=off</code> in <code>.env</code> and restart the API.</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="panel" id="connected" aria-labelledby="connected-title">
+      <h2 id="connected-title">What the API dev script sets</h2>
+      <p class="panel-intro">If you start one-ngo yourself, copy <strong>Settings for one-ngo's .env</strong> from the sandbox home page. It has the live ports and the certificate path.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Setting</th><th>Value</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>OIDC_ISSUER</code></td><td><code>https://127.0.0.1:8095</code></td><td>Google sign-in provider</td></tr>
+          <tr><td><code>OIDC_CLIENT_ID</code>, <code>OIDC_CLIENT_SECRET</code></td><td><code>demo-google</code>, <code>demo-google-secret</code></td><td>Google sign-in client</td></tr>
+          <tr><td><code>RAZORPAY_API_BASE</code>, <code>CASHFREE_API_BASE</code></td><td><code>https://127.0.0.1:8095</code></td><td>Payment APIs</td></tr>
+          <tr><td><code>SMTP_HOST</code>, <code>SMTP_PORT</code></td><td><code>127.0.0.1</code>, <code>2525</code></td><td>Outgoing mail</td></tr>
+          <tr><td><code>SMTP_USER</code>, <code>SMTP_PASSWORD</code>, <code>SMTP_FROM</code></td><td><code>demo</code>, <code>demo</code>, <code>demo@localhost</code></td><td>Mail login</td></tr>
+          <tr><td><code>NODE_EXTRA_CA_CERTS</code></td><td>The sandbox CA certificate</td><td>Lets the API trust the sandbox's HTTPS certificate</td></tr>
+          <tr><td><code>INTEGRATION_FIXTURE_ORIGIN</code></td><td><code>https://127.0.0.1:8095</code></td><td>Rewrites Cloud Storage, the metadata token, and the breached-password range API to the sandbox</td></tr>
+          <tr><td><code>CONNECTOR_ALLOWED_HOSTS</code></td><td><code>127.0.0.1</code>, added to existing values</td><td>Lets connectors call this machine</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="panel" id="troubleshooting" aria-labelledby="troubleshooting-title">
+      <h2 id="troubleshooting-title">Troubleshooting</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Problem</th><th>What to do</th></tr></thead>
+        <tbody>
+          <tr><td>Certificate warning in the browser</td><td>Accept it once for the sandbox page and the sign-in page. The API trusts the same certificate through <code>NODE_EXTRA_CA_CERTS</code>.</td></tr>
+          <tr><td>Port already in use</td><td>Stop the process using that port, or pass another one. The sandbox takes <code>--https-port</code> and <code>--smtp-port</code>. The API, web app, and console take <code>--port</code>.</td></tr>
+          <tr><td>Operator sign-in creates no session</td><td>Enter <code>operator.full@onengo.local</code>. A different email does not match the one account <code>npm run dev:setup</code> linked.</td></tr>
+          <tr><td>Sign-in, payments, or files fail after a manual start</td><td>Start one-ngo with the settings from the sandbox home page. Without <code>INTEGRATION_FIXTURE_ORIGIN</code>, Cloud Storage and breached-password calls go to the real services.</td></tr>
+          <tr><td>Start from clean data</td><td>Stop the sandbox and delete <code>.data/service-sandbox</code>. The next start creates new certificates and files. Mail and orders were only in memory.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <p class="notice">Keep the organisation's saved credentials and the sandbox values in step. If you change a secret in one place, change it in the other.</p>
+  </main>
+
+  <script>
+    function openCapability(id) {
+      var section = id && document.getElementById(id);
+      if (section && section.tagName === 'DETAILS') section.open = true;
+    }
+    document.querySelectorAll('a[href^="#"]').forEach(function (link) {
+      link.addEventListener('click', function () { openCapability(link.getAttribute('href').slice(1)); });
+    });
+    window.addEventListener('hashchange', function () { openCapability(location.hash.slice(1)); });
+    openCapability(location.hash.slice(1));
+  </script>
+</body>
+</html>

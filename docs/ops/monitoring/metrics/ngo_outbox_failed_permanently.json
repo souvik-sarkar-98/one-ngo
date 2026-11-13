@@ -1,0 +1,11 @@
+{
+  "description": "NGO platform: background (outbox) events that failed their last attempt and will not be retried. Applied by a person with gcloud; see docs/ops/monitoring/README.md.",
+  "filter": "jsonPayload.alert=\"outbox.failed_permanently\"",
+  "metricDescriptor": {
+    "metricKind": "DELTA",
+    "valueType": "INT64",
+    "unit": "1",
+    "labels": [{ "key": "event_type", "valueType": "STRING", "description": "Outbox event type, for example notification.email." }]
+  },
+  "labelExtractors": { "event_type": "EXTRACT(jsonPayload.eventType)" }
+}

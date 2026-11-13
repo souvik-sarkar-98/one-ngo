@@ -1,0 +1,18 @@
+.html-ed__head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .35rem; }
+.html-ed__head .gen-label { margin: 0; }
+.html-ed__modes, .html-ed__bar, .html-ed__ask { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; }
+.html-ed__modes button[aria-pressed='true'] { background: var(--brand); color: var(--brand-foreground, #fff); border-color: var(--brand); }
+.html-ed__bar { margin-bottom: .4rem; }
+.html-ed__bar button, .html-ed__ask button, .html-ed__modes button { font: inherit; font-size: .8rem; padding: .25rem .55rem; }
+.html-ed__ask { margin-bottom: .4rem; }
+.html-ed__ask input { flex: 1; min-width: 12rem; }
+.html-ed__ask .error { flex-basis: 100%; }
+.html-ed__design, .html-ed__source {
+  min-height: 16rem; padding: .7rem .8rem; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--card); width: 100%; box-sizing: border-box;
+}
+.html-ed__design { overflow-wrap: anywhere; }
+.html-ed__design:focus, .html-ed__source:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+.html-ed__design table { border-collapse: collapse; width: 100%; }
+.html-ed__design td, .html-ed__design th { border: 1px solid var(--line); padding: .35rem .5rem; }
+.html-ed__source { font-family: Consolas, 'Courier New', monospace; font-size: .85rem; tab-size: 2; resize: vertical; }

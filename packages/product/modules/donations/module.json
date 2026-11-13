@@ -1,0 +1,56 @@
+{
+  "key": "donations",
+  "version": "0.2.3",
+  "label": "Donations",
+  "description": "Keep donors, record donations from raised to paid, post them to the books, and issue numbered receipts.",
+  "engine": "0.1.0",
+  "definitions": [
+    "donor.recordType.json",
+    "donation.recordType.json",
+    "donation.workflow.json",
+    "donation-thanks.template.json",
+    "donation-reminder.template.json",
+    "donation-paid.postingRule.json",
+    "donation-paid.receiptRule.json",
+    "donation-thanks.automation.json",
+    "donors.listView.json",
+    "donations.listView.json",
+    "fundraising.recordGroup.json",
+    "send-reminder.action.json",
+    "pay-now.action.json",
+    "print-receipt.action.json",
+    "donation-summary.template.json",
+    "donation-summary.report.json",
+    "donation-register.report.json",
+    "fundraising.reportGroup.json"
+  ],
+  "setup": {
+    "roles": [
+      {
+        "key": "finance",
+        "label": "Finance",
+        "permissions": [
+          "record:donor:*",
+          "record:donation:*",
+          "record:donation:transition:*",
+          "record:donation:action:*",
+          "payments:create",
+          "payments:confirm",
+          "money:accounts:read",
+          "people:read",
+          "report:donationSummary:run",
+          "report:donationRegister:run"
+        ]
+      },
+      { "key": "viewer", "label": "Viewer", "permissions": ["record:donor:read", "record:donation:read", "people:read"] }
+    ],
+    "accounts": [
+      { "code": "BANK", "name": "Bank account", "type": "asset" },
+      { "code": "CASH", "name": "Cash in hand", "type": "asset" },
+      { "code": "DONATION_INCOME", "name": "Donations received", "type": "income" }
+    ],
+    "receiptSeries": [
+      { "key": "donation-receipt", "prefix": "RCPT", "label": "Donation acknowledgement", "reset": "fiscal_year" }
+    ]
+  }
+}

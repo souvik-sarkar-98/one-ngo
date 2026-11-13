@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NGO Platform — Data migrator</title>
+<style>
+  :root {
+    --fg: #1d2733; --muted: #5b6878; --line: #d8dee6; --bg: #f5f7fa; --card: #fff;
+    --brand: #1f5f8b; --ok: #1d7a46; --warn: #9a6200; --bad: #b3261e; --radius: 6px;
+    --b50: color-mix(in srgb, var(--brand) 6%, #fff); --b100: color-mix(in srgb, var(--brand) 12%, #fff); --b200: color-mix(in srgb, var(--brand) 25%, #fff);
+    --page: #eef1f5; --ink: #18212b;
+    --font: 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Devanagari', Helvetica, Arial, sans-serif;
+    --mono: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font); color: var(--ink); background: linear-gradient(180deg, #f6f8fa, var(--page)); }
+  header.page { max-width: 1440px; margin: 0 auto; padding: 36px 40px 18px; }
+  header.page h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -.01em; }
+  header.page p { margin: 0 0 10px; max-width: 980px; line-height: 1.55; color: #36414d; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 16px; }
+  .rules div { background: #fff; border: 1px solid #dfe5eb; border-radius: 10px; padding: 12px 14px; font-size: 13.5px; line-height: 1.5; }
+  .rules b { display: block; color: var(--brand); margin-bottom: 3px; }
+  nav.toc { position: sticky; top: 0; z-index: 20; background: rgba(238,241,245,.94); backdrop-filter: blur(6px); border-bottom: 1px solid #dbe1e7; }
+  nav.toc div { max-width: 1440px; margin: 0 auto; padding: 9px 40px; display: flex; gap: 4px; overflow-x: auto; }
+  nav.toc a { font: 600 12px var(--mono); color: #3a4a5a; text-decoration: none; padding: 6px 10px; border-radius: 6px; white-space: nowrap; }
+  nav.toc a:hover { background: #fff; }
+  main.page { max-width: 1440px; margin: 0 auto; padding: 0 40px 80px; }
+  section.flow { margin-top: 40px; }
+  .flabel { font: 700 12px var(--mono); color: var(--brand); text-transform: uppercase; letter-spacing: .06em; display: flex; gap: 8px; align-items: center; }
+  .flabel::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+  section.flow > h2 { margin: 4px 0 4px; font-size: 22px; }
+  section.flow > p { margin: 0 0 14px; color: #3a4552; max-width: 980px; line-height: 1.5; }
+  .step { display: grid; grid-template-columns: 52px 330px minmax(0, 1fr); gap: 18px; align-items: start; padding: 18px 0; border-top: 1px dashed #d3dae2; }
+  @media (max-width: 1200px) { .step { grid-template-columns: 44px minmax(0, 1fr); } .step .desk { grid-column: 2; } }
+  .num { width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 2px solid var(--brand); color: var(--brand); font: 700 15px/36px var(--font); text-align: center; }
+  .stephead { grid-column: 2 / -1; margin-bottom: -6px; }
+  .stephead b { font-size: 16px; }
+  .stephead .act { display: inline-block; margin-left: 10px; font-size: 13px; color: #3a4552; }
+  .stephead .act kbd { font: 600 12px var(--font); background: #fff; border: 1px solid #ccd5de; border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; }
+  .stephead code { display: block; margin-top: 4px; font: 12px var(--mono); color: #556373; }
+  .cap { font: 600 10.5px var(--mono); color: #6a7683; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 5px; }
+  .noteline { font-size: 13px; color: #3a4552; line-height: 1.5; margin-top: 8px; max-width: 760px; }
+
+  .try { background: #fff; border: 1px solid #dfe5eb; border-radius: 12px; padding: 14px 16px 16px; margin-top: 18px; }
+  .try h2 { margin: 0 0 6px; font-size: 18px; }
+  .try p { margin: 0 0 12px; color: #3a4552; font-size: 14px; line-height: 1.5; max-width: 860px; }
+  .tryform { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-bottom: 10px; }
+  .tryform label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #374151; }
+  .tryform input { font: 14px var(--font); border: 1px solid #79747e; border-radius: 4px; height: 36px; padding: 0 10px; min-width: 180px; }
+  .tryform input.wide { min-width: min(520px, 100%); }
+  .tryform button, .samples button { font: 600 13px var(--font); border-radius: 6px; border: 1px solid var(--line); background: #fff; height: 36px; padding: 0 12px; cursor: pointer; }
+  .tryform button.p { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .samples { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 12px; font-size: 13px; color: #3a4552; }
+  .try-stage { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 18px; align-items: start; }
+  @media (max-width: 1100px) { .try-stage { grid-template-columns: 1fr; } }
+  .try-msg { margin: 8px 0 0; font-size: 13px; color: var(--bad); }
+
+  .phone { width: 330px; height: 680px; border-radius: 34px; background: #0f141a; padding: 10px; box-shadow: 0 14px 30px rgba(15,23,42,.18); }
+  .phone .scr { width: 100%; height: 100%; border-radius: 26px; overflow: hidden; background: var(--bg); position: relative; display: flex; flex-direction: column; color: var(--fg); font-size: 14px; }
+  .status { height: 26px; flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; font: 600 11px var(--font); background: var(--brand); color: #fff; }
+  .browser { border-radius: 10px; background: #fff; border: 1px solid #d5dbe2; box-shadow: 0 14px 30px rgba(15,23,42,.12); overflow: hidden; min-width: 0; }
+  .browser .chrome { height: 30px; background: #e9edf1; border-bottom: 1px solid #d5dbe2; display: flex; align-items: center; padding: 0 10px; }
+  .browser .url { flex: 1; height: 20px; border-radius: 6px; background: #fff; font: 11.5px var(--mono); color: #536171; display: flex; align-items: center; padding: 0 9px; overflow: hidden; white-space: nowrap; }
+  .browser .scr { height: 680px; background: var(--bg); position: relative; overflow: hidden; display: flex; flex-direction: column; color: var(--fg); font-size: 14px; }
+  .appbar { height: 50px; flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 12px; background: var(--brand); color: #fff; }
+  .appbar .brand { font-weight: 700; font-size: 15px; }
+  .appbar .mark { width: 22px; height: 22px; border-radius: 5px; background: #fff; color: var(--brand); font: 800 9px/22px var(--font); text-align: center; flex: 0 0 auto; }
+  .appbar .org { font-weight: 600; font-size: 13px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .appbar .sp { flex: 1; }
+  .pagehead { display: flex; align-items: center; gap: 2px; margin: 0 0 8px; }
+  .pagehead .h1 { margin: 0; line-height: 1.25; font-size: 1.15rem; font-weight: 700; }
+  .pagehead .back { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; flex: 0 0 auto; }
+  .ib { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; position: relative; font-size: 17px; }
+  .ib.av { background: rgba(255,255,255,.2); font: 700 12px var(--font); }
+  .ib .dot { position: absolute; top: 3px; right: 2px; min-width: 15px; height: 15px; border-radius: 8px; background: #fdf1dc; color: var(--warn); font: 700 9.5px/15px var(--font); text-align: center; }
+  .frame-body { flex: 1; display: flex; min-height: 0; }
+  .main { flex: 1; min-width: 0; overflow: auto; padding: 12px 12px 16px; position: relative; }
+  .browser .main { padding: 16px 20px 20px; }
+  .navbar { flex: 0 0 auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: #fff; border-top: 1px solid var(--line); height: 58px; }
+  .rail { flex: 0 0 auto; width: 84px; background: #fff; border-right: 1px solid var(--line); display: flex; flex-direction: column; padding-top: 10px; gap: 4px; }
+  .nv { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 10.5px; color: var(--muted); padding: 6px 0; }
+  .nv .g { width: 44px; height: 26px; border-radius: 13px; display: grid; place-items: center; }
+  .nv.on { color: var(--brand); font-weight: 600; }
+  .nv.on .g { background: var(--b100); }
+  .nv svg { width: 20px; height: 20px; fill: currentColor; }
+  .intro { margin: 0 0 10px; font-size: .75rem; color: var(--muted); line-height: 1.4; }
+  .hit { outline: 3px solid #f3be26; outline-offset: 2px; border-radius: 12px; }
+  .panel { background: #fff; border-radius: 16px; border: 1px solid rgba(148,163,184,.22); box-shadow: 0 1px 2px #0f172a0d, 0 4px 14px #0f172a12; overflow: hidden; margin-bottom: 12px; }
+  .btn { font: inherit; font-size: 13px; min-height: 36px; padding: .45rem .8rem; border-radius: var(--radius); border: 1px solid var(--line); background: #fff; color: var(--fg); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+  .btn.p { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn.ghost { background: transparent; }
+  .card { background: #fff; border: 1px solid rgba(148,163,184,.25); border-radius: 14px; padding: 12px; margin-bottom: 10px; box-shadow: 0 1px 2px #0f172a0a; }
+  .cs { font-size: .72rem; color: #64748b; line-height: 1.35; }
+  .listrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid rgba(148,163,184,.18); font-size: .8rem; background: #fff; width: 100%; border-left: 0; border-right: 0; border-top: 0; text-align: left; color: inherit; font-family: inherit; }
+  .listrow:last-child { border-bottom: 0; }
+  button.listrow { cursor: pointer; }
+  button.listrow:hover { background: var(--b50); }
+  .note { background: #eef5fb; border: 1px solid #c6d9e8; color: var(--brand); border-radius: 12px; padding: 9px 12px; font-size: .72rem; margin-bottom: 10px; line-height: 1.4; }
+  .note.warn { background: #fdf6e8; border-color: #ead7a6; color: var(--warn); }
+  .note.bad { background: #fdecea; border-color: #f3c4c0; color: var(--bad); }
+  .note.ok { background: #e8f6ee; border-color: #b7e0c6; color: var(--ok); }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .sp { flex: 1; }
+  .crumbs { flex: 0 0 auto; background: #fff; border-bottom: 1px solid var(--line); padding: 0 12px; height: 28px; display: flex; align-items: center; font-size: 11.5px; }
+  .browser .crumbs { padding-left: 16px; height: 30px; font-size: 12.5px; }
+  .crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; min-width: 0; overflow: hidden; white-space: nowrap; }
+  .crumbs li { display: flex; align-items: center; color: var(--muted); }
+  .crumbs li + li::before { content: '›'; margin: 0 6px; color: #94a3b8; }
+  .crumbs a { color: var(--brand); font-weight: 600; text-decoration: none; }
+  .crumbs li[aria-current] { color: var(--fg); font-weight: 600; }
+  .mf { margin-bottom: 8px; }
+  .mf .l { font-size: .72rem; font-weight: 600; color: #374151; margin-bottom: 3px; }
+  .mf .l i { color: #f97316; font-style: normal; }
+  .mf .h { font-size: .68rem; color: #64748b; margin-top: 3px; }
+  .mf .o, .mf select { border: 1px solid #79747e; border-radius: 4px; min-height: 32px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .78rem; background: #fff; width: 100%; font-family: inherit; color: inherit; }
+  .drop { border: 1.5px dashed #9aafc2; border-radius: 14px; background: #fff; padding: 16px 12px; text-align: center; margin-bottom: 10px; }
+  .drop b { display: block; font-size: .85rem; margin-bottom: 4px; }
+  .stepper { display: flex; gap: 4px; flex-wrap: wrap; margin: 0 0 10px; }
+  .stepper span { font-size: .62rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: #64748b; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; }
+  .stepper span.on { background: var(--b100); color: var(--brand); border-color: var(--b200); }
+  .bdg { font-size: .56rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; border-radius: 999px; padding: 4px 8px; line-height: 1; white-space: nowrap; }
+  .bdg.s { background: #e3f4ea; color: var(--ok); }
+  .bdg.p { background: var(--b100); color: var(--brand); }
+  .bdg.w { background: #fdf1dc; color: var(--warn); }
+  .bdg.n { background: #e8edf3; color: #64748b; }
+  .counts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+  .counts div { background: #fff; border: 1px solid rgba(148,163,184,.25); border-radius: 12px; padding: 8px; text-align: center; }
+  .counts b { display: block; font-size: 1rem; }
+  .counts span { font-size: .62rem; color: #64748b; }
+  .bar { height: 8px; border-radius: 99px; background: #e6ebf1; overflow: hidden; margin: 6px 0; }
+  .bar i { display: block; height: 100%; background: var(--brand); }
+  select.map { max-width: 132px; min-height: 28px; font: 12px var(--font); border: 1px solid #79747e; border-radius: 4px; background: #fff; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Data migrator</h1>
+  <p>Asha brings the old system’s tables into this organisation from CSV files. Any file is accepted: any name, any columns, any number of files. Each file keeps the header row it arrived with. She maps those columns onto a record type that already exists in the Builder, then runs the whole set in order. The screen lives in the core app at <code>/admin/migration</code>. The operator console does not load records.</p>
+  <div class="rules">
+    <div><b>Any CSV</b>There is no template and no required header. A donors file, a volunteers file and a ward-visits file can sit in one profile even when none of their columns match. A column she does not need stays on Not imported.</div>
+    <div><b>Map, then load</b>She chooses the record types each file fills (one row can make a supporter and their donation), which column is the old id, and which column fills each field. A donation’s donor column looks up the donor loaded earlier by that old id. The map is saved with the profile and reused on the next run.</div>
+    <div><b>The type comes first</b>The file does not create a record type or a field. If nothing in the Builder can hold the table, she leaves that file out and adds the type in the Builder, then comes back. Calculated fields, rollups, files and signatures are not in the field list.</div>
+    <div><b>Books stay separate</b>Opening balances and the next receipt number are entered on Books. Old transfer tables are not loaded as journals. Automations stay off for the run.</div>
+  </div>
+  <div class="try">
+    <h2>Try any columns</h2>
+    <p>Add a CSV by typing its name and header row. The file appears with those columns, unmatched, until a record type and a field are chosen. The samples are four unrelated tables.</p>
+    <form class="tryform" id="add-form">
+      <label>File name<input id="fname" value="visits.csv" autocomplete="off" /></label>
+      <label>Header row, comma-separated<input class="wide" id="headers" value="Ward, Visit date, Households, Notes" autocomplete="off" /></label>
+      <button class="p" type="submit">Add this CSV</button>
+    </form>
+    <div class="samples">
+      <span>Samples</span>
+      <button type="button" data-sample="donors">Donors</button>
+      <button type="button" data-sample="donations">Donations</button>
+      <button type="button" data-sample="volunteers">Volunteers</button>
+      <button type="button" data-sample="assets">Assets</button>
+    </div>
+    <p class="try-msg" id="try-msg" hidden></p>
+    <div class="try-stage" id="try-stage"></div>
+  </div>
+</header>
+<nav class="toc"><div id="toc"></div></nav>
+<main class="page" id="flows"></main>
+<script>
+const ICON = {
+  home: '<svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>',
+  records: '<svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>',
+  inbox: '<svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 12h-4a3 3 0 0 1-6 0H5V5h14v10z"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><path d="M6 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm12 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>',
+};
+const NAV = [['home', 'Home'], ['records', 'Records'], ['inbox', 'Inbox'], ['more', 'More']];
+const TYPES = {
+  donor: { label: 'Donor', fields: [['name', 'Name'], ['email', 'Email'], ['phone', 'Phone'], ['pan', 'PAN'], ['since', 'Supporter since']], required: ['name'] },
+  donation: { label: 'Donation', fields: [['donor', 'Donor (by old id)'], ['amount', 'Amount'], ['paidOn', 'Paid on'], ['mode', 'Mode'], ['receiptNo', 'Receipt number']], required: ['donor', 'amount'] },
+  volunteer: { label: 'Volunteer', fields: [['name', 'Name'], ['skill', 'Skill'], ['ward', 'Ward'], ['joined', 'Joined']], required: ['name'] },
+  asset: { label: 'Asset', fields: [['tag', 'Asset tag'], ['description', 'Description'], ['cost', 'Cost'], ['bought', 'Bought on'], ['location', 'Location']], required: ['description'] },
+};
+const SAMPLES = {
+  donors: { name: 'donors.csv', headers: ['DonorId', 'Full Name', 'Email', 'Mobile', 'PAN', 'Since', 'InternalCode'], rows: 840, samples: ['D-1042', 'Ravi Kumar', 'ravi@example.com', '98xxxxxx10', 'ABCDE1234F', '12/03/2019', 'X19'] },
+  donations: { name: 'donations.csv', headers: ['TxnNo', 'DonorId', 'Amount', 'Paid On', 'Mode', 'ReceiptNo'], rows: 2140, samples: ['T-8831', 'D-1042', '2500', '04/11/2025', 'UPI', 'R-2044'] },
+  volunteers: { name: 'volunteers.csv', headers: ['VolCode', 'Person', 'Skill', 'Ward', 'Joined'], rows: 36, samples: ['V-12', 'Meera Joshi', 'Teaching', 'Kothrud', '2024-06-01'] },
+  assets: { name: 'assets.csv', headers: ['Asset tag', 'Description', 'Cost', 'Bought', 'Location', 'Custodian code'], rows: 18, samples: ['LT-04', 'Laptop', '45000', '2022-08-14', 'Office', 'V-12'] },
+};
+
+const hit = (on) => (on ? ' hit' : '');
+function nav(k) {
+  const html = NAV.map(([key, label]) => `<div class="nv${key === 'more' ? ' on' : ''}"><span class="g">${ICON[key]}</span><span>${label}</span></div>`).join('');
+  return k === 'phone' ? `<div class="navbar">${html}</div>` : `<div class="rail">${html}</div>`;
+}
+function appbar() {
+  return `<div class="appbar"><span class="mark">DF</span><span class="brand">NGOOne</span><span class="org">Demo Foundation</span><span class="sp"></span><span class="ib">🔔<span class="dot">2</span></span><span class="ib av">AS</span></div>`;
+}
+function crumbs(s) {
+  return `<nav class="crumbs" aria-label="Breadcrumb"><ol>${s.crumbs.map((it, i) => i === s.crumbs.length - 1 ? `<li aria-current="page">${it}</li>` : `<li><a>${it}</a></li>`).join('')}</ol></nav>`;
+}
+function frame(k, s) {
+  const head = `<div class="pagehead">${s.back ? '<span class="back" aria-hidden="true">←</span>' : ''}<div class="h1">${s.title}</div></div>`;
+  const body = `<div class="main">${head}${s.body(k)}${s.overlay ? s.overlay(k) : ''}</div>`;
+  return k === 'phone'
+    ? `<div class="phone"><div class="scr"><div class="status"><span>9:41</span><span>100%</span></div>${appbar()}${crumbs(s)}<div class="frame-body">${body}</div>${nav('phone')}</div></div>`
+    : `<div class="browser"><div class="chrome"><div class="url">${s.url}</div></div><div class="scr">${appbar()}${crumbs(s)}<div class="frame-body">${nav('desk')}${body}</div></div></div>`;
+}
+const field = (l, v, o = {}) => `<div class="mf"><div class="l">${l}${o.req ? ' <i>*</i>' : ''}</div><div class="o"><span>${v}</span>${o.icon ? `<span>${o.icon}</span>` : ''}</div>${o.hint ? `<div class="h">${o.hint}</div>` : ''}</div>`;
+const steps = (on) => `<div class="stepper">${['Files', 'Map', 'Order', 'Books', 'Check', 'Run'].map((n) => `<span class="${n === on ? 'on' : ''}">${n}</span>`).join('')}</div>`;
+function row(title, sub, extra) {
+  return `<div class="listrow"><div><b>${title}</b><div class="cs">${sub}</div></div>${extra || '<span class="cs">›</span>'}</div>`;
+}
+
+function adminHome() {
+  return `<p class="cap">Organisation</p>
+    <div class="panel">${row('Identity', 'Code, names and default language')}${row('Profile', 'Contact, address and time zone')}${row('Registrations', '12A, 80G and other registrations')}${row('Settings', 'Financial year, storage and API limits')}</div>
+    <p class="cap">People</p>
+    <div class="panel">${row('People', 'Add someone, invitations, roles')}${row('Roles', 'Who holds each role')}</div>
+    <p class="cap">Data</p>
+    <div class="panel">${row('Migration', 'Bring in CSV files from another system', '<span class="cs">›</span>')}</div>
+    <p class="cap">Integrations</p>
+    <div class="panel">${row('Connectors', 'SMS, WhatsApp and webhooks')}${row('API keys', 'Let another system act as one role')}</div>
+    <p class="cap">Activity</p>
+    <div class="panel">${row('Background jobs', "Everyone's imports, bulk changes and rebuilds")}${row('Audit log', 'Who changed what, and when')}</div>`;
+}
+function profileList() {
+  return `<p class="intro">A saved map of files to record types. Running it again updates rows that share the same old id.</p>
+    <div class="row" style="margin-bottom:10px"><span class="sp"></span><span class="btn p${hit(true)}">New migration</span></div>
+    <div class="panel">${row('Legacy extract', '5 files · last run 2 Nov 2026 · 1,204 created, 0 failed')}</div>`;
+}
+function emptyList() {
+  return `<p class="intro">CSV files from the old database. Each file can have its own columns.</p>
+    <div class="card"><b>No migration yet</b><p class="cs">Add the CSV files you exported. You choose, file by file, which record type they fill.</p><div class="row" style="margin-top:10px"><span class="btn p${hit(true)}">New migration</span></div></div>`;
+}
+function filesBody() {
+  return `${steps('Files')}
+    <p class="intro">Add every table you exported. The columns can be different on every file.</p>
+    <div class="drop${hit(true)}"><b>Drop CSV files here</b><span class="cs">Or choose files. Any header row is kept. Up to 10 MB and 20,000 rows each.</span></div>
+    <div class="panel">
+      ${row('donors.csv', '7 columns · 840 rows · Donor · old id DonorId', '<span class="bdg s">Mapped</span>')}
+      ${row('donations.csv', '6 columns · 2,140 rows · Donation · old id TxnNo', '<span class="bdg s">Mapped</span>')}
+      ${row('volunteers.csv', '5 columns · 36 rows · Volunteer · old id VolCode', '<span class="bdg s">Mapped</span>')}
+      ${row('assets.csv', '6 columns · 18 rows · Asset · old id Asset tag', '<span class="bdg p">Mapped</span>')}
+      ${row('ward-visits.csv', '4 columns · 120 rows · no record type yet', '<span class="bdg w">Left out</span>')}
+    </div>
+    <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p">Next</span></div>`;
+}
+function mapRows(pairs) {
+  return `<div class="panel">${pairs.map(([col, sample, badge, kind]) => `<div class="listrow"><div><b>${col}</b><div class="cs">${sample}</div></div><span class="bdg ${kind}">${badge}</span></div>`).join('')}</div>`;
+}
+function mapDonors() {
+  return `${steps('Map')}<p class="intro">donors.csv · 840 rows. Match each column to a Donor field, or leave it out.</p>
+    ${field('Record type', 'Donor', { icon: '▾' })}
+    ${field('Column that holds the old id', 'DonorId', { icon: '▾', hint: 'A later file can point at this donor with D-1042.' })}
+    ${mapRows([
+      ['DonorId', 'D-1042', 'Old id', 'p'],
+      ['Full Name', 'Ravi Kumar', 'Name', 's'],
+      ['Email', 'ravi@example.com', 'Email', 's'],
+      ['Mobile', '98xxxxxx10', 'Phone', 's'],
+      ['PAN', 'ABCDE1234F', 'PAN', 's'],
+      ['Since', '12/03/2019', 'Supporter since', 's'],
+      ['InternalCode', 'X19', 'Not imported', 'n'],
+    ])}
+    <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p${hit(true)}">Save map</span></div>`;
+}
+function mapDonations() {
+  return `${steps('Map')}<p class="intro">donations.csv · 2,140 rows. DonorId is not an email. It finds the donor loaded from donors.csv.</p>
+    ${field('Record type', 'Donation', { icon: '▾' })}
+    ${field('Column that holds the old id', 'TxnNo', { icon: '▾' })}
+    ${mapRows([
+      ['TxnNo', 'T-8831', 'Old id', 'p'],
+      ['DonorId', 'D-1042', 'Donor (by old id)', 's'],
+      ['Amount', '2500', 'Amount', 's'],
+      ['Paid On', '04/11/2025', 'Paid on', 's'],
+      ['Mode', 'UPI', 'Mode', 's'],
+      ['ReceiptNo', 'R-2044', 'Receipt number', 's'],
+    ])}
+    <div class="note">Receipt numbers already issued are stored on the donation. The next number to issue is set on Books, so this run does not print a new receipt.</div>
+    <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p${hit(true)}">Save map</span></div>`;
+}
+function mapCombined() {
+  return `${steps('Map')}<p class="intro">combined.csv · 64 rows. Each row holds a supporter and, sometimes, their first gift.</p>
+    <div class="card"><div class="row"><b>Supporter</b><span class="sp"></span><span class="bdg p">Required</span></div>
+      ${field('Column with the old id', 'Donor code', { icon: '▾' })}
+      ${mapRows([
+        ['Donor code', 'D-4', 'Old id', 'p'],
+        ['Name', 'Meena', 'Name', 's'],
+      ])}
+    </div>
+    <div class="card"><div class="row"><b>Donation</b><span class="sp"></span><span class="bdg n">Optional</span></div>
+      ${field('Column with the old id', 'Txn', { icon: '▾', hint: 'A row with no Txn makes only the supporter.' })}
+      ${mapRows([
+        ['Txn', 'T-4', 'Old id', 'p'],
+        ['Gift amount', '25', 'Amount', 's'],
+        ['Donor', '—', 'The supporter from the same row', 's'],
+      ])}
+    </div>
+    <div class="row"><span class="btn">Fill another record type ▾</span><span class="sp"></span><span class="btn p${hit(true)}">Save mapping</span></div>`;
+}
+function mapUnknown() {
+  return `${steps('Map')}<p class="intro">ward-visits.csv · 120 rows. These columns are kept as they arrived. Nothing in the Builder is selected yet.</p>
+    ${field('Record type', 'Choose a record type', { icon: '▾' })}
+    <div class="note warn">This file stays out of the run until it has a record type. Add a Ward visit type in the Builder if you need these rows.</div>
+    ${mapRows([
+      ['Ward', 'Kothrud', 'Not imported', 'n'],
+      ['Visit date', '03/11/2025', 'Not imported', 'n'],
+      ['Households', '14', 'Not imported', 'n'],
+      ['Notes', 'Follow up', 'Not imported', 'n'],
+    ])}
+    <div class="row"><span class="btn${hit(true)}">Leave this file out</span><span class="sp"></span><span class="btn">Open Builder</span></div>`;
+}
+function orderBody() {
+  return `${steps('Order')}<p class="intro">Files load from top to bottom. A file that looks up another waits until that file has loaded.</p>
+    <div class="panel">
+      ${row('1 · donors.csv', 'Donor · 840 rows', '<span class="cs">↑ ↓</span>')}
+      ${row('2 · volunteers.csv', 'Volunteer · 36 rows', '<span class="cs">↑ ↓</span>')}
+      ${row('3 · assets.csv', 'Asset · 18 rows', '<span class="cs">↑ ↓</span>')}
+      ${row('4 · donations.csv', 'Donation · looks up Donor', '<span class="cs">↑ ↓</span>')}
+    </div>
+    <div class="note">ward-visits.csv is left out. It has no record type.</div>
+    <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p${hit(true)}">Next</span></div>`;
+}
+function booksBody() {
+  return `${steps('Books')}<p class="intro">These are not a CSV. They set the books at the cutover date after the files succeed.</p>
+    <div class="card">
+      ${field('Cutover date', '01/04/2026', { req: true, hint: 'The opening journal is dated this day; its financial year must be open.' })}
+    </div>
+    <p class="cap">Opening journal</p>
+    <div class="panel">
+      ${row('BANK', 'Debit 4,80,000.00', '<span class="cs">Remove</span>')}
+      ${row('DONATION_INCOME', 'Credit 4,80,000.00', '<span class="cs">Remove</span>')}
+    </div>
+    <p class="cs">Debits 480000 · Credits 480000. Old transfers are not replayed.</p>
+    <p class="cap">Receipt numbering</p>
+    <div class="card">${field('Receipt series', 'donation-receipt')}${field('Next receipt number', '2045', { hint: 'The highest ReceiptNo in donations.csv is 2044. The counter is raised, never lowered.' })}</div>
+    <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p${hit(true)}">Next</span></div>`;
+}
+function checkBody() {
+  return `${steps('Check')}<p class="intro">Nothing is saved. Automations stay off when you run.</p>
+    <div class="counts"><div><b>3,034</b><span>Rows</span></div><div><b>3,031</b><span>Ready</span></div><div><b>3</b><span>Problems</span></div></div>
+    <div class="panel">
+      ${row('donors.csv', '840 ready · 0 problems', '<span class="bdg s">Ready</span>')}
+      ${row('volunteers.csv', '36 ready', '<span class="bdg s">Ready</span>')}
+      ${row('assets.csv', '18 ready', '<span class="bdg s">Ready</span>')}
+      ${row('donations.csv', '2,137 ready · 3 problems', '<span class="bdg w">Problems</span>')}
+    </div>
+    <div class="card"><b>Problems</b>
+      <div class="cs" style="margin-top:6px">donations.csv, row 18: Donor: nothing loaded has old id 'D-9990'</div>
+      <div class="cs">donations.csv, row 44: Amount is not a number</div>
+      <div class="cs">donations.csv, row 102: Paid on is not a date (use dd/mm/yyyy or yyyy-mm-dd)</div>
+    </div>
+    <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p${hit(true)}">Run 3,031 rows</span></div>`;
+}
+function runBody() {
+  return `${steps('Run')}<p class="intro">You can leave this page. The run continues with automations off.</p>
+    <div class="card"><b>donations.csv</b><div class="cs">File 4 of 4 · 1,420 of 2,140</div><div class="bar"><i style="width:72%"></i></div><div class="cs">About 2 minutes left</div></div>
+    <div class="panel">
+      ${row('donors.csv', '840 created', '<span class="bdg s">Done</span>')}
+      ${row('volunteers.csv', '36 created', '<span class="bdg s">Done</span>')}
+      ${row('assets.csv', '18 created', '<span class="bdg s">Done</span>')}
+      ${row('donations.csv', 'In progress', '<span class="bdg p">Running</span>')}
+    </div>
+    <div class="row"><span class="btn">Close</span><span class="sp"></span><span class="btn">Cancel run</span></div>`;
+}
+function resultBody() {
+  return `${steps('Run')}<div class="note ok">Migration finished. Opening balance and the next receipt number were saved.</div>
+    <div class="counts"><div><b>3,031</b><span>Created</span></div><div><b>0</b><span>Updated</span></div><div><b>3</b><span>Failed</span></div></div>
+    <div class="panel">
+      ${row('donors.csv', '840 created', '<span class="bdg s">Done</span>')}
+      ${row('donations.csv', '2,137 created · 3 failed', '<span class="bdg w">3 failed</span>')}
+    </div>
+    <div class="row"><span class="btn${hit(true)}">Download failed rows</span><span class="sp"></span><span class="btn p">Done</span></div>
+    <p class="cs">Fix the three rows and add the file again. Rows already loaded are updated, not duplicated.</p>`;
+}
+function rerunBody() {
+  return `${steps('Check')}<p class="intro">The same donors.csv, after the failed rows were fixed. DonorId matches the old id already stored.</p>
+    <div class="counts"><div><b>840</b><span>Rows</span></div><div><b>837</b><span>Will update</span></div><div><b>3</b><span>Will create</span></div></div>
+    <div class="note">No second Ravi Kumar. D-1042 updates the donor loaded last time.</div>
+    <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p${hit(true)}">Run 840 rows</span></div>`;
+}
+function badFile() {
+  return `${steps('Files')}<p class="intro">Add every table you exported.</p>
+    <div class="drop"><b>Drop CSV files here</b><span class="cs">Any header row is kept.</span></div>
+    <div class="note bad">ledger.xlsx is not a CSV. Export that table as CSV and add it again. The other files are unchanged.</div>
+    <div class="panel">${row('donors.csv', '7 columns · 840 rows · Donor', '<span class="bdg s">Mapped</span>')}</div>`;
+}
+function noAccess() {
+  return `<div class="note bad">You do not have access to Migration. Ask an administrator who can migrate data.</div>
+    <p class="cs">The Administration home does not list Migration for this person. Opening /admin/migration shows this message.</p>`;
+}
+
+const STEPS = [
+  { id: 'admin', t: 'Administration', act: 'More → <kbd>Administration</kbd>', url: '/admin', title: 'Administration', back: true, crumbs: ['Administration'], body: adminHome,
+    note: 'Migration is its own row, for a person who can migrate data. It sits with the organisation’s data, separate from People, Connectors and the audit log.' },
+  { id: 'list', t: 'Migrations', act: 'Tap <kbd>Migration</kbd>', url: '/admin/migration', title: 'Migration', back: true, crumbs: ['Administration', 'Migration'], body: profileList,
+    note: 'One profile holds the files, the column map, the order and the books figures. A later run of the same profile updates by old id.' },
+  { id: 'empty', t: 'Nothing yet', act: 'First visit', url: '/admin/migration', title: 'Migration', back: true, crumbs: ['Administration', 'Migration'], body: emptyList,
+    note: 'An organisation with no profile sees this. New migration starts an empty profile. There is no sample file to download, because the columns come from the old database.' },
+  { id: 'files', t: 'Any files', act: 'Drop the export', url: '/admin/migration/legacy/files', title: 'Legacy extract', back: true, crumbs: ['Administration', 'Migration', 'Files'], body: filesBody,
+    note: 'Five files, five shapes. Donors, donations, volunteers and assets each keep their own headers. ward-visits.csv is accepted and marked left out until it has a record type. A file the old database named differently would appear the same way.' },
+  { id: 'map-donors', t: 'Map donors', act: 'Open <kbd>donors.csv</kbd>', url: '/admin/migration/legacy/map/donors.csv', title: 'Map columns', back: true, crumbs: ['Administration', 'Migration', 'Map'], body: mapDonors,
+    note: 'Full Name fills Name even though the words differ. InternalCode has no Donor field, so it stays Not imported and is not rejected. DonorId is the old id used by later files.' },
+  { id: 'map-donations', t: 'Map donations', act: 'Open <kbd>donations.csv</kbd>', url: '/admin/migration/legacy/map/donations.csv', title: 'Map columns', back: true, crumbs: ['Administration', 'Migration', 'Map'], body: mapDonations,
+    note: 'The donor column looks up by old id, not by email or name. Receipt numbers already issued are data on the row. They do not advance the sequence; Books does that.' },
+  { id: 'map-combined', t: 'One row, two records', act: 'Open <kbd>combined.csv</kbd>', url: '/admin/migration/legacy/map', title: 'Map columns', back: true, crumbs: ['Administration', 'Migration', 'Map'], body: mapCombined,
+    note: 'One file fills two record types. Each row is one transaction: if the required supporter fails, the donation from that row is not saved either. The optional donation is left out when its old id is blank or its cells are wrong, and the supporter still loads. The donation’s Donor field points at the supporter written from the same row.' },
+  { id: 'map-unknown', t: 'No type yet', act: 'Open <kbd>ward-visits.csv</kbd>', url: '/admin/migration/legacy/map/ward-visits.csv', title: 'Map columns', back: true, crumbs: ['Administration', 'Migration', 'Map'], body: mapUnknown,
+    note: 'An unfamiliar table is still listed, with every column unmatched. She either picks a record type that already exists or leaves the file out and creates the type in the Builder. The headers are not turned into fields.' },
+  { id: 'order', t: 'Order', act: 'Next', url: '/admin/migration/legacy/order', title: 'Load order', back: true, crumbs: ['Administration', 'Migration', 'Order'], body: orderBody,
+    note: 'Donors load before donations because the donation map looks up Donor. A file with no record type is absent here. Saving a mapping moves a file below the files it looks up; moving donations above donors by hand is refused while that lookup remains.' },
+  { id: 'books', t: 'Books', act: 'Next', url: '/admin/migration/legacy/books', title: 'Books', back: true, crumbs: ['Administration', 'Migration', 'Books'], body: booksBody,
+    note: 'An opening journal that must balance, and the next receipt number for each series. They need their own permission and apply once, in one transaction, after every file has loaded; if the ledger refuses them (for example the year is not open), the run still finishes and Apply books can be pressed again. The old transfer table is not a file on this profile.' },
+  { id: 'check', t: 'Check', act: 'Next', url: '/admin/migration/legacy/check', title: 'Check', back: true, crumbs: ['Administration', 'Migration', 'Check'], body: checkBody,
+    note: 'The check counts creates and problems per file and does not write. Run is allowed with problems: the bad rows are skipped and downloaded afterwards. The button counts only ready rows.' },
+  { id: 'run', t: 'Run', act: 'Tap <kbd>Run</kbd>', url: '/admin/migration/legacy/run', title: 'Running', back: true, crumbs: ['Administration', 'Migration', 'Run'], body: runBody,
+    note: 'Files run in the saved order. Automations, mail and receipts stay off. Cancel stops after the current row. Closing the page does not stop the job.' },
+  { id: 'result', t: 'Result', act: 'When the job finishes', url: '/admin/migration/legacy/result', title: 'Result', back: true, crumbs: ['Administration', 'Migration', 'Result'], body: resultBody,
+    note: 'Created, updated and failed, per file. Failed rows download as CSV with the original columns plus the problem. Books are applied only because the run finished.' },
+  { id: 'rerun', t: 'Run again', act: 'Add the fixed file', url: '/admin/migration/legacy/check', title: 'Check', back: true, crumbs: ['Administration', 'Migration', 'Check'], body: rerunBody,
+    note: 'The second pass updates the 837 donors whose old id is already stored and creates only the new ones. The map does not have to be drawn again.' },
+  { id: 'bad', t: 'Not a CSV', act: 'Drop <kbd>ledger.xlsx</kbd>', url: '/admin/migration/legacy/files', title: 'Legacy extract', back: true, crumbs: ['Administration', 'Migration', 'Files'], body: badFile,
+    note: 'Spreadsheets, JSON and a live database connection are refused. She exports each table as CSV from her database tool and drops those files. Files already added stay.' },
+  { id: 'denied', t: 'No access', act: 'Open the address', url: '/admin/migration', title: 'Migration', back: true, crumbs: ['Administration', 'Migration'], body: noAccess,
+    note: 'Someone without Migrate data sees this message. The row is also absent on Administration. The page does not send her to Home with no explanation.' },
+];
+
+const toc = document.getElementById('toc');
+const root = document.getElementById('flows');
+root.insertAdjacentHTML('beforeend', `<section class="flow"><div class="flabel">Administration</div><h2>Bring in any CSV</h2><p>Phone and desktop show the same steps. The yellow outline marks what Asha does next. The try box above uses the same mapping rule on a header row you type.</p>${STEPS.map((s, i) => {
+  toc.insertAdjacentHTML('beforeend', `<a href="#${s.id}">${i + 1} · ${s.t}</a>`);
+  return `<div class="step" id="${s.id}"><div class="num">${i + 1}</div><div class="stephead"><b>${s.t}</b><span class="act">${s.act}</span><code>${s.url}</code></div><div></div><div><p class="cap">Phone</p>${frame('phone', s)}</div><div class="desk"><p class="cap">Desktop</p>${frame('desk', s)}<div class="noteline">${s.note}</div></div></div>`;
+}).join('')}</section>`);
+
+const added = [];
+let selected = 0;
+function parseHeaders(text) {
+  return text.split(',').map((h) => h.trim()).filter(Boolean);
+}
+function addFile(name, headers, rows, samples) {
+  const clean = headers.filter((h, i) => headers.indexOf(h) === i);
+  if (!clean.length) return 'Add at least one column name.';
+  const fileName = (name.trim() || 'upload.csv').replace(/\.csv$/i, '') + '.csv';
+  if (added.some((f) => f.name.toLowerCase() === fileName.toLowerCase())) return `${fileName} is already in this profile.`;
+  added.push({
+    name: fileName,
+    headers: clean,
+    rows: rows || null,
+    samples: samples || clean.map(() => '—'),
+    type: '',
+    oldId: '',
+    fields: Object.fromEntries(clean.map((h) => [h, ''])),
+  });
+  selected = added.length - 1;
+  return '';
+}
+function optionsFor(file) {
+  const type = TYPES[file.type];
+  const used = new Set(Object.values(file.fields).filter(Boolean));
+  const base = [['', 'Not imported'], ['__old', 'Old id']];
+  if (!type) return base;
+  return base.concat(type.fields.map(([key, label]) => [key, label]));
+}
+function fileSummary(file) {
+  const type = TYPES[file.type];
+  const mapped = Object.values(file.fields).filter(Boolean).length + (file.oldId ? 1 : 0);
+  const typeLabel = type ? type.label : 'no record type yet';
+  const rows = file.rows ? `${file.rows.toLocaleString('en-IN')} rows · ` : '';
+  return `${file.headers.length} columns · ${rows}${typeLabel}${mapped ? ` · ${mapped} matched` : ''}`;
+}
+function renderTry(kind) {
+  if (!added.length) {
+    return `<p class="intro">No file in the try profile yet. Add a header row above, or use a sample.</p>`;
+  }
+  const file = added[selected];
+  const list = `<div class="panel">${added.map((f, i) => `<button type="button" class="listrow" data-pick="${i}"><div><b>${f.name}</b><div class="cs">${fileSummary(f)}</div></div><span class="bdg ${f.type ? 's' : 'w'}">${f.type ? 'Mapped' : 'Unmatched'}</span></button>`).join('')}</div>`;
+  const typeOptions = [['', 'Choose a record type']].concat(Object.entries(TYPES).map(([key, t]) => [key, t.label]));
+  const opts = optionsFor(file);
+  const missing = file.type ? TYPES[file.type].required.filter((key) => !Object.values(file.fields).includes(key)) : [];
+  const missingNote = file.type && missing.length
+    ? `<div class="note warn">${TYPES[file.type].label} still needs ${missing.map((key) => TYPES[file.type].fields.find((f) => f[0] === key)[1]).join(', ')}. Match a column, or clear the record type to leave this file out.</div>`
+    : '';
+  const map = `<div class="card"><b>${file.name}</b><p class="cs">These columns came from the file. Pick a field, or leave the column on Not imported.</p>
+    <div class="mf"><div class="l">Record type</div><select class="o" data-type="1">${typeOptions.map(([k, l]) => `<option value="${k}"${k === file.type ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+    ${missingNote}
+    <div class="panel">${file.headers.map((h, i) => {
+      const value = file.oldId === h ? '__old' : (file.fields[h] || '');
+      return `<div class="listrow"><div><b>${h}</b><div class="cs">${file.samples[i] || '—'}</div></div><select class="map" data-col="${h}">${opts.map(([k, l]) => `<option value="${k}"${k === value ? ' selected' : ''}>${l}</option>`).join('')}</select></div>`;
+    }).join('')}</div></div>`;
+  return `${list}${map}`;
+}
+function paint() {
+  const stage = document.getElementById('try-stage');
+  const screen = {
+    url: 'http://localhost:4200/admin/migration/try/files',
+    title: 'Try profile',
+    back: true,
+    crumbs: ['Administration', 'Migration', 'Files'],
+    body: () => renderTry(),
+  };
+  stage.innerHTML = `<div><p class="cap">Phone</p>${frame('phone', screen)}</div><div><p class="cap">Desktop</p>${frame('desk', screen)}</div>`;
+  stage.querySelectorAll('[data-pick]').forEach((el) => el.addEventListener('click', () => { selected = Number(el.dataset.pick); paint(); }));
+  stage.querySelectorAll('[data-type]').forEach((el) => el.addEventListener('change', () => {
+    const file = added[selected];
+    file.type = el.value;
+    file.fields = Object.fromEntries(file.headers.map((h) => [h, '']));
+    file.oldId = '';
+    paint();
+  }));
+  stage.querySelectorAll('[data-col]').forEach((el) => el.addEventListener('change', () => {
+    const file = added[selected];
+    const header = el.dataset.col;
+    if (el.value === '__old') {
+      file.oldId = header;
+      file.fields[header] = '';
+    } else {
+      if (file.oldId === header) file.oldId = '';
+      for (const key of Object.keys(file.fields)) if (file.fields[key] === el.value && el.value) file.fields[key] = '';
+      file.fields[header] = el.value;
+    }
+    paint();
+  }));
+}
+document.getElementById('add-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const msg = document.getElementById('try-msg');
+  const error = addFile(document.getElementById('fname').value, parseHeaders(document.getElementById('headers').value));
+  msg.hidden = !error;
+  msg.textContent = error;
+  if (!error) paint();
+});
+document.querySelector('.samples').addEventListener('click', (event) => {
+  const key = event.target.dataset.sample;
+  if (!key) return;
+  const sample = SAMPLES[key];
+  const msg = document.getElementById('try-msg');
+  const error = addFile(sample.name, sample.headers, sample.rows, sample.samples);
+  msg.hidden = !error;
+  msg.textContent = error;
+  if (!error) paint();
+});
+paint();
+</script>
+</body>
+</html>

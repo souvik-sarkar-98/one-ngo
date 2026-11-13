@@ -1,0 +1,233 @@
+name: CD (stage)
+
+# Called by ci.yml after "CI gate" passes on develop. Stage runs on Cloud Run,
+# in the project named by the stage environment. Production is a different
+# workflow and a different project.
+#
+# A new revision gets no traffic until GET /health answers. The public address
+# is checked again after traffic moves, and a failure sends traffic back.
+
+on:
+  workflow_call:
+
+concurrency:
+  group: deploy-stage
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Deploy to stage
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: stage
+    outputs:
+      public_url: ${{ steps.urls.outputs.public_url }}
+      console_url: ${{ steps.urls.outputs.console_url }}
+    env:
+      PROJECT: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION || 'asia-south1' }}
+      MAIN_SERVICE: ngo
+      CONSOLE_SERVICE: ngo-console
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build both servers
+        run: |
+          npm run build:server
+          npm run operator:server:build
+      - name: Stage both images
+        run: |
+          node .github/scripts/stage-cloud-run.mjs apps/onengo/server .deploy/main
+          node .github/scripts/stage-cloud-run.mjs apps/onengo-console/server .deploy/console
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Migrate the stage database
+        env:
+          DATABASE_OWNER_URL: ${{ secrets.DATABASE_OWNER_URL }}
+        run: npm run deploy:prepare
+
+      - name: Store secrets in Secret Manager
+        env:
+          MAIN_RUNTIME_SA: ${{ vars.SERVICE_ACCOUNT }}
+          CONSOLE_RUNTIME_SA: ${{ vars.CONSOLE_SERVICE_ACCOUNT }}
+          SYSTEM_DATABASE_URL: ${{ secrets.SYSTEM_DATABASE_URL }}
+          RUNTIME_DATABASE_URL: ${{ secrets.RUNTIME_DATABASE_URL }}
+          TOKEN_SECRET: ${{ secrets.TOKEN_SECRET }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+          TICK_SECRET: ${{ secrets.TICK_SECRET }}
+          CONSOLE_DATABASE_URL: ${{ secrets.CONSOLE_DATABASE_URL }}
+          CONSOLE_RUNTIME_URL: ${{ secrets.CONSOLE_RUNTIME_URL }}
+          CONSOLE_ENCRYPTION_KEY: ${{ secrets.CONSOLE_ENCRYPTION_KEY }}
+          CONSOLE_INTERNAL_TOKEN_SECRET: ${{ secrets.CONSOLE_INTERNAL_TOKEN_SECRET }}
+          CONSOLE_OIDC_CLIENT_SECRET: ${{ secrets.CONSOLE_OIDC_CLIENT_SECRET }}
+        run: bash .github/scripts/sync-stage-secrets.sh
+
+      - name: Record the revisions now serving
+        run: |
+          set -euo pipefail
+          serving() {
+            gcloud run services describe "$1" --project "$PROJECT" --region "$REGION" \
+              --format='value(status.traffic[0].revisionName)' 2>/dev/null || true
+          }
+          echo "PREVIOUS_MAIN=$(serving "$MAIN_SERVICE")" >> "$GITHUB_ENV"
+          echo "PREVIOUS_CONSOLE=$(serving "$CONSOLE_SERVICE")" >> "$GITHUB_ENV"
+
+      - name: Deploy new revisions without traffic
+        env:
+          PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
+          CONSOLE_PUBLIC_BASE_URL: ${{ vars.CONSOLE_PUBLIC_BASE_URL }}
+          MAIN_SA: ${{ vars.SERVICE_ACCOUNT }}
+          CONSOLE_SA: ${{ vars.CONSOLE_SERVICE_ACCOUNT }}
+          OIDC_ISSUER: ${{ vars.CONSOLE_OIDC_ISSUER }}
+          OIDC_CLIENT_ID: ${{ vars.CONSOLE_OIDC_CLIENT_ID }}
+          OIDC_AUDIENCE: ${{ vars.CONSOLE_OIDC_AUDIENCE }}
+          CONSOLE_IAP_AUDIENCE: ${{ vars.CONSOLE_IAP_AUDIENCE }}
+        run: |
+          set -euo pipefail
+          deploy() {
+            local name="$1" source="$2" sa="$3" concurrency="$4" env_vars="$5" secrets="$6"
+            gcloud run deploy "$name" \
+              --source "$source" \
+              --project "$PROJECT" --region "$REGION" \
+              --service-account "$sa" \
+              --min-instances 0 --max-instances 1 \
+              --memory 512Mi --cpu 1 --cpu-throttling \
+              --concurrency "$concurrency" --port 8080 \
+              --allow-unauthenticated --no-traffic --tag candidate \
+              --set-env-vars "$env_vars" \
+              --set-secrets "$secrets" \
+              --quiet
+          }
+          main_url="${PUBLIC_BASE_URL:-https://pending.invalid}"
+          console_url="${CONSOLE_PUBLIC_BASE_URL:-https://pending.invalid}"
+          deploy "$MAIN_SERVICE" .deploy/main "$MAIN_SA" 40 \
+            "NODE_ENV=production,INSTALLATION_MODE=one-ngo,PUBLIC_BASE_URL=${main_url},DATABASE_POOL_SIZE=3,BREACHED_PASSWORD_CHECK=online,MEMORY_ALERT_MB=300" \
+            "DATABASE_SYSTEM_URL=ngo-database-system-url:latest,DATABASE_RUNTIME_URL=ngo-database-runtime-url:latest,TOKEN_SECRET=ngo-token-secret:latest,ENCRYPTION_KEY=ngo-encryption-key:latest,TICK_SECRET=ngo-tick-secret:latest"
+          deploy "$CONSOLE_SERVICE" .deploy/console "$CONSOLE_SA" 20 \
+            "NODE_ENV=production,INSTALLATION_MODE=one-ngo,OPERATOR_PUBLIC_BASE_URL=${console_url},OPERATOR_OIDC_ISSUER=${OIDC_ISSUER},OPERATOR_OIDC_CLIENT_ID=${OIDC_CLIENT_ID},OPERATOR_OIDC_AUDIENCE=${OIDC_AUDIENCE},OPERATOR_IAP_AUDIENCE=${CONSOLE_IAP_AUDIENCE}" \
+            "OPERATOR_DATABASE_URL=ngo-console-database-url:latest,OPERATOR_RUNTIME_URL=ngo-console-runtime-url:latest,OPERATOR_ENCRYPTION_KEY=ngo-console-encryption-key:latest,OPERATOR_INTERNAL_TOKEN_SECRET=ngo-console-internal-token-secret:latest,OPERATOR_OIDC_CLIENT_SECRET=ngo-console-oidc-client-secret:latest,ENCRYPTION_KEY=ngo-encryption-key:latest"
+
+      - name: Curl /health on the new revisions
+        run: |
+          set -euo pipefail
+          candidate() {
+            gcloud run services describe "$1" --project "$PROJECT" --region "$REGION" --format=json \
+              | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const hit=(JSON.parse(s).status.traffic??[]).find(t=>t.tag==="candidate");if(!hit||!hit.url){process.stderr.write("No candidate URL\n");process.exit(1);}process.stdout.write(hit.url);})'
+          }
+          node .github/scripts/smoke-test.mjs main "$(candidate "$MAIN_SERVICE")"
+          node .github/scripts/smoke-test.mjs console "$(candidate "$CONSOLE_SERVICE")"
+
+      - name: Move traffic to the new revisions
+        id: promote
+        run: |
+          set -euo pipefail
+          gcloud run services update-traffic "$MAIN_SERVICE" --project "$PROJECT" --region "$REGION" --to-latest --quiet
+          gcloud run services update-traffic "$CONSOLE_SERVICE" --project "$PROJECT" --region "$REGION" --to-latest --quiet
+
+      - name: Curl /health on the public addresses
+        id: urls
+        env:
+          PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
+          CONSOLE_PUBLIC_BASE_URL: ${{ vars.CONSOLE_PUBLIC_BASE_URL }}
+        run: |
+          set -euo pipefail
+          service_url() {
+            gcloud run services describe "$1" --project "$PROJECT" --region "$REGION" --format='value(status.url)'
+          }
+          main="${PUBLIC_BASE_URL:-$(service_url "$MAIN_SERVICE")}"
+          console="${CONSOLE_PUBLIC_BASE_URL:-$(service_url "$CONSOLE_SERVICE")}"
+          node .github/scripts/smoke-test.mjs main "$main"
+          node .github/scripts/smoke-test.mjs console "$console"
+          echo "public_url=$main" >> "$GITHUB_OUTPUT"
+          echo "console_url=$console" >> "$GITHUB_OUTPUT"
+
+      - name: Move traffic back to the previous revisions
+        if: failure() && (steps.promote.outcome == 'success' || steps.promote.outcome == 'failure')
+        run: |
+          set -euo pipefail
+          back() {
+            if [[ -n "$2" ]]; then
+              gcloud run services update-traffic "$1" --project "$PROJECT" --region "$REGION" --to-revisions "$2=100" --quiet
+            else
+              echo "::warning::No previous revision of $1 to return to. This was its first deploy."
+            fi
+          }
+          back "$MAIN_SERVICE" "$PREVIOUS_MAIN"
+          back "$CONSOLE_SERVICE" "$PREVIOUS_CONSOLE"
+
+      - name: Ensure the hourly tick
+        if: success()
+        env:
+          TICK_SECRET: ${{ secrets.TICK_SECRET }}
+          PUBLIC_BASE_URL: ${{ steps.urls.outputs.public_url }}
+        run: |
+          set -euo pipefail
+          common=(
+            --project "$PROJECT" --location "$REGION"
+            --schedule "0 * * * *" --time-zone "Asia/Kolkata"
+            --uri "${PUBLIC_BASE_URL}/internal/tick" --http-method POST
+          )
+          if gcloud scheduler jobs describe ngo-tick --project "$PROJECT" --location "$REGION" >/dev/null 2>&1; then
+            gcloud scheduler jobs update http ngo-tick "${common[@]}" --update-headers "Authorization=Bearer ${TICK_SECRET}" --quiet
+          else
+            gcloud scheduler jobs create http ngo-tick "${common[@]}" --headers "Authorization=Bearer ${TICK_SECRET}" --quiet
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Stage deploy"
+            echo "- Previous main revision: \`${PREVIOUS_MAIN:-none}\`"
+            echo "- Previous console revision: \`${PREVIOUS_CONSOLE:-none}\`"
+            echo "- Public app: ${{ steps.urls.outputs.public_url }}"
+            echo "- Public console: ${{ steps.urls.outputs.console_url }}"
+            echo "- To go back, run Rollback (stage) with those two revision names."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  e2e:
+    name: Post-deploy end-to-end
+    needs: deploy
+    if: needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+      - name: Install Playwright
+        working-directory: tests/e2e
+        run: npm ci
+      - name: Install Chromium
+        working-directory: tests/e2e
+        run: npx playwright install --with-deps chromium
+      - name: Open the deployed sign-in pages
+        working-directory: tests/e2e
+        env:
+          CI: true
+          APP_BASE_URL: ${{ needs.deploy.outputs.public_url }}
+          CONSOLE_BASE_URL: ${{ needs.deploy.outputs.console_url }}
+        run: npx playwright test --config=playwright.post-deploy.config.ts
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage-playwright-${{ github.run_id }}
+          path: tests/e2e/playwright-report
+          retention-days: 7

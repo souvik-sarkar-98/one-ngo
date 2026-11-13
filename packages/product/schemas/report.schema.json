@@ -1,0 +1,195 @@
+{
+  "$id": "report",
+  "title": "Report",
+  "description": "Gathers records, totals and calculations, then makes one file: a PDF from a document template, or an Excel workbook.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["key", "label", "datasets"],
+  "properties": {
+    "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,62}$", "description": "Stable name of the report; part of its permission" },
+    "label": { "type": "string", "minLength": 1, "maxLength": 80, "description": "Name shown to the person running it" },
+    "audience": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string" },
+      "description": "Roles that may run it, besides holding report:<key>:run. Empty means anyone with that permission",
+      "x-ref": "role"
+    },
+    "parameters": {
+      "type": "array",
+      "maxItems": 20,
+      "description": "Values asked for when the report is run. Each is available as params.<key>",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "label", "type"],
+        "properties": {
+          "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_]{0,40}$", "description": "Name used as params.<key>" },
+          "label": { "type": "string", "minLength": 1, "description": "Label shown on the form" },
+          "type": { "enum": ["text", "number", "money", "date", "boolean", "choice"], "description": "Kind of value" },
+          "required": { "type": "boolean", "description": "Must be filled in" },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["value", "label"],
+              "properties": {
+                "value": { "type": "string", "description": "Stored value" },
+                "label": { "type": "string", "description": "Shown to people" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "datasets": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "description": "Where the rows and totals come from",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "source"],
+        "properties": {
+          "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_]{0,40}$", "description": "Name used as datasets.<key>" },
+          "label": { "type": "string", "description": "Name of the sheet or section" },
+          "source": { "enum": ["query", "aggregate", "ledger"], "description": "A list of records, a count or total, or ledger balances" },
+          "recordType": { "type": "string", "description": "Record type to read", "x-ref": "recordType" },
+          "filters": {
+            "type": "object",
+            "description": "Field filters. Each value is an expression over params; a blank result leaves the filter out",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "eq": { "type": "string", "description": "Equals, as an expression" },
+                "from": { "type": "string", "description": "From, as an expression" },
+                "to": { "type": "string", "description": "To, as an expression" }
+              }
+            }
+          },
+          "statusIn": { "type": "array", "items": { "type": "string" }, "description": "Workflow states to include" },
+          "sort": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["field"],
+            "properties": {
+              "field": { "type": "string", "description": "Field to sort by" },
+              "dir": { "enum": ["asc", "desc"], "description": "Direction. Default descending" }
+            }
+          },
+          "fields": { "type": "array", "maxItems": 40, "items": { "type": "string" }, "description": "Fields to include. Masked fields stay masked" },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 20000, "description": "Most rows to read. Default 5000" },
+          "related": {
+            "type": "array",
+            "maxItems": 5,
+            "description": "Reference fields whose chosen records are loaded beside each row",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["field", "fields"],
+              "properties": {
+                "field": { "type": "string", "description": "Reference field of this record type" },
+                "fields": { "type": "array", "minItems": 1, "maxItems": 20, "items": { "type": "string" }, "description": "Fields of the chosen record" }
+              }
+            }
+          },
+          "measure": { "enum": ["count", "sum"], "description": "Count the records, or add up a number or money field" },
+          "field": { "type": "string", "description": "Number or money field to add up" },
+          "groupBy": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Split the total by a field or by a period",
+            "properties": {
+              "field": { "type": "string", "description": "Choice, yes/no or reference field" },
+              "period": { "enum": ["day", "week", "month", "financialYear"], "description": "Period" },
+              "dateField": { "type": "string", "description": "Date field, or createdAt" }
+            }
+          },
+          "accounts": { "type": "array", "maxItems": 20, "items": { "type": "string" }, "description": "Ledger account codes" },
+          "funds": { "type": "array", "maxItems": 20, "items": { "type": "string" }, "description": "Fund codes" },
+          "asOf": { "type": "string", "description": "Date the balances are taken to, as an expression. Default today" }
+        }
+      }
+    },
+    "calculations": {
+      "type": "array",
+      "maxItems": 30,
+      "description": "Values worked out from the parameters and datasets",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "expression"],
+        "properties": {
+          "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_]{0,40}$", "description": "Name used as calculations.<key>" },
+          "label": { "type": "string", "description": "Name shown on the report" },
+          "expression": { "type": "string", "description": "Expression over params, datasets and earlier calculations" }
+        }
+      }
+    },
+    "shape": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "A custom step that replaces the data model. A script runs only as a background job and needs an organisation administrator to publish",
+      "properties": {
+        "script": { "type": "string", "description": "Report shape script", "x-ref": "script" },
+        "provider": { "type": "string", "description": "Provider registered by a module" }
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "maxProperties": 1,
+      "description": "The one file the report makes: a PDF or an Excel workbook",
+      "properties": {
+        "pdf": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["template"],
+          "properties": {
+            "template": { "type": "string", "description": "Document template", "x-ref": "template" },
+            "pageSize": { "enum": ["A4", "Letter"], "description": "Page size. Default A4" },
+            "orientation": { "enum": ["portrait", "landscape"], "description": "Page direction. Default portrait" }
+          }
+        },
+        "excel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sheets"],
+          "properties": {
+            "sheets": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 12,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["dataset"],
+                "properties": {
+                  "dataset": { "type": "string", "description": "Dataset this sheet shows" },
+                  "columns": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["field"],
+                      "properties": {
+                        "field": { "type": "string", "description": "Field of each row" },
+                        "header": { "type": "string", "description": "Column heading. Default the field name" },
+                        "format": { "enum": ["text", "number", "money", "date", "percent"], "description": "How the cell is written" },
+                        "total": { "type": "boolean", "description": "Add this column up in a totals row" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

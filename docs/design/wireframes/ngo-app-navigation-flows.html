@@ -1,0 +1,1348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NGO Platform — step-by-step navigation (same controls on phone and desktop)</title>
+<style>
+  :root {
+    --fg: #1d2733; --muted: #5b6878; --line: #d8dee6; --bg: #f5f7fa; --card: #fff;
+    --brand: #1f5f8b; --ok: #1d7a46; --warn: #9a6200; --bad: #b3261e; --radius: 6px;
+    --b50: color-mix(in srgb, var(--brand) 6%, #fff); --b100: color-mix(in srgb, var(--brand) 12%, #fff); --b200: color-mix(in srgb, var(--brand) 25%, #fff);
+    --page: #eef1f5; --ink: #18212b;
+    --font: 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Devanagari', Helvetica, Arial, sans-serif;
+    --mono: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font); color: var(--ink); background: linear-gradient(180deg, #f6f8fa, var(--page)); }
+  header.page { max-width: 1440px; margin: 0 auto; padding: 36px 40px 18px; }
+  header.page h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -.01em; }
+  header.page p { margin: 0 0 10px; max-width: 980px; line-height: 1.55; color: #36414d; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 16px; }
+  .rules div { background: #fff; border: 1px solid #dfe5eb; border-radius: 10px; padding: 12px 14px; font-size: 13.5px; line-height: 1.5; }
+  .rules b { display: block; color: var(--brand); margin-bottom: 3px; }
+  .changes { margin-top: 14px; background: #fff8ee; border: 1px solid #f0d9b5; border-radius: 10px; padding: 12px 16px; font-size: 13.5px; line-height: 1.55; }
+  .changes b { color: #8a4b0f; }
+  nav.toc { position: sticky; top: 0; z-index: 20; background: rgba(238,241,245,.94); backdrop-filter: blur(6px); border-bottom: 1px solid #dbe1e7; }
+  nav.toc div { max-width: 1440px; margin: 0 auto; padding: 9px 40px; display: flex; gap: 4px; overflow-x: auto; }
+  nav.toc a { font: 600 12px var(--mono); color: #3a4a5a; text-decoration: none; padding: 6px 10px; border-radius: 6px; white-space: nowrap; }
+  nav.toc a:hover { background: #fff; }
+  main.page { max-width: 1440px; margin: 0 auto; padding: 0 40px 80px; }
+  section.flow { margin-top: 40px; }
+  .flabel { font: 700 12px var(--mono); color: var(--brand); text-transform: uppercase; letter-spacing: .06em; display: flex; gap: 8px; align-items: center; }
+  .flabel::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+  section.flow > h2 { margin: 4px 0 4px; font-size: 22px; }
+  section.flow > p { margin: 0 0 14px; color: #3a4552; max-width: 980px; line-height: 1.5; }
+  .step { display: grid; grid-template-columns: 52px 330px minmax(0, 1fr); gap: 18px; align-items: start; padding: 18px 0; border-top: 1px dashed #d3dae2; }
+  @media (max-width: 1200px) { .step { grid-template-columns: 44px minmax(0, 1fr); } .step .desk { grid-column: 2; } }
+  .num { width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 2px solid var(--brand); color: var(--brand); font: 700 15px/36px var(--font); text-align: center; }
+  .stephead { grid-column: 2 / -1; margin-bottom: -6px; }
+  .stephead b { font-size: 16px; }
+  .stephead .act { display: inline-block; margin-left: 10px; font-size: 13px; color: #3a4552; }
+  .stephead .act kbd { font: 600 12px var(--font); background: #fff; border: 1px solid #ccd5de; border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; }
+  .stephead code { display: block; margin-top: 4px; font: 12px var(--mono); color: #556373; }
+  .cap { font: 600 10.5px var(--mono); color: #6a7683; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 5px; }
+  .noteline { font-size: 13px; color: #3a4552; line-height: 1.5; margin-top: 8px; max-width: 760px; }
+
+  /* frames */
+  .phone { width: 330px; height: 640px; border-radius: 34px; background: #0f141a; padding: 10px; box-shadow: 0 14px 30px rgba(15,23,42,.18); }
+  .phone .scr { width: 100%; height: 100%; border-radius: 26px; overflow: hidden; background: var(--bg); position: relative; display: flex; flex-direction: column; color: var(--fg); font-size: 14px; }
+  .status { height: 26px; flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; font: 600 11px var(--font); background: var(--brand); color: #fff; }
+  .browser { border-radius: 10px; background: #fff; border: 1px solid #d5dbe2; box-shadow: 0 14px 30px rgba(15,23,42,.12); overflow: hidden; min-width: 0; }
+  .browser .chrome { height: 30px; background: #e9edf1; border-bottom: 1px solid #d5dbe2; display: flex; align-items: center; padding: 0 10px; }
+  .browser .url { flex: 1; height: 20px; border-radius: 6px; background: #fff; font: 11.5px var(--mono); color: #536171; display: flex; align-items: center; padding: 0 9px; overflow: hidden; white-space: nowrap; }
+  .browser .scr { height: 600px; background: var(--bg); position: relative; overflow: hidden; display: flex; flex-direction: column; color: var(--fg); font-size: 14px; }
+
+  /* shared chrome: app bar + nav (bottom bar on phone, rail on desktop) */
+  .appbar { height: 50px; flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 12px; background: var(--brand); color: #fff; }
+  .appbar .brand { font-weight: 700; font-size: 15px; }
+  .appbar .org { font-weight: 600; font-size: 13px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pagehead { display: flex; flex-flow: row nowrap; align-items: center; gap: 2px; margin: 0 0 10px; }
+  .pagehead .h1 { margin: 0; line-height: 1.25; }
+  .pagehead .back { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; flex: 0 0 auto; }
+  .welcome { font-weight: 600; margin: 0 0 10px; }
+  .dialog { position: absolute; z-index: 5; left: 16px; right: 16px; top: 50%; transform: translateY(-50%); margin: 0 auto; max-width: 420px; background: #fff; border: 1px solid #e8c56a; border-radius: 14px; padding: 16px 18px 14px; box-shadow: 0 18px 48px #0f172a33; }
+  .dialog h3 { margin: 0 0 8px; font-size: .95rem; color: var(--warn); }
+  .dialog p { margin: 0 0 14px; font-size: .78rem; line-height: 1.45; }
+  .menu.acct { top: 78px; right: 12px; z-index: 9; min-width: 140px; }
+  .browser .menu.acct { top: 52px; }
+  .menu .danger { color: var(--bad); font-weight: 600; }
+  .menu .danger.on { background: #fdf0ef; }
+  .ib { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; position: relative; font-size: 17px; }
+  .ib.av { background: rgba(255,255,255,.2); font: 700 12px var(--font); }
+  .ib .dot { position: absolute; top: 3px; right: 2px; min-width: 15px; height: 15px; border-radius: 8px; background: #fdf1dc; color: var(--warn); font: 700 9.5px/15px var(--font); text-align: center; }
+  .frame-body { flex: 1; display: flex; min-height: 0; }
+  .main { flex: 1; min-width: 0; overflow: hidden; padding: 12px 12px 0; position: relative; }
+  .browser .main { padding: 16px 20px 0; }
+  .browser .main .inner { max-width: 1000px; }
+  .navbar { flex: 0 0 auto; display: grid; grid-template-columns: repeat(var(--nav-n, 4), minmax(0, 1fr)); background: #fff; border-top: 1px solid var(--line); height: 58px; }
+  .rail { flex: 0 0 auto; width: 84px; background: #fff; border-right: 1px solid var(--line); display: flex; flex-direction: column; padding-top: 10px; gap: 4px; overflow: auto; }
+  .nv { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 10.5px; color: var(--muted); padding: 6px 0; position: relative; min-width: 0; }
+  .nv .lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .navpanel { position: absolute; z-index: 5; top: 0; bottom: 0; left: 0; width: 300px; background: #fff; border-right: 1px solid var(--line); box-shadow: 4px 0 18px #0f172a1a; display: flex; flex-direction: column; padding: 12px 14px 10px; }
+  .navpanel .scroll { overflow: auto; min-height: 0; }
+  .sheet.more-sheet .scroll { overflow: auto; }
+  .phone .sheet.more-sheet { max-height: 100%; }
+  .mtiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .mtile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 104px; padding: 12px 6px 10px; border: 1px solid rgba(148,163,184,.28); border-radius: 16px; background: #fff; text-align: center; font-size: .72rem; font-weight: 700; line-height: 1.25; color: var(--fg); }
+  .mtile .mti { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--b200); background: #fff; color: var(--brand); display: grid; place-items: center; }
+  .mtile .mti svg { width: 22px; height: 22px; fill: currentColor; }
+  .nv .g { width: 44px; height: 26px; border-radius: 13px; display: grid; place-items: center; }
+  .nv.on { color: var(--brand); font-weight: 600; }
+  .nv.on .g { background: var(--b100); }
+  .nv svg { width: 20px; height: 20px; fill: currentColor; }
+  .nv .dot { position: absolute; top: 3px; left: calc(50% + 6px); min-width: 15px; height: 15px; border-radius: 8px; background: #fdf1dc; color: var(--warn); font: 700 9.5px/15px var(--font); text-align: center; }
+
+  /* shared controls (ported list-dashboard look) */
+  .h1 { font-size: 1.15rem; font-weight: 700; margin: 0 0 10px; }
+  .chipbar { display: flex; gap: 8px; overflow: hidden; padding-bottom: 10px; }
+  .chip { flex: 0 0 auto; border: 1px solid rgba(148,163,184,.35); background: #fff; border-radius: 999px; padding: 7px 13px; font-size: .7rem; font-weight: 700; line-height: 1; }
+  .chip.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .chip.hit { outline: 3px solid #f3be26; outline-offset: 2px; }
+  .ftb { display: flex; gap: 8px; padding-bottom: 10px; }
+  .ftb .search { flex: 1; display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid rgba(148,163,184,.35); border-radius: 12px; padding: 0 10px; min-height: 38px; font-size: .76rem; color: #94a3b8; }
+  .ftb .search.typed { color: var(--fg); }
+  .ftb .fb { display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(148,163,184,.35); background: #fff; border-radius: 12px; padding: 0 11px; min-height: 38px; font-size: .7rem; font-weight: 700; white-space: nowrap; }
+  .ftb .fb .lbl { display: none; }
+  .browser .ftb .fb .lbl { display: inline; }
+  .cnt { min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px; background: var(--brand); color: #fff; font-size: .6rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+  .hit { outline: 3px solid #f3be26; outline-offset: 2px; border-radius: 12px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 10px; }
+  .pills span { border: 1px solid var(--b200); background: var(--b50); color: var(--brand); border-radius: 999px; padding: 5px 10px; font-size: .66rem; font-weight: 600; }
+  .panel { background: #fff; border-radius: 16px; border: 1px solid rgba(148,163,184,.22); box-shadow: 0 1px 2px #0f172a0d, 0 4px 14px #0f172a12; overflow: hidden; }
+  .lr { display: flex; gap: 10px; padding: 11px 10px; border-bottom: 1px solid rgba(148,163,184,.18); align-items: flex-start; }
+  .lr.sel, table.rows tr.sel td { background: var(--b100); }
+  .lr.sel { box-shadow: inset 4px 0 0 var(--brand); }
+  .lr .ico { width: 34px; height: 34px; border-radius: 10px; background: #ffedd5; color: #c2410c; display: grid; place-items: center; flex: 0 0 auto; font-weight: 700; }
+  .lr .c { flex: 1; min-width: 0; }
+  .lr .tt { font-size: .8rem; font-weight: 700; }
+  .lr .st { margin-top: 2px; font-size: .66rem; color: #64748b; }
+  .lr .mt { margin-top: 3px; font-size: .6rem; color: #64748b; }
+  .lr .aside { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .kebab { color: #64748b; font-size: 17px; line-height: 1; padding: 2px 6px; border-radius: 50%; }
+  .bdg { font-size: .56rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; border-radius: 999px; padding: 4px 8px; line-height: 1; white-space: nowrap; }
+  .bdg.w { background: #fdf1dc; color: var(--warn); } .bdg.s { background: #e3f4ea; color: var(--ok); } .bdg.p { background: var(--b100); color: var(--brand); }
+  table.rows { width: 100%; border-collapse: collapse; font-size: .76rem; }
+  table.rows th { text-align: left; font-size: .64rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: #64748b; padding: 10px 12px; border-bottom: 1px solid rgba(148,163,184,.25); background: #f8fafc; white-space: nowrap; }
+  table.rows td { padding: 0 12px; height: 38px; border-bottom: 1px solid rgba(148,163,184,.32); white-space: nowrap; }
+  table.rows td.t { font-weight: 700; }
+  .more { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 12px; font-size: .72rem; color: #64748b; }
+  /* table layout: the rule under the last row, and an "End of list" strip as tall as a row */
+  table.rows + .more { box-sizing: border-box; height: 38px; padding: 0; border-top: 1px solid rgba(148,163,184,.32); }
+  .spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(148,163,184,.35); border-top-color: var(--brand); }
+  .fab { position: absolute; right: 16px; bottom: 16px; width: 48px; height: 48px; border-radius: 50%; background: var(--brand); color: #fff; display: grid; place-items: center; font-size: 26px; box-shadow: 0 6px 18px #0f172a33; z-index: 3; }
+  .fab.hit { outline-offset: 3px; border-radius: 50%; }
+  .menu { position: absolute; z-index: 6; background: #fff; border-radius: 6px; box-shadow: 0 6px 22px rgba(15,23,42,.22); padding: 6px 0; min-width: 170px; font-size: 13px; }
+  .menu div { padding: 9px 16px; } .menu div.on { background: #eef3f8; }
+  .scrim { position: absolute; inset: 0; background: #0f172a59; z-index: 4; }
+  .sheet { position: absolute; z-index: 5; background: #fff; box-shadow: 0 -8px 32px #0f172a1f; padding: 10px 16px 14px; display: flex; flex-direction: column; }
+  .phone .sheet { left: 0; right: 0; bottom: 0; border-radius: 20px 20px 0 0; }
+  .browser .sheet { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, 86%); border-radius: 20px; padding: 16px 24px 18px; box-shadow: 0 18px 48px #0f172a33; }
+  .sheet .handle { width: 36px; height: 4px; border-radius: 999px; background: #cbd5e1; margin: 0 auto 10px; }
+  .browser .sheet .handle { display: none; }
+  .sheet .ttl { text-align: center; font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 12px; position: relative; padding: 0 34px; }
+  .sheet .ttl .x { position: absolute; right: 0; top: -5px; width: 28px; height: 28px; border-radius: 50%; background: #f1f5f9; display: grid; place-items: center; font-size: 12px; color: #475569; }
+  .sheet .scroll { overflow: hidden; }
+  .sec-h { display: flex; justify-content: space-between; padding: 9px 12px; border: 1px solid var(--b200); border-radius: 12px; background: var(--b100); font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--brand); }
+  .kv { margin: 7px 0 9px; border: 1px solid rgba(148,163,184,.32); border-radius: 12px; overflow: hidden; }
+  .kv div { display: grid; grid-template-columns: 1fr 1fr; padding: 8px 12px; font-size: .7rem; }
+  .kv div:not(:last-child) { border-bottom: 1px solid rgba(148,163,184,.32); }
+  .kv div:nth-child(2n) { background: #f8fafc; }
+  .kv b { font-weight: 600; color: #334155; }
+  .kv.sum { background: #fffaf5; }
+  /* the record sheet's footer is a grid: 4 columns by 2 rows, up to 8 buttons (2 columns on phones); a group name takes a whole row */
+  .acts { border-top: 1px solid rgba(148,163,184,.2); padding-top: 11px; display: flex; flex-flow: row wrap; gap: 7px; margin-top: 8px; }
+  .acts .btn { flex: 1 1 calc((100% - 21px) / 4); min-width: 0; }
+  .acts .wfg { flex: 0 0 100%; }
+  .phone .acts:not(.h) .btn { flex-basis: calc((100% - 7px) / 2); }
+  .acts.h { flex-wrap: nowrap; } .acts.h .btn { flex: 1; }
+  .okn { background: #e3f4ea; color: var(--ok); border-radius: 8px; padding: 8px 12px; font-size: .72rem; font-weight: 600; margin-bottom: 8px; }
+  .btn { font: inherit; font-size: 13px; padding: .45rem .8rem; border-radius: var(--radius); border: 1px solid var(--line); background: #fff; color: var(--fg); text-align: center; }
+  .btn.p { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn.d { color: var(--bad); border-color: var(--bad); }
+  .btn.hit { outline: 3px solid #f3be26; outline-offset: 2px; }
+  .mf { margin-bottom: 12px; }
+  .mf .l { font-size: .8rem; font-weight: 500; color: #374151; margin-bottom: 5px; }
+  .mf .l i { color: #f97316; font-style: normal; }
+  .mf .o { border: 1px solid #79747e; border-radius: 4px; height: 40px; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; font-size: .85rem; background: #fff; }
+  .mf .o.ph { color: #8a8590; }
+  .mf .o.ro { background: #f2f2f4; color: #6b6870; border-color: #c9c6cf; }
+  .mf .o.err { border-color: #ba1a1a; } .mf .e { font-size: .72rem; color: #ba1a1a; margin-top: 4px; }
+  .grid2 { display: grid; grid-template-columns: 1fr; gap: 0 14px; }
+  .stepper-h { margin-bottom: 12px; } .stepper-h b { display: block; font-size: .95rem; } .stepper-h span { font-size: .76rem; color: #64748b; }
+  .toast { position: absolute; z-index: 7; left: 12px; right: 12px; bottom: 74px; background: #1d2733; color: #fff; border-radius: 10px; padding: 10px 14px; font-size: 12.5px; }
+  .browser .toast { left: auto; right: 24px; bottom: 24px; width: 360px; }
+  .card { background: #fff; border: 1px solid rgba(148,163,184,.25); border-radius: 14px; padding: 12px; margin-bottom: 10px; box-shadow: 0 1px 2px #0f172a0a; }
+  .card .ct { font-weight: 700; font-size: .85rem; color: var(--brand); }
+  .card .cs { font-size: .74rem; color: #64748b; margin-top: 2px; }
+  .cards { display: grid; grid-template-columns: 1fr; gap: 0 12px; }
+  .browser .cards { grid-template-columns: repeat(3, 1fr); }
+  .browser .cards.two { grid-template-columns: repeat(2, 1fr); }
+  .listrow { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid rgba(148,163,184,.18); font-size: .82rem; }
+  .listrow:last-child { border-bottom: 0; }
+  .note { background: #eef5fb; border: 1px solid #c6d9e8; color: var(--brand); border-radius: 12px; padding: 9px 12px; font-size: .72rem; margin-bottom: 10px; }
+  .signin { margin: 30px auto 0; max-width: 380px; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .sp { flex: 1; }
+  .switch { display: inline-flex; border: 1px solid rgba(148,163,184,.35); border-radius: 12px; overflow: hidden; background: #fff; }
+  .switch span { padding: 0 11px; min-height: 38px; display: inline-flex; align-items: center; font-size: .7rem; font-weight: 700; color: #475569; }
+  .switch span.on { background: var(--b100); color: var(--brand); }
+
+  /* breadcrumb (every route except print and sign-in) */
+  .crumbs { flex: 0 0 auto; position: relative; z-index: 8; background: #fff; border-bottom: 1px solid var(--line); padding: 0 12px; height: 26px; display: flex; align-items: center; font-size: 11.5px; }
+  .browser .crumbs { padding-left: 100px; height: 30px; font-size: 12.5px; }
+  .crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; min-width: 0; overflow: hidden; white-space: nowrap; }
+  .crumbs li { display: flex; align-items: center; flex: 0 0 auto; color: var(--muted); }
+  .crumbs li + li::before { content: '›'; margin: 0 6px; color: #94a3b8; }
+  .crumbs a { color: var(--brand); font-weight: 600; text-decoration: none; cursor: pointer; }
+  .crumbs li[aria-current] { flex: 0 1 auto; min-width: 0; display: block; overflow: hidden; text-overflow: ellipsis; color: var(--fg); font-weight: 600; }
+  .crumbs .ell { background: #eef2f7; border-radius: 6px; padding: 0 7px; color: var(--brand); font-weight: 700; }
+  .crumbs .menu { top: 26px; left: 8px; }
+  .phone .sheet { max-height: 100%; }
+
+  /* first-release additions (journeys 10–20) */
+  .menu .sep { border-top: 1px solid #eee; margin: 4px 0; padding: 0; }
+  .sheet.fit .scroll { flex: 1 1 auto; min-height: 0; }
+  .browser .sheet.fit { max-height: 94%; }
+  .sheet .ttl .x.k { right: 34px; font-size: 15px; }
+  .link { color: var(--brand); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+  .wgrid { display: grid; grid-template-columns: 1fr; gap: 0 12px; }
+  .browser .wgrid { grid-template-columns: 1fr 1fr; }
+  .wgrid .full { grid-column: 1 / -1; }
+  .wd .wh { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .wd .wl { font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #64748b; }
+  .wd .wv { font-size: 1.3rem; font-weight: 700; color: var(--ink); }
+  .wd .see { font-size: .7rem; color: var(--brand); font-weight: 600; padding: 2px 4px; }
+  .wd .lr { padding: 8px 0; } .wd .lr:last-child { border-bottom: 0; }
+  .drop { border: 2px dashed var(--b200); border-radius: 12px; background: var(--b50); padding: 14px 12px; text-align: center; font-size: .74rem; color: #475569; line-height: 1.5; margin-bottom: 8px; }
+  .prog { height: 8px; border-radius: 999px; background: #e2e8f0; overflow: hidden; } .prog i { display: block; height: 100%; background: var(--brand); border-radius: 999px; }
+  .file { display: flex; gap: 9px; align-items: center; padding: 7px 10px; border: 1px solid rgba(148,163,184,.3); border-radius: 10px; margin-bottom: 6px; font-size: .72rem; background: #fff; }
+  .file .fc { flex: 1; min-width: 0; } .file b { display: block; font-size: .74rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .th { width: 36px; height: 36px; border-radius: 8px; flex: 0 0 auto; display: grid; place-items: center; font: 700 9px var(--font); }
+  .th.img { background: linear-gradient(170deg, #a9cdec 0 48%, #86b884 48% 72%, #c9a46b 72%); }
+  .th.pdf { background: #fdecea; color: var(--bad); } .th.doc { background: #e8edf3; color: var(--muted); }
+  .th.big { width: 92px; height: 70px; border-radius: 10px; font-size: 12px; }
+  .cb { width: 18px; height: 18px; border: 2px solid #79747e; border-radius: 4px; display: inline-grid; place-items: center; font-size: 11px; flex: 0 0 auto; background: #fff; color: #fff; line-height: 1; }
+  .cb.on { background: var(--brand); border-color: var(--brand); } .cb.part { background: var(--brand); border-color: var(--brand); }
+  .bulkbar { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; background: #1d2733; color: #fff; display: flex; gap: 8px; align-items: center; padding: 9px 12px; font-size: 12.5px; }
+  .browser .bulkbar { left: 20px; right: 20px; bottom: 16px; border-radius: 12px; box-shadow: 0 8px 24px #0f172a40; }
+  .bulkbar .bb { border: 1px solid rgba(255,255,255,.35); border-radius: 8px; padding: 5px 10px; white-space: nowrap; }
+  .bulkbar .bb.p { background: #fff; color: var(--brand); border-color: #fff; font-weight: 600; }
+  .radio { display: flex; align-items: center; gap: 12px; padding: 10px 6px; border-bottom: 1px solid rgba(148,163,184,.18); font-size: .84rem; }
+  .radio .r { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #79747e; flex: 0 0 auto; }
+  .radio .r.on { border-color: var(--brand); background: radial-gradient(circle, var(--brand) 0 4px, #fff 5px); }
+  .radio .cs { margin-left: auto; }
+  .tog { display: inline-block; width: 30px; height: 16px; border-radius: 8px; background: #cbd5e1; position: relative; vertical-align: middle; flex: 0 0 auto; } .tog::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; } .tog.on { background: var(--brand); } .tog.on::after { left: 16px; }
+  .maprow { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(148,163,184,.18); font-size: .74rem; }
+  .maprow .from { flex: 1; font-weight: 600; } .maprow .to { flex: 1.3; border: 1px solid #79747e; border-radius: 4px; padding: 6px 8px; display: flex; justify-content: space-between; background: #fff; }
+  .maprow .to.ph { color: #8a8590; }
+  .prob { font-size: .72rem; padding: 7px 10px; border-radius: 8px; background: #fdf0ef; color: var(--bad); margin-bottom: 5px; }
+  .ok { font-size: .72rem; padding: 7px 10px; border-radius: 8px; background: #eef9f2; color: var(--ok); margin-bottom: 8px; }
+  .wfl { border: 1px solid rgba(148,163,184,.25); border-radius: 12px; overflow: hidden; margin-bottom: 9px; }
+  .wfl div { display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: .72rem; }
+  .wfl div + div { border-top: 1px solid rgba(148,163,184,.18); }
+  .wfl b { font-weight: 600; color: #334155; flex: 1; }
+  .wfg { font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #64748b; margin: 2px 0 -2px; }
+  .sigpad { position: relative; height: 112px; border: 1px dashed #94a3b8; border-radius: 10px; background: #fff; overflow: hidden; }
+  .sigpad .base { position: absolute; left: 14px; right: 14px; bottom: 26px; border-top: 1px solid #cbd5e1; }
+  .sigpad .hint { position: absolute; left: 14px; bottom: 8px; font-size: .62rem; color: #94a3b8; }
+  .sigpad svg { position: absolute; left: 20px; top: 18px; }
+  .rt { border: 1px solid #79747e; border-radius: 4px; background: #fff; overflow: hidden; }
+  .rt .bar { display: flex; gap: 2px; padding: 4px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; flex-wrap: wrap; }
+  .rt .bar span { min-width: 26px; height: 26px; border-radius: 4px; display: grid; place-items: center; font-size: 12px; color: #334155; }
+  .rt .bar span.on { background: var(--b100); color: var(--brand); }
+  .rt .ed, .rtv { padding: 8px 12px; font-size: .76rem; line-height: 1.5; }
+  .rt .ed h4, .rtv h4 { margin: 0 0 4px; font-size: .82rem; } .rt .ed p, .rtv p { margin: 0 0 4px; }
+  .rt .ed ul, .rtv ul { margin: 2px 0 4px; padding-left: 18px; }
+  .rt .ed blockquote, .rtv blockquote { margin: 4px 0; padding-left: 10px; border-left: 3px solid var(--b200); color: #475569; }
+  .locbox { border: 1px solid #79747e; border-radius: 4px; padding: 10px 12px; background: #fff; display: flex; flex-direction: column; gap: 6px; font-size: .78rem; }
+  .locbox .mono { font: 12px var(--mono); }
+  .printbar { display: flex; gap: 8px; align-items: center; padding: 4px 0 12px; }
+  .paper { background: #fff; margin: 0 auto; box-shadow: 0 2px 10px #0f172a1f; padding: 24px 28px; font-size: .74rem; color: #1d2733; max-width: 600px; border-radius: 2px; }
+  .phone .paper { padding: 14px; font-size: .64rem; }
+  .paper .ptitle { text-align: center; font-size: .9rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin: 16px 0 10px; padding: 6px 0; border-top: 1px solid #d8dee6; border-bottom: 1px solid #d8dee6; }
+  .paper .pkv div { display: grid; grid-template-columns: 1fr 1.4fr; padding: 4px 0; border-bottom: 1px dotted #d8dee6; }
+  .paper .pkv b { font-weight: 600; color: #475569; }
+  .pdfpage { background: #fff; border: 1px solid #d5dbe2; box-shadow: 0 2px 8px #0f172a14; padding: 18px 20px; height: 250px; }
+  .pdfpage i { display: block; height: 6px; border-radius: 3px; background: #e2e8f0; margin-bottom: 9px; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Step-by-step navigation — one set of controls for phone and desktop</h1>
+  <p>Every journey, step by step, with the phone and the desktop side by side. Both use <b>exactly the same controls</b>, drawn from the same components. Only the arrangement adapts to the width: list rows (cards on phones, a table on wide screens), where the navigation sits (bottom bar or side rail, with the same four items), and where panels appear (sliding up from the bottom on phones, centred on wide screens). The yellow outline marks what the person taps next.</p>
+  <div class="rules">
+    <div><b>Same navigation</b>App bar with the product name, organisation and account. The page title sits in the content, with Back on that same row. Default destinations: Home, Records, Inbox, More. A published navigation can put record lists and pages on that same bar and rail. Bottom bar on phones, side rail on desktop. More stays last.</div>
+    <div><b>Same list controls</b>Status chips, search box, Sort and Filters buttons, removable filter pills, row menu (⋮), the create button (+), and infinite scroll with "Loading more…".</div>
+    <div><b>Same panels</b>Filters, record detail, edit, workflow steps, create stepper, and reject reason all use one panel component with the same fields and buttons.</div>
+    <div><b>Same address</b>Every step has an address. Back, reload and shared links reproduce the exact screen on any device.</div>
+  </div>
+  <div class="rules" style="margin-top:12px"><div style="grid-column:1/-1"><b>Signed-off details</b>No record counts on Home or Records (names and descriptions only). The record panel is a single column on every size; on wide screens it is only centred. Tablet tables use the list view's optional <code>compactColumns</code>. Existing donations are not linked to donors automatically. Record groups get a visual editor in the Builder. Full specification: <code>.cursor/docs/design/ngo-app-ui-design.md</code>.</div></div>
+  <div class="changes"><b>What this changes from the earlier decisions.</b>
+    <ul style="margin:6px 0 0;padding-left:20px">
+      <li>The desktop table layout no longer has its own toolbar, tabs, filter card and record page. It uses the same chips, search, filter panel, detail panel and forms as phones. Only the rows differ: table rows instead of cards.</li>
+      <li>The separate record page goes away. A record always opens in the record panel: a bottom sheet on phones, a centred panel on desktop.</li>
+      <li>The desktop side navigation becomes a rail with the same four items as the phone's bottom bar. Record types are listed on the Records screen instead of in the side navigation.</li>
+      <li>The Inbox is split into two chips, Approvals and Notifications (<code>/inbox?tab=…</code>). Approvals use the same cards on both, and the desktop approvals table goes away. The Inbox badge counts only approvals waiting for you.</li>
+      <li>Donors become a record type. A donation picks a donor, and the donor's details are copied onto the donation; a donor's record lists their donations.</li>
+      <li>Home and the Records screen group record types (for example Fundraising: Donors, Donations, Pledges). Groups come from a new "Record groups" definition, which defaults to grouping by module.</li>
+      <li>The Builder editors stay desktop-only; phones show the catalogue read-only.</li>
+    </ul>
+  </div>
+  <div class="rules" style="margin-top:12px"><div style="grid-column:1/-1"><b>First-release additions — journeys 10 to 20 (approved 2026-10-24)</b>Home with widgets and pins, pages in More, language choice, record actions, the receipt print view, CSV import and export, files, sharing, selection and bulk actions, location / signature / rich-text fields, and a record with two workflows (Design §13a). They use only the controls above; three additions appear: the list's own <b>⋮</b> at the end of the toolbar (Pin to Home, Select, Import, Export), a <b>⋮</b> in the record panel header (Share), and the <b>bulk bar</b> while rows are selected. Examples come from the Donations module and from a Beneficiary record (BEN/2026-27/00012) for files, location, signature and two workflows.</div></div>
+  <div class="rules" style="margin-top:12px"><div style="grid-column:1/-1"><b>Breadcrumb on every route (added and approved 2026-10-24)</b>One line under the app bar on every screen, derived from the address and the definitions, never drawn by a screen itself: the destination first, with no leading "Home" (decided 2026-10-24), then for records the group, the record type, the open record (number · title) or "New …", and the panel mode where it means something (Edit, a step, an action, Share, Import). For example Records › Fundraising › Donations › DON/2026-27/00040 · Ravi Kumar › Mark as paid; Inbox › Approvals; More › Administration › Roles › Finance. Every item but the last links back (lists keep their own filters and sort); the last is the current page. Phones show the first and last items with "…" in between (tap it for the full trail; Journey 3.2), and long last items end with "…". No breadcrumb on sign-in or the print view.</div></div>
+  <div class="rules" style="margin-top:12px"><div style="grid-column:1/-1"><b>People, profiles and Administration — journeys 21 to 23 (added and approved 2026-10-24)</b>Administration (<code>/admin</code>, from More, administrators only) holds People, role assignment, connectors, API keys, background jobs, the audit log and organisation settings with storage (Journey 23); the Builder keeps only definitions. People are not a destination in the bar or in More, and <code>/people</code> opens Home. Administrators open <b>Administration</b> at <code>/admin</code> from More: People (<code>/admin/people</code>: status chips, the create button, row ⋮, adding, invitations, role changes, suspending) and Roles (<code>/admin/roles</code>: who has each role). What each role allows is defined in the Builder, not here. Everyone opens <b>My profile</b> by tapping their name at the top of More, and changes only the fields marked "The person can change this"; the rest show "Set by your administrator".</div></div>
+  <div class="rules" style="margin-top:12px"><div style="grid-column:1/-1"><b>Shell chrome (updated 2026-10-25)</b>The blue app bar does not change with the page. It shows the product name <b>NGOOne</b>, the organisation logo when the organisation has one (same-origin or embedded image only), and the organisation name, plus the inbox bell and the account initials. The page name is a heading in the content, left-aligned. <b>Back</b> sits on that same row, immediately left of the heading, and only when the screen is not Home, Records, Inbox or More. Clicking or hovering the initials opens <b>Sign out</b>. Choosing it asks for confirmation: this device will be signed out and the person must sign in again. More has no Sign out button, and it does not repeat the record groups; those stay on Home and Records.</div></div>
+  <div class="rules" style="margin-top:12px"><div style="grid-column:1/-1"><b>HTTP calls and account sign-in (added 2026-10-31)</b>Connectors gain two kinds, drawn in the journey after Administration. <b>HTTP call</b> is either <b>Send after save</b> (queued, retried, does not undo the save) or <b>Look up while saving</b> (fills record fields before the save; a failure stays under the input and nothing is saved). <b>Account sign-in</b> stores one organisation's access to a provider; an HTTP call can sign in with it. One HTTP connector can be marked to send all of the organisation's email, then the organisation's mail server, then the installation mail server. The Builder adds a <b>Call a connector</b> step (send connectors only) and a <b>Lookups</b> tab on a record type. Filled fields are read only on the record. Phones review Builder screens; editing stays on larger screens, as with record groups.</div></div>
+  <div class="rules" style="margin-top:12px"><div style="grid-column:1/-1"><b>Theme, layout and organisation information (wireframe 2026-11-01)</b>An administrator with Manage organisation settings changes these from Administration, without opening the Builder. Drawn step by step in <code>org-admin-appearance.html</code>: organisation information (name, legal name, contact, address, registrations, logo), the theme (the same colour tokens, with a live preview and a contrast check), and the layout (the same published navigation, plus the starting list layout on wide screens). Theme and layout stay the published definitions; either this screen or the Builder edits them.</div></div>
+  <div class="rules" style="margin-top:12px"><div style="grid-column:1/-1"><b>Custom navigation (added 2026-11-01)</b>One published navigation, arranged in the Builder, chooses what sits on the bar and the rail and what sits in More. A slot can be Home, Records, Inbox, People, a record list, a page, Administration, Builder or Settings. More has no profile. My profile, Language and About this app are a separate screen, Settings, opened from a Settings tile in More. Without a published navigation, the four default destinations and the More page in the earlier journeys stay as drawn. The phone bar keeps the first four slots, then More. Further sidebar items stay on the desktop rail and are listed at the top of the phone's More sheet. Tapping More does not leave the current screen: phones open the existing bottom sheet; wide screens open a panel beside the rail, not the centred dialog. Items the person cannot read are left out and the bar closes up. The rail highlights the record list itself when that list is on the sidebar; the breadcrumb still follows the address.</div></div>
+</header>
+<nav class="toc"><div id="toc"></div></nav>
+<main class="page" id="flows"></main>
+
+<script>
+/* ------------------------------------------------------------------ data */
+const ROWS = [
+  { id: 41, name: 'Asha Rao', amt: '₹1,500.00', method: 'UPI', num: 'DON/2026-27/00041', st: 'Raised', tone: 'w', paid: '—' },
+  { id: 40, name: 'Ravi Kumar', amt: '₹5,000.00', method: 'UPI', num: 'DON/2026-27/00040', st: 'Raised', tone: 'w', paid: '—' },
+  { id: 39, name: 'Meera Iyer', amt: '₹750.00', method: 'UPI', num: 'DON/2026-27/00039', st: 'Raised', tone: 'w', paid: '—' },
+  { id: 38, name: 'Sunita Devi', amt: '₹2,100.00', method: 'UPI', num: 'DON/2026-27/00038', st: 'Raised', tone: 'w', paid: '—' },
+  { id: 37, name: 'Kiran Shah', amt: '₹300.00', method: 'UPI', num: 'DON/2026-27/00037', st: 'Raised', tone: 'w', paid: '—' },
+  { id: 36, name: 'Farah Khan', amt: '₹1,000.00', method: 'UPI', num: 'DON/2026-27/00036', st: 'Raised', tone: 'w', paid: '—' },
+];
+const ICON = {
+  home: '<svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>',
+  records: '<svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>',
+  inbox: '<svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 12h-4a3 3 0 0 1-6 0H5V5h14v10z"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><path d="M6 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm12 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>',
+  people: '<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>',
+};
+const hit = (on) => (on ? ' hit' : '');
+
+/* ------------------------------------------------------------ components */
+function nav(k, on, o = {}) {
+  const custom = o.navItems && o.navItems[k];
+  const items = custom || [['home', 'Home', 'home'], ['records', 'Records', 'records'], ['inbox', 'Inbox', 'inbox'], ['more', 'More', 'more']].map(([key, label, icon], i) => [key, o.navLabels ? o.navLabels[i] : label, icon]);
+  const html = items.map(([key, label, icon]) => `<div class="nv${on === key ? ' on' : ''}${o.hitNav === key ? ' hit' : ''}"><span class="g">${ICON[icon] || ICON.records}</span><span class="lbl">${label}</span>${key === 'inbox' && o.unread !== 0 ? `<span class="dot">${o.unread ?? 4}</span>` : ''}</div>`).join('');
+  return k === 'phone' ? `<div class="navbar" style="--nav-n:${items.length}">${html}</div>` : `<div class="rail">${html}</div>`;
+}
+function appbar(o = {}) {
+  return `<div class="appbar"><span class="brand">NGOOne</span><span class="org">${o.org || 'Demo Foundation'}</span><span class="sp"></span><span class="ib${o.hitInbox ? ' hit' : ''}">🔔${o.unread !== 0 ? `<span class="dot">${o.unread ?? 4}</span>` : ''}</span><span class="ib av${o.hitAccount ? ' hit' : ''}">${o.initials || 'AS'}</span></div>`;
+}
+function pageHead(s) {
+  if (!s.title) return '';
+  return `<div class="pagehead">${s.back ? '<span class="back" aria-hidden="true">←</span>' : ''}<div class="h1">${s.title}</div></div>`;
+}
+/* breadcrumb: derived from the step's address and the definitions, as core/breadcrumbs.ts will be; `crumbs` on a step overrides it */
+const CRUMB_TYPES = { donation: ['Fundraising', 'Donations', 'donation'], donor: ['Fundraising', 'Donors', 'donor'], beneficiary: ['Programmes', 'Beneficiaries', 'beneficiary'], bankAccount: ['Operations', 'Bank accounts', 'bank account'] };
+const CRUMB_CONNECTOR = { whatsapp: 'WhatsApp Business', 'google-mail': 'google-mail', gmail: 'gmail', ifsc: 'ifsc' };
+const CRUMB_PANELS = { edit: 'Edit', share: 'Share', 'step:markPaid': 'Mark as paid', 'step:requestClosure': 'Request closure', 'action:sendReminder': 'Send reminder', 'file:f81': 'house-photo.jpg', 'file:f80': 'school-admission-letter.pdf', language: 'Language', profile: 'My profile' };
+const CRUMB_ADMIN = { people: 'People', roles: 'Roles', connectors: 'Connectors', 'api-keys': 'API keys', jobs: 'Jobs', audit: 'Audit log', settings: 'Settings' };
+function crumbRecord(type, id) {
+  if (type === 'donation') { const r = [...ROWS, { id: 42, name: 'Priya Nair', num: 'DON/2026-27/00042' }].find((x) => String(x.id) === id); return r ? `${r.num} · ${r.name}` : id; }
+  if (type === 'beneficiary') { const b = BENS.find((x) => String(x.id) === id); return b ? `${b.num} · ${b.name}` : id; }
+  if (type === 'bankAccount') return 'BA-0042 · HDFC Bank';
+  return { d7: 'Ravi Kumar' }[id] || id;
+}
+function crumbsFor(s) {
+  if (s.crumbs) return s.crumbs;
+  const [path, query = ''] = s.url.split('?');
+  const pairs = query ? query.split('&') : [];
+  const q = Object.fromEntries(pairs.map((p) => { const [key, ...v] = p.split('='); return [key, v.join('=')]; }));
+  const keep = (drop) => { const kept = pairs.filter((p) => !drop.includes(p.split('=')[0])); return kept.length ? `?${kept.join('&')}` : ''; };
+  const parts = path.split('/').filter(Boolean);
+  const L = s.navLabels || ['Home', 'Records', 'Inbox', 'More'];
+  const more = [L[3], '/more'];
+  const t = [];
+  if (!parts.length) t.push([L[0], '/']);
+  else if (parts[0] === 'records') {
+    t.push([L[1], '/records']);
+    if (parts[1]) {
+      const [group, plural, single] = CRUMB_TYPES[parts[1]] || ['Other', s.title, s.title];
+      t.push([group, `/records#group-${group.toLowerCase()}`], [plural, path + keep(['id', 'panel', 'create', 'createStep', 'import', 'importStep', 'job', 'filters'])]);
+      if (q.id) t.push([crumbRecord(parts[1], q.id), path + keep(['panel'])]);
+      if (q.create === 'new') t.push([`New ${single.toLowerCase()}`]);
+      if (q.panel && CRUMB_PANELS[q.panel]) t.push([CRUMB_PANELS[q.panel]]);
+      if ('import' in q) t.push(['Import']);
+      if (q.job) t.push(['Job result']);
+    }
+  } else if (parts[0] === 'inbox') t.push([L[2], '/inbox'], [q.tab === 'notifications' ? 'Notifications' : 'Approvals']);
+  else if (parts[0] === 'more') { t.push(more); if (q.panel && CRUMB_PANELS[q.panel]) t.push([CRUMB_PANELS[q.panel]]); }
+  else if (parts[0] === 'pages') t.push(more, [s.title]);
+  else if (parts[0] === 'people') { t.push(more, ['People', path + keep(['person'])]); if (q.person) t.push([PEOPLE.find((p) => p.id === q.person).name]); }
+  else if (parts[0] === 'admin') {
+    t.push(more, ['Administration', '/admin']);
+    const area = parts[1];
+    if (area) {
+      t.push([CRUMB_ADMIN[area], `/admin/${area}${area === 'people' ? keep(['person', 'add']) : ''}`]);
+      if (area === 'people' && q.person) t.push([PEOPLE.find((p) => p.id === q.person).name]);
+      if ('add' in q) t.push([area === 'people' ? 'Add a person' : 'Add people']);
+      if (area === 'roles' && parts[2]) t.splice(t.length - ('add' in q ? 1 : 0), 0, [ROLES.find((r) => r.key === parts[2]).name, `/admin/roles/${parts[2]}`]);
+      if (area === 'connectors' && parts[2]) t.push([CRUMB_CONNECTOR[parts[2]] || parts[2]]);
+      if (area === 'connectors' && 'create' in q) t.push(['New connector']);
+      if (area === 'api-keys' && 'create' in q) t.push(['New API key']);
+      if (q.job) t.push(['Mark as paid · 214 donations']);
+    }
+  } else if (parts[0] === 'builder') t.push(['Builder', '/builder'], ['Record groups']);
+  return t;
+}
+function crumbBar(k, s) {
+  const all = crumbsFor(s);
+  if (!all.length) return '';
+  const shown = k === 'phone' && all.length > 2 ? [all[0], ['…'], all[all.length - 1]] : all;
+  const li = (it, i) => {
+    if (i === shown.length - 1) return `<li aria-current="page">${it[0]}</li>`;
+    if (it[0] === '…') return `<li><a class="ell${hit(s.crumbMenu)}" aria-label="Show the full trail">…</a></li>`;
+    return `<li><a title="Goes to ${it[1]}">${it[0]}</a></li>`;
+  };
+  const menu = k === 'phone' && s.crumbMenu && all.length > 2 ? `<div class="menu">${all.slice(0, -1).map((it) => `<div>${it[0]}</div>`).join('')}</div>` : '';
+  return `<nav class="crumbs" aria-label="Breadcrumb"><ol>${shown.map(li).join('')}</ol>${menu}</nav>`;
+}
+function frame(k, s) {
+  const head = s.bare ? '' : pageHead(s);
+  const account = s.accountMenu ? `<div class="menu acct"><div class="danger${s.hitSignOut ? ' on' : ''}">Sign out</div></div>` : '';
+  const body = `<div class="main">${k === 'desk' ? `<div class="inner">${head}${s.body(k)}</div>` : `${head}${s.body(k)}`}${s.fab ? `<span class="fab${hit(s.hitFab)}">+</span>` : ''}${s.overlay ? s.overlay(k) : ''}</div>`;
+  if (s.bare) {
+    return k === 'phone'
+      ? `<div class="phone"><div class="scr"><div class="status" style="background:var(--bg);color:var(--fg)"><span>9:41</span><span>●●● 100%</span></div>${body}</div></div>`
+      : `<div class="browser"><div class="chrome"><div class="url">${s.url}</div></div><div class="scr">${body}</div></div>`;
+  }
+  const bar = appbar(s);
+  return k === 'phone'
+    ? `<div class="phone"><div class="scr"><div class="status"><span>9:41</span><span>●●● 100%</span></div>${bar}${account}${crumbBar('phone', s)}<div class="frame-body">${body}</div>${nav('phone', s.nav, s)}</div></div>`
+    : `<div class="browser"><div class="chrome"><div class="url">${s.url}</div></div><div class="scr">${bar}${account}${crumbBar('desk', s)}<div class="frame-body">${nav('desk', s.nav, s)}${body}</div></div></div>`;
+}
+function chips(active, o = {}) {
+  return `<div class="chipbar">${['Mine', 'Outstanding', 'Closed'].map((c) => `<span class="chip${c === active ? ' on' : ''}${o.hitChip === c ? ' hit' : ''}">${c}</span>`).join('')}</div>`;
+}
+function toolbar(k, o = {}) {
+  return `<div class="ftb"><span class="search${o.q ? ' typed' : ''}${hit(o.hitSearch)}">⌕ ${o.q || o.ph || 'Search donations…'}</span>${k === 'desk' && o.switcher !== false ? `<span class="switch"><span class="${o.view === 'cards' ? 'on' : ''}">Cards</span><span class="${o.view === 'cards' ? '' : 'on'}">Table</span></span>` : ''}<span class="fb${hit(o.hitSort)}">↕ <span class="lbl">Sort</span>${o.sort ? `<span class="cnt">${o.sort}</span>` : ''}</span><span class="fb${hit(o.hitFilters)}">≡ <span class="lbl">Filters</span>${o.filters ? `<span class="cnt">${o.filters}</span>` : ''}</span>${o.kebab ? `<span class="fb${hit(o.hitKebab)}" aria-label="More list actions">⋮</span>` : ''}</div>`;
+}
+function pills(list) {
+  return list.length ? `<div class="pills">${list.map((p) => `<span>${p} ×</span>`).join('')}</div>` : '';
+}
+function rows(k, o = {}) {
+  const data = (o.rows || ROWS).slice(0, k === 'phone' ? (o.n ?? 5) : (o.n ?? 6));
+  const more = o.more ? '<div class="more"><span class="spin"></span>Loading more…</div>' : o.end ? '<div class="more">End of list</div>' : '';
+  if (k === 'phone' || o.view === 'cards') {
+    return `<div class="panel">${data.map((r) => `<div class="lr${r.id === o.sel ? ' sel' : ''}${r.id === o.hitRow ? ' hit' : ''}"><span class="ico">$</span><div class="c"><div class="tt">${r.name}</div><div class="st">${r.amt} · ${r.method}</div><div class="mt">${r.num}</div></div><div class="aside"><span class="bdg ${r.tone}">${r.st}</span><span class="kebab${r.id === o.hitMenu ? ' hit' : ''}">⋮</span></div></div>`).join('')}${more}</div>`;
+  }
+  return `<div class="panel"><table class="rows"><thead><tr><th>Number</th><th>Donor name${o.sortCol === 'donorName' ? ' ▲' : ''}</th><th>Amount${o.sortCol === 'amount' ? ' ▼' : ''}</th><th>Method</th><th>Paid on</th><th>Status</th><th></th></tr></thead><tbody>${data.map((r) => `<tr class="${r.id === o.sel ? 'sel' : ''}"><td>${r.num}</td><td class="t${r.id === o.hitRow ? ' hitcell' : ''}">${r.id === o.hitRow ? `<span class="hit" style="padding:2px 4px">${r.name}</span>` : r.name}</td><td>${r.amt}</td><td>${r.method}</td><td>${r.paid}</td><td><span class="bdg ${r.tone}">${r.st}</span></td><td><span class="kebab${r.id === o.hitMenu ? ' hit' : ''}">⋮</span></td></tr>`).join('')}</tbody></table>${more}</div>`;
+}
+function list(o = {}) {
+  return (k) => `${chips(o.chip ?? 'Outstanding', o)}${toolbar(k, o)}${pills(o.pills || [])}${rows(k, o)}`;
+}
+function sheet(k, title, content, actions, o = {}) {
+  const h = k === 'phone' ? `height:${o.h ?? 470}px` : '';
+  return `<div class="scrim"></div><div class="sheet${o.cls ? ` ${o.cls}` : ''}" style="${h}"><div class="handle"></div><div class="ttl">${title}${o.kebab ? `<span class="x k${hit(o.hitKebab)}">⋮</span>` : ''}<span class="x">✕</span></div><div class="scroll">${content}</div>${actions}</div>`;
+}
+const field = (l, v, o = {}) => `<div class="mf"><div class="l">${l}${o.req ? ' <i>*</i>' : ''}</div><div class="o${v ? '' : ' ph'}${o.ro ? ' ro' : ''}${o.err ? ' err' : ''}">${v || o.ph || '&nbsp;'}${o.icon ? `<span>${o.icon}</span>` : ''}</div>${o.err ? `<div class="e">${o.err}</div>` : ''}</div>`;
+/** A success message shown inside the record sheet (not a toast over the page behind it); it clears after a few seconds. */
+const okn = (text) => `<div class="okn" role="status">${text}</div>`;
+const acts = (btns, horizontal = true) => `<div class="acts${horizontal ? ' h' : ''}">${btns.map(([t, c]) => `<span class="btn ${c || ''}">${t}</span>`).join('')}</div>`;
+function detail(r, o = {}) {
+  return `${o.pending ? `<div class="note">Waiting for approval to "Mark as paid" — requested by Asha, 0 of 1 approvals.</div>` : ''}
+    <div class="sec-h"><span>Donation</span><span>⌃</span></div>
+    <div class="kv"><div><b>Number</b>${r.num}</div><div><b>Status</b>${r.st}</div><div><b>Amount</b>${r.amt}</div>${r.st === 'Paid' ? `<div><b>Method</b>${r.method}</div><div><b>Paid on</b>23 Oct 2026</div>` : ''}</div>
+    <div class="sec-h"><span>Donor</span><span>⌃</span></div>
+    <div class="kv"><div><b>Donor name</b>${r.name}</div><div><b>Email</b>${r.name.split(' ')[0].toLowerCase()}@example.org</div></div>
+    ${o.receipt ? `<div class="sec-h"><span>Receipts</span><span>⌃</span></div><div class="kv"><div><b>RCPT/2026-27/00012</b>Issued</div></div>` : ''}`;
+}
+
+const GROUPS = [
+  { label: 'Fundraising', items: [{ name: 'Donors', desc: 'People and organisations who give' }, { name: 'Donations', desc: 'From raised to paid, with receipts' }] },
+  { label: 'Programmes', items: [{ name: 'Beneficiaries', desc: 'People the programmes support' }, { name: 'Visits', desc: 'Field visits and follow-ups' }] },
+  { label: 'Operations', items: [{ name: 'Expenses', desc: 'Claims and payments' }, { name: 'Assets', desc: 'Equipment and its upkeep' }] },
+];
+const DONORS = [
+  { name: 'Asha Rao', email: 'asha@example.org', phone: '+91 98450 12301', city: 'Pune' },
+  { name: 'Farah Khan', email: 'farah@example.org', phone: '+91 97310 48882', city: 'Mumbai' },
+  { name: 'Priya Nair', email: 'priya@example.org', phone: '+91 98201 44552', city: 'Kochi' },
+  { name: 'Ravi Kumar', email: 'ravi@example.org', phone: '+91 98450 12210', city: 'Chennai', hit: true },
+  { name: 'Sunita Devi', email: 'sunita@example.org', phone: '+91 99620 33017', city: 'Patna' },
+];
+function inboxChips(on, approvals = 2, hitNotes = false) {
+  const c = (id, label, n) => `<span class="chip${on === id ? ' on' : ''}${hitNotes && id === 'notifications' ? ' hit' : ''}">${label}${n ? ` ${n}` : ''}</span>`;
+  return `<div class="chipbar">${c('approvals', 'Approvals', approvals)}${c('notifications', 'Notifications', 3)}</div>`;
+}
+const APPROVALS = [
+  { num: 'DON/2026-27/00040', title: 'Ravi Kumar', type: 'Donation', step: 'Mark as paid', from: 'Raised', to: 'Paid', by: 'Asha', waiting: '3 days', count: '0 / 1' },
+  { num: 'EXP/2026-27/00007', title: 'Field travel, October', type: 'Expense', step: 'Approve claim', from: 'Submitted', to: 'Approved', by: 'Ravi', waiting: '2 days', count: '1 / 2' },
+  { num: 'DON/2026-27/00044', title: 'Meera Iyer', type: 'Donation', step: 'Cancel donation', from: 'Raised', to: 'Cancelled', by: 'Meera', waiting: '5 hours', count: '0 / 1' },
+  { num: 'AST/2026-27/00003', title: 'Laptop, Pune office', type: 'Asset', step: 'Dispose asset', from: 'In use', to: 'Disposed', by: 'Kiran', waiting: '1 hour', count: '0 / 1' },
+];
+function approvalsView(k, items, o = {}) {
+  const bar = `<div class="ftb"><span class="search">⌕ Search approvals…</span><span class="fb">↕ <span class="lbl">Sort</span>${o.sort ? `<span class="cnt">${o.sort}</span>` : ''}</span><span class="fb">≡ <span class="lbl">Filters</span>${o.filters ? `<span class="cnt">${o.filters}</span>` : ''}</span></div>${pills(o.pills || [])}`;
+  if (!items.length) return `${bar}<div class="panel"><div class="more" style="padding:28px">Nothing is waiting for you.</div></div>`;
+  const btns = (a) => `<span class="btn sm p${o.hitApprove === a.num ? ' hit' : ''}" style="padding:.3rem .7rem;font-size:12px">Approve</span> <span class="btn sm d${o.hitReject === a.num ? ' hit' : ''}" style="padding:.3rem .7rem;font-size:12px">Reject</span>`;
+  const move = (a) => `<span class="bdg w">${a.from}</span> → <span class="bdg s">${a.to}</span>`;
+  if (k === 'phone') {
+    return `${bar}${items.map((a) => `<div class="card"><div class="row"><span class="ct">${a.num}</span><span class="sp"></span><span class="bdg p">${a.count}</span></div><div style="font-size:.8rem;font-weight:600;margin-top:3px">${a.title}</div><div class="cs" style="margin:3px 0">${a.type} · ${a.step}</div><div class="cs" style="margin:5px 0 9px">${move(a)}</div><div class="cs" style="margin-bottom:9px">Requested by ${a.by} · waiting ${a.waiting}</div><div class="row"><span class="btn p${o.hitApprove === a.num ? ' hit' : ''}" style="flex:1">Approve</span><span class="btn d${o.hitReject === a.num ? ' hit' : ''}" style="flex:1">Reject</span></div></div>`).join('')}`;
+  }
+  return `${bar}<div class="panel"><table class="rows"><thead><tr><th>Record</th><th>Type</th><th>Step</th><th>Status change</th><th>Requested by${o.sortCol === 'by' ? ' ▲' : ''}</th><th>Waiting since${o.sortCol ? '' : ' ▼'}</th><th>Approvals</th><th></th></tr></thead><tbody>${items.map((a) => `<tr><td><div class="t" style="color:var(--brand);font-weight:700">${a.num}</div><div class="cs">${a.title}</div></td><td>${a.type}</td><td>${a.step}</td><td>${move(a)}</td><td>${a.by}</td><td>${a.waiting}</td><td><span class="bdg p">${a.count}</span></td><td style="text-align:right">${btns(a)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function approval(num, what, count, hitBtn) {
+  return `<div class="card"><div class="row"><span class="ct">${num}</span><span class="sp"></span><span class="bdg p">${count}</span></div><div class="cs" style="margin:4px 0 10px">${what}</div><div class="row"><span class="btn p${hitBtn === 'approve' ? ' hit' : ''}" style="flex:1">Approve</span><span class="btn d${hitBtn === 'reject' ? ' hit' : ''}" style="flex:1">Reject</span></div></div>`;
+}
+function notice(subject, body, when, read = false, hitIt = false) {
+  return `<div class="card${hitIt ? ' hit' : ''}" style="${read ? 'opacity:.6' : ''}"><div class="row"><b style="font-size:.82rem">${subject}</b>${read ? '' : '<span class="bdg p">New</span>'}<span class="sp"></span><span class="cs">${when}</span></div><div class="cs">${body}</div></div>`;
+}
+
+/* ---------------------------------------------------------------- flows */
+const R40 = ROWS[1];
+const PAID40 = { ...R40, st: 'Paid', tone: 's', paid: '23 Oct 2026' };
+const FLOWS = [
+  {
+    id: 'signin', title: 'Sign in and land on Home', lead: 'First open of the app or the website.',
+    steps: [
+      { t: 'Open the app', act: 'Sign-in screen', url: '/sign-in', bare: true,
+        body: () => `<div class="signin"><div class="h1" style="text-align:center">Sign in</div><div class="card">${field('Organisation', 'demo')}${field('Email', 'asha@demo.local')}${field('Password', '••••••••')}${acts([['Sign in', 'p hit'], ['Email me a code']], false)}</div></div>` },
+      { t: 'Home', act: 'Signed in — the inbox badge shows 4 approvals waiting', url: '/', title: 'Home', nav: 'home',
+        body: () => `<div class="welcome">Welcome, Asha</div><div class="cards">${GROUPS.map((g, i) => `<div class="card"><div class="cs" style="font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px">${g.label}</div>${g.items.map((it) => `<div class="row" style="padding:5px 0"><span class="ct${i === 0 && it.name === 'Donations' ? ' hit' : ''}" style="font-size:.82rem">${it.name}</span><span class="sp"></span><span class="cs" style="color:var(--brand)">New</span></div>`).join('')}</div>`).join('')}</div>`,
+        note: 'One card per group; tapping a record type on Home or on the Records screen leads to the same list.' },
+    ],
+  },
+  {
+    id: 'find', title: 'Find a donation', lead: 'Open a list, switch chip, search, filter, sort, and scroll. Every change updates the address, so Back and shared links restore it.',
+    steps: [
+      { t: 'Records, grouped', act: 'Tap <kbd>Records</kbd>', url: '/records', title: 'Records', nav: 'records',
+        body: () => `<div class="ftb"><span class="search">⌕ Search record types…</span></div><div>${GROUPS.map((g, i) => `<div><div class="sec-h" style="margin-bottom:7px"><span>${g.label}</span><span>${i === 2 ? '⌄' : '⌃'}</span></div>${i === 2 ? '' : `<div class="panel" style="margin-bottom:12px">${g.items.map((it) => `<div class="listrow${it.name === 'Donations' ? ' hit' : ''}"><div><b>${it.name}</b><div class="cs">${it.desc}</div></div><span class="cs">›</span></div>`).join('')}</div>`}</div>`).join('')}</div>`,
+        note: 'Groups use the same section header as the record panel and can be collapsed (here "Operations" is collapsed); the choice is remembered. Record types a person cannot see are left out, and empty groups disappear. The search box appears when there are more than eight record types.' },
+      { t: 'Donations list', act: 'Tap <kbd>Donations</kbd> — opens on the default chip', url: '/records/donation', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ hitChip: 'Mine' }) },
+      { t: 'Switch chip', act: 'Tap <kbd>Mine</kbd>', url: '/records/donation?chip=mine', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ chip: 'Mine', hitSearch: true }) },
+      { t: 'Search', act: 'Type <kbd>ravi</kbd> — the list updates after a short pause', url: '/records/donation?chip=mine&q=ravi', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ chip: 'Mine', q: 'ravi', rows: [R40], n: 1, hitFilters: true, end: true }) },
+      { t: 'Open filters', act: 'Clear the search, tap <kbd>Filters</kbd>', url: '/records/donation?chip=mine&filters=open', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ chip: 'Mine' }),
+        overlay: (k) => sheet(k, 'Filter donations', `<div class="grid2">${field('Method', 'UPI', { icon: '▾' })}${field('Paid on', '', { ph: 'Start date – End date', icon: '📅' })}${field('Amount from', '100')}${field('Amount to', '')}</div>`, acts([['Reset'], ['Apply', 'hit']]), { h: 440 }) },
+      { t: 'Filters applied', act: 'Tap <kbd>Apply</kbd> — pills show what is active', url: '/records/donation?chip=mine&method=upi&amountFrom=100', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ chip: 'Mine', filters: 2, pills: ['Method: UPI', 'Amount: ₹100.00 – …'], hitSort: true }) },
+      { t: 'Sort', act: 'Tap <kbd>Sort</kbd>, choose <kbd>Amount</kbd> (again for the other direction, a third time to clear)', url: '/records/donation?chip=mine&method=upi&amountFrom=100&sort=-amount', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ chip: 'Mine', filters: 2, sort: '▼', sortCol: 'amount', pills: ['Method: UPI', 'Amount: ₹100.00 – …'] }),
+        overlay: (k) => `<div class="menu" style="${k === 'phone' ? 'right:58px;top:96px' : 'right:120px;top:96px'}"><div>Number</div><div>Donor name</div><div class="on">Amount ▼</div><div>Status</div></div>`,
+        note: 'On desktop the table column headers do the same thing as the Sort menu; both are shown with the same arrow.' },
+      { t: 'Scroll', act: 'Scroll to the end — the next page loads on its own', url: '/records/donation?chip=mine&…&show=24', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ chip: 'Mine', filters: 2, sort: '▼', pills: ['Method: UPI', 'Amount: ₹100.00 – …'], more: true }),
+        note: 'Keyboard and reduced-motion users get a "Load more" button in the same place. Back from a record returns to the same depth.' },
+    ],
+  },
+  {
+    id: 'act', title: 'Open a donation and run a step', lead: 'The record panel is the same on every device: a bottom sheet on phones, a centred panel on wide screens.',
+    steps: [
+      { t: 'Open the record', act: 'Tap <kbd>Ravi Kumar</kbd>', url: '/records/donation?id=40', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ sel: 40 }),
+        overlay: (k) => sheet(k, 'Ravi Kumar', detail(R40), acts([['Mark as paid', 'p hit'], ['Cancel donation'], ['Edit', 'p']], false), { h: 560 }) },
+      { t: 'Step form', act: 'Tap <kbd>Mark as paid</kbd> — asks only for what the step needs (phone: tapping <kbd>…</kbd> in the breadcrumb shows the full trail)', url: '/records/donation?id=40&panel=step:markPaid', title: 'Donations', back: true, nav: 'records', fab: true, crumbMenu: true,
+        body: list({ sel: 40 }),
+        overlay: (k) => sheet(k, 'Mark as paid', `${field('Method', 'UPI', { req: true, icon: '▾' })}${field('Paid on', '', { req: true, ph: 'Choose a date', icon: '📅', err: 'Paid on is required.' })}${field('Reference', '', { ph: 'UPI transaction id' })}`, acts([['Cancel'], ['Mark as paid', 'p hit']]), { h: 420 }),
+        note: 'Required fields are checked before anything is sent; server problems appear under the field.' },
+      { t: 'Done', act: 'Fill in the date, tap <kbd>Mark as paid</kbd>', url: '/records/donation?id=40', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ sel: 40, rows: [ROWS[0], PAID40, ...ROWS.slice(2)] }),
+        overlay: (k) => sheet(k, 'Ravi Kumar', detail(PAID40, { receipt: true }), acts([['Edit', 'p']], false), { h: 560 }) + `<div class="toast">Mark as paid — receipt RCPT/2026-27/00012 issued.</div>` },
+      { t: 'Back to the list', act: 'Tap <kbd>✕</kbd> or Back', url: '/records/donation', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ sel: 40, rows: [ROWS[0], PAID40, ...ROWS.slice(2)] }),
+        note: 'The row updated in place and stays highlighted; the list did not reload or lose its scroll position.' },
+    ],
+  },
+  {
+    id: 'edit', title: 'Edit a donation', lead: 'Edit opens in the same panel. Fields that are hidden or locked for the record\'s state follow the same rules everywhere.',
+    steps: [
+      { t: 'Row menu', act: 'Tap <kbd>⋮</kbd> on a row (or open the record and tap Edit)', url: '/records/donation', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ hitMenu: 41 }),
+        overlay: (k) => `<div class="menu" style="${k === 'phone' ? 'right:22px;top:118px' : 'right:44px;top:150px'}"><div class="on">Edit</div><div>Mark as paid</div><div>Cancel donation</div></div>` },
+      { t: 'Edit form', act: 'Tap <kbd>Edit</kbd>', url: '/records/donation?id=41&panel=edit', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ sel: 41 }),
+        overlay: (k) => sheet(k, 'Asha Rao — Edit', `<div class="kv sum" style="margin-top:0"><div><b>Number</b>DON/2026-27/00041</div><div><b>Status</b>Raised</div></div><div class="grid2">${field('Donor name', 'Asha Rao', { req: true })}${field('Email', 'asha@example.org')}${field('Amount', '1500', { req: true })}${field('Fee', '0')}</div>`, acts([['Cancel'], ['Save', 'p hit']]), { h: 520 }),
+        note: 'A problem is shown under its field in plain words that name the field, e.g. "Enter a valid email address, like name@example.org." or "Enter a valid phone number, like +91 98765 43210." The same wording is used when the server finds the problem, instead of its raw message.' },
+      { t: 'Saved', act: 'Tap <kbd>Save</kbd> — back to the record', url: '/records/donation?id=41', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ sel: 41 }),
+        overlay: (k) => sheet(k, 'Asha Rao', okn('Saved.') + detail(ROWS[0]), acts([['Mark as paid', 'p'], ['Edit', 'p']], false), { h: 520 }),
+        note: '"Saved." appears inside the record panel, above its details, and clears after a few seconds; nothing is shown on the page behind it. Messages and errors raised while a record is open also appear in the panel.' },
+    ],
+  },
+  {
+    id: 'create', title: 'Create a donation', lead: 'The create button and the create stepper are the same on both. The steps come from the list view configuration.',
+    steps: [
+      { t: 'Start', act: 'Tap <kbd>+</kbd>', url: '/records/donation', title: 'Donations', back: true, nav: 'records', fab: true, hitFab: true, body: list({}) },
+      { t: 'Step 1 — choose the donor', act: 'Type <kbd>pri</kbd> in Donor — matching donors appear', url: '/records/donation?create=new', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({}),
+        overlay: (k) => sheet(k, 'New donation', `<div class="stepper-h"><b>Donor</b><span>Step 1 of 2</span></div><div class="mf" style="position:relative"><div class="l">Donor</div><div class="o" style="border-color:var(--brand);border-width:2px">pri<span>⌕</span></div><div style="position:absolute;left:0;right:0;top:66px;background:#fff;border-radius:4px;box-shadow:0 6px 22px rgba(15,23,42,.22);z-index:2;font-size:.82rem"><div style="padding:10px 14px" class="hit">Priya Nair <span class="cs">· priya@example.org</span></div><div style="padding:10px 14px">Prithvi Rao <span class="cs">· +91 98765 21114</span></div><div style="padding:10px 14px;border-top:1px solid #eee;color:var(--brand);font-weight:600">＋ New donor “pri”</div></div></div><div style="height:150px"></div>${field('Donor name', '', { req: true, ph: 'Filled from the donor' })}`, acts([['Cancel'], ['Next', 'p']]), { h: 540 }),
+        note: 'The donor picker searches Donors by name, email or phone. "New donor" creates one with what was typed, without leaving the form. Choosing nobody still works: the donor details can be typed in, as today.' },
+      { t: 'Step 1 — donor chosen', act: 'Tap <kbd>Priya Nair</kbd> — her details are filled in and locked', url: '/records/donation?create=new', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({}),
+        overlay: (k) => sheet(k, 'New donation', `<div class="stepper-h"><b>Donor</b><span>Step 1 of 2</span></div>${field('Donor', 'Priya Nair', { icon: '✕' })}<div class="grid2">${field('Donor name', 'Priya Nair', { req: true, ro: true })}${field('Donor email', 'priya@example.org', { ro: true })}${field('Donor phone', '+91 98201 44552', { ro: true })}${field('Donor PAN', '***', { ro: true })}</div>`, acts([['Cancel'], ['Next', 'p hit']]), { h: 540 }),
+        note: 'The details are copied onto the donation when it is saved, so receipts, thank-you emails, the books and payments keep working unchanged, and the donation keeps the details as they were. To change them later, edit the donor and choose them again, or clear the donor and type the details.' },
+      { t: 'Step 2 — Details', act: 'Tap <kbd>Next</kbd>, fill in the amount', url: '/records/donation?create=new&createStep=1', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({}),
+        overlay: (k) => sheet(k, 'New donation', `<div class="stepper-h"><b>Details</b><span>Step 2 of 2</span></div><div class="grid2">${field('Amount', '2500', { req: true })}${field('Fee', '')}</div>${field('Notes', '')}`, acts([['Back'], ['Create', 'p hit']]), { h: 440 }) },
+      { t: 'Created', act: 'Tap <kbd>Create</kbd> — the new donation is at the top', url: '/records/donation', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ sel: 42, rows: [{ id: 42, name: 'Priya Nair', amt: '₹2,500.00', method: '—', num: 'DON/2026-27/00042', st: 'Raised', tone: 'w', paid: '—' }, ...ROWS] }),
+        overlay: () => `<div class="toast">Created.</div>`,
+        note: 'Back from step 2 returns to step 1 with the values kept; closing the panel discards the draft.' },
+    ],
+  },
+  {
+    id: 'donors', title: 'Donors and their donations', lead: 'Donors are a record type of their own in the Fundraising group, with the same list and record panel as everything else. A donor\'s record lists their donations.',
+    steps: [
+      { t: 'Donors list', act: 'Records → Fundraising → <kbd>Donors</kbd>', url: '/records/donor', title: 'Donors', back: true, nav: 'records', fab: true,
+        body: (k) => `<div class="chipbar"><span class="chip on">All</span></div>${toolbar(k, {})}${k === 'phone'
+          ? `<div class="panel">${DONORS.map((d) => `<div class="lr${d.hit ? ' hit' : ''}"><span class="ico" style="background:#e0e7ff;color:#4338ca">${d.name[0]}</span><div class="c"><div class="tt">${d.name}</div><div class="st">${d.email} · ${d.phone}</div></div><div class="aside"><span class="kebab">⋮</span></div></div>`).join('')}</div>`
+          : `<div class="panel"><table class="rows"><thead><tr><th>Name ▲</th><th>Email</th><th>Phone</th><th>City</th><th></th></tr></thead><tbody>${DONORS.map((d) => `<tr><td class="t">${d.hit ? `<span class="hit" style="padding:2px 4px">${d.name}</span>` : d.name}</td><td>${d.email}</td><td>${d.phone}</td><td>${d.city}</td><td><span class="kebab">⋮</span></td></tr>`).join('')}</tbody></table></div>`}` },
+      { t: 'Donor record', act: 'Tap <kbd>Ravi Kumar</kbd>', url: '/records/donor?id=d7', title: 'Donors', back: true, nav: 'records', fab: true,
+        body: (k) => `<div class="chipbar"><span class="chip on">All</span></div>${toolbar(k, {})}<div class="panel" style="height:300px"></div>`,
+        overlay: (k) => sheet(k, 'Ravi Kumar', `<div class="sec-h"><span>Donor</span><span>⌃</span></div><div class="kv"><div><b>Name</b>Ravi Kumar</div><div><b>Email</b>ravi@example.org</div><div><b>Phone</b>+91 98450 12210</div><div><b>PAN</b>***</div></div><div class="sec-h"><span>Donations · 3 · ₹8,500.00</span><span>⌃</span></div><div class="kv"><div><b>DON/2026-27/00040</b><span>₹5,000.00 <span class="bdg s">Paid</span></span></div><div><b class="hit" style="padding:0 3px">DON/2026-27/00021</b><span>₹2,500.00 <span class="bdg s">Paid</span></span></div><div><b>DON/2025-26/00310</b><span>₹1,000.00 <span class="bdg s">Paid</span></span></div></div>`, acts([['New donation for Ravi', 'p'], ['Edit', 'p']], false), { h: 580 }),
+        note: 'The Donations section is configured in the donor list view as a related section (records of another type that point at this one). It shows the latest donations, how many there are, and the total. Tapping one opens it in the Donations list. "New donation for Ravi" opens create with the donor already chosen.' },
+    ],
+  },
+  {
+    id: 'approve', title: 'Inbox: approvals and notifications', lead: 'The Inbox has two chips, Approvals and Notifications, using the same chip control as record lists. Approvals work like a record list: search, Sort, Filters and pills, cards on phones and a table on wider screens. The Inbox badge counts only approvals waiting for you; unread notifications are counted on their chip. Push notifications in the store app open the right tab directly.',
+    steps: [
+      { t: 'Approvals', act: 'Tap <kbd>Inbox</kbd> (badge 4) — opens on Approvals, longest waiting first', url: '/inbox?tab=approvals', title: 'Inbox', nav: 'inbox', hitNav: 'inbox', unread: 4,
+        body: (k) => `${inboxChips('approvals', 4)}${approvalsView(k, APPROVALS, { hitApprove: 'DON/2026-27/00040', sort: '▼' })}`,
+        note: 'Phones show one card per request; wider screens show a table with the same columns. Approve and Reject are on every row; tapping the row itself opens the record with the request at the top, to see everything before deciding.' },
+      { t: 'Filter and sort', act: 'Tap <kbd>Filters</kbd>, choose Type <kbd>Donation</kbd>; Sort by <kbd>Requested by</kbd>', url: '/inbox?tab=approvals&type=donation&sort=requestedBy', title: 'Inbox', nav: 'inbox', unread: 4,
+        body: (k) => `${inboxChips('approvals', 4)}${approvalsView(k, APPROVALS.filter((a) => a.type === 'Donation').sort((a, b) => a.by.localeCompare(b.by)), { filters: 1, pills: ['Type: Donation'], sort: '▲', sortCol: 'by' })}`,
+        note: 'Approvals show only what every workflow has in common: the record (number and title), its type, the step, the status it moves from and to, who asked, how long it has waited, and approvals given of needed. Record-specific fields such as an amount are seen by opening the record. Filters: Type, Step, Requested by. Sort: Waiting since, Record, Type, Step, Requested by.' },
+      { t: 'Approved', act: 'Tap <kbd>Approve</kbd> on DON/2026-27/00040 — the row leaves and the badge drops to 3', url: '/inbox?tab=approvals', title: 'Inbox', nav: 'inbox', unread: 3,
+        body: (k) => `${inboxChips('approvals', 3)}${approvalsView(k, APPROVALS.slice(1), { hitReject: 'EXP/2026-27/00007', sort: '▼' })}`,
+        overlay: () => `<div class="toast">Approved and applied.</div>` },
+      { t: 'Reject with a reason', act: 'Tap <kbd>Reject</kbd> on EXP/2026-27/00007', url: '/inbox?tab=approvals', title: 'Inbox', nav: 'inbox', unread: 3,
+        body: (k) => `${inboxChips('approvals', 3)}${approvalsView(k, APPROVALS.slice(1), { sort: '▼' })}`,
+        overlay: (k) => sheet(k, 'Reject "Approve claim"', field('Reason (optional)', 'Receipt missing'), acts([['Cancel'], ['Reject', 'd hit']]), { h: 250 }) },
+      { t: 'Nothing waiting', act: 'After the last decision — the badge disappears', url: '/inbox?tab=approvals', title: 'Inbox', nav: 'inbox', unread: 0,
+        body: (k) => `${inboxChips('approvals', 0, true)}${approvalsView(k, [], {})}` },
+      { t: 'Notifications', act: 'Tap <kbd>Notifications 3</kbd>', url: '/inbox?tab=notifications', title: 'Inbox', nav: 'inbox', unread: 0,
+        body: () => `${inboxChips('notifications', 0)}<div class="row" style="margin-bottom:10px"><span class="sp"></span><span class="btn">Mark all read</span></div>${notice('Donation paid', 'DON/2026-27/00038 was marked as paid.', '10:02', false, true)}${notice('Approval needed', 'EXP/2026-27/00007 is waiting for your approval.', '09:40')}${notice('Receipt issued', 'RCPT/2026-27/00011 was issued for DON/2026-27/00037.', 'Yesterday')}${notice('Welcome', 'Your account is ready.', 'Mon', true)}`,
+        note: 'Tapping a notification marks it read and opens its record in the list with the record panel open. Read notifications stay, dimmed. When nothing is waiting for approval, the Inbox opens on this tab.' },
+    ],
+  },
+  {
+    id: 'groups', title: 'Set up record groups (Builder)', lead: 'Grouping is configuration, not code. Without any setup, record types are grouped by the module that shipped them, and the organisation\'s own record types go under "Other". An administrator can rearrange groups in the Builder; it is versioned and published like any other definition, and the organisation\'s changes are kept as a patch on top of what modules ship.',
+    steps: [
+      { t: 'Record groups', act: 'Builder → <kbd>Record groups</kbd> (larger screens)', url: '/builder/recordGroups/main', title: 'Record groups', back: true, nav: 'more',
+        body: (k) => `${k === 'phone' ? '<div class="note">Editing works best on a tablet or computer. You can review what is published here.</div>' : ''}<div class="row" style="margin-bottom:10px"><span class="bdg s">v2 published</span><span class="sp"></span>${k === 'desk' ? '<span class="btn">Discard draft</span><span class="btn p hit">Publish</span>' : ''}</div>${GROUPS.map((g, i) => `<div class="card"><div class="row"><span style="color:#94a3b8">⠿</span><b style="font-size:.85rem">${g.label}</b><span class="sp"></span>${k === 'desk' ? '<span class="cs">Move up · Move down · Rename · Remove</span>' : ''}</div><div class="pills" style="margin-top:8px;padding-bottom:0">${g.items.map((it) => `<span>${it.name}${k === 'desk' ? ' ×' : ''}</span>`).join('')}${k === 'desk' ? '<span style="border-style:dashed;background:#fff">+ Add record type</span>' : ''}</div></div>`).join('')}${k === 'desk' ? '<span class="btn">+ New group</span>' : ''}`,
+        note: 'A record type can sit in one group only. Record types not placed in any group appear under "Other", so nothing ever disappears from the menu by mistake.' },
+    ],
+  },
+  {
+    id: 'account', title: 'Account and sign out', lead: 'More holds the account, pages, organisation links and settings. Record groups are not repeated here. The initials in the app bar open Sign out on every screen, and choosing it asks for confirmation. This is the More page used when no navigation has been published. A published navigation opens More as a menu over the current screen instead (Custom navigation).',
+    steps: [
+      { t: 'More', act: 'Tap <kbd>More</kbd>', url: '/more', title: 'More', nav: 'more',
+        body: () => moreScreen({})(),
+        note: 'Account card, pages, People or Administration when allowed, language, two-step sign-in, Builder and About. No record groups, and no Sign out button.' },
+      { t: 'Sign out', act: 'Click or hover the initials', url: '/more', title: 'More', nav: 'more', hitAccount: true, accountMenu: true, hitSignOut: true,
+        body: () => moreScreen({})() },
+      { t: 'Confirm', act: 'Tap <kbd>Sign out</kbd>', url: '/more', title: 'More', nav: 'more',
+        body: () => moreScreen({})(),
+        overlay: () => `<div class="scrim"></div><div class="dialog"><h3>Sign out?</h3><p>You will be signed out on this device and will need to sign in again.</p><div class="acts h"><span class="btn">Cancel</span><span class="btn d hit">Sign out</span></div></div>`,
+        note: 'Cancel leaves the person signed in. Sign out ends the session on this device and returns to the sign-in screen.' },
+    ],
+  },
+];
+
+/* ------------------------------------------- first-release additions (journeys 10–20) */
+const chipRow = (labels, active, hitL) => `<div class="chipbar">${labels.map((c) => `<span class="chip${c === active ? ' on' : ''}${hitL === c ? ' hit' : ''}">${c}</span>`).join('')}</div>`;
+const menuAt = (k, pos, items) => `<div class="menu" style="${k === 'phone' ? pos[0] : pos[1]}">${items.map((i) => (i === '-' ? '<div class="sep"></div>' : i.startsWith('*') ? `<div class="on">${i.slice(1)}</div>` : `<div>${i}</div>`)).join('')}</div>`;
+const tog = (label, on, hint) => `<div class="row" style="font-size:.76rem;margin:6px 0 ${hint ? 2 : 10}px"><span>${label}</span><span class="sp"></span><span class="tog${on ? ' on' : ''}"></span></div>${hint ? `<div class="cs" style="margin-bottom:10px">${hint}</div>` : ''}`;
+const sigSvg = (w = 120, h = 40) => `<svg width="${w}" height="${h}" viewBox="0 0 120 40" aria-label="Signature"><path d="M4 30 C 12 4, 22 4, 25 26 S 38 36, 45 14 S 58 4, 63 24 S 78 36, 86 16 S 102 8, 116 22" fill="none" stroke="#1d2733" stroke-width="2.2" stroke-linecap="round"/></svg>`;
+
+/* widgets (pages and Home) */
+function barChart(data) {
+  const max = Math.max(...data.map((d) => d[1])), w = data.length * 40;
+  return `<svg viewBox="0 0 ${w} 116" width="100%" height="116" role="img" aria-label="Bar chart">${data.map(([l, v], i) => { const h = Math.round((v / max) * 82); return `<rect x="${i * 40 + 9}" y="${96 - h}" width="22" height="${h}" rx="3" fill="#1f5f8b" opacity="${i === data.length - 1 ? 1 : 0.55}"/><text x="${i * 40 + 20}" y="110" text-anchor="middle" font-size="10" fill="#64748b">${l}</text>`; }).join('')}<line x1="0" y1="96.5" x2="${w}" y2="96.5" stroke="#d8dee6"/></svg>`;
+}
+function lineChart(data) {
+  const max = Math.max(...data.map((d) => d[1])), w = (data.length - 1) * 44 + 28;
+  const pts = data.map(([, v], i) => [i * 44 + 14, 90 - Math.round((v / max) * 74)]);
+  return `<svg viewBox="0 0 ${w} 116" width="100%" height="116" role="img" aria-label="Line chart"><line x1="0" y1="96.5" x2="${w}" y2="96.5" stroke="#d8dee6"/><polyline points="${pts.map((p) => p.join(',')).join(' ')}" fill="none" stroke="#1f5f8b" stroke-width="2.5" stroke-linejoin="round"/>${pts.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="3" fill="#1f5f8b"/><text x="${x}" y="110" text-anchor="middle" font-size="9" fill="#64748b">${data[i][0]}</text>`).join('')}</svg>`;
+}
+const wcard = (label, inner, o = {}) => `<div class="card wd${o.full ? ' full' : ''}${hit(o.hit)}"><div class="wh"><span class="wl">${label}</span>${o.tag ? `<span class="bdg p">${o.tag}</span>` : ''}<span class="sp"></span>${o.see ? `<span class="see${hit(o.hitSee)}">${o.seeLabel || 'See all'}</span>` : ''}${o.menu ? `<span class="kebab${hit(o.hitMenu)}">⋮</span>` : ''}</div>${inner}</div>`;
+const statW = (label, value, sub, o = {}) => wcard(label, `<div class="wv">${value}</div>${sub ? `<div class="cs">${sub}</div>` : ''}`, o);
+const listW = (label, data, o = {}) => wcard(label, rows('phone', { rows: data, n: data.length }).replace('<div class="panel">', '<div class="wrows">'), { see: true, ...o });
+const linksW = (label, items) => wcard(label, items.map((l) => `<div class="row" style="padding:6px 0;font-size:.8rem"><span class="link">${l}</span><span class="sp"></span><span class="cs">›</span></div>`).join(''));
+const groupsW = (o = {}) => `<div class="full"><div class="cards">${(o.groups || GROUPS).map((g) => `<div class="card"><div class="cs" style="font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px">${g.label}</div>${g.items.map((it) => `<div class="row" style="padding:5px 0"><span class="ct" style="font-size:.82rem">${it.name}</span><span class="sp"></span><span class="cs" style="color:var(--brand)">${o.newLabel || 'New'}</span></div>`).join('')}</div>`).join('')}</div></div>`;
+const MONTHS = [['Apr', 182000], ['May', 146500], ['Jun', 201300], ['Jul', 168900], ['Aug', 239400], ['Sep', 211750], ['Oct', 124500]];
+const WEEKS = [['5 Sep', 41200], ['12 Sep', 52800], ['19 Sep', 38900], ['26 Sep', 61500], ['3 Oct', 47300], ['10 Oct', 33900], ['17 Oct', 55600], ['24 Oct', 22100]];
+const PIN_ROWS = [ROWS[1], ROWS[3], ROWS[0], ROWS[5]];
+const PIN_URL = '/records/donation?chip=outstanding&amountFrom=1000&sort=-amount';
+function home(o = {}) {
+  return `<div class="welcome">Welcome, Asha</div><div class="wgrid">${o.pin ? listW('Outstanding over ₹1,000', PIN_ROWS.slice(0, 3), { tag: 'Your pin', menu: true, hitMenu: o.hitPinMenu }) : ''}${statW('Raised this month', '₹1,24,500.00', 'Paid donations, October 2026')}${statW('Outstanding donations', '18', 'Raised, not yet paid')}${wcard('Donations by month · 2026-27', `${barChart(MONTHS)}<div class="cs">Highest: August, ₹2,39,400.00</div>`)}${listW('Waiting the longest', [ROWS[5], ROWS[4]])}${linksW('Quick links', ['New donation', 'Donors in Pune', 'Receipts issued this week'])}${groupsW()}</div>`;
+}
+function moreScreen(o = {}) {
+  const who = o.who || ['AS', 'Asha Sharma', 'asha@demo.local · Demo Foundation'];
+  const peopleRow = o.people === 'viewer'
+    ? `<p class="cap" style="margin:4px 2px 6px">Organisation</p><div class="panel" style="margin-bottom:12px"><div class="listrow${hit(o.hitPeople)}"><div><b>People</b><div class="cs">Directory · names, roles and contact details</div></div><span class="cs">›</span></div></div>`
+    : `<p class="cap" style="margin:4px 2px 6px">Administration</p><div class="panel" style="margin-bottom:12px"><div class="listrow${hit(o.hitPeople)}"><div><b>Administration</b><div class="cs">People, invitations and who has which role</div></div><span class="cs">›</span></div></div>`;
+  return () => `<div class="card row${hit(o.hitProfile)}" aria-label="My profile"><span class="ib av" style="background:var(--b100);color:var(--brand)">${who[0]}</span><div><b>${who[1]}</b><div class="cs">${who[2]}</div></div>${o.profile ? '<span class="sp"></span><span class="cs">My profile ›</span>' : ''}</div>
+    <p class="cap" style="margin:4px 2px 6px">Pages</p><div class="panel" style="margin-bottom:12px"><div class="listrow${hit(o.hitPage)}"><div><b>Fundraising dashboard</b><div class="cs">Totals, trends and gifts waiting</div></div><span class="cs">›</span></div><div class="listrow"><div><b>Programme reach</b><div class="cs">Beneficiaries by programme and place</div></div><span class="cs">›</span></div></div>
+    ${o.people ? peopleRow : ''}
+    <div class="panel"><div class="listrow${hit(o.hitLang)}">Language<span class="cs">${o.lang || 'English'} ›</span></div><div class="listrow">Two-step sign-in<span class="bdg s">On</span></div><div class="listrow">Builder<span class="cs">catalogue on phones; editing on larger screens</span></div><div class="listrow">About this app</div></div>`;
+}
+const LANGS = [['English', 'English'], ['हिन्दी', 'Hindi'], ['தமிழ்', 'Tamil'], ['తెలుగు', 'Telugu'], ['বাংলা', 'Bengali'], ['मराठी', 'Marathi']];
+const HI_GROUPS = [
+  { label: 'धन संग्रह', items: [{ name: 'दानदाता' }, { name: 'दान' }] },
+  { label: 'कार्यक्रम', items: [{ name: 'लाभार्थी' }, { name: 'Visits' }] },
+  { label: 'संचालन', items: [{ name: 'खर्च' }, { name: 'संपत्ति' }] },
+];
+
+/* donors list with the list ⋮ (import and export) */
+const donorsBody = (o = {}) => (k) => `<div class="chipbar"><span class="chip on">All</span></div>${toolbar(k, { ph: 'Search donors…', kebab: true, hitKebab: o.hitKebab })}${k === 'phone'
+  ? `<div class="panel">${DONORS.map((d) => `<div class="lr"><span class="ico" style="background:#e0e7ff;color:#4338ca">${d.name[0]}</span><div class="c"><div class="tt">${d.name}</div><div class="st">${d.email} · ${d.phone}</div></div><div class="aside"><span class="kebab">⋮</span></div></div>`).join('')}</div>`
+  : `<div class="panel"><table class="rows"><thead><tr><th>Name ▲</th><th>Email</th><th>Phone</th><th>City</th><th></th></tr></thead><tbody>${DONORS.map((d) => `<tr><td class="t">${d.name}</td><td>${d.email}</td><td>${d.phone}</td><td>${d.city}</td><td><span class="kebab">⋮</span></td></tr>`).join('')}</tbody></table></div>`}`;
+const importHead = (n, label) => `<div class="stepper-h"><b>${label}</b><span>Step ${n} of 5</span></div>`;
+const MAP = [['Name', 'Name'], ['Email', 'Email'], ['Mobile', 'Phone'], ['PAN', 'PAN'], ['City', 'City'], ['Remarks', '']];
+
+/* files */
+const fileRow = (kind, name, meta, o = {}) => `<div class="file${hit(o.hit)}"><span class="th ${kind}">${o.label ?? (kind === 'pdf' ? 'PDF' : '')}</span><div class="fc"><b>${name}</b>${o.prog != null ? `<div class="prog" style="margin:5px 0 3px"><i style="width:${o.prog}%"></i></div>` : ''}<span class="cs"${o.err ? ' style="color:var(--bad)"' : ''}>${meta}</span></div>${o.right ?? '<span class="kebab">×</span>'}</div>`;
+const fileField = (k, inner = '', o = {}) => `<div class="mf"><div class="l">Documents</div>${k === 'phone' ? `<div class="row" style="margin-bottom:8px"><span class="btn" style="flex:1">Choose files</span><span class="btn${hit(o.hitTake)}" style="flex:1">📷 Take photo</span></div>` : `<div class="drop${hit(o.hitDrop)}">Drag files here, or <span class="link">choose files</span></div>`}<div class="cs" style="margin:-2px 0 8px">Images or PDF · up to 10 MB each · several files allowed</div>${inner}</div>`;
+const imgPreview = `<svg viewBox="0 0 320 200" width="100%" height="200" role="img" aria-label="Photo preview" style="border-radius:10px;display:block"><rect width="320" height="200" fill="#a9cdec"/><rect y="132" width="320" height="68" fill="#86b884"/><circle cx="262" cy="44" r="18" fill="#f8e08e"/><polygon points="96,86 160,40 224,86" fill="#b4533c"/><rect x="108" y="86" width="104" height="66" fill="#efe3cf"/><rect x="148" y="112" width="24" height="40" fill="#7a5537"/><rect x="118" y="98" width="20" height="18" fill="#6aa0c8"/><rect x="182" y="98" width="20" height="18" fill="#6aa0c8"/></svg>`;
+
+/* beneficiaries (files, sharing, fields, two workflows) */
+const BENS = [
+  { id: 12, name: 'Lakshmi Devi', num: 'BEN/2026-27/00012', prog: 'Scholarship', place: 'Hadapsar, Pune', st: 'Enrolled', tone: 's', close: 'Open' },
+  { id: 11, name: 'Arjun Patil', num: 'BEN/2026-27/00011', prog: 'Livelihood', place: 'Wagholi, Pune', st: 'Screening', tone: 'w', close: '—' },
+  { id: 10, name: 'Fatima Shaikh', num: 'BEN/2026-27/00010', prog: 'Scholarship', place: 'Kondhwa, Pune', st: 'Enrolled', tone: 's', close: 'Closure requested' },
+  { id: 9, name: 'Ganesh More', num: 'BEN/2026-27/00009', prog: 'Health', place: 'Yerawada, Pune', st: 'Enrolled', tone: 's', close: 'Open' },
+  { id: 8, name: 'Kavita Jadhav', num: 'BEN/2026-27/00008', prog: 'Livelihood', place: 'Hinjewadi, Pune', st: 'Applied', tone: 'p', close: '—' },
+];
+const BEN12 = BENS[0];
+function benRows(k, o = {}) {
+  const data = (o.rows || BENS).slice(0, o.n ?? 5);
+  const closeBadge = (b) => (b.close === '—' ? '<span class="cs">—</span>' : `<span class="bdg ${b.close === 'Open' ? 'p' : 'w'}">${b.close}</span>`);
+  if (k === 'phone' || o.view === 'cards') {
+    return `<div class="panel">${data.map((b) => `<div class="lr${b.id === o.sel ? ' sel' : ''}${b.id === o.hitRow ? ' hit' : ''}"><span class="ico" style="background:#ede9fe;color:#6d28d9">${b.name[0]}</span><div class="c"><div class="tt">${b.name}</div><div class="st">${b.prog} · ${b.place}</div><div class="mt">${o.meta ? o.meta(b) : b.num}</div></div><div class="aside"><span class="bdg ${b.tone}">${b.st}</span><span class="kebab">⋮</span></div></div>`).join('')}</div>`;
+  }
+  return `<div class="panel"><table class="rows"><thead><tr><th>Number</th><th>Name</th><th>Programme</th><th>Place</th><th>Intake</th>${o.wf ? '<th>Case closure</th>' : ''}${o.meta ? '<th>Shared</th>' : ''}<th></th></tr></thead><tbody>${data.map((b) => `<tr class="${b.id === o.sel ? 'sel' : ''}"><td>${b.num}</td><td class="t">${b.id === o.hitRow ? `<span class="hit" style="padding:2px 4px">${b.name}</span>` : b.name}</td><td>${b.prog}</td><td>${b.place}</td><td><span class="bdg ${b.tone}">${b.st}</span></td>${o.wf ? `<td>${closeBadge(b)}</td>` : ''}${o.meta ? `<td class="cs">${o.meta(b)}</td>` : ''}<td><span class="kebab">⋮</span></td></tr>`).join('')}</tbody></table></div>`;
+}
+const benList = (o = {}) => (k) => `${chipRow(o.chips || ['Mine', 'Active', 'Closed'], o.chip || 'Active', o.hitChip)}${toolbar(k, { ph: 'Search beneficiaries…', ...o })}${pills(o.pills || [])}${benRows(k, o)}`;
+const benSum = `<div class="kv sum" style="margin-top:0"><div><b>Number</b>BEN/2026-27/00012</div><div><b>Scholarship intake</b>Enrolled</div></div>`;
+const wfLines = (intake = ['Enrolled', 's'], closure = ['Open', 'p']) => `<div class="wfl"><div><b>Scholarship intake</b><span class="bdg ${intake[1]}">${intake[0]}</span></div><div><b>Case closure</b><span class="bdg ${closure[1]}">${closure[0]}</span></div></div>`;
+const wfFooter = (closure = [['Request closure', 'p']]) => `<div class="acts"><div class="wfg">Scholarship intake</div><span class="btn">Suspend</span><div class="wfg">Case closure</div>${closure.map(([t, c]) => `<span class="btn ${c || ''}">${t}</span>`).join('')}<span class="btn p" style="margin-top:4px">Edit</span></div>`;
+const benDetail = (extra = '') => `${wfLines()}<div class="sec-h"><span>Beneficiary</span><span>⌃</span></div><div class="kv"><div><b>Number</b>BEN/2026-27/00012</div><div><b>Programme</b>Scholarship</div><div><b>Place</b>Hadapsar, Pune</div></div>${extra}`;
+const BEN_URL = '/records/beneficiary?chip=active';
+const shareRow = (ini, name, sub, o = {}) => `<div class="listrow" style="padding:8px 2px"><div class="row"><span class="ib av" style="background:var(--b100);color:var(--brand);width:30px;height:30px;flex:0 0 auto">${ini}</span><div><b style="font-size:.8rem">${name}</b><div class="cs">${sub}</div></div></div>${o.owner ? '<span class="cs">Owner</span>' : `<span class="kebab${hit(o.hit)}" aria-label="Remove">×</span>`}</div>`;
+
+/* selection and bulk */
+function selRows(k, o = {}) {
+  const sel = new Set(o.sel || []);
+  const on = (id) => o.all || sel.has(id);
+  const cb = (id) => `<span class="cb${on(id) ? ' on' : ''}${hit(o.hitCb === id)}">${on(id) ? '✓' : ''}</span>`;
+  const data = ROWS.slice(0, k === 'phone' ? 5 : 6);
+  if (k === 'phone') {
+    return `<div class="panel">${data.map((r) => `<div class="lr${on(r.id) ? ' sel' : ''}${hit(o.hitRow === r.id)}">${o.selecting ? `<span style="width:34px;height:34px;display:grid;place-items:center;flex:0 0 auto">${cb(r.id)}</span>` : '<span class="ico">$</span>'}<div class="c"><div class="tt">${r.name}</div><div class="st">${r.amt} · ${r.method}</div><div class="mt">${r.num}</div></div><div class="aside"><span class="bdg ${r.tone}">${r.st}</span>${o.selecting ? '' : '<span class="kebab">⋮</span>'}</div></div>`).join('')}</div>`;
+  }
+  const head = o.all ? '<span class="cb on">✓</span>' : sel.size ? '<span class="cb part">–</span>' : '<span class="cb"></span>';
+  /* the checkbox column exists only while selecting */
+  const cbHead = o.selecting ? `<th style="width:30px">${o.hitHead ? `<span class="hit" style="display:inline-block;border-radius:4px">${head}</span>` : head}</th>` : '';
+  const cbCell = (id) => (o.selecting ? `<td>${cb(id)}</td>` : '');
+  return `<div class="panel"><table class="rows"><thead><tr>${cbHead}<th>Number</th><th>Donor name</th><th>Amount</th><th>Method</th><th>Status</th><th></th></tr></thead><tbody>${data.map((r) => `<tr class="${on(r.id) ? 'sel' : ''}">${cbCell(r.id)}<td>${r.num}</td><td class="t">${r.name}</td><td>${r.amt}</td><td>${r.method}</td><td><span class="bdg ${r.tone}">${r.st}</span></td><td><span class="kebab">⋮</span></td></tr>`).join('')}</tbody></table></div>`;
+}
+const bulkBar = (k, n, o = {}) => `<div class="bulkbar"><span class="bb" aria-label="Clear selection">✕</span><b>${n} selected</b><span class="sp"></span>${k === 'phone' ? `<span class="bb p${hit(o.hitOp)}">Mark as paid</span><span class="bb">⋮</span>` : ['Mark as paid', 'Send reminder', 'Edit fields', 'Export'].map((x, i) => `<span class="bb${i === 0 ? ` p${hit(o.hitOp)}` : ''}">${x}</span>`).join('')}</div>`;
+const selList = (o = {}) => (k) => `${chips('Outstanding')}${toolbar(k, { kebab: true, hitKebab: o.hitKebab })}${o.banner || ''}${selRows(k, o)}`;
+
+/* location, signature, rich text */
+const locEmpty = (o = {}) => `<div class="mf"><div class="l">Home location</div><div class="locbox"><span class="btn${hit(o.hitUse)}" style="align-self:flex-start">◎ Use my location</span><span class="cs">or <span class="link">type coordinates</span></span></div></div>`;
+const locSet = `<div class="mf"><div class="l">Home location</div><div class="locbox"><div class="row"><span class="mono">18.502114, 73.925871</span><span class="sp"></span><span class="bdg s">± 12 m</span></div><div class="row" style="font-size:.74rem"><span class="link">Open in maps ↗</span><span class="sp"></span><span class="cs">Use my location again · Clear</span></div></div></div>${field('Location label', 'Home, Sasane Nagar, Hadapsar')}`;
+const sigPad = (signed) => `<div class="mf"><div class="l">Consent signature <i>*</i></div><div class="sigpad">${signed ? sigSvg(200, 64) : ''}<div class="base"></div><div class="hint">${signed ? 'Signed with a finger, mouse or pen' : 'Sign above the line'}</div></div><div class="row" style="margin-top:6px"><span class="sp"></span><span class="btn">Clear</span></div></div>`;
+const rtEditor = `<div class="mf"><div class="l">Case notes</div><div class="rt"><div class="bar"><span class="on"><b>B</b></span><span><i>I</i></span><span><u>U</u></span><span>•≡</span><span>1≡</span><span>H</span><span>❝</span><span>🔗</span></div><div class="ed"><h4>Home visit, 22 Oct</h4><p>School fees for Term 2 are <b>paid in full</b>. Next steps:</p><ul><li>Collect the marks card</li><li>Check the bus pass</li></ul><blockquote>“I want to become a nurse.”</blockquote></div></div></div>`;
+const rtView = `<div class="rtv"><h4>Home visit, 22 Oct</h4><p>School fees for Term 2 are <b>paid in full</b>. Next steps:</p><ul><li>Collect the marks card</li><li>Check the bus pass</li></ul></div>`;
+
+/* print view */
+const receipt = () => `<div class="printbar"><span class="btn">← Back</span><span class="sp"></span><span class="btn p hit">Print</span></div><div class="paper">
+  <div class="row" style="align-items:flex-start"><div><div style="font-size:1.05em;font-weight:700;color:var(--brand)">Demo Foundation</div><div class="cs">12 MG Road, Pune 411001</div></div><span class="sp"></span><div style="text-align:right"><div style="font-weight:700">RCPT/2026-27/00012</div><div class="cs">23 Oct 2026</div></div></div>
+  <div class="ptitle">Donation acknowledgement</div>
+  <div class="pkv"><div><b>Received with thanks from</b>Ravi Kumar</div><div><b>Email</b>ravi@example.org</div><div><b>Amount</b>₹5,000.00</div><div><b>In words</b>Rupees five thousand only</div><div><b>Paid by</b>UPI · 23 Oct 2026</div><div><b>Reference</b>UPI 4301 2298 7712</div><div><b>For donation</b>DON/2026-27/00040</div></div>
+  <div class="row" style="margin-top:16px;align-items:flex-end"><div class="cs" style="max-width:55%">This is an acknowledgement, not a tax receipt.</div><span class="sp"></span><div style="text-align:center">${sigSvg(110, 36)}<div style="border-top:1px solid #94a3b8;font-size:.9em;padding-top:3px">Authorised signatory</div></div></div></div>`;
+
+const ASHA_LAST = `<div class="sec-h"><span>Follow-up</span><span>⌃</span></div><div class="kv"><div><b>Last reminder</b>24 Oct 2026 · WhatsApp</div></div>`;
+const FIT = (h) => ({ h, cls: 'fit' });
+
+FLOWS.push(
+  {
+    id: 'home-widgets', title: 'Home with widgets and pins', lead: 'Home is the organisation\'s configurable "home" page: counts, totals, charts, short lists, links and the record groups, two per row on wide screens and one per row on phones. Anyone can pin a list to their own Home from the list\'s ⋮; pins sit above the organisation\'s widgets. The record-type lists themselves still show no counts; numbers appear only in widgets someone configured.',
+    steps: [
+      { t: 'Home with widgets', act: 'Sign in, or tap <kbd>Home</kbd>', url: '/', title: 'Home', nav: 'home',
+        body: () => home(),
+        note: 'Widgets in the order the Home page sets: two totals, a bar chart by month of the financial year (inline drawing, no chart library), a short list with "See all", quick links (in-app only), then the record groups. Without a published Home page, Home shows the record groups only (Journey 1.2). Widgets a person cannot read are left out.' },
+      { t: 'Pin a list', act: 'On Donations, set chip, filter and sort, then tap the list <kbd>⋮</kbd>', url: PIN_URL, title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ kebab: true, hitKebab: true, filters: 1, sort: '▼', sortCol: 'amount', pills: ['Amount: ₹1,000.00 – …'], rows: PIN_ROWS, n: 4, end: true }),
+        overlay: (k) => menuAt(k, ['right:12px;top:96px', 'right:20px;top:96px'], ['*Pin to my Home', 'Pin to everyone\'s Home', '-', 'Select', 'Import', 'Export']),
+        note: 'The list\'s own ⋮ sits at the end of the toolbar. "Pin to everyone\'s Home" is shown only to people who can change the Home page; it adds the widget to a Home page draft for publishing. "Select" is offered on cards and on tables; the table\'s checkbox column appears only while selecting. Import and Export appear only with their permissions.' },
+      { t: 'Pinned', act: 'Tap <kbd>Pin to my Home</kbd>', url: PIN_URL, title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ kebab: true, filters: 1, sort: '▼', sortCol: 'amount', pills: ['Amount: ₹1,000.00 – …'], rows: PIN_ROWS, n: 4, end: true }),
+        overlay: () => '<div class="toast">Pinned to your Home as "Outstanding over ₹1,000".</div>',
+        note: 'The pin stores the list\'s address (chip, filters, sort), named from the chip and pills; it can be renamed on Home. For "everyone": "Added to the Home page draft — publish it in the Builder to show it to everyone."' },
+      { t: 'The pin on Home', act: 'Tap <kbd>Home</kbd>, then the pin\'s <kbd>⋮</kbd>', url: '/', title: 'Home', nav: 'home', hitNav: 'home',
+        body: () => home({ pin: true, hitPinMenu: true }),
+        overlay: (k) => menuAt(k, ['right:22px;top:66px', 'left:220px;top:66px'], ['*See all', 'Rename', 'Move up', 'Move down', '-', 'Unpin']),
+        note: 'Pins are kept per person (badge "Your pin") and show the first three rows with the same cards as the list. Organisation widgets have no ⋮ for people; they are changed in the Builder (Builder 20).' },
+      { t: 'See all', act: 'Tap <kbd>See all</kbd> — the list opens exactly as pinned', url: PIN_URL, title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ kebab: true, filters: 1, sort: '▼', sortCol: 'amount', pills: ['Amount: ₹1,000.00 – …'], rows: PIN_ROWS, n: 4, end: true }),
+        note: 'Same address as when it was pinned, so Back returns to Home and the list keeps its own chip, filters and sort.' },
+    ],
+  },
+  {
+    id: 'page-view', title: 'A page from More', lead: 'Organisations can add extra pages (placement "More") made of the same widgets as Home. They are listed in More and open at /pages/:key; only people in the page\'s audience see them. A published navigation can also put a page on the bar or the rail.',
+    steps: [
+      { t: 'Pages in More', act: 'Tap <kbd>More</kbd>', url: '/more', title: 'More', nav: 'more', body: moreScreen({ hitPage: true }),
+        note: 'Pages come before the account settings. A page whose audience leaves a person out is not listed, and its address shows "You do not have access to this page."' },
+      { t: 'The page', act: 'Tap <kbd>Fundraising dashboard</kbd>', url: '/pages/fundraising', title: 'Fundraising dashboard', back: true, nav: 'more',
+        body: () => `<div class="row" style="margin-bottom:10px"><span class="cs">Updated 10:42 · figures you are allowed to see</span><span class="sp"></span><span class="fb btn" style="padding:.25rem .6rem">⋮</span></div><div class="wgrid">${statW('Raised in 2026-27', '₹12,74,350.00', 'Paid donations since 1 Apr 2026')}${statW('Donations in 2026-27', '624', 'All statuses')}${wcard('Raised by week · last 8 weeks', lineChart(WEEKS))}${listW('Large gifts waiting', [ROWS[1], ROWS[3]])}${linksW('Links', ['New donation', 'Donors in Pune'])}</div>`,
+        note: 'Same widget components as Home. The page ⋮ offers "Pin to my Home" (adds a link widget to the page) and, for administrators, "Edit in the Builder". Back returns to More.' },
+    ],
+  },
+  {
+    id: 'language', title: 'Choose a language', lead: 'English, Hindi, Tamil, Telugu, Bengali and Marathi for all screen text. Each person chooses in More; the choice is saved to their membership, so it follows them to every device, and applies at once without a reload. Organisation labels show their translation where one exists and English otherwise.',
+    steps: [
+      { t: 'Language in More', act: 'Tap <kbd>More</kbd>, then <kbd>Language</kbd>', url: '/more', title: 'More', nav: 'more', body: moreScreen({ hitLang: true }) },
+      { t: 'Choose', act: 'Tap <kbd>हिन्दी</kbd>', url: '/more?panel=language', title: 'More', nav: 'more', body: moreScreen({}),
+        overlay: (k) => sheet(k, 'Language', `${LANGS.map(([n, e], i) => `<div class="radio${hit(i === 1)}"><span class="r${i === 0 ? ' on' : ''}"></span><span>${n}</span><span class="cs">${e}</span></div>`).join('')}<div class="cs" style="margin-top:10px">Your organisation's default is English.</div>`, '', FIT(420)),
+        note: 'Each language is shown in its own script with the English name beside it. Choosing one applies immediately and closes the panel; there is no Save button.' },
+      { t: 'In Hindi', act: 'The app redraws in Hindi; numbers and dates keep Indian formats', url: '/', title: 'होम', nav: 'home', navLabels: ['होम', 'रिकॉर्ड', 'इनबॉक्स', 'और'],
+        body: () => `<div class="welcome">नमस्ते, आशा</div><div class="wgrid">${statW('इस महीने प्राप्त', '₹1,24,500.00', 'भुगतान किए गए दान, अक्टूबर 2026')}${statW('बकाया दान', '18', 'दर्ज, अभी भुगतान नहीं')}${groupsW({ groups: HI_GROUPS, newLabel: 'नया' })}</div>`,
+        overlay: () => '<div class="toast">भाषा बदल दी गई: हिन्दी</div>',
+        note: 'Screen text comes from the shipped Hindi catalogue; labels such as "Donations" or widget titles come from the organisation\'s Hindi translations (Builder 22). "Visits" has no Hindi translation yet, so it falls back to English. The organisation name is not translated. Notifications and messages to this person also use Hindi.' },
+    ],
+  },
+  {
+    id: 'actions', title: 'Record actions', lead: 'Organisations add their own buttons, such as Send reminder, Pay now and Print receipt. They appear in the record panel footer (after the workflow steps, before Edit) and in the row ⋮ menu, only when their condition and permission allow. An action can ask for a few fields and for confirmation, both in the same panel; afterwards the panel returns to the record with a message.',
+    steps: [
+      { t: 'Actions in the panel', act: 'Open <kbd>Asha Rao</kbd>', url: '/records/donation?id=41', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ sel: 41 }),
+        overlay: (k) => sheet(k, 'Asha Rao', detail(ROWS[0]), acts([['Mark as paid', 'p'], ['Cancel donation'], ['Send reminder', 'hit'], ['Pay now'], ['Edit', 'p']], false), FIT(476)),
+        note: 'Footer order: workflow steps (primary first), then actions, then Edit. "Send reminder" and "Pay now" are shown only while the donation is Raised; "Print receipt" only once it is Paid (Journey 14).' },
+      { t: 'Action form', act: 'Tap <kbd>Send reminder</kbd> — it asks only for its own fields', url: '/records/donation?id=41&panel=action:sendReminder', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ sel: 41 }),
+        overlay: (k) => sheet(k, 'Send reminder', `<div class="kv sum" style="margin-top:0"><div><b>Donation</b>DON/2026-27/00041</div><div><b>Outstanding</b>₹1,500.00</div></div>${field('Send by', 'WhatsApp', { req: true, icon: '▾' })}${field('Note to add', '', { ph: 'Optional, for example the UPI ID' })}`, acts([['Cancel'], ['Send reminder', 'p hit']]), FIT(400)),
+        note: 'Same panel and fields as a workflow step. Required fields are checked before anything is sent.' },
+      { t: 'Confirm', act: 'Tap <kbd>Send reminder</kbd> — the action\'s confirmation text, in the panel', url: '/records/donation?id=41&panel=action:sendReminder', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ sel: 41 }),
+        overlay: (k) => sheet(k, 'Send reminder', `<div class="note" style="font-size:.82rem;line-height:1.5;color:var(--fg)">Send a payment reminder to <b>Asha Rao</b> (+91 98450 12301) on <b>WhatsApp</b>?</div><div class="cs">Note: "UPI ID demofoundation@upi"</div>`, acts([['Back'], ['Send reminder', 'p hit']]), FIT(300)),
+        note: 'No browser dialog. The confirmation is not a separate address: form values are not kept in the address, so a reload returns to the form. Actions without a form go straight to this confirmation; actions without a confirmation run at once.' },
+      { t: 'Done', act: 'Tap <kbd>Send reminder</kbd> — back to the record with the message', url: '/records/donation?id=41', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ sel: 41 }),
+        overlay: (k) => sheet(k, 'Asha Rao', detail(ROWS[0]) + ASHA_LAST, acts([['Mark as paid', 'p'], ['Cancel donation'], ['Send reminder'], ['Pay now'], ['Edit', 'p']], false), FIT(476)) + '<div class="toast">Reminder sent to Asha Rao on WhatsApp.</div>',
+        note: 'The action\'s steps ran together: the message went out through the WhatsApp connector (Administration › Connectors, Journey 23) and "Last reminder" was set. If the connector fails later, the record change stays and the delivery log shows the failure.' },
+      { t: 'From the row menu', act: 'Tap <kbd>⋮</kbd> on a row', url: '/records/donation', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ hitMenu: 41 }),
+        overlay: (k) => menuAt(k, ['right:22px;top:118px', 'right:44px;top:150px'], ['Edit', 'Mark as paid', 'Cancel donation', '-', 'Send reminder', '*Pay now']),
+        note: 'Actions placed in the row menu follow Edit and the workflow steps, after a divider. "Pay now" creates a payment and opens its payment page; "Send reminder" opens the same panel as above (with ?id=41&panel=action:sendReminder).' },
+    ],
+  },
+  {
+    id: 'print', title: 'Print a receipt', lead: 'The receipt print view is a page of its own at /print/receipt/:id, laid out for paper and printed with the browser\'s print dialog (which can also save a PDF). There is no PDF service and nothing is loaded from outside.',
+    steps: [
+      { t: 'Print receipt', act: 'Open the paid donation, tap <kbd>Print receipt</kbd>', url: '/records/donation?id=40', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: list({ sel: 40, rows: [ROWS[0], PAID40, ...ROWS.slice(2)] }),
+        overlay: (k) => sheet(k, 'Ravi Kumar', detail(PAID40, { receipt: true }), acts([['Print receipt', 'hit'], ['Edit', 'p']], false), FIT(476)),
+        note: 'A configured action ("open receipt") shown once the donation is Paid. Tapping the receipt in the Receipts section opens the same view.' },
+      { t: 'Print view', act: 'The receipt opens; tap <kbd>Print</kbd>', url: '/print/receipt/rcpt-12', bare: true,
+        body: () => receipt(),
+        note: 'Only Back and Print sit above the page, and they are hidden on paper. The organisation\'s name and address are text (no remote logo). Signatures from signature fields appear here as images stored with the record. On phones the page is scaled to the width; Print opens the phone\'s print or share sheet.' },
+    ],
+  },
+  {
+    id: 'import', title: 'Import from CSV and export', lead: 'Any record list can import a CSV file from its ⋮: upload, match columns to fields, check every row before anything is saved, run, then see what failed and download it. The import uses the same panel as create, as a five-step stepper. Export downloads the current list.',
+    steps: [
+      { t: 'Import', act: 'On Donors, tap the list <kbd>⋮</kbd>, then <kbd>Import</kbd>', url: '/records/donor', title: 'Donors', back: true, nav: 'records', fab: true,
+        body: donorsBody({ hitKebab: true }),
+        overlay: (k) => menuAt(k, ['right:12px;top:96px', 'right:20px;top:96px'], ['Pin to my Home', '-', 'Select', '*Import', 'Export']) },
+      { t: 'Step 1 — upload', act: 'Choose or drop <kbd>donors-october.csv</kbd>', url: '/records/donor?import=new', title: 'Donors', back: true, nav: 'records', fab: true,
+        body: donorsBody(),
+        overlay: (k) => sheet(k, 'Import donors', `${importHead(1, 'Upload')}<div class="drop">${k === 'phone' ? '<span class="btn">Choose a CSV file</span>' : 'Drag a CSV file here, or <span class="link">choose a file</span>'}<div class="cs" style="margin-top:6px">Up to 10 MB and 20,000 rows</div></div>${fileRow('doc', 'donors-october.csv', '1,207 rows · 6 columns · 182 kB', { label: 'CSV' })}<div class="cs"><span class="link">Download a sample file</span> with this list's columns</div>`, acts([['Cancel'], ['Next', 'p hit']]), FIT(440)) },
+      { t: 'Step 2 — match columns', act: 'Check the suggested matches; turn on "update when PAN matches"', url: '/records/donor?import=imp7&importStep=1', title: 'Donors', back: true, nav: 'records', fab: true,
+        body: donorsBody(),
+        overlay: (k) => sheet(k, 'Import donors', `${importHead(2, 'Match columns')}<div class="maprow" style="font-size:.62rem;font-weight:700;text-transform:uppercase;color:#64748b"><span class="from">Column in file</span><span style="flex:1.3">Field</span></div>${MAP.map(([c, f]) => `<div class="maprow"><span class="from">${c}</span><span class="to${f ? '' : ' ph'}">${f || 'Not imported'}<span>▾</span></span></div>`).join('')}<div style="height:8px"></div>${tog('Update a donor when PAN matches', true, 'Otherwise every row creates a new donor.')}`, acts([['Back'], ['Next', 'p hit']]), FIT(476)),
+        note: 'Columns are matched by label or key and confirmed here. Reference columns match by number, title or a unique field; choice columns by label or value; dates as dd/mm/yyyy or ISO. The update switch is offered only for fields marked unique (PAN on Donor). After upload the address carries the import\'s id, so reload and Back restore the step.' },
+      { t: 'Step 3 — check', act: 'Tap <kbd>Next</kbd> — every row is checked, nothing is saved yet', url: '/records/donor?import=imp7&importStep=2', title: 'Donors', back: true, nav: 'records', fab: true,
+        body: donorsBody(),
+        overlay: (k) => sheet(k, 'Import donors', `${importHead(3, 'Check')}<div class="kv" style="margin-top:0"><div><b>Rows in the file</b>1,207</div><div><b>Will create</b>1,180</div><div><b>Will update (PAN matched)</b>24</div><div><b>Have problems</b>3</div></div><div class="prob"><b>Row 18</b> · Email: "asha@" is not an email address.</div><div class="prob"><b>Row 211</b> · Name is required.</div><div class="prob"><b>Row 904</b> · PAN: another donor already has this PAN.</div>${tog('Run automations for these donors', true, 'Rows with problems are skipped.')}`, acts([['Back'], ['Import 1,204 rows', 'p hit']]), FIT(476)),
+        note: 'The check runs every row through the same rules as a normal save: permissions, required fields, conditions, rules and unique values. The first 200 problems are listed. Turning automations off needs the "quiet import" permission.' },
+      { t: 'Step 4 — run', act: 'Tap <kbd>Import 1,204 rows</kbd> — progress from the background job', url: '/records/donor?import=imp7&importStep=3', title: 'Donors', back: true, nav: 'records', fab: true,
+        body: donorsBody(),
+        overlay: (k) => sheet(k, 'Import donors', `${importHead(4, 'Import')}<div class="row" style="margin-bottom:6px"><b style="font-size:.85rem">640 of 1,204</b><span class="sp"></span><span class="cs">about 1 minute left</span></div><div class="prog" style="margin-bottom:12px"><i style="width:53%"></i></div><div class="note">You can close this panel and keep working. A notification arrives when the import has finished and opens the result.</div>`, acts([['Close'], ['Cancel import', 'd']]), FIT(330)) },
+      { t: 'Step 5 — result', act: 'When it finishes (or from the notification)', url: '/records/donor?import=imp7&importStep=4', title: 'Donors', back: true, nav: 'records', fab: true, unread: 4,
+        body: donorsBody(),
+        overlay: (k) => sheet(k, 'Import donors', `${importHead(5, 'Result')}<div class="ok">Import finished: 1,180 created, 24 updated, 3 failed.</div><div class="kv" style="margin-top:0"><div><b>Created</b>1,180</div><div><b>Updated</b>24</div><div><b>Failed</b>3</div></div><span class="btn hit" style="display:block;margin-bottom:6px">Download failed rows (CSV)</span><div class="cs">The file has the original columns plus the reason, ready to fix and import again.</div>`, acts([['Done', 'p']]), FIT(400)),
+        note: 'The Notifications chip gains "Import finished: 1,180 created, 24 updated, 3 failed"; tapping it opens this step. Totals kept on records (for example a donor\'s total given) are recalculated once at the end.' },
+      { t: 'Export', act: 'Tap the list <kbd>⋮</kbd>, then <kbd>Export</kbd>', url: '/records/donor', title: 'Donors', back: true, nav: 'records', fab: true,
+        body: donorsBody(),
+        overlay: () => '<div class="toast">Exported 312 donors — donors-2026-10-24.csv</div>',
+        note: 'Exports what the list shows: same chip, search and filters, every field the person may read; sensitive fields are masked unless they may see them. With rows selected, Export in the bulk bar exports only those (Journey 18). Above 50,000 rows the export runs in the background and a notification brings the download.' },
+    ],
+  },
+  {
+    id: 'files', title: 'Files on a record', lead: 'A file field holds photos, PDFs, documents and spreadsheets. Files can be chosen, dragged in, or taken with the phone camera; they upload with progress, images and PDFs preview in the record panel, and every file can be downloaded. Example: a beneficiary\'s documents.',
+    steps: [
+      { t: 'The file field', act: 'Open <kbd>Lakshmi Devi</kbd>, tap <kbd>Edit</kbd>', url: `${BEN_URL}&id=12&panel=edit`, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({ sel: 12 }),
+        overlay: (k) => sheet(k, 'Lakshmi Devi — Edit', `${benSum}${field('Name', 'Lakshmi Devi', { req: true })}${fileField(k, '', { hitTake: true, hitDrop: true })}`, acts([['Cancel'], ['Save', 'p']]), FIT(440)),
+        note: 'Phones: Choose files, or Take photo (opens the camera through the file picker). Wider screens: drag and drop, or choose. The accepted kinds and the size limit come from the field\'s settings.' },
+      { t: 'Uploading', act: 'Take a photo, add a PDF', url: `${BEN_URL}&id=12&panel=edit`, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({ sel: 12 }),
+        overlay: (k) => sheet(k, 'Lakshmi Devi — Edit', `${benSum}${fileField(k, `${fileRow('pdf', 'school-admission-letter.pdf', '240 kB · uploaded')}${fileRow('img', 'house-photo.jpg', '3.1 MB · uploading 62%', { prog: 62, right: '<span class="kebab">✕</span>' })}${fileRow('doc', 'bank-statement.xlsx', 'This field accepts images and PDF only.', { label: 'XLSX', err: true })}`)}`, acts([['Cancel'], ['Save', 'p']]), FIT(476)),
+        note: 'Each file shows its own progress and can be cancelled or removed. Problems appear on the file: wrong kind (checked from the content, not the name), too large, or the organisation\'s storage is full. Save waits until uploads finish.' },
+      { t: 'Saved — files in the record', act: 'Tap <kbd>Save</kbd>', url: `${BEN_URL}&id=12`, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({ sel: 12 }),
+        overlay: (k) => sheet(k, 'Lakshmi Devi', okn('Saved.') + benDetail(`<div class="sec-h"><span>Documents · 2</span><span>⌃</span></div><div class="row" style="margin:8px 0"><span class="th img big hit"></span><span class="th pdf big">PDF</span></div>${fileRow('img', 'house-photo.jpg', '3.1 MB', { right: '<span class="link" style="font-size:.7rem">Download</span>' })}${fileRow('pdf', 'school-admission-letter.pdf', '240 kB', { right: '<span class="link" style="font-size:.7rem">Download</span>' })}`), wfFooter(), FIT(476)),
+        note: 'Images show thumbnails; other files show their kind. Downloads come from the app itself, only for people who can read the record. Print views and exports list file names.' },
+      { t: 'Image preview', act: 'Tap the photo', url: `${BEN_URL}&id=12&panel=file:f81`, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({ sel: 12 }),
+        overlay: (k) => sheet(k, 'house-photo.jpg', `${imgPreview}<div class="cs" style="margin-top:8px">3.1 MB · added by Asha Sharma on 24 Oct 2026</div>`, acts([['Back'], ['Download', 'p']]), FIT(380)),
+        note: 'The preview replaces the panel content; Back returns to the record. Pinch or scroll to zoom on phones.' },
+      { t: 'PDF preview', act: 'Back, then tap the PDF', url: `${BEN_URL}&id=12&panel=file:f80`, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({ sel: 12 }),
+        overlay: (k) => sheet(k, 'school-admission-letter.pdf', k === 'phone'
+          ? `<div class="card" style="text-align:center;padding:22px 12px"><span class="th pdf big" style="margin:0 auto 10px">PDF</span><b style="font-size:.85rem">school-admission-letter.pdf</b><div class="cs">2 pages · 240 kB</div></div><div class="cs">This phone cannot show PDFs inside the app. Open uses the phone's PDF viewer.</div>`
+          : `<div class="pdfpage"><b style="display:block;margin-bottom:12px;font-size:.8rem">Sahyadri Public School, Hadapsar</b>${'<i></i>'.repeat(3)}<i style="width:70%"></i>${'<i></i>'.repeat(4)}<i style="width:45%"></i></div><div class="row" style="margin-top:8px"><span class="cs">Page 1 of 2</span><span class="sp"></span><span class="btn">‹</span><span class="btn">›</span></div>`,
+        acts(k === 'phone' ? [['Open'], ['Download', 'p']] : [['Back'], ['Download', 'p']]), FIT(420)),
+        note: 'Wider screens show the PDF inside the panel using the browser\'s own viewer. Phone browsers that cannot show PDFs inline get a file card with Open and Download instead.' },
+    ],
+  },
+  {
+    id: 'share', title: 'Share a record', lead: 'For record types set to "only their own and shared", people see the records they created, records shared with them or their role, and everything only if allowed. Sharing is done from the record panel\'s ⋮, with read or edit access and an optional end date. A "Shared with me" chip appears on such lists automatically.',
+    steps: [
+      { t: 'Share', act: 'Open <kbd>Lakshmi Devi</kbd>, tap the panel <kbd>⋮</kbd>', url: `${BEN_URL}&id=12`, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({ sel: 12 }),
+        overlay: (k) => sheet(k, 'Lakshmi Devi', benDetail(), wfFooter(), { ...FIT(476), kebab: true, hitKebab: true }) + menuAt(k, ['right:50px;top:52px', 'left:calc(50% + 120px);top:78px'], ['*Share']),
+        note: 'The record panel\'s ⋮ holds record-level options that are not steps or actions; in this release that is Share. It is shown to the record\'s creator and to people with the share permission.' },
+      { t: 'Share panel', act: 'Type <kbd>mee</kbd> — people and roles appear', url: `${BEN_URL}&id=12&panel=share`, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({ sel: 12 }),
+        overlay: (k) => sheet(k, 'Share Lakshmi Devi', `<div class="sec-h" style="margin-bottom:4px"><span>Shared with · 3</span><span>⌃</span></div>${shareRow('AS', 'Asha Sharma', 'Created this record', { owner: true })}${shareRow('RK', 'Ravi Kumar', 'Can edit · until 31 Dec 2026')}${shareRow('FO', 'Field officers (role)', 'Can view · no end date')}<div style="height:10px"></div><div class="mf" style="position:relative"><div class="l">Add a person or role</div><div class="o" style="border-color:var(--brand);border-width:2px">mee<span>⌕</span></div><div style="position:absolute;left:0;right:0;top:66px;background:#fff;border-radius:4px;box-shadow:0 6px 22px rgba(15,23,42,.22);z-index:2;font-size:.8rem"><div style="padding:9px 12px" class="hit">Meera Iyer <span class="cs">· meera@demo.local</span></div><div style="padding:9px 12px">Monitoring &amp; evaluation <span class="cs">· role</span></div></div></div><div style="height:66px"></div><div class="mf"><div class="l">Access</div><span class="switch"><span class="on">Can view</span><span>Can edit</span></span></div>${field('Ends on', '', { ph: 'No end date', icon: '📅' })}`, acts([['Close'], ['Share', 'p']]), FIT(476)),
+        note: '"Can edit" still needs the edit permission for the record type: sharing widens which records someone sees, not what they may do. × removes a share at once.' },
+      { t: 'Shared', act: 'Choose <kbd>Meera Iyer</kbd>, set an end date, tap <kbd>Share</kbd>', url: `${BEN_URL}&id=12&panel=share`, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({ sel: 12 }),
+        overlay: (k) => sheet(k, 'Share Lakshmi Devi', `<div class="sec-h" style="margin-bottom:4px"><span>Shared with · 4</span><span>⌃</span></div>${shareRow('AS', 'Asha Sharma', 'Created this record', { owner: true })}${shareRow('MI', 'Meera Iyer', 'Can view · until 31 Mar 2027')}${shareRow('RK', 'Ravi Kumar', 'Can edit · until 31 Dec 2026')}${shareRow('FO', 'Field officers (role)', 'Can view · no end date')}<div style="height:10px"></div>${field('Add a person or role', '', { ph: 'Type a name, email or role', icon: '⌕' })}`, acts([['Close', 'p']]), FIT(440)) + '<div class="toast">Shared with Meera Iyer (can view until 31 Mar 2027).</div>',
+        note: 'Meera gets a notification: "Asha shared Beneficiary BEN/2026-27/00012 with you". Shares end on their date automatically.' },
+      { t: 'Shared with me', act: 'Meera opens Beneficiaries — the chip is added automatically', url: '/records/beneficiary?chip=shared', title: 'Beneficiaries', back: true, nav: 'records', initials: 'MI',
+        body: benList({ chips: ['Mine', 'Shared with me', 'Active', 'Closed'], chip: 'Shared with me', rows: [BENS[0], BENS[2]], meta: (b) => (b.id === 12 ? 'Shared by Asha · can view · until 31 Mar 2027' : 'Shared with Field officers · can view') }),
+        note: 'The chip appears only on record types that are "only their own and shared". Shares to a role show the role. Approvers always see a record they are asked to decide, shared or not.' },
+    ],
+  },
+  {
+    id: 'bulk', title: 'Select rows and act on many', lead: 'On cards and tables alike, use "Select" in the list ⋮ (on cards you can also long-press a row). Selecting adds a checkbox to every row (the table gets a checkbox column), and clicking a row ticks it. The bulk bar shows how many are selected and what can be done to all of them: workflow steps allowed for every selected record, bulk actions, Edit fields, Share (for shared record types) and Export. "Select all matching" covers the whole list, up to 5,000 records. Selection is not part of the address and clears when the list changes.',
+    steps: [
+      { t: 'Start selecting', act: 'Phone: long-press <kbd>Ravi Kumar</kbd>. Desktop: <kbd>⋮</kbd> → <kbd>Select</kbd>', url: '/records/donation', title: 'Donations', back: true, nav: 'records', fab: true,
+        body: selList({ hitRow: 40, hitKebab: true }),
+        overlay: (k) => (k === 'phone' ? '' : menuAt(k, ['right:12px;top:96px', 'right:20px;top:96px'], ['Pin to my Home', '-', '*Select', 'Import', 'Export'])),
+        note: 'Until Select is chosen a table has no checkbox column. Choosing it adds the column (and a box on every card), and the create button gives way to the bulk bar.' },
+      { t: 'The bulk bar', act: 'Tap or click two more rows (or tick their boxes)', url: '/records/donation', title: 'Donations', back: true, nav: 'records',
+        body: selList({ selecting: true, sel: [40, 38, 37] }),
+        overlay: (k) => bulkBar(k, 3),
+        note: 'Cards switch to checkboxes while selecting, and the create button gives way to the bulk bar. On phones the bar keeps the first operation and puts the rest under ⋮. ✕ clears the selection.' },
+      { t: 'Select all matching', act: 'Tick the header box (phones: ⋮ → Select all)', url: '/records/donation', title: 'Donations', back: true, nav: 'records',
+        body: selList({ selecting: true, all: true, hitHead: true, banner: '<div class="note row">All 12 loaded donations are selected.<span class="sp"></span><span class="link hit">Select all 214 that match</span></div>' }),
+        overlay: (k) => bulkBar(k, 12) },
+      { t: 'All 214 selected', act: 'Tap <kbd>Select all 214 that match</kbd>, then <kbd>Mark as paid</kbd>', url: '/records/donation', title: 'Donations', back: true, nav: 'records',
+        body: selList({ selecting: true, all: true, banner: '<div class="note row">All 214 matching donations are selected.<span class="sp"></span><span class="link">Clear selection</span></div>' }),
+        overlay: (k) => bulkBar(k, 214, { hitOp: true }) },
+      { t: 'Bulk step form', act: 'The step\'s fields are asked once for all', url: '/records/donation', title: 'Donations', back: true, nav: 'records',
+        body: selList({ selecting: true, all: true }),
+        overlay: (k) => sheet(k, 'Mark as paid · 214 donations', `${field('Method', 'UPI', { req: true, icon: '▾' })}${field('Paid on', '24/10/2026', { req: true, icon: '📅' })}<div class="note">Each donation goes through the normal checks. Donations that need approval get their own request.</div>`, acts([['Cancel'], ['Mark 214 as paid', 'p hit']]), FIT(400)),
+        note: 'Bulk panels have no address of their own, because the selection is not in the address. Runs of 50 or fewer finish at once and show the result straight away.' },
+      { t: 'Running in the background', act: 'Tap <kbd>Mark 214 as paid</kbd>', url: '/records/donation', title: 'Donations', back: true, nav: 'records',
+        body: selList({ selecting: true, all: true }),
+        overlay: (k) => sheet(k, 'Marking as paid', `<div class="row" style="margin-bottom:6px"><b style="font-size:.85rem">120 of 214</b><span class="sp"></span><span class="cs">about 30 seconds left</span></div><div class="prog" style="margin-bottom:12px"><i style="width:56%"></i></div><div class="note">You can close this and keep working. A notification arrives when it is done.</div>`, acts([['Close'], ['Stop', 'd']]), FIT(300)) },
+      { t: 'Result', act: 'When it finishes (or from the notification)', url: '/records/donation?job=j31', title: 'Donations', back: true, nav: 'records', fab: true, unread: 16,
+        body: list({ chip: 'Outstanding' }),
+        overlay: (k) => sheet(k, 'Mark as paid · result', `<div class="ok">200 done, 12 waiting for approval, 2 failed.</div><div class="kv" style="margin-top:0"><div><b>Done</b>200</div><div><b>Waiting for approval</b>12 · <span class="link">Inbox</span></div><div><b>Failed</b>2</div></div><div class="prob"><b>DON/2026-27/00031</b> · Paid on cannot be before the donation date.</div><div class="prob"><b>DON/2026-27/00019</b> · Already waiting for approval.</div>`, acts([['Done', 'p']]), FIT(420)),
+        note: 'The selection clears, the list refreshes, and each failure links to its record. Twelve approval requests were added to approvers\' Inboxes (badge 16 here for the approver). Opening the notification shows this result again.' },
+    ],
+  },
+  {
+    id: 'fields', title: 'Location, signature and rich-text fields', lead: 'Three new field types, shown on a beneficiary. Location: "Use my location" (with its accuracy) or typed coordinates, plus a label, and an "Open in maps" link; there are no maps inside the app. Signature: sign with a finger, mouse or pen; the record keeps who signed and when. Rich text: a small toolbar for bold, italic, underline, lists, heading, quote and link.',
+    steps: [
+      { t: 'Location — empty', act: 'Edit <kbd>Lakshmi Devi</kbd>, tap <kbd>Use my location</kbd>', url: `${BEN_URL}&id=12&panel=edit`, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({ sel: 12 }),
+        overlay: (k) => sheet(k, 'Lakshmi Devi — Edit', `${benSum}${locEmpty({ hitUse: true })}${field('Location label', '', { ph: 'For example: Home, ward office' })}`, acts([['Cancel'], ['Save', 'p']]), FIT(400)),
+        note: 'The browser asks once for permission to use the location. If it is refused, the field explains how to allow it and offers typed coordinates.' },
+      { t: 'Location — found', act: 'The position and its accuracy appear', url: `${BEN_URL}&id=12&panel=edit`, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({ sel: 12 }),
+        overlay: (k) => sheet(k, 'Lakshmi Devi — Edit', `${benSum}${locSet}`, acts([['Cancel'], ['Save', 'p hit']]), FIT(400)),
+        note: 'Coordinates to six decimals and the accuracy in metres. Above 100 m the badge turns amber: "Low accuracy (± 350 m) — try again outdoors or type coordinates". "Open in maps" is a link the person chooses to follow; nothing from a map service is loaded in the app.' },
+      { t: 'Location — typed', act: 'Tap <kbd>type coordinates</kbd> instead', url: `${BEN_URL}&id=12&panel=edit`, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({ sel: 12 }),
+        overlay: (k) => sheet(k, 'Lakshmi Devi — Edit', `${benSum}${field('Latitude', '98.502114', { err: 'Latitude must be between −90 and 90.' })}${field('Longitude', '73.925871')}${field('Location label', 'Home, Sasane Nagar, Hadapsar')}`, acts([['Cancel'], ['Save', 'p']]), FIT(440)),
+        note: 'Typed coordinates are offered when the field allows them (a field setting). Accuracy is empty for typed values.' },
+      { t: 'Filter by distance', act: 'On the list, tap <kbd>Filters</kbd>', url: `${BEN_URL}&filters=open`, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({}),
+        overlay: (k) => sheet(k, 'Filter beneficiaries', `${field('Programme', 'Scholarship', { icon: '▾' })}<div class="mf"><div class="l">Home location</div><div class="row"><span class="cs">Within</span><span class="o" style="width:64px;border:1px solid #79747e;border-radius:4px;height:40px;display:flex;align-items:center;padding:0 10px">5</span><span class="cs">km of</span><span class="o" style="flex:1;border:1px solid #79747e;border-radius:4px;height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 10px">My location<span>▾</span></span></div></div>`, acts([['Reset'], ['Apply', 'hit']]), FIT(360)),
+        note: 'The point can be "My location" or a typed point. Applied, it shows as the pill "Within 5 km of my location"; the address keeps the resolved point so a shared link finds the same records. Lists show the label, or the coordinates when there is no label.' },
+      { t: 'Signature', act: 'Sign on the pad (finger, mouse or pen); type the signer\'s name if it is someone else', url: `${BEN_URL}&id=12&panel=edit`, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({ sel: 12 }),
+        overlay: (k) => sheet(k, 'Lakshmi Devi — Edit', `${benSum}${sigPad(true)}${field('Signer\'s name', 'Lakshmi Devi', { ph: 'Leave empty if you are signing' })}`, acts([['Cancel'], ['Save', 'p hit']]), FIT(440)),
+        note: 'Clear starts again. Once saved, a signature can only be cleared (where the field may be changed), never redrawn in place.' },
+      { t: 'Rich text', act: 'Write case notes with the toolbar', url: `${BEN_URL}&id=12&panel=edit`, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({ sel: 12 }),
+        overlay: (k) => sheet(k, 'Lakshmi Devi — Edit', `${benSum}${rtEditor}`, acts([['Cancel'], ['Save', 'p hit']]), FIT(440)),
+        note: 'Toolbar: bold, italic, underline, bulleted and numbered lists, heading, quote, link. Pasted text keeps only these; everything else is removed, on the device and again on the server.' },
+      { t: 'In the record', act: 'Tap <kbd>Save</kbd>', url: `${BEN_URL}&id=12`, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({ sel: 12 }),
+        overlay: (k) => sheet(k, 'Lakshmi Devi', okn('Saved.') + `<div class="sec-h"><span>Home location</span><span>⌃</span></div><div class="kv"><div><b>Label</b>Home, Sasane Nagar, Hadapsar</div><div><b>Coordinates</b>18.502114, 73.925871 · ± 12 m</div><div><b>&nbsp;</b><span class="link">Open in maps ↗</span></div></div><div class="sec-h"><span>Consent</span><span>⌃</span></div><div class="kv"><div style="grid-template-columns:1fr">${sigSvg(140, 46)}<span class="cs">Signed by Lakshmi Devi on 24 Oct 2026, 11:05</span></div></div><div class="sec-h"><span>Case notes</span><span>⌃</span></div>${rtView}`, wfFooter(), FIT(476)),
+        note: 'The signature also appears on print views. Rich text is shown formatted; searches and exports use its plain text.' },
+    ],
+  },
+  {
+    id: 'workflows', title: 'A record with two workflows', lead: 'A record type can have alternative workflows, one chosen when the record is created (here Scholarship intake, because the programme is Scholarship), and parallel workflows running beside it (here Case closure). The record panel shows one status line per workflow, and its footer groups the steps by workflow, primary first.',
+    steps: [
+      { t: 'The list', act: 'Records → Programmes → <kbd>Beneficiaries</kbd>', url: BEN_URL, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({ chips: ['Mine', 'Active', 'Closure requested', 'Closed'], wf: true, hitRow: 12 }),
+        note: 'Card badges show the primary workflow\'s state. Tables can add a column per workflow (here Case closure). Chips and filters can use a parallel workflow\'s states ("Closure requested").' },
+      { t: 'Two status lines', act: 'Tap <kbd>Lakshmi Devi</kbd>', url: `${BEN_URL}&id=12`, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({ chips: ['Mine', 'Active', 'Closure requested', 'Closed'], wf: true, sel: 12 }),
+        overlay: (k) => sheet(k, 'Lakshmi Devi', benDetail(), wfFooter([['Request closure', 'p hit']]), FIT(476)),
+        note: 'One line per workflow with its name and state, at the top of the record. The footer labels each group with the workflow\'s name only when there is more than one; steps keep their usual primary and secondary styles.' },
+      { t: 'A parallel step', act: 'Tap <kbd>Request closure</kbd>', url: `${BEN_URL}&id=12&panel=step:requestClosure`, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({ chips: ['Mine', 'Active', 'Closure requested', 'Closed'], wf: true, sel: 12 }),
+        overlay: (k) => sheet(k, 'Request closure', `<div class="kv sum" style="margin-top:0"><div><b>Case closure</b>Open → Closure requested</div></div>${field('Reason', 'Goals met', { req: true, icon: '▾' })}${field('Final visit on', '22/10/2026', { req: true, icon: '📅' })}`, acts([['Cancel'], ['Request closure', 'p hit']]), FIT(380)),
+        note: 'Same step panel as any workflow step; the summary names the workflow it moves. Approvals, conditions and required fields work per step as usual.' },
+      { t: 'Done', act: 'Tap <kbd>Request closure</kbd>', url: `${BEN_URL}&id=12`, title: 'Beneficiaries', back: true, nav: 'records', fab: true,
+        body: benList({ chips: ['Mine', 'Active', 'Closure requested', 'Closed'], wf: true, sel: 12, rows: [{ ...BEN12, close: 'Closure requested' }, ...BENS.slice(1)] }),
+        overlay: (k) => sheet(k, 'Lakshmi Devi', okn('Request closure — done.') + `${wfLines(['Enrolled', 's'], ['Closure requested', 'w'])}<div class="sec-h"><span>Beneficiary</span><span>⌃</span></div><div class="kv"><div><b>Number</b>BEN/2026-27/00012</div><div><b>Programme</b>Scholarship</div></div>`, `<div class="acts"><div class="wfg">Scholarship intake</div><span class="btn">Suspend</span><div class="wfg">Case closure</div><span class="btn p">Close case</span><span class="btn">Reopen</span><span class="btn p" style="margin-top:4px">Edit</span></div>`, FIT(476)),
+        note: 'Only the Case closure line changed; the intake state stays Enrolled. The row updates in place, including its Case closure column.' },
+    ],
+  },
+);
+
+/* ------------------------------------------- people and profiles (journeys 21–22) */
+const PEOPLE = [
+  { id: 'u-asha', ini: 'AS', name: 'Asha Shetty', email: 'asha@ashatrust.org', roles: ['Admin', 'Finance'], kind: 'Staff', dept: 'Administration', desig: 'Executive director', phone: '***', st: 'Active', tone: 's', two: ['On', 's'], joined: '2 Apr 2026' },
+  { id: 'u-ravi', ini: 'RK', name: 'Ravi Kumar', email: 'ravi@ashatrust.org', roles: ['Finance'], kind: 'Staff', dept: 'Finance', desig: 'Accounts officer', phone: '***', st: 'Active', tone: 's', two: ['Required · not set', 'w'], joined: '14 Aug 2026' },
+  { id: 'u-meena', ini: 'MI', name: 'Meena Iyer', email: 'meena.iyer@gmail.com', roles: ['Finance', 'Viewer'], kind: 'Volunteer', dept: 'Fundraising', desig: 'Volunteer coordinator', phone: '***', st: 'Active', tone: 's', two: ['Off', ''], joined: '3 Sep 2026' },
+  { id: 'u-sanjay', ini: 'SD', name: 'Sanjay Desai', email: 'sanjay@ashatrust.org', roles: ['Viewer'], kind: 'Staff', dept: 'Programmes', desig: 'Programme manager', phone: '***', st: 'Active', tone: 's', two: ['Off', ''], joined: '20 May 2026' },
+  { id: 'u-farhan', ini: 'FA', name: 'Farhan Ali', email: 'farhan@ashatrust.org', roles: ['Finance'], kind: 'Staff', dept: 'Programmes', desig: 'Field officer', phone: '—', st: 'Invited', tone: 'p', two: ['—', ''], joined: 'Invited 21 Oct' },
+  { id: 'u-deepak', ini: 'DJ', name: 'Deepak Joshi', email: 'deepak.joshi@gmail.com', roles: ['Viewer'], kind: 'Volunteer', dept: 'Programmes', desig: 'Field volunteer', phone: '***', st: 'Suspended', tone: 'w', two: ['Off', ''], joined: '9 Jun 2026' },
+];
+const RAVI = PEOPLE[1];
+const KAVYA = { id: 'u-kavya', ini: 'KR', name: 'Kavya Rao', email: 'kavya.rao@ashatrust.org', roles: ['Finance'], kind: 'Board', dept: '—', desig: 'Treasurer', phone: '—', st: 'Invited', tone: 'p', two: ['Required · not set', 'w'], joined: 'Invited today' };
+const ACTIVE_PEOPLE = PEOPLE.filter((p) => p.st === 'Active');
+const VIEWER = ['MI', 'Meena Iyer', 'meena.iyer@gmail.com · Demo Foundation'];
+const ADMIN = ['AS', 'Asha Shetty', 'asha@ashatrust.org · Demo Foundation'];
+const facePic = (s = 36) => `<svg width="${s}" height="${s}" viewBox="0 0 36 36" aria-label="Photo" style="flex:0 0 auto"><rect width="36" height="36" rx="8" fill="#dbe7f3"/><circle cx="18" cy="14" r="6" fill="#8aa7c2"/><path d="M6 33c2-8 8-11 12-11s10 3 12 11" fill="#8aa7c2"/></svg>`;
+const rolePills = (roles) => `<span class="pills" style="padding:0;display:inline-flex">${roles.map((r) => `<span>${r}</span>`).join('')}</span>`;
+const twoStep = (t) => (t[1] ? `<span class="bdg ${t[1]}">${t[0]}</span>` : `<span class="cs">${t[0]}</span>`);
+function peopleRows(k, o = {}) {
+  const data = o.rows || (o.admin ? PEOPLE.filter((p) => p.st === 'Active') : ACTIVE_PEOPLE);
+  if (k === 'phone') {
+    return `<div class="panel">${data.map((p) => `<div class="lr${p.id === o.sel ? ' sel' : ''}${p.id === o.hitRow ? ' hit' : ''}"><span class="ico" style="background:#e0f2fe;color:#0369a1;font-size:.7rem">${p.ini}</span><div class="c"><div class="tt">${p.name}</div><div class="st">${p.desig} · ${p.dept}</div><div class="mt">${o.admin ? p.email : p.roles.join(' · ')}</div></div>${o.admin ? `<div class="aside"><span class="bdg ${p.tone}">${p.st}</span><span class="kebab">⋮</span></div>` : ''}</div>`).join('')}</div>`;
+  }
+  const name = (p) => (p.id === o.hitRow ? `<span class="hit" style="padding:2px 4px">${p.name}</span>` : p.name);
+  if (!o.admin) {
+    return `<div class="panel"><table class="rows"><thead><tr><th>Name ▲</th><th>Email</th><th>Roles</th><th>Kind</th><th>Department</th><th>Designation</th><th>Phone</th></tr></thead><tbody>${data.map((p) => `<tr class="${p.id === o.sel ? 'sel' : ''}"><td class="t">${name(p)}</td><td>${p.email}</td><td>${rolePills(p.roles)}</td><td>${p.kind}</td><td>${p.dept}</td><td>${p.desig}</td><td>${p.phone}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+  return `<div class="panel"><table class="rows"><thead><tr><th>Person ▲</th><th>Roles</th><th>Kind</th><th>Two-step</th><th>Status</th><th>Joined</th><th></th></tr></thead><tbody>${data.map((p) => `<tr class="${p.id === o.sel ? 'sel' : ''}"><td><div class="t">${name(p)}</div><div class="cs">${p.email}</div></td><td>${rolePills(p.roles)}</td><td>${p.kind}</td><td>${twoStep(p.two)}</td><td><span class="bdg ${p.tone}">${p.st}</span></td><td class="cs">${p.joined}</td><td><span class="kebab">⋮</span></td></tr>`).join('')}</tbody></table></div>`;
+}
+const peopleList = (o = {}) => (k) => `${o.admin ? chipRow(['Active 11', 'Invited 2', 'Suspended 1', 'All 14'], o.chip || 'Active 11', o.hitChip) : ''}${toolbar(k, { ph: 'Search people…', ...o })}${pills(o.pills || [])}${peopleRows(k, o)}`;
+const personHead = (p, o = {}) => `<div class="row" style="margin-bottom:10px">${facePic(44)}<div><b style="font-size:.95rem">${p.name}</b><div class="cs">${p.desig} · ${p.dept}</div>${o.status ? `<div class="cs" style="margin-top:3px">${o.status}</div>` : ''}</div></div>`;
+const personDirectory = (p) => `${personHead(p)}<div class="sec-h"><span>Contact</span><span>⌃</span></div><div class="kv"><div><b>Email</b>${p.email}</div><div><b>Phone</b>${p.phone}</div></div><div class="sec-h"><span>Roles</span><span>⌃</span></div><div style="margin:7px 0 9px">${rolePills(p.roles)}</div><div class="sec-h"><span>Profile</span><span>⌃</span></div><div class="kv"><div><b>Kind</b>${p.kind}</div><div><b>Department</b>${p.dept}</div><div><b>Designation</b>${p.desig}</div></div>`;
+const personAdmin = (p, o = {}) => `${personHead(p, { status: `${p.email} · <span class="bdg ${o.suspended ? 'w' : p.tone}">${o.suspended ? 'Suspended' : p.st}</span> · joined ${p.joined}` })}${o.suspended ? '<div class="note">Suspended on 24 Oct 2026 by Asha Shetty. The profile is read-only until reactivated; Ravi\'s name stays on records, approvals and the audit log.</div>' : ''}
+  <div class="mf"><div class="l">Roles</div><div class="pills" style="padding:0">${p.roles.map((r) => `<span>${r}${o.suspended ? '' : ' ×'}</span>`).join('')}${o.suspended ? '' : '<span style="border-style:dashed;background:#fff">+ Add role</span>'}</div></div>
+  <div class="sec-h"><span>Sign-in</span><span>⌃</span></div><div class="kv"><div><b>Two-step</b>${twoStep(p.two)}</div><div><b>Last invitation</b>14 Aug 2026 (used)</div></div>
+  <div class="sec-h"><span>Profile · all fields</span><span>⌃</span></div><div class="kv"><div><b>Kind ◉</b>${p.kind}</div><div><b>Department ◉</b>${p.dept}</div><div><b>Designation ◉</b>${p.desig}</div><div><b>Phone ◉ ✎</b>+91 98450 12210</div><div><b>Emergency contact ✎</b>Lakshmi Kumar · +91 98450 33018</div><div><b>Photo ◉ ✎</b>${facePic(28)}</div><div><b>Joining date</b>14 Aug 2026</div><div><b>Employee ID</b>AT-014</div></div><div class="cs">◉ shown in the directory · ✎ the person can change it</div>`;
+const adminRo = (l, v) => `<div class="mf"><div class="l">${l}</div><div class="o ro">${v}</div><div class="cs" style="margin-top:3px">Set by your administrator</div></div>`;
+const myProfile = (o = {}) => `${personHead(PEOPLE[2], { status: `${PEOPLE[2].email} · Finance, Viewer` })}
+  <div class="mf"><div class="l">Photo</div><div class="row">${facePic(40)}<span class="btn">Change photo</span><span class="cs">Shown in the directory</span></div></div>
+  ${field('Phone', o.phone || '+91 98201 44552', { icon: '✎' })}<div class="cs" style="margin:-8px 0 10px">Shown in the directory, hidden from people without the sensitive permission</div>
+  ${field('Emergency contact', 'Suresh Iyer · +91 98200 11223')}<div class="cs" style="margin:-8px 0 10px">Only you and administrators see this</div>
+  ${adminRo('Kind', 'Volunteer')}${adminRo('Department', 'Fundraising')}${adminRo('Designation', 'Volunteer coordinator')}${adminRo('Joining date', '3 Sep 2026')}`;
+
+/* administration (journey 21) */
+const adminRow = (title, sub, on) => `<div class="listrow${hit(on)}"><div><b>${title}</b><div class="cs">${sub}</div></div><span class="cs">›</span></div>`;
+const adminHome = (o = {}) => () => `<div class="cs" style="margin-bottom:10px">For administrators: people, who has which role, and how the organisation runs. What each role allows is set in the Builder.</div>
+  <p class="cap" style="margin:4px 2px 6px">People and roles</p><div class="panel" style="margin-bottom:12px">${adminRow('People', '14 people · 2 invited · 1 suspended', o.hitPeople)}${adminRow('Roles', '5 roles · who has which role', o.hitRoles)}</div>
+  <p class="cap" style="margin:4px 2px 6px">Operations</p><div class="panel" style="margin-bottom:12px">${adminRow('Connectors', 'SMS, WhatsApp, webhooks, HTTP calls · 1 failing', o.hitConnectors)}${adminRow('API keys', '2 active', o.hitKeys)}${adminRow('Background jobs', '1 running · 1 finished with problems', o.hitJobs)}${adminRow('Audit log', 'Who changed what, and when', o.hitAudit)}${adminRow('Organisation settings', 'Name, language, storage 412 MB of 1 GB, API limit', o.hitSettings)}</div>
+  <p class="cap" style="margin:4px 2px 6px">In the Builder</p><div class="panel"><div class="listrow"><div><b>What each role allows</b><div class="cs">Roles, permissions and the access map</div></div><span class="cs">↗</span></div></div>`;
+const ROLES = [
+  { key: 'admin', name: 'Admin', from: 'Platform', members: 1, two: true },
+  { key: 'finance', name: 'Finance', from: 'Donations module', members: 5, two: true },
+  { key: 'viewer', name: 'Viewer', from: 'Donations module', members: 3, two: false },
+  { key: 'programme-staff', name: 'Programme staff', from: 'Organisation', members: 2, two: false },
+  { key: 'field-volunteer', name: 'Field volunteer', from: 'Organisation', members: 3, two: false },
+];
+function rolesList(k, o = {}) {
+  const bar = toolbar(k, { ph: 'Search roles…', switcher: false });
+  if (k === 'phone') return `${bar}<div class="panel">${ROLES.map((r) => `<div class="lr${hit(o.hitRole === r.key)}"><span class="ico" style="background:#ede9fe;color:#6d28d9;font-size:.7rem">${r.members}</span><div class="c"><div class="tt">${r.name}</div><div class="st">${r.members} ${r.members === 1 ? 'member' : 'members'} · ${r.from}</div>${r.two ? '<div class="mt">Requires two-step sign-in</div>' : ''}</div><span class="cs">›</span></div>`).join('')}</div>`;
+  return `${bar}<div class="panel"><table class="rows"><thead><tr><th>Role ▲</th><th>Members</th><th>Two-step</th><th>From</th><th></th></tr></thead><tbody>${ROLES.map((r) => `<tr><td class="t">${o.hitRole === r.key ? `<span class="hit" style="padding:2px 4px">${r.name}</span>` : r.name}</td><td>${r.members}</td><td>${r.two ? '<span class="bdg w">Required</span>' : '<span class="cs">—</span>'}</td><td class="cs">${r.from}</td><td class="cs">›</td></tr>`).join('')}</tbody></table></div>`;
+}
+const FIN_MEMBERS = [PEOPLE[0], PEOPLE[1], PEOPLE[2], PEOPLE[4], KAVYA];
+function adminTable(k, cols, data, o = {}) {
+  if (k === 'phone') return `<div class="panel">${data.map((r, i) => `<div class="lr${i === o.sel ? ' sel' : ''}${hit(i === o.hitRow)}"><div class="c"><div class="tt">${r[0]}</div><div class="st">${r[1]}</div>${r.length > 3 ? `<div class="mt">${r.slice(2, -1).join(' · ')}</div>` : ''}</div><div class="aside">${r[r.length - 1]}</div></div>`).join('')}</div>`;
+  return `<div class="panel"><table class="rows"><thead><tr>${cols.map((c) => `<th>${c}</th>`).join('')}</tr></thead><tbody>${data.map((r, i) => `<tr class="${i === o.sel ? 'sel' : ''}">${r.map((c, j) => `<td${j === 0 ? ' class="t"' : ''}>${j === 0 && i === o.hitRow ? `<span class="hit" style="padding:2px 4px">${c}</span>` : c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+const ON = '<span class="bdg s">On</span>';
+const CONNECTORS = [
+  ['WhatsApp Business', 'WhatsApp', 'Send reminder, Thank the donor', '10:41 · delivered', ON],
+  ['google-mail', 'Account sign-in', 'gmail, calendar-invite', '—', '<span class="bdg s">Connected</span>'],
+  ['gmail', 'HTTP · send', 'All email', '19:40 · sent', '<span class="bdg p">Email sender</span>'],
+  ['ifsc', 'HTTP · lookup', 'Bank account', '19:12 · sent', ON],
+  ['Finance webhook', 'Webhook', 'Automation "Donation paid → finance"', '<span class="bdg w">Failed · retrying in 4 min</span>', ON],
+  ['SMS gateway', 'SMS', 'Not used', '—', '<span class="btn" style="padding:.25rem .6rem;font-size:12px">Set up</span>'],
+];
+const DELIVERIES = [
+  ['10:41 · Send reminder', 'DON/2026-27/00041 · +91 98450 12301', '1 try', '<span class="bdg s">Delivered</span>'],
+  ['09:58 · Thank the donor', 'DON/2026-27/00036 · +91 97310 48882', '3 tries · template not approved', '<span class="bdg w">Failed</span>'],
+  ['09:40 · Send reminder', 'DON/2026-27/00039 · +91 98201 44552', '2 tries', '<span class="bdg p">Retrying in 4 min</span>'],
+];
+const KEYS = [
+  ['Website donation form', 'Acts as Finance', 'Asha · 2 Sep 2026', 'Used 5 minutes ago', '<span class="bdg s">Active</span>'],
+  ['Tally export', 'Acts as Viewer', 'Ravi · 14 Aug 2026', 'Used yesterday, 23:10', '<span class="bdg s">Active</span>'],
+  ['Old CRM sync', 'Acts as Finance', 'Asha · 3 Jun 2026', 'Revoked 15 Jul', '<span class="cs">Revoked</span>'],
+];
+const JOBS = [
+  ['Import donors', 'Asha Shetty · 10:40', '<span class="prog" style="display:inline-block;width:90px;vertical-align:middle"><i style="width:53%"></i></span> 640 of 1,204', '<span class="bdg p">Running</span>'],
+  ['Mark as paid · 214 donations', 'Ravi Kumar · 09:58', '200 done, 12 waiting for approval, 2 failed', '<span class="bdg w">Finished with problems</span>'],
+  ['Build index · Donation PAN', 'System · 09:12', 'Done in 14 s', '<span class="bdg s">Done</span>'],
+  ['Rebuild totals · Donor total given', 'System · yesterday', 'Done in 2 min', '<span class="bdg s">Done</span>'],
+];
+const AUDIT = [
+  ['10:44 · Asha Shetty', 'Suspended Ravi Kumar', '<span class="bdg p">People</span>'],
+  ['10:41 · Asha Shetty', 'Gave Sanjay Desai the role Finance', '<span class="bdg p">Roles</span>'],
+  ['10:02 · Ravi Kumar', 'Mark as paid · DON/2026-27/00040', '<span class="bdg p">Donation</span>'],
+  ['09:58 · api:Website donation form', 'Created DON/2026-27/00045', '<span class="bdg p">Donation</span>'],
+  ['09:15 · Asha Shetty', 'Published list view Donations v4', '<span class="bdg p">Builder</span>'],
+];
+const secretBox = '<div style="background:#fff8e6;border:1px solid #f0d9b5;border-radius:10px;padding:10px 12px;font:12.5px var(--mono);word-break:break-all;margin:8px 0">ak_7f3c2e.sk_4Qm9Xr2LwV8tB1nZcH6pJ0yD</div>';
+function roleMembers(k, o = {}) {
+  const data = o.rows || FIN_MEMBERS;
+  const head = `<div class="card"><div class="row"><b style="font-size:.9rem">Finance</b><span class="bdg w">Requires two-step</span><span class="sp"></span><span class="link" style="font-size:.72rem">What this role allows ↗</span></div><div class="cs" style="margin-top:4px">Donations module · ${data.length} members · permissions are set in the Builder</div></div>`;
+  const bar = toolbar(k, { ph: 'Search members…', switcher: false });
+  const rm = (p) => `<span class="btn${hit(o.hitRemove === p.id)}" style="padding:.25rem .6rem;font-size:12px">Remove</span>`;
+  if (k === 'phone') return `${head}${bar}<div class="panel">${data.map((p) => `<div class="lr${p.id === o.sel ? ' sel' : ''}"><span class="ico" style="background:#e0f2fe;color:#0369a1;font-size:.7rem">${p.ini}</span><div class="c"><div class="tt">${p.name}</div><div class="st">${p.email}</div>${p.st !== 'Active' ? `<div class="mt">${p.st}</div>` : ''}</div><div class="aside">${rm(p)}</div></div>`).join('')}</div>`;
+  return `${head}${bar}<div class="panel"><table class="rows"><thead><tr><th>Person ▲</th><th>Status</th><th>Other roles</th><th>Since</th><th></th></tr></thead><tbody>${data.map((p) => `<tr class="${p.id === o.sel ? 'sel' : ''}"><td><div class="t">${p.name}</div><div class="cs">${p.email}</div></td><td><span class="bdg ${p.tone}">${p.st}</span></td><td>${rolePills(p.roles.filter((r) => r !== 'Finance'))}</td><td class="cs">${p.joined}</td><td style="text-align:right">${rm(p)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+FLOWS.push(
+  {
+    id: 'people', title: 'Administration: people and roles', lead: 'People are not a destination in the bar or in More. Administrators ("Manage people" or "Manage roles") open Administration at /admin from More: People (/admin/people) to add people, send invitations, change their roles and suspend, and Roles (/admin/roles) to see and change who has each role. What each role allows is not here: it is defined in the Builder (roles, permissions and the access map). /people opens Home.',
+    steps: [
+      { t: 'Administrator: Administration in More', act: 'Asha (Admin) taps <kbd>More</kbd>', url: '/more', title: 'More', nav: 'more',
+        body: moreScreen({ who: ADMIN, people: true, hitPeople: true, profile: true }),
+        note: 'The Administration row is shown only to people with an administration permission. There is no People row.' },
+      { t: 'Administration', act: 'Tap <kbd>Administration</kbd>', url: '/admin', title: 'Administration', back: true, nav: 'more',
+        body: adminHome({ hitPeople: true }),
+        note: 'People and roles, then the operational settings (Journey 23). Each row is shown only with its permission: People "Manage people", Roles "Manage people" or "Manage roles", Connectors, API keys, Background jobs, Audit log and Organisation settings their own administration permissions. The link to "What each role allows" opens the Builder for people who can configure; it is hidden for others.' },
+      { t: 'Administrator: the people list', act: 'Tap <kbd>People</kbd> — opens on Active', url: '/admin/people?status=active', title: 'People', back: true, nav: 'more', fab: true,
+        body: peopleList({ admin: true, hitChip: 'Invited 2' }),
+        note: 'Status chips Active, Invited (added, never signed in), Suspended and All; the two-step column shows "Required · not set" when a role requires it. Row ⋮: Change roles, Resend invitation, Suspend or Reactivate. Selection works as on record lists (add or remove a role, resend, suspend).' },
+      { t: 'Add a person', act: 'Tap <kbd>+</kbd>', url: '/admin/people?status=active&add', title: 'People', back: true, nav: 'more', fab: true,
+        body: peopleList({ admin: true }),
+        overlay: (k) => sheet(k, 'Add a person', `${field('Email', 'kavya.rao@ashatrust.org', { req: true })}${field('Name', 'Kavya Rao', { req: true })}<div class="mf"><div class="l">Roles <i>*</i></div><div class="pills" style="padding:0"><span>Finance ×</span><span style="border-style:dashed;background:#fff">+ Add role</span></div></div><div class="sec-h" style="margin-bottom:8px"><span>Profile</span><span>⌃</span></div>${field('Kind', 'Board', { icon: '▾' })}${field('Designation', 'Treasurer')}${field('Joining date', '24/10/2026', { icon: '📅' })}${tog('Send the invitation email now', true, 'The link to set a password is valid for 7 days.')}`, acts([['Cancel'], ['Add and invite', 'p hit']]), FIT(476)),
+        note: 'The profile part is the profile\'s create form, so fields the organisation added appear here (fields follow their conditions: Board members have no Department). The profile is created with the person. Errors appear under the field: "Kavya Rao is already a member."' },
+      { t: 'Added', act: 'Tap <kbd>Add and invite</kbd>', url: '/admin/people?status=invited', title: 'People', back: true, nav: 'more', fab: true,
+        body: peopleList({ admin: true, chip: 'Invited 2', rows: [KAVYA, PEOPLE[4]], sel: 'u-kavya' }),
+        overlay: () => '<div class="toast">Kavya Rao added. Invitation sent.</div>',
+        note: 'The list switches to the Invited chip with the new person highlighted at the top.' },
+      { t: 'A person', act: 'Back to Active, tap <kbd>Ravi Kumar</kbd>', url: '/admin/people?status=active&person=u-ravi', title: 'People', back: true, nav: 'more', fab: true,
+        body: peopleList({ admin: true, sel: 'u-ravi' }),
+        overlay: (k) => sheet(k, 'Ravi Kumar', personAdmin(RAVI), acts([['Save roles', 'p'], ['Edit profile'], ['Resend invitation'], ['Suspend…', 'd hit']], false), FIT(476)),
+        note: 'Roles, sign-in state and every profile field. "Edit profile" opens the profile in the panel\'s edit mode with all fields editable. Roles are assigned here or in Administration › Roles; what a role allows is not shown or changed here. Changing roles that would leave nobody able to manage roles is refused with a message. "Resend invitation" gives a new single-use link.' },
+      { t: 'Suspend — confirm', act: 'Tap <kbd>Suspend…</kbd>', url: '/admin/people?status=active&person=u-ravi', title: 'People', back: true, nav: 'more', fab: true,
+        body: peopleList({ admin: true, sel: 'u-ravi' }),
+        overlay: (k) => sheet(k, 'Suspend Ravi Kumar?', '<div class="note" style="font-size:.82rem;line-height:1.5;color:var(--fg)">Ravi Kumar will be signed out on every device and cannot sign in to Demo Foundation until reactivated.</div><div class="cs">His profile stays, read-only. His name stays on records, approvals and the audit log. He leaves the directory.</div>', acts([['Back'], ['Suspend', 'd hit']]), FIT(320)),
+        note: 'The confirmation is in the panel, like action confirmations, and has no address of its own. Nobody can suspend themselves.' },
+      { t: 'Suspended', act: 'Tap <kbd>Suspend</kbd>', url: '/admin/people?status=active&person=u-ravi', title: 'People', back: true, nav: 'more', fab: true,
+        body: peopleList({ admin: true, rows: PEOPLE.filter((p) => p.st === 'Active' && p.id !== 'u-ravi') }),
+        overlay: (k) => sheet(k, 'Ravi Kumar', personAdmin(RAVI, { suspended: true }), acts([['Reactivate', 'p']], false), FIT(476)) + '<div class="toast">Ravi Kumar suspended.</div>',
+        note: 'Ravi leaves the Active chip and appears under Suspended. Reactivate restores his access and roles.' },
+      { t: 'Administration › Roles', act: 'Back to Administration, tap <kbd>Roles</kbd>', url: '/admin/roles', title: 'Roles', back: true, nav: 'more',
+        body: (k) => rolesList(k, { hitRole: 'finance' }),
+        note: 'Every role with how many people have it. This is membership only: names, two-step requirement and what a role allows are changed in the Builder (Builder 18 Roles, 24–25 Access map).' },
+      { t: 'A role\'s members', act: 'Tap <kbd>Finance</kbd>', url: '/admin/roles/finance', title: 'Finance', back: true, nav: 'more', fab: true,
+        body: (k) => roleMembers(k, { hitRemove: 'u-farhan' }),
+        note: 'Remove takes the role away at once with a message ("Farhan Ali no longer has Finance."); a person keeps their other roles. Removing the last person who can manage roles is refused. The create button adds people to this role. "What this role allows" opens Builder 18 for people who can configure.' },
+      { t: 'Add people to a role', act: 'Tap <kbd>+</kbd>, type <kbd>san</kbd>', url: '/admin/roles/finance?add', title: 'Finance', back: true, nav: 'more', fab: true,
+        body: (k) => roleMembers(k),
+        overlay: (k) => sheet(k, 'Add people to Finance', `<div class="mf" style="position:relative"><div class="l">People</div><div class="o" style="border-color:var(--brand);border-width:2px">san<span>⌕</span></div><div style="position:absolute;left:0;right:0;top:66px;background:#fff;border-radius:4px;box-shadow:0 6px 22px rgba(15,23,42,.22);z-index:2;font-size:.8rem"><div style="padding:9px 12px" class="hit">Sanjay Desai <span class="cs">· sanjay@ashatrust.org · Viewer</span></div></div></div><div style="height:46px"></div><div class="note">Finance requires two-step sign-in. People who have not set it up will be asked to when they next sign in.</div>`, acts([['Cancel'], ['Add', 'p']]), FIT(360)),
+        note: 'Only active and invited people are offered; several can be added at once. The same change can be made from a person\'s panel in People (roles ×, + Add role).' },
+      { t: 'Added to the role', act: 'Choose <kbd>Sanjay Desai</kbd>, tap <kbd>Add</kbd>', url: '/admin/roles/finance', title: 'Finance', back: true, nav: 'more', fab: true,
+        body: (k) => roleMembers(k, { rows: [...FIN_MEMBERS, { ...PEOPLE[3], roles: ['Viewer', 'Finance'] }], sel: 'u-sanjay' }),
+        overlay: () => '<div class="toast">Sanjay Desai now has Finance.</div>',
+        note: 'The change applies on the person\'s next screen load and is written to the audit log.' },
+    ],
+  },
+  {
+    id: 'my-profile', title: 'My profile', lead: 'Everyone opens My profile by tapping their own name and photo at the top of More; there is no separate menu entry. They change only the fields the organisation marked "The person can change this on their own profile" (here photo, phone and emergency contact); the other fields are shown read-only with "Set by your administrator". The server refuses any other change.',
+    steps: [
+      { t: 'Your name in More', act: 'Meena taps <kbd>More</kbd>, then her name at the top', url: '/more', title: 'More', nav: 'more', initials: 'MI',
+        body: moreScreen({ who: VIEWER, profile: true, hitProfile: true }),
+        note: 'The account card at the top of More (initials, name, email and organisation) opens My profile for everyone, whatever their roles. The initials in the app bar open More, as before.' },
+      { t: 'Edit my profile', act: 'Change the phone number', url: '/more?panel=profile', title: 'More', nav: 'more', initials: 'MI',
+        body: moreScreen({ who: VIEWER, profile: true }),
+        overlay: (k) => sheet(k, 'My profile', myProfile({ phone: '+91 98201 45000' }), acts([['Cancel'], ['Save', 'p hit']]), FIT(476)),
+        note: 'Name, email and roles are changed by an administrator. Fields the person cannot change show their value and "Set by your administrator". Field conditions still apply: Employee ID is only asked for staff, so a volunteer does not see it.' },
+      { t: 'Saved', act: 'Tap <kbd>Save</kbd>', url: '/more', title: 'More', nav: 'more', initials: 'MI',
+        body: moreScreen({ who: VIEWER, profile: true }),
+        overlay: () => '<div class="toast">Profile saved.</div>',
+        note: 'The new phone number is saved on the profile (masked for people without the sensitive permission).' },
+    ],
+  },
+  {
+    id: 'admin-settings', title: 'Administration: connectors, API keys, jobs, audit log, settings', lead: 'The operational side of running the organisation is in Administration too, not in the Builder: connectors (SMS, WhatsApp, webhooks, HTTP calls and account sign-in), API keys, background jobs, the audit log, and organisation settings with storage use and how email is sent. Each area needs its own administration permission; the Builder keeps only definitions.',
+    steps: [
+      { t: 'Administration', act: 'More → <kbd>Administration</kbd>, then <kbd>Connectors</kbd>', url: '/admin', title: 'Administration', back: true, nav: 'more',
+        body: adminHome({ hitConnectors: true }),
+        note: 'Areas: Connectors ("Manage connectors"), API keys ("Manage API keys"), Background jobs ("See everyone\'s jobs"; people always see their own jobs from their notifications), Audit log ("See the audit log"), Organisation settings ("Manage organisation settings").' },
+      { t: 'Connectors', act: 'The list, with what uses each one', url: '/admin/connectors', title: 'Connectors', back: true, nav: 'more',
+        body: (k) => `${toolbar(k, { ph: 'Search connectors…', switcher: false })}<div class="note">Nothing is sent through a connector until it is set up and switched on.</div>${adminTable(k, ['Connector', 'Kind', 'Used by', 'Last delivery', 'State'], CONNECTORS, { hitRow: 0 })}`,
+        note: 'Used by lists the actions, automations, templates and lookups that use it. An account sign-in shows Connected, Not connected or Reconnect needed. One HTTP connector can show Email sender. Row ⋮: Open, Test, Switch off, Remove (blocked while something uses it). The + button asks for a kind: SMS, WhatsApp, webhook, HTTP call, or account sign-in. HTTP and account sign-in are the next journey.' },
+      { t: 'A connector: settings, test, deliveries', act: 'Tap <kbd>WhatsApp Business</kbd>', url: '/admin/connectors/whatsapp', title: 'WhatsApp Business', back: true, nav: 'more',
+        body: (k) => `<div class="card">${field('Phone number ID', '109876543210', { req: true })}<div class="mf"><div class="l">Access token <i>*</i></div><div class="o"><span><span class="bdg s">Set</span> <span class="cs">changed 2 Sep 2026</span></span><span class="link" style="font-size:.74rem">Replace</span></div></div><div class="mf"><div class="l">App secret</div><div class="o"><span class="cs">Not set</span><span class="link" style="font-size:.74rem">Set</span></div></div>${tog('Switched on', true)}<div class="row"><span class="btn">Test</span><span class="sp"></span><span class="btn p">Save</span></div><div class="ok" style="margin-top:8px">✓ Test message accepted by WhatsApp in 1.2 s.</div></div><div class="sec-h" style="margin-bottom:8px"><span>Deliveries · last 7 days</span><span>⌃</span></div>${chipRow(['All 128', 'Failed 3', 'Retrying 1'], 'All 128')}${adminTable(k, ['Sent', 'Record and recipient', 'Tries', 'Result'], DELIVERIES, { hitRow: 1 })}`,
+        note: 'Secrets are never shown again once saved, only Set or Not set. One column on every size: settings, test, then the delivery log; a delivery opens the service\'s reply with Retry now.' },
+      { t: 'API keys — create', act: 'Administration → <kbd>API keys</kbd>, tap <kbd>+</kbd>', url: '/admin/api-keys?create', title: 'API keys', back: true, nav: 'more', fab: true,
+        body: (k) => `<div class="row" style="margin-bottom:10px"><span class="cs">Each key may make 120 requests a minute.</span><span class="sp"></span><span class="link" style="font-size:.74rem">API documentation</span></div>${adminTable(k, ['Name', 'Acts as', 'Created', 'Last used', 'State'], KEYS)}`,
+        overlay: (k) => sheet(k, 'New API key', `${field('Name', 'Volunteer app', { req: true })}<div class="cs" style="margin:-8px 0 10px">Records it changes show "api:Volunteer app"</div>${field('Acts as role', 'Viewer', { req: true, icon: '▾' })}<div class="cs" style="margin:-8px 0 10px">The key can do exactly what this role allows</div>`, acts([['Cancel'], ['Create key', 'p hit']]), FIT(360)),
+        note: 'The API documentation link opens /api/openapi.json, generated from the organisation\'s own setup. Revoke is in the row ⋮ and is confirmed in the panel.' },
+      { t: 'API key — secret shown once', act: 'Tap <kbd>Create key</kbd>', url: '/admin/api-keys', title: 'API keys', back: true, nav: 'more', fab: true,
+        body: (k) => adminTable(k, ['Name', 'Acts as', 'Created', 'Last used', 'State'], KEYS),
+        overlay: (k) => sheet(k, 'API key created', `<div class="prob">Copy this secret now. It is shown only once.</div><div class="cs">Volunteer app · acts as Viewer</div>${secretBox}<span class="btn" style="display:block">Copy</span><div class="cs" style="margin-top:8px">Send it as <code>Authorization: ApiKey ak_7f3c2e.&lt;secret&gt;</code></div>`, acts([['I have copied it', 'p']]), FIT(380)),
+        note: 'The secret is never put in the address, history or logs; closing the panel hides it for good.' },
+      { t: 'Background jobs', act: 'Administration → <kbd>Background jobs</kbd>', url: '/admin/jobs?status=all', title: 'Background jobs', back: true, nav: 'more',
+        body: (k) => `${chipRow(['Running 1', 'Finished with problems 1', 'All 24'], 'All 24')}${toolbar(k, { ph: 'Search jobs…', switcher: false, filters: 0 })}${adminTable(k, ['Job', 'Started', 'Progress', 'State'], JOBS, { hitRow: 1 })}`,
+        note: 'Imports, bulk operations, index builds and total rebuilds from everyone in the organisation. Filters: kind, started by, date. A running job can be cancelled from its row.' },
+      { t: 'A job\'s failed items', act: 'Tap <kbd>Mark as paid · 214 donations</kbd>', url: '/admin/jobs?status=all&job=j31', title: 'Background jobs', back: true, nav: 'more',
+        body: (k) => `${chipRow(['Running 1', 'Finished with problems 1', 'All 24'], 'All 24')}${adminTable(k, ['Job', 'Started', 'Progress', 'State'], JOBS, { sel: 1 })}`,
+        overlay: (k) => sheet(k, 'Mark as paid · 214 donations', `<div class="kv" style="margin-top:0"><div><b>Started</b>Ravi Kumar · 09:58</div><div><b>Done</b>200</div><div><b>Waiting for approval</b>12</div><div><b>Failed</b>2</div></div><div class="prob"><b>DON/2026-27/00031</b> · Paid on cannot be before the donation date.</div><div class="prob"><b>DON/2026-27/00019</b> · Already waiting for approval.</div><span class="btn" style="display:block">Download failed items (CSV)</span>`, acts([['Close', 'p']]), FIT(420)),
+        note: 'The same result panel the person who started it saw. Running jobs show their progress here with Cancel.' },
+      { t: 'Audit log', act: 'Administration → <kbd>Audit log</kbd>', url: '/admin/audit?date=today', title: 'Audit log', back: true, nav: 'more',
+        body: (k) => `${toolbar(k, { ph: 'Search the audit log…', switcher: false, filters: 1 })}${pills(['Date: today'])}${adminTable(k, ['When and who', 'What', 'Area'], AUDIT)}`,
+        note: 'Read-only, newest first. Filters: person (including API keys), area, record type, date. A row with a record opens it; definition changes open the Builder history. Suspended people keep their name here.' },
+      { t: 'Organisation settings', act: 'Administration → <kbd>Organisation settings</kbd>', url: '/admin/settings', title: 'Organisation settings', back: true, nav: 'more',
+        body: () => `<div class="card">${field('Organisation name', 'Demo Foundation', { req: true })}${field('Default language', 'English', { icon: '▾' })}<div class="cs" style="margin:-8px 0 10px">For new people and messages; each person can choose their own in More</div></div><div class="card"><div class="row" style="margin-bottom:4px"><b style="font-size:.82rem">Email</b><span class="sp"></span><span class="bdg p">gmail</span></div><div class="cs">Sent through gmail (Google account). Your mail server is used when that connector is off, and the installation mail server when neither is set.</div><span class="btn" style="margin-top:8px">Change</span></div><div class="card"><div class="row" style="margin-bottom:6px"><b style="font-size:.82rem">Storage</b><span class="sp"></span><span class="cs">412 MB of 1 GB used</span></div><div class="prog" style="margin-bottom:10px"><i style="width:41%"></i></div>${field('Storage quota', '1 GB', { icon: '▾' })}</div><div class="card">${field('API requests per minute, per key', '120')}</div><div class="row"><span class="sp"></span><span class="btn p hit">Save</span></div>`,
+        note: 'Storage use counts every file and signature; uploads are refused with a clear message when the quota is full. Changes here are written to the audit log.' },
+    ],
+  },
+);
+
+/* -------------------------------- HTTP calls and account sign-in */
+const lines = (label, value, help) => `<div class="mf"><div class="l">${label}</div><div class="o" style="height:auto;min-height:40px;align-items:flex-start;padding:8px 12px;font:12px var(--mono);white-space:pre-wrap;line-height:1.4">${value}</div>${help ? `<div class="cs" style="margin-top:3px">${help}</div>` : ''}</div>`;
+const radios = (on) => `<div class="mf"><div class="l">Mode</div><div class="radio" style="border:0;padding:4px 0"><span class="r${on === 'send' ? ' on' : ''}"></span><span>Send after save</span></div><div class="radio" style="border:0;padding:4px 0"><span class="r${on === 'lookup' ? ' on' : ''}"></span><span>Look up while saving</span></div></div>`;
+const secretLine = (label, set) => `<div class="mf"><div class="l">${label}</div><div class="o"><span>${set ? '<span class="bdg s">Set</span>' : '<span class="cs">Not set</span>'}</span><span class="link" style="font-size:.74rem">${set ? 'Replace' : 'Set'}</span></div></div>`;
+const builderNote = (k) => (k === 'phone' ? '<div class="note">Editing works best on a tablet or computer. You can review what is published here.</div>' : '');
+
+FLOWS.push({
+  id: 'http-oauth',
+  title: 'HTTP calls and account sign-in',
+  lead: 'Two connector kinds cover services that are not SMS, WhatsApp or a signed webhook. An HTTP call either sends after the record is saved, or looks up values while the record is saving. An account sign-in holds one organisation\'s access, and an HTTP call can use it. One HTTP connector can send all of the organisation\'s email. Slack, a bank-code lookup, Gmail and Calendar are saved rows, not new product code.',
+  steps: [
+    { t: 'Connectors', act: 'The list now includes HTTP calls and account sign-in', url: '/admin/connectors', title: 'Connectors', back: true, nav: 'more', fab: true, hitFab: true,
+      body: (k) => `${toolbar(k, { ph: 'Search connectors…', switcher: false })}<div class="note">Nothing is sent through a connector until it is set up and switched on.</div>${adminTable(k, ['Connector', 'Kind', 'Used by', 'Last delivery', 'State'], CONNECTORS, { hitRow: 2 })}`,
+      note: 'gmail is the only Email sender. google-mail is Connected. ifsc looks up while a bank account is saved. The + button starts a new connector.' },
+    { t: 'New connector', act: 'Tap <kbd>+</kbd>, choose <kbd>HTTP call</kbd>, name it <kbd>gmail</kbd>', url: '/admin/connectors?create', title: 'Connectors', back: true, nav: 'more', fab: true,
+      body: (k) => `${toolbar(k, { ph: 'Search connectors…', switcher: false })}${adminTable(k, ['Connector', 'Kind', 'Used by', 'Last delivery', 'State'], CONNECTORS)}`,
+      overlay: (k) => sheet(k, 'New connector', `${field('Kind', 'HTTP call', { req: true, icon: '▾' })}<div class="cs" style="margin:-8px 0 10px">SMS, WhatsApp, webhook, HTTP call, or account sign-in</div>${field('Key', 'gmail', { req: true })}<div class="cs" style="margin:-8px 0 10px">Letters, digits, hyphen or underscore</div>`, acts([['Cancel'], ['Next', 'p hit']]), FIT(340)),
+      note: 'Next opens the new connector. The key cannot be changed later.' },
+    { t: 'Account sign-in', act: 'Open <kbd>google-mail</kbd> after returning from the provider', url: '/admin/connectors/google-mail?connected=1', title: 'google-mail', back: true, nav: 'more',
+      body: () => `<div class="okn">Connected as asha@trust.org.</div><div class="card"><div class="row" style="margin-bottom:8px"><b>google-mail</b><span class="sp"></span><span class="bdg p">Account sign-in</span></div><div class="cs" style="margin-bottom:10px">Connected. The token renews automatically. Last renewed 31 Oct 2026, 19:40.</div>${field('Authorization address', 'https://accounts.google.com/o/oauth2/v2/auth', { req: true })}${field('Token address', 'https://oauth2.googleapis.com/token', { req: true })}${field('Client id', '1234-abc.apps.googleusercontent.com', { req: true })}${lines('Scopes, one per line', 'https://www.googleapis.com/auth/gmail.send\nhttps://www.googleapis.com/auth/calendar.events')}<div class="mf"><div class="l">Redirect address to register with the provider</div><div class="o ro"><span style="font:11px var(--mono);overflow:hidden">…/api/connectors/oauth/callback</span><span class="link" style="font-size:.74rem">Copy</span></div></div>${secretLine('Client secret', true)}${tog('Switched on', true)}<div class="note">Scopes changed. Reconnect to ask for them.</div><div class="row"><span class="btn hit">Reconnect</span><span class="btn">Test</span><span class="sp"></span><span class="btn p">Save</span></div></div><div class="cs">Used by gmail and calendar-invite.</div>`,
+      note: 'Connect is shown until the provider has accepted the account, and only after the client secret is saved. Test renews the token now. Reconnect needed appears when the provider refuses the saved access. The redirect address is read only.' },
+    { t: 'HTTP call that sends email', act: 'Open <kbd>gmail</kbd>', url: '/admin/connectors/gmail', title: 'gmail', back: true, nav: 'more',
+      body: () => `<div class="card"><div class="row" style="margin-bottom:8px"><b>gmail</b><span class="sp"></span><span class="bdg p">HTTP · send</span></div>${radios('send')}${field('Method', 'POST', { icon: '▾' })}${field('Address', 'https://gmail.googleapis.com/…/messages/send', { req: true })}${field('Sign in with', 'google-mail (Connected)', { icon: '▾' })}${lines('Headers', '{ "authorization": "Bearer {{credential.accessToken}}" }')}${lines('Body', '{ "raw": "{{ message.mime | base64url }}" }', 'Placeholders: record.*, message.to, message.subject, message.text, message.mime, organisation.name, secrets.*, credential.accessToken. Encoders: base64url, base64, json.')}${field('Success answers', '200')}${field('Wait up to, milliseconds', '8000')}${tog('Send all of this organisation\'s email through this connector', true, 'Used instead of the organisation\'s mail server.')}${field('From address', 'office@trust.org', { req: true })}${tog('Switched on', true)}${field('Send test to', 'you@trust.org')}<div class="row"><span class="btn hit">Test</span><span class="sp"></span><span class="btn p">Save</span></div></div><div class="okn">Test sent. The service answered 200.</div>`,
+      note: 'A second email sender is refused on Save. An unknown placeholder or an address that is not HTTPS is shown under its field. Send mode asks for an email address when this connector sends the organisation\'s email, and a sample message otherwise. Deliveries are listed under the form, as on WhatsApp; a failed send can be retried.' },
+    { t: 'HTTP call that looks up', act: 'Open <kbd>ifsc</kbd>, try a code', url: '/admin/connectors/ifsc', title: 'ifsc', back: true, nav: 'more',
+      body: () => `<div class="card"><div class="row" style="margin-bottom:8px"><b>ifsc</b><span class="sp"></span><span class="bdg p">HTTP · lookup</span></div>${radios('lookup')}${field('Method', 'GET', { icon: '▾' })}${field('Address', 'https://ifsc.razorpay.com/{{record.ifsc}}', { req: true })}${field('Sign in with', 'None', { icon: '▾' })}${field('Inputs', 'ifsc')}<div class="cs" style="margin:-8px 0 10px">Record fields the address and body may use</div>${lines('Answer fields', '{ "bank": "BANK", "branch": "BRANCH" }', 'A JSON path for each value the lookup returns.')}${field('Success answers', '200')}${field('Wait up to, milliseconds', '5000')}${tog('Switched on', true)}<div class="sec-h" style="margin-bottom:8px"><span>Try a lookup</span></div><div class="row" style="align-items:flex-end">${field('ifsc', 'HDFC0000001')}<span class="btn hit" style="margin-bottom:12px">Look up</span></div><div class="kv"><div><b>bank</b>HDFC Bank</div><div><b>branch</b>Mumbai Fort</div></div><div class="row"><span class="sp"></span><span class="btn p">Save</span></div></div><div class="cs">A failed lookup is listed under Deliveries for diagnosis. There is no retry; the person saves the record again.</div>`,
+      note: 'Look up shows the values that would be written onto the record. A 404 is a failed delivery here and, on a real save, an error under the IFSC field.' },
+    { t: 'Call a connector', act: 'Builder → automation <kbd>Thank donor</kbd>, step 3 (larger screens)', url: '/builder/automations/thank-donor', title: 'Thank donor', back: true, nav: 'more',
+      crumbs: [['Builder', '/builder'], ['Thank donor']],
+      body: (k) => `${builderNote(k)}<div class="card"><div class="cs" style="margin-bottom:8px">Step 3</div>${field('Step', 'Call a connector', { icon: '▾' })}${field('Connector', 'slack-alerts (HTTP · send)', { icon: '▾' })}<div class="cs" style="margin:-8px 0 10px">Only HTTP connectors that send after save are listed</div><div class="mf"><div class="l">Values</div><div class="o" style="height:auto;min-height:40px;align-items:flex-start;padding:8px 12px"><b style="margin-right:8px">text</b><span style="font:12px var(--mono)">"New donation " + record.number</span></div></div><span class="btn">Add value</span><div class="note" style="margin-top:10px">Sent after the record is saved. A failed call is retried and does not undo the save.</div></div>`,
+      note: 'Publish refuses a missing connector, and a lookup connector in this step. The same picker is used on a record action.' },
+    { t: 'Lookups on a record type', act: 'Builder → <kbd>Bank account</kbd> → <kbd>Lookups</kbd> (larger screens)', url: '/builder/recordTypes/bankAccount?tab=lookups', title: 'Bank account', back: true, nav: 'more',
+      crumbs: [['Builder', '/builder'], ['Bank account'], ['Lookups']],
+      body: (k) => `${builderNote(k)}${chipRow(['Fields', 'Rules', 'Lookups', 'Workflows', 'Used by'], 'Lookups')}${adminTable(k, ['Key', 'Connector', 'Runs when', 'Fills'], [['bankDetails', 'ifsc', 'IFSC changes', 'bankName, branch']], { hitRow: 0 })}<div class="card" style="margin-top:10px"><b style="font-size:.85rem">Lookup: bankDetails</b><div style="height:8px"></div>${field('Connector', 'ifsc (HTTP · lookup)', { icon: '▾' })}<div class="mf"><div class="l">Inputs</div><div class="cs">ifsc is selected. Runs when one of these changes.</div></div><div class="kv"><div><b>bankName</b>← bank</div><div><b>branch</b>← branch</div></div><div class="note">Saves from record actions, automations and scripts that change IFSC are refused. Change it on the record or by import.</div><div class="row"><span class="btn">Remove</span><span class="sp"></span><span class="btn p hit">Done</span></div></div>`,
+      note: 'Answer values come from the connector\'s answer fields. Adding a lookup uses the same card.' },
+    { t: 'The record', act: 'Save a bank account whose IFSC the service does not know', url: '/records/bankAccount?id=ba42', title: 'Bank accounts', back: true, nav: 'records', fab: true,
+      body: (k) => adminTable(k, ['Number', 'Account', 'IFSC', 'Bank'], [['BA-0042', 'Riverside branch', 'HDFC000000X', 'HDFC Bank']], { sel: 0 }),
+      overlay: (k) => sheet(k, 'BA-0042 · HDFC Bank', `${field('IFSC', 'HDFC000000X', { err: 'The bank service did not recognise this IFSC.' })}${field('Bank name', 'HDFC Bank', { ro: true })}<div class="cs" style="margin:-8px 0 10px">Filled from the IFSC lookup</div>${field('Branch', 'Mumbai Fort', { ro: true })}<div class="cs" style="margin:-8px 0 10px">Filled from the IFSC lookup</div>`, acts([['Save', 'p']]), FIT(420)),
+      note: 'The error is under the input and nothing is saved. A concurrent edit says "Someone else changed this record. Reload and save again." Import runs the lookup; an import check does not. A record action, automation or script that changes IFSC is refused.' },
+    { t: 'How email is sent', act: 'Administration → <kbd>Organisation settings</kbd>', url: '/admin/settings', title: 'Organisation settings', back: true, nav: 'more',
+      body: () => `<div class="card"><div class="row" style="margin-bottom:4px"><b style="font-size:.82rem">Email</b><span class="sp"></span><span class="bdg p">gmail</span></div><div class="cs">Sent through gmail (Google account).</div><span class="btn hit" style="margin-top:8px">Change</span></div><div class="card"><div class="cs" style="margin-bottom:6px">Which path sends mail</div><div class="listrow"><div><b>gmail (Google account)</b><div class="cs">This organisation's email sender. In use.</div></div><span class="bdg s">In use</span></div><div class="listrow"><div><b>Your mail server</b><div class="cs">Used when the email sender is off.</div></div></div><div class="listrow"><div><b>Installation mail server</b><div class="cs">Used when neither of the above is set.</div></div></div></div>`,
+      note: 'Name, language, storage and the API limit stay on this screen (the Administration journey). Change opens the gmail connector.' },
+  ],
+});
+
+/* ------------------------------------------- custom navigation */
+const CUSTOM_NAV = {
+  phone: [['home', 'Home', 'home'], ['donors', 'Donors', 'records'], ['donations', 'Donations', 'records'], ['inbox', 'Inbox', 'inbox'], ['more', 'More', 'more']],
+  desk: [['home', 'Home', 'home'], ['donors', 'Donors', 'records'], ['donations', 'Donations', 'records'], ['inbox', 'Inbox', 'inbox'], ['visits', 'Visits', 'records'], ['more', 'More', 'more']],
+};
+/* the More drawer: a grid of icon tiles, as on the existing mobile More drawer; one tile per destination */
+const TILE_ICON = {
+  visits: ICON.records,
+  people: ICON.people,
+  dash: ICON.home,
+  grants: '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM8 13h8v2H8v-2zm0 4h8v2H8v-2z"/></svg>',
+  all: ICON.records,
+  admin: '<svg viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>',
+  builder: '<svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.61l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.5.5 0 0 0-.61.22L2.71 8.87a.5.5 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.5.5 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.5.5 0 0 0-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg>',
+  settings: '<svg viewBox="0 0 24 24"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>',
+};
+const mtile = (label, icon, o = {}) => `<div class="mtile${hit(o.hit)}"><span class="mti">${icon}</span><span>${label}</span></div>`;
+function moreMenu(k, o = {}) {
+  const sidebar = k === 'phone' ? [mtile('Visits', TILE_ICON.visits)] : [];
+  const tiles = [
+    mtile('Fundraising dashboard', TILE_ICON.dash),
+    mtile('Grants', TILE_ICON.grants),
+    mtile('All records', TILE_ICON.all),
+    mtile('Administration', TILE_ICON.admin),
+    mtile('Builder', TILE_ICON.builder),
+    mtile('Settings', TILE_ICON.settings, { hit: o.hitSettings }),
+  ];
+  return `<div class="mtiles">${[...sidebar, ...tiles].join('')}</div>`;
+}
+function settingsScreen() {
+  return `<div class="panel"><div class="listrow${hit(true)}"><div><b>My profile</b><div class="cs">Asha Sharma · asha@demo.local</div></div><span class="cs">›</span></div><div class="listrow"><div><b>Language</b><div class="cs">English</div></div><span class="cs">›</span></div><div class="listrow"><div><b>About this app</b><div class="cs">Version 1.0 · demo.local</div></div><span class="cs">›</span></div></div>`;
+}
+function moreOverlay(k, o = {}) {
+  const inner = moreMenu(k, o);
+  if (k === 'phone') return sheet(k, 'More', inner, '', { h: 500, cls: 'more-sheet fit' });
+  return `<div class="scrim"></div><aside class="navpanel"><div style="position:relative;text-align:center;font-size:.8rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin:4px 0 14px;padding:0 34px"><span>More</span><span style="position:absolute;right:0;top:-5px;width:28px;height:28px;border-radius:50%;background:#f1f5f9;display:grid;place-items:center;font-size:12px;color:#475569">✕</span></div><div class="scroll">${inner}</div></aside>`;
+}
+const slot = (label, kind, extra) => `<div class="listrow"><div><b>${label}</b><div class="cs">${kind}</div></div><span class="cs">${extra}</span></div>`;
+function arrangeNav(k) {
+  const side = `${slot('Home', 'Destination', 'Stays')}${slot('Donors', 'Record list', 'Up · Down · To More')}${slot('Donations', 'Record list', 'Up · Down · To More')}${slot('Inbox', 'Destination', 'Up · Down · To More')}<div class="note">Phone bar ends here. Visits stays on the desktop rail and opens from More on a phone.</div>${slot('Visits', 'Record list', 'Up · Down · To More')}`;
+  const menu = `<p class="cap" style="margin:4px 2px 6px">Pages</p><div class="panel" style="margin-bottom:8px">${slot('Fundraising dashboard', 'Page', 'To sidebar')}</div><p class="cap" style="margin:4px 2px 6px">Records</p><div class="panel" style="margin-bottom:8px">${slot('Grants', 'Record list', 'To sidebar')}${slot('All records', 'Destination', 'To sidebar')}</div><p class="cap" style="margin:4px 2px 6px">More</p><div class="panel" style="margin-bottom:8px">${slot('Administration', 'Destination', 'To sidebar')}${slot('Builder', 'Destination', 'To sidebar')}${slot('Settings', 'Screen', 'Stays in More')}</div><p class="cap" style="margin:4px 2px 6px">On the Settings screen</p><div class="panel">${slot('My profile', 'Screen', 'Not in More')}${slot('Language', 'Panel', 'Not in More')}${slot('About this app', 'Screen', 'Not in More')}</div>`;
+  if (k === 'phone') return `<div class="note">Arranging navigation works on a larger screen. This is the published order.</div><p class="cap" style="margin:4px 2px 6px">Sidebar</p><div class="panel" style="margin-bottom:10px">${side}</div><p class="cap" style="margin:4px 2px 6px">More</p>${menu}`;
+  return `<div class="row" style="margin-bottom:10px"><span class="bdg s">v3 published</span><span class="sp"></span><span class="btn">Discard draft</span><span class="btn p hit">Publish</span></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start"><div><p class="cap" style="margin:0 2px 6px">Sidebar · 5 of 8</p><div class="panel">${side}</div></div><div><p class="cap" style="margin:0 2px 6px">More</p>${menu}</div></div>`;
+}
+FLOWS.push({
+  id: 'custom-nav',
+  title: 'Custom navigation',
+  lead: 'The organisation publishes one navigation. This example puts Donors and Donations on the phone bar, and also Visits on the desktop rail. More opens over the list the person is already on: the existing bottom sheet on a phone, a panel beside the rail on a wide screen. People is not a destination.',
+  steps: [
+    { t: 'A record list on the bar', act: 'Open <kbd>Donations</kbd> from the bar or the rail', url: '/records/donation', title: 'Donations', back: true, nav: 'donations', navItems: CUSTOM_NAV, fab: true, hitNav: 'more',
+      body: list({}),
+      note: 'Donations is a sidebar slot, so the bar and the rail highlight Donations, not Records. The breadcrumb still follows the address: Records › Fundraising › Donations. The phone shows the first four slots plus More. Visits is the fifth, so it appears only on the rail.' },
+    { t: 'More over the list', act: 'Tap <kbd>More</kbd> — the donations list stays behind the menu', url: '/records/donation', title: 'Donations', back: true, nav: 'more', navItems: CUSTOM_NAV, fab: true,
+      body: list({}),
+      overlay: (k) => moreOverlay(k, { hitSettings: true }),
+      note: 'The address does not change. More is a grid of tiles and has no profile. On a phone, Visits, which did not fit on the bar, is the first tile. On a wide screen Visits is already on the rail, so the panel does not repeat it. Settings is one tile. Close, or tap outside, returns to the list.' },
+    { t: 'Settings', act: 'Tap <kbd>Settings</kbd>', url: '/settings', title: 'Settings', back: true, nav: 'more', navItems: CUSTOM_NAV, crumbs: [['Settings']],
+      body: settingsScreen,
+      note: 'Settings is its own screen, not part of the More drawer. It holds My profile, Language and About this app. Tapping My profile opens the profile panel; tapping Language opens the language panel. Back returns to the screen that was open before More.' },
+    { t: 'Opened from More', act: 'Tap <kbd>Visits</kbd>', url: '/records/visit', title: 'Visits', back: true, nav: 'visits', navItems: CUSTOM_NAV, fab: true,
+      body: () => `<div class="note">Field visits and follow-ups</div><div class="panel"><div class="listrow"><div><b>Hadapsar school</b><div class="cs">22 Oct 2026 · Lakshmi Devi</div></div><span class="cs">›</span></div><div class="listrow"><div><b>Wagholi workshop</b><div class="cs">18 Oct 2026 · Arjun Patil</div></div><span class="cs">›</span></div></div>`,
+      note: 'The menu closes and the list opens. On the desktop rail Visits is the current item. On the phone Visits was past the fourth slot, so the bar does not highlight it; More is not left selected either, because the menu is closed.' },
+    { t: 'Arrange it', act: 'Builder → <kbd>Navigation</kbd> (larger screens)', url: '/builder/navigation/app', title: 'Navigation', back: true, nav: 'more', navItems: CUSTOM_NAV,
+      body: arrangeNav,
+      note: 'Order in the sidebar is the phone cutoff: the first four, then More. The rail can hold eight. Home stays on the sidebar. Settings stays a tile in More; My profile, Language and About this app live on that screen and are not tiles in More. Anything the person cannot read is left out when the bar is drawn, and the remaining items close up. Publishing is the same draft and publish as record groups. Phones can review the published order; arranging stays on a larger screen.' },
+  ],
+});
+
+/* --------------------------------------------------------------- render */
+const toc = document.getElementById('toc');
+const root = document.getElementById('flows');
+FLOWS.forEach((f, fi) => {
+  toc.insertAdjacentHTML('beforeend', `<a href="#${f.id}">${String(fi + 1).padStart(2, '0')} · ${f.title}</a>`);
+  const steps = f.steps.map((s, si) => `
+    <div class="step">
+      <div class="num">${fi + 1}.${si + 1}</div>
+      <div class="stephead" style="grid-column:2 / -1"><b>${s.t}</b><span class="act">${s.act}</span><code>${s.url}</code></div>
+      <div></div>
+      <div><p class="cap">Phone</p>${frame('phone', s)}</div>
+      <div class="desk"><p class="cap">Desktop</p>${frame('desk', s)}${s.note ? `<div class="noteline">${s.note}</div>` : ''}</div>
+    </div>`).join('');
+  root.insertAdjacentHTML('beforeend', `<section class="flow" id="${f.id}"><div class="flabel">Journey ${fi + 1}</div><h2>${f.title}</h2><p>${f.lead}</p>${steps}</section>`);
+});
+</script>
+</body>
+</html>

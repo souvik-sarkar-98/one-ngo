@@ -1,0 +1,39 @@
+{
+  "name": "@onengo/platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./main": "./src/api/main.ts",
+    "./operator": "./src/api/operator.ts",
+    "./contracts": "./src/api/contracts.ts",
+    "./browser": "./src/api/browser.ts",
+    "./deployment": "./src/api/deployment.ts",
+    "./testing": "./src/api/testing.ts",
+    "./icons": "./src/runtime/definitions/icon-names.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "db:types": "tsx scripts/db-types.ts"
+  },
+  "dependencies": {
+    "@onengo/kernel": "0.1.0",
+    "@onengo/product": "0.1.0",
+    "@simplewebauthn/server": "^13.3.3",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "exceljs": "^4.4.0",
+    "jose": "^6.2.13",
+    "jpeg-js": "^0.4.4",
+    "kysely": "^0.29.7",
+    "pg": "^8.23.1",
+    "quickjs-emscripten": "^0.32.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
+    "kysely-codegen": "0.20.0",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3"
+  }
+}

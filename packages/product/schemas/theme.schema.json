@@ -1,0 +1,21 @@
+{
+  "$id": "theme",
+  "title": "Organisation theme",
+  "description": "Token overrides for one organisation. Colours are hex values. This is not a stylesheet.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["key"],
+  "x-preview": "theme",
+  "properties": {
+    "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,62}$", "description": "Stable name of the theme" },
+    "label": { "type": "string", "maxLength": 80, "description": "Name shown to administrators" },
+    "brand": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "description": "Buttons, links and the app bar, for example #1f5f8b", "x-group": "colours", "x-control": "colour" },
+    "brandForeground": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "description": "Text on the brand colour", "x-group": "colours", "x-control": "colour" },
+    "background": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "description": "Behind the screens", "x-group": "colours", "x-control": "colour" },
+    "surface": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "description": "Cards, panels and tables", "x-group": "colours", "x-control": "colour" },
+    "text": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "description": "Main text", "x-group": "colours", "x-control": "colour" },
+    "muted": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "description": "Hints and secondary text", "x-group": "colours", "x-control": "colour" },
+    "line": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "description": "Borders and dividers", "x-group": "colours", "x-control": "colour" },
+    "radius": { "type": "string", "pattern": "^[0-9]{1,2}px$", "description": "Corner rounding, for example 6px" }
+  }
+}

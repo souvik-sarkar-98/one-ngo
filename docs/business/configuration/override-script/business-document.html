@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Override scripts — Business Document</title>
+    <style>
+      :root {
+        --bg: #f7f6f3;
+        --ink: #1c1b19;
+        --muted: #5c574f;
+        --line: #d9d4cb;
+        --accent: #0f5c4c;
+        --warn: #8a4b00;
+        --card: #fffefb;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+        color: var(--ink);
+        background: linear-gradient(180deg, #eef3f1 0%, var(--bg) 40%);
+        line-height: 1.55;
+      }
+      main { max-width: 52rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+      h1 { font-size: 1.85rem; margin: 0 0 0.35rem; color: var(--accent); }
+      .meta { color: var(--muted); font-size: 0.95rem; margin-bottom: 0.75rem; }
+      .badge {
+        display: inline-block; font-size: 0.75rem; letter-spacing: 0.02em;
+        background: #e2ece8; color: var(--accent); border: 1px solid var(--line);
+        border-radius: 999px; padding: 0.1rem 0.6rem; margin: 0 0.3rem 1.5rem 0;
+      }
+      h2 {
+        font-size: 1.15rem; margin: 2rem 0 0.65rem; padding-bottom: 0.35rem;
+        border-bottom: 1px solid var(--line);
+      }
+      h3 { font-size: 1rem; margin: 1.1rem 0 0.4rem; }
+      ul { padding-left: 1.2rem; }
+      table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 0.92rem; }
+      th, td { border: 1px solid var(--line); padding: 0.55rem 0.65rem; text-align: left; vertical-align: top; }
+      th { background: #e8efec; }
+      code { font-family: ui-monospace, Consolas, monospace; font-size: 0.86em; background: #eceae4; padding: 0.05rem 0.3rem; border-radius: 3px; }
+      .src { color: var(--muted); font-size: 0.85rem; }
+      .warn { color: var(--warn); }
+
+      .tc { background: #f2f7f5; }
+      .tc td:first-child { font-weight: 600; white-space: nowrap; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Override scripts</h1>
+      <p class="meta">Domain: configuration · Entity: override script</p>
+      <span class="badge">Implementation-independent · reconciled against backend + frontend</span>
+
+      <h2>1. Purpose</h2>
+      <p>
+        Let an organisation add its own logic to how records are saved, checked and moved through their workflow,
+        beyond what forms, rules and posting rules can express, without being able to break the books, permissions or
+        another organisation's data. A script can change the record being saved, refuse a save, and propose
+        follow-on actions: a journal entry, a new or changed related record, a notification, or a call to an approved
+        connector. The platform checks every proposal and carries it out as part of the same save, or not at all.
+      </p>
+
+      <h2>2. Actors</h2>
+      <ul>
+        <li><strong>Script author</strong> (holds the script-publishing permission): writes, tries and publishes scripts, and rolls them back to an earlier version. No second approval is needed, including for finance scripts.</li>
+        <li><strong>Organisation administrator</strong>: everything a script author can do, plus publishing (or rolling back to) a script that acts as a role or reads ledger balances, and keeping the list of named fixed recipients. Is told about every finance-script publish and rollback.</li>
+        <li><strong>Person saving a record</strong>: triggers scripts by saving, moving a record through its workflow, or pressing a custom button. Needs only permission to make that change; what a script proposes is carried out with their permissions, or with the declared role's.</li>
+      </ul>
+
+      <h2>3. Domain model</h2>
+      <table>
+        <thead><tr><th>Concept</th><th>Business meaning</th></tr></thead>
+        <tbody>
+          <tr><td>Script</td><td>A small program for one record type, published in versions like any configuration. Has a moment it runs at, an order among scripts of the same moment, an on/off switch and time and memory limits.</td></tr>
+          <tr><td>Moment (hook)</td><td><em>Before save</em> (may change the record and propose actions), <em>validate</em> (may only refuse), <em>after save</em> (sees the saved number; may propose actions), <em>workflow guard</em> (may only refuse a workflow step) and <em>custom button</em> (run from a record action; may change the record and propose actions).</td></tr>
+          <tr><td>Declared inputs</td><td>What the script needs to read, stated up front: records a reference field points to, a few matching records of another type, allowed organisation settings, and ledger account or fund balances. Nothing else can be read.</td></tr>
+          <tr><td>Proposed action (effect)</td><td>A journal entry, a new record, a change to another record at the version the script saw, a notification, or a connector call. Only proposed; the platform decides.</td></tr>
+          <tr><td>Effect policy</td><td>What the script is allowed to propose: which kinds, which ledger accounts, the most one run may post, which connectors, which named recipients, and how many actions per run.</td></tr>
+          <tr><td>Acting role</td><td>An optional role whose permissions the script reads and acts with instead of the person saving.</td></tr>
+          <tr><td>Named fixed recipient</td><td>A person outside the system, such as the statutory auditor, whose email and/or phone an administrator keeps in the organisation settings under a short name.</td></tr>
+          <tr><td>Finance script</td><td>A script that may post journal entries, or runs for a record type that posts to the books, issues receipts, or holds money amounts.</td></tr>
+          <tr><td>Script run</td><td>The record of one run: which script and version, the moment, how long it took, the outcome (ok, failed, over a limit, or rejected) and a summary of what it proposed.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>4. Business rules</h2>
+      <ul>
+        <li>A script never acts directly. Everything it proposes is checked and then carried out by the part of the platform that owns it, inside the same save. If anything is refused, nothing from that save is kept: not the record, its postings, its receipts, nor any other proposal.</li>
+        <li>Every journal entry a script proposes must balance to the paisa, use only accounts the script declares, fall in an open financial year, and stay within the script's per-run limit. The ledger checks again when posting, and the books check once more when the save completes.</li>
+        <li>A script cannot issue or change receipts, reverse entries, or open or close financial years.</li>
+        <li>New and changed records proposed by a script go through every check a save from the screens would, with the permissions of the person saving or of the acting role. A script cannot change the record being saved through a proposal, nor create a record of its own type from that record's own save. Changes to another record need the version the script read; if someone changed it since, the whole save is refused.</li>
+        <li>A script never supplies an email address or phone number. It can notify roles, people, the record's creator, a person, email or phone field of the record, or a named fixed recipient it declares. Notifications and connector calls leave only after the save completes; a failed delivery never undoes the save.</li>
+        <li>Connector calls go only to webhook connectors an administrator has configured and enabled, and that the script declares.</li>
+        <li>Inputs are read with the same permissions as the screens: a record the reader cannot see looks the same as a missing one, and protected fields are masked.</li>
+        <li>At most 20 proposals per run and 50 per save, nested saves included; nested saves started by scripts stop at five levels.</li>
+        <li>Only an organisation administrator may publish, or roll back to, a script that acts as a role or reads ledger balances. Anyone else is refused.</li>
+        <li>Every save that carries out proposals is recorded in the change history with each action, its script and version, the person saving, and any acting role. Each journal entry names the script and version that posted it.</li>
+        <li>Every publish and rollback of a finance script is recorded in the change history with the versions, the author and what changed in its proposals and code, and the organisation administrators are notified.</li>
+        <li>Trying a script shows the changes it would make, the inputs it would read, the actions it would propose and what would be refused, and changes nothing.</li>
+        <li>Unknown named recipients, accounts, connectors, roles, fields and record types are refused when the script is published.</li>
+      </ul>
+
+      <h2>5. User flows</h2>
+      <h3>Find / view</h3>
+      <p>Script authors see scripts with the other configuration, their published version, draft and history. Script runs are kept for the retention period.</p>
+      <h3>Create</h3>
+      <p>The author writes the script, chooses its moment, declares its inputs and what it may propose, tries it against sample values or an existing record, and publishes it. The publish is refused if any reference does not exist, or if it acts as a role or reads balances and the author is not an administrator.</p>
+      <h3>Update</h3>
+      <p>A new draft is published as a new version. Rolling back republishes an earlier version as the newest one, under the same administrator rule. Finance-script publishes and rollbacks are recorded and announced to administrators.</p>
+      <h3>Other actions</h3>
+      <p>Saving a record runs its before-save, validate and after-save scripts; asking for a workflow step also runs its workflow-guard scripts; a record action can run a custom-button script whose changes are saved as an update. Administrators keep the named fixed recipients in the organisation settings.</p>
+
+      <h2>6. Fields &amp; validation</h2>
+      <table>
+        <thead><tr><th>Field</th><th>Rules</th><th>Visibility / conditions</th></tr></thead>
+        <tbody>
+          <tr><td>Moment</td><td>One of before save, validate, after save, workflow guard, custom button</td><td>Validate and workflow guard may not declare proposals</td></tr>
+          <tr><td>Related records</td><td>Up to 5; each a reference field of the record type and the fields wanted</td><td>Null when empty, missing or not visible to the reader</td></tr>
+          <tr><td>Matching records</td><td>Up to 3 lookups, each at most 20 records, 50 in total, newest first; matched on fields that can be filtered</td><td>Empty when the reader cannot read that type</td></tr>
+          <tr><td>Settings</td><td>Organisation name, financial-year start month, default currency, receipt series</td><td>Never secrets or connector settings</td></tr>
+          <tr><td>Balances</td><td>Up to 20 accounts and 20 funds, as of the save date</td><td>Administrator-published scripts only</td></tr>
+          <tr><td>Allowed proposals</td><td>Journal, new record, record change, notification, connector call</td><td>Journals need accounts and a per-run maximum</td></tr>
+          <tr><td>Per-run maximum</td><td>Positive amount, at most two decimals</td><td>Required for journals</td></tr>
+          <tr><td>Acting role</td><td>An existing role</td><td>Administrator-published scripts only</td></tr>
+          <tr><td>Named fixed recipient (settings)</td><td>Short name; email and/or phone, at least one; at most 20</td><td>Administrators only</td></tr>
+        </tbody>
+      </table>
+
+      <h2>7. Out of scope / non-goals</h2>
+      <ul>
+        <li>Scripts that look up data they did not declare, or call back into the platform while running.</li>
+        <li>Deleting records, reversing entries, issuing receipts or changing financial years from scripts.</li>
+        <li>A daily posting ceiling per script (only the per-run maximum exists).</li>
+        <li>Running the follow-on saves of proposed records while trying a script.</li>
+        <li>A second approval for finance scripts.</li>
+        <li>Calculated-field, scheduled-job, report-shaping and payment-matching moments.</li>
+      </ul>
+
+      <h2>8. Testable scenarios (for test generation)</h2>
+      <p class="src">Given / When / Then acceptance criteria. "BE" = backend-enforced, "FE" = frontend-enforced, "E2E" = end-to-end.</p>
+      <table>
+        <thead><tr><th>ID</th><th>Given</th><th>When</th><th>Then (expected)</th><th>Layer</th></tr></thead>
+        <tbody class="tc">
+          <tr><td>SCR-01</td><td>An after-save script proposes a balanced journal and a notification</td><td>A record is saved</td><td>The journal is posted naming the script and version, the notification is queued, the change history lists both</td><td>BE</td></tr>
+          <tr><td>SCR-02</td><td>A script proposes a journal that is out by 0.01</td><td>A record is saved</td><td>The save is refused naming the script and the proposal; nothing is written; the run is logged as rejected</td><td>BE</td></tr>
+          <tr><td>SCR-03</td><td>A script proposes a journal in a year that is not open</td><td>A record is saved</td><td>The whole save is undone</td><td>BE</td></tr>
+          <tr><td>SCR-04</td><td>A script proposes a change to a related record at the version it read</td><td>A record is saved</td><td>The related record is changed through all its checks; a stale version refuses the whole save</td><td>BE</td></tr>
+          <tr><td>SCR-05</td><td>An administrator keeps an auditor email; a script declares and names the auditor</td><td>A record is saved</td><td>The auditor receives the email; an undeclared or unknown name is refused</td><td>BE</td></tr>
+          <tr><td>SCR-06</td><td>A script acts as a role or reads balances</td><td>A non-administrator publishes or rolls back to it</td><td>Refused; an administrator may</td><td>BE</td></tr>
+          <tr><td>SCR-07</td><td>A script proposes actions</td><td>The author tries it</td><td>The proposals and any refusals are shown; nothing is written</td><td>BE</td></tr>
+          <tr><td>SCR-08</td><td>A script runs on a money record type</td><td>It is published, republished and rolled back</td><td>Each writes a finance-script entry in the change history and notifies the administrators</td><td>BE</td></tr>
+          <tr><td>SCR-09</td><td>Validate and workflow-guard scripts refuse in some cases</td><td>A save or step meets that case</td><td>Refused with the script's message</td><td>BE</td></tr>
+        </tbody>
+      </table>
+
+      <h2>9. Discrepancies (backend vs frontend)</h2>
+      <p class="src">Where the two implementations disagree. Backend enforcement is authoritative for correctness.</p>
+      <table>
+        <thead><tr><th>Topic</th><th>Backend behavior</th><th>Frontend behavior</th><th>Resolution</th></tr></thead>
+        <tbody>
+          <tr><td class="warn">Try it results</td><td>Returns proposed actions, loaded inputs and refusals besides field changes (<code>POST /api/builder/scripts/try</code>)</td><td>The builder's script screen shows field changes and logs only</td><td>Backend authoritative; screen to show proposals in a later web block</td></tr>
+          <tr><td class="warn">Named fixed recipients</td><td>Kept in organisation settings (<code>PUT /api/admin/settings</code>, <code>namedRecipients</code>)</td><td>The settings screen has no editor for them yet</td><td>Backend authoritative; settings screen to follow</td></tr>
+          <tr><td class="warn">New moments and inputs</td><td>Script definitions accept the five moments, inputs, effect policy and acting role</td><td>The schema-driven builder form offers them generically; no tailored editor</td><td>Acceptable until a dedicated editor exists</td></tr>
+        </tbody>
+      </table>
+
+      <h2>10. Revision history</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Change (why)</th><th>Side</th><th>Code drivers</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>2026-10-26</td>
+            <td>Created. Scripts propose effects applied in the save; four new moments; declared inputs; acting role; named fixed recipients; record changes; balances; finance-script publish and rollback audit with administrator notification (block X2, design decisions of section 19).</td>
+            <td>backend</td>
+            <td class="src"><code>src/scripts/effects.ts</code>, <code>src/scripts/sandbox.ts</code>, <code>src/runtime/records/save/script-run.ts</code>, <code>src/runtime/records/save/script.ts</code>, <code>src/engines/records/record-service.ts</code>, <code>src/metadata/definition-service.ts</code>, <code>src/metadata/cross-refs.ts</code>, <code>src/engines/admin/administration-service.ts</code>, <code>src/platform.ts</code>, <code>migrations/021_script_effects.sql</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>11. Learning log</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Learning</th><th>How it was inferred</th></tr></thead>
+        <tbody>
+          <tr><td>2026-10-26</td><td>The books allow one journal per source record and rule, so a script posts at most once per record per version; a later save of the same record by the same script version is refused rather than posting twice. Several journals in one run are told apart by a suffix.</td><td>backend: unique index on journal source in the core migration; script source names in <code>script-run.ts</code></td></tr>
+          <tr><td>2026-10-26</td><td>"Organisation administrator" for scripts is the permission to publish privileged scripts, which the administrator role holds through its full access; finance notifications go to holders of the administrator role.</td><td>backend: <code>src/metadata/script-inputs.ts</code>, administrator role in onboarding</td></tr>
+          <tr><td>2026-10-26</td><td>A finance script is read as: declares journals, or its record type has a posting or receipt rule, or has a money field ("a module with money record types").</td><td>backend: <code>isFinanceScript</code> in <code>src/metadata/script-inputs.ts</code></td></tr>
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

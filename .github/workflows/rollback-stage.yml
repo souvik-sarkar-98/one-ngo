@@ -1,0 +1,70 @@
+name: Rollback (stage)
+
+# Sends stage traffic back to two Cloud Run revisions that are still deployed.
+# Use the revision names from a stage deploy summary. This does not undo
+# database migrations.
+
+on:
+  workflow_dispatch:
+    inputs:
+      main_revision:
+        description: Main service revision to serve again
+        required: true
+        type: string
+      console_revision:
+        description: Console service revision to serve again
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-stage
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  rollback:
+    name: Roll back stage
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: stage
+    env:
+      PROJECT: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION || 'asia-south1' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Check both revisions exist
+        run: |
+          set -euo pipefail
+          gcloud run revisions describe "${{ inputs.main_revision }}" --service ngo --project "$PROJECT" --region "$REGION" >/dev/null
+          gcloud run revisions describe "${{ inputs.console_revision }}" --service ngo-console --project "$PROJECT" --region "$REGION" >/dev/null
+
+      - name: Move traffic
+        run: |
+          set -euo pipefail
+          gcloud run services update-traffic ngo --project "$PROJECT" --region "$REGION" --to-revisions "${{ inputs.main_revision }}=100" --quiet
+          gcloud run services update-traffic ngo-console --project "$PROJECT" --region "$REGION" --to-revisions "${{ inputs.console_revision }}=100" --quiet
+
+      - name: Curl /health on the public addresses
+        env:
+          PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
+          CONSOLE_PUBLIC_BASE_URL: ${{ vars.CONSOLE_PUBLIC_BASE_URL }}
+        run: |
+          set -euo pipefail
+          service_url() {
+            gcloud run services describe "$1" --project "$PROJECT" --region "$REGION" --format='value(status.url)'
+          }
+          node .github/scripts/smoke-test.mjs main "${PUBLIC_BASE_URL:-$(service_url ngo)}"
+          node .github/scripts/smoke-test.mjs console "${CONSOLE_PUBLIC_BASE_URL:-$(service_url ngo-console)}"

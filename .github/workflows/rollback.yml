@@ -1,0 +1,65 @@
+name: Rollback (production)
+
+# Sends production traffic back to a version that is still deployed. Use the
+# version names from the "Summary" of a deploy run, for example g1a2b3c4d5-r12.
+# This does not undo database migrations: migrations must already work with
+# the version you return to.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version name to serve again (the same name exists on both services)
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  rollback:
+    name: Roll back production
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: prod
+    env:
+      PROJECT: ${{ vars.GCP_PROJECT_ID }}
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+
+      # Both services must have the version before either one is touched.
+      - name: Check the version exists on both services
+        run: |
+          case "$VERSION" in
+            g[0-9a-f]*-r[0-9]*) ;;
+            *) echo "::error::Version names look like g1a2b3c4d5-r12."; exit 1 ;;
+          esac
+          for service in default console; do
+            gcloud app versions describe "$VERSION" --service="$service" --project "$PROJECT" --format='value(id)' >/dev/null \
+              || { echo "::error::Version $VERSION is not deployed on service $service."; exit 1; }
+          done
+
+      - name: Move traffic
+        run: |
+          gcloud app services set-traffic default --splits="$VERSION=1" --project "$PROJECT" --quiet
+          gcloud app services set-traffic console --splits="$VERSION=1" --project "$PROJECT" --quiet
+
+      - name: Smoke-test the public addresses
+        run: |
+          node .github/scripts/smoke-test.mjs main "${{ vars.PUBLIC_BASE_URL }}"
+          node .github/scripts/smoke-test.mjs console "${{ vars.CONSOLE_PUBLIC_BASE_URL }}"

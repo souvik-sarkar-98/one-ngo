@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NGO Platform — Report builder screens</title>
+<style>
+  :root {
+    --fg: #1d2733; --muted: #5b6878; --line: #d8dee6; --bg: #f5f7fa; --brand: #1f5f8b; --ok: #1d7a46; --warn: #9a6200; --bad: #b3261e;
+    --b50: color-mix(in srgb, var(--brand) 6%, #fff); --b100: color-mix(in srgb, var(--brand) 12%, #fff); --b200: color-mix(in srgb, var(--brand) 25%, #fff);
+    --font: 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Devanagari', Helvetica, Arial, sans-serif;
+    --mono: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font); color: #18212b; background: linear-gradient(180deg, #f6f8fa, #eef1f5); }
+  header.page { max-width: 1480px; margin: 0 auto; padding: 34px 40px 14px; }
+  header.page h1 { margin: 0 0 8px; font-size: 28px; }
+  header.page p { margin: 0 0 8px; max-width: 1040px; line-height: 1.55; color: #36414d; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-top: 14px; }
+  .rules div { background: #fff; border: 1px solid #dfe5eb; border-radius: 10px; padding: 12px 14px; font-size: 13.5px; line-height: 1.5; }
+  .rules b { display: block; color: var(--brand); margin-bottom: 3px; }
+  nav.toc { position: sticky; top: 0; z-index: 20; background: rgba(238,241,245,.94); backdrop-filter: blur(6px); border-bottom: 1px solid #dbe1e7; }
+  nav.toc div { max-width: 1480px; margin: 0 auto; padding: 9px 40px; display: flex; gap: 4px; overflow-x: auto; }
+  nav.toc a { font: 600 12px var(--mono); color: #3a4a5a; text-decoration: none; padding: 6px 10px; border-radius: 6px; white-space: nowrap; }
+  nav.toc a:hover { background: #fff; }
+  main.page { max-width: 1480px; margin: 0 auto; padding: 0 40px 80px; }
+  section.scr { margin-top: 38px; }
+  .flabel { font: 700 12px var(--mono); color: var(--brand); text-transform: uppercase; letter-spacing: .06em; display: flex; gap: 8px; align-items: center; }
+  .flabel::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+  section.scr > h2 { margin: 4px 0 4px; font-size: 22px; }
+  section.scr > p { margin: 0 0 14px; color: #3a4552; max-width: 1040px; line-height: 1.5; }
+  .stage { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 20px; align-items: start; }
+  @media (max-width: 1250px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+  .notes { background: #fff; border: 1px solid #e1e6ec; border-radius: 10px; padding: 14px 16px; font-size: 13.5px; line-height: 1.5; }
+  .notes h3 { margin: 0 0 6px; font-size: 14px; }
+  .notes ul { margin: 0 0 8px; padding-left: 18px; } .notes li + li { margin-top: 5px; }
+  .notes code, .browser code { font: 11.5px var(--mono); background: #f1f4f7; padding: 1px 5px; border-radius: 4px; }
+  .tag { display: inline-block; font: 700 10px var(--mono); padding: 2px 7px; border-radius: 999px; letter-spacing: .03em; }
+  .tag.new { background: #e5f5ee; color: #0f6b4c; } .tag.has { background: #e8edf3; color: var(--muted); }
+  .tag.old { background: #fdf1dc; color: var(--warn); }
+  .replaced { background: #fff8ee; border: 1px solid #f0d9b5; border-radius: 10px; padding: 10px 14px; margin: 0 0 12px; font-size: 13.5px; line-height: 1.5; }
+  .replaced a { color: var(--brand); font-weight: 700; } .tag.app { background: #fdf1dc; color: var(--warn); }
+
+  .browser { border-radius: 10px; background: #fff; border: 1px solid #d5dbe2; box-shadow: 0 14px 30px rgba(15,23,42,.12); overflow: hidden; min-width: 0; }
+  .chrome { height: 30px; background: #e9edf1; border-bottom: 1px solid #d5dbe2; display: flex; align-items: center; padding: 0 10px; }
+  .url { flex: 1; height: 20px; border-radius: 6px; background: #fff; font: 11.5px var(--mono); color: #536171; display: flex; align-items: center; padding: 0 9px; overflow: hidden; white-space: nowrap; }
+  .scr-in { height: var(--h, 640px); background: var(--bg); position: relative; overflow: hidden; display: flex; flex-direction: column; color: var(--fg); font-size: 14px; }
+  .appbar { height: 50px; flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 12px; background: var(--brand); color: #fff; }
+  .appbar .brand { font-weight: 700; font-size: 15px; }
+  .appbar .org { font-weight: 600; font-size: 13px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.4); }
+  .ib { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; position: relative; }
+  .ib.av { background: rgba(255,255,255,.2); font: 700 12px var(--font); }
+  .ib .dot { position: absolute; top: 3px; right: 2px; min-width: 15px; height: 15px; border-radius: 8px; background: #fdf1dc; color: var(--warn); font: 700 9.5px/15px var(--font); text-align: center; }
+  .fb-body { flex: 1; display: flex; min-height: 0; }
+  .rail { width: 84px; flex: 0 0 auto; background: #fff; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; padding-top: 10px; }
+  .nv { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10.5px; color: var(--muted); padding: 6px 0; }
+  .nv .g { width: 44px; height: 26px; border-radius: 13px; display: grid; place-items: center; }
+  .nv.on { color: var(--brand); font-weight: 600; } .nv.on .g { background: var(--b100); }
+  .nv svg { width: 20px; height: 20px; fill: currentColor; }
+  .main { flex: 1; min-width: 0; padding: 14px 18px 0; overflow: hidden; position: relative; }
+
+  .bhead { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .crumb { font-size: 12.5px; color: var(--muted); }
+  .crumb a { color: var(--brand); text-decoration: none; }
+  .crumb ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; }
+  .crumb li + li::before { content: '›'; margin: 0 6px; color: #94a3b8; }
+  .crumb li[aria-current] { color: var(--fg); font-weight: 600; }
+  .bhead h1 { margin: 0; font-size: 1.15rem; line-height: 1.25; }
+  .back { width: 32px; height: 32px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 16px; flex: 0 0 auto; }
+  .sp { flex: 1; }
+  .bdg { font-size: .58rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; border-radius: 999px; padding: 4px 8px; line-height: 1; white-space: nowrap; display: inline-block; }
+  .bdg.s { background: #e3f4ea; color: var(--ok); } .bdg.w { background: #fdf1dc; color: var(--warn); } .bdg.p { background: var(--b100); color: var(--brand); } .bdg.n { background: #eef1f5; color: var(--muted); } .bdg.e { background: #fdecea; color: var(--bad); }
+  .btn { font: inherit; font-size: 12.5px; padding: .38rem .75rem; border-radius: 6px; border: 1px solid var(--line); background: #fff; color: var(--fg); white-space: nowrap; display: inline-block; }
+  .btn.p { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn.d { color: var(--bad); border-color: var(--bad); }
+  .btn.sm { padding: .22rem .55rem; font-size: 11.5px; }
+  .tabs2 { display: flex; gap: 8px; padding-bottom: 10px; flex-wrap: wrap; }
+  .chip { border: 1px solid rgba(148,163,184,.35); background: #fff; border-radius: 999px; padding: 7px 12px; font-size: .68rem; font-weight: 700; line-height: 1; white-space: nowrap; }
+  .chip.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .chip.sub { padding: 5px 10px; font-size: .64rem; }
+  .ftb { display: flex; gap: 8px; padding-bottom: 10px; }
+  .ftb .search { flex: 1; display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid rgba(148,163,184,.35); border-radius: 12px; padding: 0 10px; min-height: 36px; font-size: .76rem; color: #94a3b8; }
+  .ftb .fb { display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(148,163,184,.35); background: #fff; border-radius: 12px; padding: 0 11px; min-height: 36px; font-size: .7rem; font-weight: 700; }
+  .panel { background: #fff; border-radius: 14px; border: 1px solid rgba(148,163,184,.22); box-shadow: 0 1px 2px #0f172a0d, 0 4px 14px #0f172a12; overflow: hidden; }
+  table.rows { width: 100%; border-collapse: collapse; font-size: .74rem; }
+  table.rows th { text-align: left; font-size: .6rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: #64748b; padding: 9px 11px; border-bottom: 1px solid rgba(148,163,184,.25); background: #f8fafc; white-space: nowrap; }
+  table.rows td { padding: 8px 11px; border-bottom: 1px solid rgba(148,163,184,.18); vertical-align: middle; }
+  table.rows tr.sel td { background: var(--b100); }
+  .t { font-weight: 700; } .cs { font-size: .7rem; color: #64748b; } .mono { font: 11px var(--mono); color: #4a5866; }
+  .grip { color: #a3afbd; cursor: grab; }
+  .cols { display: grid; gap: 14px; min-height: 0; }
+  .sec-h { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border: 1px solid var(--b200); border-radius: 10px; background: var(--b100); font-size: .66rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--brand); margin-bottom: 8px; }
+  .box { background: #fff; border: 1px solid rgba(148,163,184,.25); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+  .mf { margin-bottom: 10px; }
+  .mf .l { font-size: .74rem; font-weight: 500; color: #374151; margin-bottom: 4px; }
+  .mf .l i { color: #f97316; font-style: normal; }
+  .mf .o { border: 1px solid #79747e; border-radius: 4px; min-height: 34px; padding: 6px 10px; display: flex; align-items: center; justify-content: space-between; font-size: .8rem; background: #fff; gap: 6px; }
+  .mf .o.ph { color: #8a8590; } .mf .o.code { font: 11.5px var(--mono); color: #1d2733; } .mf .o.err { border-color: #ba1a1a; } .mf .o.ok { border-color: var(--ok); }
+  .mf .h { font-size: .68rem; color: #64748b; margin-top: 3px; } .mf .e { font-size: .68rem; color: #ba1a1a; margin-top: 3px; } .mf .g { font-size: .68rem; color: var(--ok); margin-top: 3px; }
+  .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; } .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 12px; }
+  .chk { display: flex; align-items: center; gap: 7px; font-size: .76rem; margin: 4px 0; } .chk span.b { width: 15px; height: 15px; border: 2px solid #79747e; border-radius: 3px; display: inline-grid; place-items: center; font-size: 10px; } .chk span.b.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pills span { border: 1px solid var(--b200); background: var(--b50); color: var(--brand); border-radius: 999px; padding: 4px 9px; font-size: .64rem; font-weight: 600; }
+  .pills span.add { border-style: dashed; background: #fff; }
+  .issue { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 8px; font-size: .72rem; margin-bottom: 6px; }
+  .issue.e { background: #fdf0ef; color: var(--bad); } .issue.w { background: #fdf6e8; color: var(--warn); } .issue.ok { background: #eef9f2; color: var(--ok); }
+  .scrim { position: absolute; inset: 0; background: #0f172a59; z-index: 4; }
+  .sheet { position: absolute; z-index: 5; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(680px, 90%); max-height: 92%; overflow: hidden; background: #fff; border-radius: 18px; box-shadow: 0 18px 48px #0f172a33; padding: 14px 22px 16px; display: flex; flex-direction: column; }
+  .sheet .ttl { text-align: center; font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 12px; position: relative; padding: 0 34px; }
+  .sheet .ttl .x { position: absolute; right: 0; top: -5px; width: 28px; height: 28px; border-radius: 50%; background: #f1f5f9; display: grid; place-items: center; font-size: 12px; color: #475569; }
+  .acts { border-top: 1px solid rgba(148,163,184,.2); padding-top: 10px; display: flex; gap: 8px; margin-top: 8px; } .acts .btn { flex: 1; text-align: center; }
+  .foot { position: absolute; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--line); padding: 9px 18px; display: flex; gap: 8px; align-items: center; z-index: 3; }
+  .menu { position: absolute; z-index: 6; background: #fff; border-radius: 6px; box-shadow: 0 6px 22px rgba(15,23,42,.22); padding: 6px 0; min-width: 190px; font-size: 12.5px; }
+  .menu div { padding: 8px 16px; } .menu div.on { background: #eef3f8; } .menu .sep { border-top: 1px solid #eee; margin: 4px 0; padding: 0; }
+  .codebox { background: #0f1720; color: #d7e1ea; border-radius: 10px; padding: 10px 12px; font: 11px/1.55 var(--mono); white-space: pre; overflow: hidden; }
+  .codebox .k { color: #8fc1ff; } .codebox .s { color: #b9e39b; } .codebox .c { color: #7f8b98; } .codebox .b { color: #f3be26; }
+
+  /* report additions */
+  .flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .flow .n { background: #fff; border: 1.5px solid var(--b200); border-radius: 9px; padding: 6px 10px; font-size: .68rem; font-weight: 700; }
+  .flow .n.on { border-color: var(--brand); background: var(--b100); color: var(--brand); }
+  .flow .n small { display: block; font-weight: 500; color: #64748b; font-size: .58rem; }
+  .flow .ar { color: #94a3b8; }
+  .a4wrap { background: #e4e9ef; border-radius: 12px; padding: 12px; height: 100%; overflow: hidden; }
+  .a4 { background: #fff; width: 100%; max-width: 330px; aspect-ratio: 1 / 1.414; margin: 0 auto; box-shadow: 0 4px 14px #0f172a26; padding: 16px 18px; font-size: 7.5px; line-height: 1.45; color: #1d2733; position: relative; overflow: hidden; }
+  .a4 .lh { display: flex; gap: 8px; align-items: center; border-bottom: 1.5px solid #1d2733; padding-bottom: 6px; margin-bottom: 8px; }
+  .a4 .logo { width: 22px; height: 22px; border-radius: 5px; background: var(--b200); }
+  .a4 h4 { margin: 0; font-size: 10px; } .a4 h5 { margin: 6px 0 4px; font-size: 8.5px; }
+  .a4 table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  .a4 th, .a4 td { border: .5px solid #cbd5e1; padding: 2px 4px; text-align: left; }
+  .a4 th { background: #f1f5f9; } .a4 td.r, .a4 th.r { text-align: right; }
+  .a4 .ft { position: absolute; left: 18px; right: 18px; bottom: 10px; border-top: .5px solid #cbd5e1; padding-top: 4px; display: flex; justify-content: space-between; color: #64748b; }
+  .a4 .lbl { display: inline-block; border: .5px solid var(--warn); color: var(--warn); border-radius: 3px; padding: 0 4px; font-weight: 700; }
+  .xl { background: #fff; border: 1px solid #cfd6de; border-radius: 8px; overflow: hidden; font-size: .66rem; }
+  .xl table { border-collapse: collapse; width: 100%; }
+  .xl th { background: #eef1f5; color: #64748b; font-weight: 600; padding: 3px 6px; border: 1px solid #dde3ea; text-align: center; }
+  .xl td { padding: 3px 6px; border: 1px solid #e4e9ef; white-space: nowrap; }
+  .xl tr.hd td { background: #1f5f8b; color: #fff; font-weight: 700; }
+  .xl tr.tot td { font-weight: 700; background: #f8fafc; }
+  .xl .tabsx { display: flex; gap: 2px; background: #eef1f5; padding: 3px 6px 0; border-top: 1px solid #dde3ea; }
+  .xl .tabsx span { background: #e1e6ec; padding: 3px 10px; border-radius: 4px 4px 0 0; font-size: .6rem; } .xl .tabsx span.on { background: #fff; font-weight: 700; color: var(--brand); }
+  .r { text-align: right; }
+  .kv { display: grid; grid-template-columns: 110px 1fr; gap: 4px 10px; font-size: .72rem; } .kv b { color: #374151; font-weight: 600; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Report builder — custom PDF and Excel reports</h1>
+  <p>An administrator builds a report the way they build any other definition: in the Builder, on the shared editor frame (Visual, JSON, Changes, History tabs, with Discard, Check and Publish). A report gathers data from one or more record types, adds calculated values and, if needed, custom code, then produces a PDF from an HTML document template and an Excel workbook from the same data. Tablet and desktop only, like the other editors.</p>
+  <div class="rules">
+    <div><b>One data model, two outputs</b>Parameters, datasets, calculations and the optional shape step produce one data model. The PDF template and the Excel sheets both read it, so the numbers always match.</div>
+    <div><b>The person's own access</b>Datasets run as the person running the report. Records they cannot see are left out, and sensitive fields stay masked in both the PDF and the Excel file.</div>
+    <div><b>HTML like email templates</b>Document templates use the same <code>{{ placeholders }}</code> as email, plus <code>{{#each}}</code>, <code>{{#if}}</code> and <code>{{&gt; partial}}</code>. Scripts, event handlers and remote addresses are removed.</div>
+    <div><b>Custom code is guarded</b>The shape script runs in the existing sandbox with time and size limits, proposes no changes, and only an organisation administrator can publish a report that uses one or reads ledger balances.</div>
+  </div>
+  <div class="rules" style="margin-top:12px"><div style="grid-column:1/-1"><b>Editor layout</b>The report editor adds one row of section chips under the frame tabs: <b>General</b>, <b>Parameters</b>, <b>Datasets</b>, <b>Calculations</b>, <b>Outputs</b> and <b>Preview</b>. A strip above them shows the flow, parameters → datasets → calculations → shape → PDF and Excel, with the current section highlighted and a count or warning on each step.</div></div>
+  <div class="rules" style="margin-top:12px"><div style="grid-column:1/-1"><b>Screens 1, 5 and 6 are replaced</b>Message templates and the report layout are drawn in <a href="builder-messages-and-reports.html">builder-messages-and-reports.html</a>. A report layout is part of the report, not a message template. A report is PDF or Excel, not both. The drawings below those three screens are kept so the earlier idea can still be read.</div></div>
+  <p style="margin-top:12px;font-size:13px"><span class="tag has">EXISTS</span> already in the product, changed here &nbsp; <span class="tag new">NEW</span> not built yet &nbsp; <span class="tag app">APP</span> outside the Builder, shown for context &nbsp; <span class="tag old">REPLACED</span> earlier drawing, see the link</p>
+</header>
+<nav class="toc"><div id="toc"></div></nav>
+<main class="page" id="screens"></main>
+
+<script>
+const ICON = {
+  home: '<svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>',
+  records: '<svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>',
+  reports: '<svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>',
+  inbox: '<svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 12h-4a3 3 0 0 1-6 0H5V5h14v10z"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><path d="M6 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm12 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>',
+};
+const rail = (on = 'more') => `<div class="rail">${[['home', 'Home'], ['records', 'Records'], ['reports', 'Reports'], ['inbox', 'Inbox'], ['more', 'More']].map(([k, l]) => `<div class="nv${k === on ? ' on' : ''}"><span class="g">${ICON[k]}</span>${l}</div>`).join('')}</div>`;
+const frame = (url, inner, h = 640, on) => `<div class="browser"><div class="chrome"><div class="url">${url}</div></div><div class="scr-in" style="--h:${h}px"><div class="appbar"><span class="brand">NGOOne</span><span class="org">Demo Foundation</span><span class="sp"></span><span class="ib">🔔<span class="dot">4</span></span><span class="ib av">AS</span></div><div class="fb-body">${rail(on)}<div class="main">${inner}</div></div></div></div>`;
+const back = '<span class="back" aria-hidden="true">←</span>';
+const mf = (l, v, o = {}) => `<div class="mf"><div class="l">${l}${o.req ? ' <i>*</i>' : ''}</div><div class="o${v ? '' : ' ph'}${o.code ? ' code' : ''}${o.err ? ' err' : ''}${o.ok ? ' ok' : ''}">${v || o.ph || '&nbsp;'}${o.icon ? `<span>${o.icon}</span>` : ''}</div>${o.h ? `<div class="h">${o.h}</div>` : ''}${o.err ? `<div class="e">${o.err}</div>` : ''}${o.ok ? `<div class="g">${o.ok}</div>` : ''}</div>`;
+const chk = (l, on) => `<div class="chk"><span class="b${on ? ' on' : ''}">${on ? '✓' : ''}</span>${l}</div>`;
+const pills = (xs, add) => `<div class="pills">${xs.map((x) => `<span>${x} ×</span>`).join('')}${add ? `<span class="add">+ ${add}</span>` : ''}</div>`;
+const sec = (t, right = '⌃') => `<div class="sec-h"><span>${t}</span><span>${right}</span></div>`;
+const sheet = (title, content, actions) => `<div class="scrim"></div><div class="sheet"><div class="ttl">${title}<span class="x">✕</span></div><div style="overflow:hidden">${content}</div><div class="acts">${actions}</div></div>`;
+const bcrumb = (items) => {
+  const all = ['Builder', ...items];
+  return `<nav class="crumb" aria-label="Breadcrumb"><ol>${all.map((l, i) => (i === all.length - 1 ? `<li aria-current="page">${l}</li>` : `<li><a>${l}</a></li>`)).join('')}</ol></nav>`;
+};
+const status = (v, d, owner) => `${v ? `<span class="bdg s">Published v${v}</span>` : ''}${d ? `<span class="bdg w">Draft v${d}</span>` : ''}${owner ? `<span class="bdg p">${owner}</span>` : ''}`;
+
+const SECTIONS = ['General', 'Parameters', 'Datasets', 'Calculations', 'Outputs', 'Preview'];
+const FLOW = [
+  ['Parameters', '2 inputs'], ['Datasets', '3 sources'], ['Calculations', '4 values'], ['Shape', 'script · admin'], ['PDF', 'A4 template'], ['Excel', '2 sheets'],
+];
+/** The report editor: frame tabs, the flow strip, and the section chips. */
+function reportEditor({ crumbs, section, body, issues = '', footNote = 'Draft saved 10:42', tab = 'Visual' }) {
+  const flowOn = { Parameters: 0, Datasets: 1, Calculations: 2, Outputs: 4, Preview: -1, General: -1 }[section];
+  return `<div class="bhead"><div><div class="crumb">${bcrumb(['Reports', 'Donation summary by fund', ...crumbs])}</div><div style="display:flex;gap:8px;align-items:center;margin-top:3px">${back}<h1>Donation summary by fund</h1>${status(2, 3, 'Organisation')}</div></div><span class="sp"></span><span class="btn">▶ Run preview</span><span class="btn">⋮</span></div>
+  <div class="tabs2">${['Visual', 'JSON', 'Changes', 'History'].map((t) => `<span class="chip${t === tab ? ' on' : ''}">${t}</span>`).join('')}</div>
+  <div class="flow">${FLOW.map(([n, s], i) => `<span class="n${i === flowOn || (section === 'Outputs' && i === 5) ? ' on' : ''}">${n}<small>${s}</small></span>${i < FLOW.length - 1 ? '<span class="ar">→</span>' : ''}`).join('')}</div>
+  <div class="tabs2">${SECTIONS.map((s) => `<span class="chip sub${s === section ? ' on' : ''}">${s}</span>`).join('')}</div>
+  <div style="height:calc(100% - 210px);overflow:hidden">${body}</div>
+  <div class="foot"><span class="cs">${footNote}</span>${issues}<span class="sp"></span><span class="btn">Discard draft</span><span class="btn">Check</span><span class="btn p">Publish…</span></div>`;
+}
+
+const a4 = () => `<div class="a4">
+  <div class="lh"><span class="logo"></span><div><h4>Demo Foundation</h4><div>12 MG Road, Pune · Reg. 80G/2021/123</div></div><span class="sp"></span><span class="lbl">MANAGEMENT REPORT</span></div>
+  <h4>Donation summary by fund</h4><div>1 Apr 2026 to 30 Sep 2026 · generated 5 Nov 2026 02:48</div>
+  <h5>By fund</h5>
+  <table><tr><th>Fund</th><th class="r">Donations</th><th class="r">Amount (₹)</th><th class="r">Share</th></tr>
+    <tr><td>General</td><td class="r">212</td><td class="r">8,45,500.00</td><td class="r">61%</td></tr>
+    <tr><td>Education</td><td class="r">96</td><td class="r">3,92,000.00</td><td class="r">28%</td></tr>
+    <tr><td>Health camp</td><td class="r">41</td><td class="r">1,52,250.00</td><td class="r">11%</td></tr>
+    <tr><th>Total</th><th class="r">349</th><th class="r">13,89,750.00</th><th class="r">100%</th></tr></table>
+  <div>Thirteen lakh eighty-nine thousand seven hundred fifty rupees only</div>
+  <h5>Largest donations</h5>
+  <table><tr><th>Number</th><th>Date</th><th>Donor</th><th>PAN</th><th class="r">Amount (₹)</th></tr>
+    <tr><td>DON/2026-27/00211</td><td>12 Aug</td><td>Ravi Kumar</td><td>••••••</td><td class="r">1,00,000.00</td></tr>
+    <tr><td>DON/2026-27/00118</td><td>03 Jun</td><td>Sunita Rao</td><td>••••••</td><td class="r">75,000.00</td></tr>
+    <tr><td>DON/2026-27/00302</td><td>21 Sep</td><td>Harbour Trust</td><td>••••••</td><td class="r">60,000.00</td></tr></table>
+  <div class="ft"><span>Prepared by Asha Sharma</span><span>Page 1 of 3</span></div>
+</div>`;
+
+const xl = (sheet = 'Donations') => `<div class="xl"><table>
+  <tr><th></th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr>
+  <tr class="hd"><td>1</td><td>Number</td><td>Date</td><td>Donor</td><td>Fund</td><td class="r">Amount</td></tr>
+  <tr><td>2</td><td>DON/2026-27/00001</td><td>01-04-2026</td><td>Meera Iyer</td><td>General</td><td class="r">₹2,500.00</td></tr>
+  <tr><td>3</td><td>DON/2026-27/00002</td><td>01-04-2026</td><td>Arjun Mehta</td><td>Education</td><td class="r">₹1,000.00</td></tr>
+  <tr><td>4</td><td>DON/2026-27/00003</td><td>02-04-2026</td><td>Harbour Trust</td><td>General</td><td class="r">₹25,000.00</td></tr>
+  <tr><td>⋮</td><td>⋮</td><td></td><td></td><td></td><td></td></tr>
+  <tr class="tot"><td>351</td><td>Total</td><td></td><td></td><td></td><td class="r">₹13,89,750.00</td></tr>
+  </table><div class="tabsx">${['About', 'Donations', 'By fund'].map((s) => `<span class="${s === sheet ? 'on' : ''}">${s}</span>`).join('')}</div></div>`;
+
+/* ---------------------------------------------------------------- screens */
+const SCREENS = [
+  {
+    id: 'catalogue', tag: 'old', replaced: 'builder-messages-and-reports.html#home', title: 'Builder home — Reports in the catalogue', lead: 'Replaced. Messages holds message templates only, and the report layout is not a template kind. The drawing below is the earlier idea: a Document badge and a Document template in the New menu.',
+    url: '/builder?section=reports', h: 600,
+    body: () => `<div class="bhead"><div><div class="crumb">${bcrumb([])}</div><div style="display:flex;align-items:center;gap:2px">${back}<h1>Builder</h1></div></div><span class="sp"></span><span class="btn">Modules</span><span class="btn">Roles &amp; access</span><span class="btn p">+ New</span></div>
+      <div class="tabs2">${['All', 'Data', 'Process', 'Messages', 'Money', 'Reports 3', 'Look', 'Advanced'].map((c) => `<span class="chip${c.startsWith('Reports') ? ' on' : ''}">${c}</span>`).join('')}</div>
+      <div class="ftb"><span class="search">⌕ Search by name or key…</span><span class="fb">↕ Sort</span><span class="fb">≡ Filters</span></div>
+      <div class="panel"><table class="rows"><thead><tr><th>Name</th><th>Kind</th><th>Key</th><th>Outputs</th><th>From</th><th>State</th><th>Changed</th><th></th></tr></thead><tbody>
+        ${[
+          ['Donation summary by fund', 'Report', 'donationSummary', '<span class="bdg p">PDF</span> <span class="bdg p">Excel</span>', 'Donations module · patched', '<span class="bdg s">v2</span> <span class="bdg w">draft v3</span>', 'Asha · 10:42'],
+          ['Donor statement', 'Report', 'donorStatement', '<span class="bdg p">PDF</span>', 'Organisation', '<span class="bdg s">v1</span>', 'Ravi · yesterday'],
+          ['Fund-wise collection', 'Report', 'fundCollection', '<span class="bdg p">Excel</span>', 'Organisation', '<span class="bdg w">draft v1</span>', 'Asha · 09:15'],
+          ['Donation summary page', 'Template', 'donationSummaryPdf', '<span class="bdg n">Document</span>', 'Donations module', '<span class="bdg s">v1</span>', 'module · 2 days'],
+        ].map((r, i) => `<tr${i === 0 ? ' class="sel"' : ''}><td class="t">${r[0]}</td><td>${r[1]}</td><td class="mono">${r[2]}</td><td>${r[3]}</td><td class="cs">${r[4]}</td><td>${r[5]}</td><td class="cs">${r[6]}</td><td>⋮</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="menu" style="right:18px;top:46px"><div>Record type</div><div>Workflow</div><div>List view</div><div>Template</div><div>Document template</div><div>Automation</div><div>Script</div><div class="on">Report</div><div class="sep"></div><div>Start from a starter…</div></div>`,
+    notes: `<h3>What changes</h3><ul><li>A <b>Reports</b> section and chip in the catalogue, and <b>Report</b> in the + New menu.</li><li><b>Document template</b> in the + New menu creates a template with <code>kind: document</code>; it is listed with email templates and shows a Document badge.</li><li>The Outputs column shows which files a report produces.</li></ul><h3>Starters</h3><ul><li>Blank report, Summary by a field, Record statement (one record and its related records), Register (a full list for Excel).</li></ul><h3>Address</h3><code>/builder?section=reports</code>`,
+  },
+  {
+    id: 'general', tag: 'new', title: 'Report editor — General and parameters', lead: 'Who may run the report, where it appears, and the values people enter before it runs. Parameters become the form on the Reports screen and are available as params.* everywhere in the report.',
+    url: '/builder/report/donationSummary', h: 680,
+    body: () => reportEditor({ crumbs: [], section: 'Parameters',
+      body: `<div class="cols" style="grid-template-columns:290px 1fr">
+        <div>${sec('General')}<div class="box">${mf('Name', 'Donation summary by fund', { req: true })}${mf('Key', 'donationSummary', { code: true, h: 'Fixed after first publish' })}${mf('Description', 'Paid donations in a period, by fund')}${mf('Shown to', 'Finance, Admin', { icon: '▾', h: 'Roles that see it on the Reports screen' })}${mf('Permission', 'report:donationSummary:run', { code: true, h: 'Generated; grant it through roles' })}</div></div>
+        <div>${sec('Parameters · 3', '+ Add parameter')}<div class="panel"><table class="rows"><thead><tr><th></th><th>Label</th><th>Key</th><th>Type</th><th>Required</th><th>Default</th><th></th></tr></thead><tbody>
+          ${[
+            ['From date', 'fromDate', 'Date', '✓', '<span class="mono">startOfFinancialYear()</span>'],
+            ['To date', 'toDate', 'Date', '✓', '<span class="mono">today()</span>'],
+            ['Fund', 'fund', 'Choice · from Donation › Fund', '', '<span class="cs">All funds</span>'],
+          ].map((r, i) => `<tr${i === 2 ? ' class="sel"' : ''}><td class="grip">⠿</td><td class="t">${r[0]}</td><td class="mono">${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td><td>⋮</td></tr>`).join('')}
+        </tbody></table></div>
+        <div class="box" style="margin-top:12px">${sec('Parameter: Fund')}<div class="g2"><div>${mf('Label', 'Fund', { req: true })}${mf('Type', 'Choice', { icon: '▾' })}</div><div>${mf('Choices from', 'Donation › Fund', { icon: '▾', h: 'Or type a fixed list' })}${chk('Allow "All"', true)}</div></div></div>
+        <div class="issue w">⚠ To date must not be before From date. Add a rule under Parameters › Checks, or the report runs on an empty period.</div></div></div>` }),
+    notes: `<h3>Configurable</h3><ul><li>Name, key, description, the roles it is shown to, and the generated permission <code>report:&lt;key&gt;:run</code>.</li><li>Parameters: label, key, type (text, number, money, date, choice, yes/no, reference, record), required, default as an expression.</li><li>A <b>record</b> parameter makes the report open from a record's action button (screen 9).</li></ul><h3>Checks</h3><ul><li>Unique keys; defaults must be valid expressions of the parameter's type; choices must come from a real field.</li><li>Optional parameter checks, for example <code>params.toDate &gt;= params.fromDate</code>, with the message people see.</li></ul>`,
+  },
+  {
+    id: 'datasets', tag: 'new', title: 'Report editor — datasets', lead: 'Where the data comes from. Each dataset is a named source: a list of records, totals grouped by a field or period, related records joined through a reference, or ledger balances.',
+    url: '/builder/report/donationSummary?section=datasets&dataset=donations', h: 720,
+    body: () => reportEditor({ crumbs: ['Datasets', 'donations'], section: 'Datasets',
+      body: `<div class="cols" style="grid-template-columns:330px 1fr">
+        <div>${sec('Datasets · 3', '+ Add dataset')}<div class="panel"><table class="rows"><thead><tr><th>Name</th><th>Kind</th><th>Source</th><th>Rows</th></tr></thead><tbody>
+          <tr class="sel"><td class="t">donations</td><td><span class="bdg p">List</span></td><td>Donation</td><td class="cs">≤ 5,000</td></tr>
+          <tr><td class="t">byFund</td><td><span class="bdg n">Totals</span></td><td>Donation · by Fund</td><td class="cs">groups</td></tr>
+          <tr><td class="t">balances</td><td><span class="bdg e">Ledger</span></td><td>BANK, CASH</td><td class="cs">2</td></tr>
+        </tbody></table></div>
+        <div class="menu" style="position:relative;margin-top:10px;box-shadow:none;border:1px dashed #cbd5e1"><div class="cs" style="padding:6px 16px">+ Add dataset</div><div>List of records</div><div>Totals by field or period</div><div>Ledger balances (admin)</div></div></div>
+        <div>${sec('Dataset: donations · list of records')}<div class="box">
+          <div class="g3">${mf('Name', 'donations', { code: true, req: true })}${mf('Record type', 'Donation', { icon: '▾', req: true })}${mf('Status', 'Paid', { icon: '▾' })}</div>
+          <div class="l" style="font-size:.74rem;margin-bottom:4px">Filters</div>
+          <div class="panel" style="margin-bottom:10px"><table class="rows"><thead><tr><th>Field</th><th>Condition</th><th>Value</th></tr></thead><tbody>
+            <tr><td>Paid on</td><td>between</td><td class="mono">params.fromDate … params.toDate</td></tr>
+            <tr><td>Fund</td><td>is</td><td class="mono">params.fund <span class="cs">(skipped when All)</span></td></tr>
+          </tbody></table></div>
+          <div class="l" style="font-size:.74rem;margin-bottom:4px">Fields</div>${pills(['Number', 'Paid on', 'Donor name', 'Donor PAN', 'Fund', 'Amount'], 'Add field')}
+          <div style="height:10px"></div>
+          <div class="l" style="font-size:.74rem;margin-bottom:4px">Related records</div>${pills(['Donor → City', 'Donor → Category'], 'Follow a reference')}
+          <div style="height:10px"></div><div class="g3">${mf('Sort by', 'Amount, largest first', { icon: '▾' })}${mf('Most rows', '5000', { h: 'More runs as a background job' })}${mf('Row count', '349 for the sample period', { ok: 'Checked just now' })}</div>
+        </div><div class="issue w">⚠ Donor PAN is sensitive. People without record:donation:sensitive see it masked in the PDF and in Excel.</div></div></div>` }),
+    notes: `<h3>Dataset kinds</h3><ul><li><b>List of records</b>: one record type, status, filters with values written as expressions over <code>params</code>, fields, related records through reference fields, sort and a row limit.</li><li><b>Totals</b>: count or sum, grouped by a choice, yes/no or reference field, or by day, week, month or financial year. Uses the same engine as Home widgets.</li><li><b>Ledger balances</b>: account and fund balances as of a date. Only an organisation administrator can publish a report that has one.</li></ul><h3>Checks</h3><ul><li>Unknown fields, filters on fields that cannot be filtered, sensitive fields used as filters or groups, and references that do not lead to the chosen record type are errors.</li><li>Row count runs the dataset's count for the sample parameters, so the author sees when a report will become a job.</li></ul>`,
+  },
+  {
+    id: 'calculations', tag: 'new', title: 'Report editor — calculations and custom code', lead: 'Values worked out from the datasets, with the same expression language as the rest of the Builder, plus an optional shape step for anything expressions cannot do.',
+    url: '/builder/report/donationSummary?section=calculations', h: 720,
+    body: () => reportEditor({ crumbs: ['Calculations'], section: 'Calculations',
+      body: `<div class="cols" style="grid-template-columns:1fr 1fr">
+        <div>${sec('Calculated values · 4', '+ Add value')}<div class="panel"><table class="rows"><thead><tr><th>Name</th><th>Expression</th><th>Sample</th></tr></thead><tbody>
+          <tr><td class="t">total</td><td class="mono">sum(datasets.donations, 'amount')</td><td>13,89,750.00</td></tr>
+          <tr><td class="t">count</td><td class="mono">count(datasets.donations)</td><td>349</td></tr>
+          <tr class="sel"><td class="t">average</td><td class="mono">round(calc.total / calc.count, 2)</td><td>3,982.09</td></tr>
+          <tr><td class="t">totalInWords</td><td class="mono">inWords(calc.total)</td><td class="cs">Thirteen lakh…</td></tr>
+        </tbody></table></div>
+        <div class="box" style="margin-top:12px">${mf('Expression: average', 'round(calc.total / calc.count, 2)', { code: true, icon: 'ƒx', ok: 'Valid · result type: number' })}<div class="cs" style="line-height:1.8">Insert: <code>datasets.donations</code> <code>datasets.byFund</code> <code>params.fromDate</code> <code>calc.total</code><br/>Report functions: <code>sum(list, field)</code> <code>avg</code> <code>count</code> <code>formatMoney</code> <code>formatDate</code> <code>inWords</code></div></div></div>
+        <div>${sec('Shape step', 'Script ▾')}<div class="box">
+          <div class="tabs2" style="padding-bottom:8px"><span class="chip sub">None</span><span class="chip sub on">Script</span><span class="chip sub">Provider (coded)</span></div>
+          <div class="codebox"><span class="c">// ctx.params, ctx.datasets, ctx.calc are read-only</span>
+<span class="k">const</span> byFund = ctx.datasets.byFund.map((f) => ({
+  ...f,
+  share: <span class="k">Math</span>.round((f.value / ctx.calc.total) * <span class="s">100</span>),
+}));
+<span class="k">const</span> top = ctx.datasets.donations.slice(<span class="s">0</span>, <span class="s">10</span>);
+ctx.result = { byFund, top };</div>
+          <div class="g3" style="margin-top:10px">${mf('Time limit', '3 s')}${mf('Memory', '32 MB')}${mf('Data limit', '2 MB in and out')}</div>
+          <div class="issue w">⚠ Only an organisation administrator can publish a report with a shape script. It runs in a background job, never while someone waits.</div>
+          <div class="issue ok">✓ Try it: ran in 41 ms on the sample period. Result has byFund (3) and top (10).</div>
+        </div></div></div>` }),
+    notes: `<h3>Calculated values</h3><ul><li>Named expressions over <code>datasets</code>, <code>params</code> and earlier values (<code>calc.*</code>), checked as you type and evaluated on the sample period.</li><li>New report functions: <code>sum</code>, <code>avg</code>, <code>count</code>, <code>formatMoney</code>, <code>formatDate</code>, <code>inWords</code> (Indian numbering: lakh, crore).</li></ul><h3>Shape step</h3><ul><li><b>None</b>: the templates use datasets and values directly.</li><li><b>Script</b>: JavaScript in the existing sandbox. It reads the data and sets <code>ctx.result</code>; it cannot change records or call anything.</li><li><b>Provider</b>: a coded report registered by a module (for example a statutory register). Shown read-only with its name and version.</li></ul>`,
+  },
+  {
+    id: 'outputs', tag: 'old', replaced: 'builder-messages-and-reports.html#output-pdf', title: 'Report editor — outputs: PDF and Excel', lead: 'Replaced. A report is PDF or Excel, and the PDF layout is edited on the report. The drawing below is the earlier idea: PDF and Excel both on, with the PDF pointing at a document template.',
+    url: '/builder/report/donationSummary?section=outputs&sheet=donations', h: 740,
+    body: () => reportEditor({ crumbs: ['Outputs', 'Sheet: Donations'], section: 'Outputs',
+      body: `<div class="cols" style="grid-template-columns:300px 1fr">
+        <div>${sec('PDF', 'On')}<div class="box">${mf('Document template', 'Donation summary page', { icon: '▾', h: 'Opens the template editor (screen 6)' })}<div class="g2">${mf('Page size', 'A4', { icon: '▾' })}${mf('Orientation', 'Portrait', { icon: '▾' })}</div>${mf('File name', "'Donations ' + formatDate(params.fromDate)", { code: true, icon: 'ƒx' })}${chk('Show "Management report, not auditor file"', true)}${chk('Page numbers in the footer', true)}</div>
+        ${sec('Excel', 'On')}<div class="box">${chk('About sheet with parameters and run time', true)}${chk('Freeze the header row', true)}${chk('Filter buttons on the header', true)}</div></div>
+        <div>${sec('Sheets · 2', '+ Add sheet')}<div class="tabs2"><span class="chip sub">About</span><span class="chip sub on">Donations</span><span class="chip sub">By fund</span></div>
+          <div class="box"><div class="g2">${mf('Sheet name', 'Donations', { req: true })}${mf('Rows from', 'datasets.donations', { icon: '▾' })}</div>
+          <div class="panel"><table class="rows"><thead><tr><th></th><th>Header</th><th>Value</th><th>Format</th><th>Width</th><th>Total</th></tr></thead><tbody>
+            ${[
+              ['Number', 'row.number', 'Text', 'auto', ''],
+              ['Date', 'row.paidOn', 'Date (dd-mm-yyyy)', '12', ''],
+              ['Donor', 'row.donorName', 'Text', '28', ''],
+              ['City', 'row.donor.city', 'Text', 'auto', ''],
+              ['Fund', 'row.fund', 'Text', 'auto', ''],
+              ['Amount', 'row.amount', 'Money (₹)', '14', '✓ Sum'],
+            ].map((r, i) => `<tr${i === 5 ? ' class="sel"' : ''}><td class="grip">⠿</td><td class="t">${r[0]}</td><td class="mono">${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`).join('')}
+          </tbody></table></div></div>
+          <div class="cs">Drag ⠿ to reorder columns. "Fill from dataset fields" adds one column per field with its label and format.</div></div></div>` }),
+    notes: `<h3>PDF</h3><ul><li>A document template (screen 6), page size (A4, A5, Letter), orientation, file name as an expression, the management-report label and page numbers.</li><li>The PDF is made by the browser's print, from the same HTML the preview shows.</li></ul><h3>Excel</h3><ul><li>Sheets come from a dataset or from a list in the shape result. Columns: header, value expression, format (text, number, money, date, percent), width, and an optional sum, count or average in a totals row.</li><li>Large workbooks are written by a background job; the person gets a notification with the download.</li></ul>`,
+  },
+  {
+    id: 'template', tag: 'old', replaced: 'builder-messages-and-reports.html#output-pdf', title: 'Document template — HTML with a live A4 preview', lead: 'Replaced. There is no document template. The same page is the report layout, on the report\'s Output tab. The drawing below is the earlier idea.',
+    url: '/builder/template/donationSummaryPdf', h: 760,
+    body: () => `<div class="bhead"><div><div class="crumb">${bcrumb(['Templates', 'Donation summary page'])}</div><div style="display:flex;gap:8px;align-items:center;margin-top:3px">${back}<h1>Donation summary page</h1>${status(1, 2)}<span class="bdg n">Document</span></div></div><span class="sp"></span><span class="btn">⋮</span></div>
+      <div class="tabs2">${['Visual', 'JSON', 'Changes', 'History'].map((t) => `<span class="chip${t === 'Visual' ? ' on' : ''}">${t}</span>`).join('')}</div>
+      <div class="cols" style="grid-template-columns:1fr 360px;height:calc(100% - 140px)">
+        <div style="overflow:hidden">${mf('Used by', 'Donation summary by fund (report)', { icon: '↗', h: 'Sample data comes from this report' })}
+        <div class="tabs2"><span class="chip sub">Insert ▾</span><span class="chip sub">{{#each}}</span><span class="chip sub">{{#if}}</span><span class="chip sub">Letterhead</span><span class="chip sub">Page break</span></div>
+        <div class="codebox" style="height:330px"><span class="c">&lt;!-- styles: @page, page breaks and fonts only --&gt;</span>
+&lt;style&gt;@page { size: A4; margin: 14mm } th { background: #f1f5f9 }&lt;/style&gt;
+<span class="b">{{&gt; letterhead}}</span>
+&lt;h2&gt;Donation summary by fund&lt;/h2&gt;
+&lt;p&gt;<span class="b">{{ formatDate(params.fromDate) }}</span> to <span class="b">{{ formatDate(params.toDate) }}</span>&lt;/p&gt;
+&lt;table&gt;
+  &lt;thead&gt;&lt;tr&gt;&lt;th&gt;Fund&lt;/th&gt;&lt;th&gt;Donations&lt;/th&gt;&lt;th&gt;Amount&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+  <span class="b">{{#each result.byFund as f}}</span>
+  &lt;tr&gt;&lt;td&gt;<span class="b">{{ f.label }}</span>&lt;/td&gt;&lt;td&gt;<span class="b">{{ f.count }}</span>&lt;/td&gt;&lt;td&gt;<span class="b">{{ formatMoney(f.value) }}</span>&lt;/td&gt;&lt;/tr&gt;
+  <span class="b">{{/each}}</span>
+&lt;/table&gt;
+<span class="b">{{#if calc.total &gt; 0}}</span>&lt;p&gt;<span class="b">{{ calc.totalInWords }}</span>&lt;/p&gt;<span class="b">{{else}}</span>&lt;p&gt;No donations.&lt;/p&gt;<span class="b">{{/if}}</span></div>
+        <div class="issue ok" style="margin-top:8px">✓ Valid · 9 placeholders, 1 repeated block, 1 condition</div>
+        <div class="issue w">⚠ Removed on save: &lt;script&gt; and onclick= are not allowed in a document.</div></div>
+        <div class="a4wrap">${a4()}</div></div>
+      <div class="foot"><span class="cs">Draft saved 10:44</span><span class="sp"></span><span class="btn">Discard draft</span><span class="btn">Check</span><span class="btn p">Publish…</span></div>`,
+    notes: `<h3>Same editor as email, with blocks</h3><ul><li><code>{{ expression }}</code> placeholders, escaped as in email.</li><li><code>{{#each list as name}}…{{/each}}</code> repeats rows; <code>{{#if expr}}…{{else}}…{{/if}}</code> shows parts conditionally; <code>{{&gt; letterhead}}</code> inserts a shared part.</li><li>Built-in values: <code>org</code> (name, address, registrations, logo), <code>params</code>, <code>datasets</code>, <code>calc</code>, <code>result</code>, <code>generatedAt</code>, <code>page</code> and <code>pages</code> in the footer.</li></ul><h3>What is kept</h3><ul><li>The email allowlist plus one <code>&lt;style&gt;</code> limited to <code>@page</code>, page breaks, table header repeat and fonts.</li><li>Images only from the organisation logo, signatory and the records' own files. No scripts, event handlers or remote addresses.</li></ul>`,
+  },
+  {
+    id: 'preview', tag: 'new', title: 'Report editor — preview: run with sample parameters', lead: 'Runs the whole report as the author, on parameters they choose, and shows the data model, the PDF pages and the Excel sheets side by side, with timings and row counts.',
+    url: '/builder/report/donationSummary?section=preview', h: 760,
+    body: () => reportEditor({ crumbs: ['Preview'], section: 'Preview',
+      body: `<div class="cols" style="grid-template-columns:250px 1fr 1fr">
+        <div>${sec('Run with')}<div class="box">${mf('From date', '01-04-2026')}${mf('To date', '30-09-2026')}${mf('Fund', 'All funds', { icon: '▾' })}${mf('Run as', 'Me (Asha Sharma)', { icon: '▾', h: 'Or a role, to see what it would see' })}<span class="btn p" style="width:100%;text-align:center">▶ Run preview</span></div>
+          ${sec('Result')}<div class="box kv"><b>Rows</b><span>349 donations, 3 funds</span><b>Datasets</b><span>212 ms</span><b>Shape</b><span>41 ms</span><b>Masked</b><span>Donor PAN</span><b>Would run</b><span>at once (under 5,000 rows)</span></div></div>
+        <div><div class="tabs2"><span class="chip sub on">PDF</span><span class="chip sub">Data</span></div><div class="a4wrap" style="height:440px">${a4()}</div></div>
+        <div><div class="tabs2"><span class="chip sub on">Excel</span><span class="btn sm">⬇ Download sample</span></div>${xl()}
+          <div style="height:12px"></div>${sec('Data model')}<div class="codebox" style="height:150px">{
+  <span class="k">"params"</span>: { <span class="k">"fromDate"</span>: <span class="s">"2026-04-01"</span>, … },
+  <span class="k">"calc"</span>: { <span class="k">"total"</span>: <span class="s">1389750</span>, <span class="k">"count"</span>: <span class="s">349</span> },
+  <span class="k">"result"</span>: {
+    <span class="k">"byFund"</span>: [ { <span class="k">"label"</span>: <span class="s">"General"</span>, <span class="k">"value"</span>: <span class="s">845500</span> }, … ],
+    <span class="k">"top"</span>: [ … 10 ]
+  }
+}</div></div></div>` }),
+    notes: `<h3>What it does</h3><ul><li>Runs datasets, calculations and the shape step on the chosen parameters, as the author or as a chosen role, inside a read-only transaction.</li><li><b>PDF</b> shows the filled template at page size; <b>Data</b> shows the data model the templates read.</li><li><b>Excel</b> shows the first rows of each sheet; Download sample writes the real workbook.</li></ul><h3>Why "run as a role"</h3><p>Authors can check what Viewer or Finance would get, including which fields come out masked, before publishing.</p>`,
+  },
+  {
+    id: 'publish', tag: 'new', title: 'Publish a report — summary and checks', lead: 'The same publish step as every definition: a plain-language summary of what changes, every check, and the warnings that need an administrator.',
+    url: '/builder/report/donationSummary?publish', h: 620,
+    body: () => reportEditor({ crumbs: [], section: 'General', body: '<div class="panel" style="height:360px;opacity:.5"></div>' })
+      + sheet('Publish: Donation summary by fund', `${sec('What changes')}<div class="box" style="font-size:.76rem;line-height:1.7"><div>• Adds the parameter "Fund"</div><div>• Adds the dataset "byFund" (totals of Amount by Fund)</div><div>• Adds a shape script (3 s limit, no changes to records)</div><div>• Adds the Excel sheet "By fund"</div><div>• Shows the report to Finance and Admin</div></div>
+        ${sec('Checks')}<div class="issue ok">✓ Every field, template and role exists</div><div class="issue ok">✓ Expressions and template placeholders are valid</div><div class="issue w">⚠ Uses a shape script: only an organisation administrator can publish this. You are one.</div><div class="issue w">⚠ Donor PAN is sensitive: most people will see it masked.</div>`, `<span class="btn">Cancel</span><span class="btn p">Publish v3</span>`),
+    notes: `<h3>Checks on publish</h3><ul><li>Cross-references: record types, fields, templates, roles and ledger accounts exist.</li><li>Every expression and template placeholder parses; every sheet column has a header and a value.</li><li>A shape script or ledger dataset needs <code>config:script:admin</code>, the same rule as finance scripts; the publish is audited.</li></ul>`,
+  },
+  {
+    id: 'run', tag: 'app', title: 'Reports screen in the app — run and download', lead: 'Where people use what the Builder made. The list shows the reports they may run; choosing one opens its parameter form, an on-screen preview, and the two downloads. Shown for context.',
+    url: '/reports/donationSummary', h: 640, on: 'reports',
+    body: () => `<div class="bhead"><div><div class="crumb"><nav class="crumb"><ol><li><a>Reports</a></li><li aria-current="page">Donation summary by fund</li></ol></nav></div><div style="display:flex;gap:8px;align-items:center;margin-top:3px">${back}<h1>Donation summary by fund</h1></div></div><span class="sp"></span><span class="btn">🖨 Print / Save as PDF</span><span class="btn p">⬇ Download Excel</span></div>
+      <div class="cols" style="grid-template-columns:250px 1fr">
+        <div><div class="box">${mf('From date', '01-04-2026', { req: true })}${mf('To date', '30-09-2026', { req: true })}${mf('Fund', 'All funds', { icon: '▾' })}<span class="btn p" style="width:100%;text-align:center">Run</span></div>
+          <div class="issue ok">✓ 349 donations · ready</div><div class="cs">Larger runs continue in the background; you get a notification in the Inbox with the download.</div>
+          <div style="height:10px"></div>${sec('Also on a record')}<div class="cs">A report with a record parameter appears as a button on that record's panel, through an action step "Open a report".</div></div>
+        <div class="a4wrap" style="height:480px">${a4()}</div></div>`,
+    notes: `<h3>In the app</h3><ul><li>A <b>Reports</b> destination lists the reports a person may run, grouped by module.</li><li>Print / Save as PDF opens the browser's print dialog on the report page, so Indic text and fonts print as shown.</li><li>Download Excel returns the workbook at once, or starts a job above the inline limit.</li></ul><h3>Addresses</h3><code>/reports</code> · <code>/reports/:key</code> · <code>/print/report/:key?…</code>`,
+  },
+];
+
+const toc = document.getElementById('toc');
+const root = document.getElementById('screens');
+SCREENS.forEach((s, i) => {
+  toc.insertAdjacentHTML('beforeend', `<a href="#${s.id}">${String(i + 1).padStart(2, '0')} · ${s.title.split(' — ')[0]}</a>`);
+  const tagLabel = { new: 'NEW', has: 'EXISTS', app: 'APP', old: 'REPLACED' }[s.tag];
+  const banner = s.replaced ? `<div class="replaced">Replaced by <a href="${s.replaced}">builder-messages-and-reports.html</a>.</div>` : '';
+  root.insertAdjacentHTML('beforeend', `<section class="scr" id="${s.id}"><div class="flabel">Screen ${i + 1} <span class="tag ${s.tag}">${tagLabel}</span></div><h2>${s.title}</h2><p>${s.lead}</p>${banner}<div class="stage">${frame(s.url, s.body(), s.h, s.on)}<div class="notes">${s.notes}</div></div></section>`);
+});
+</script>
+</body>
+</html>

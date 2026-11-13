@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Passkey technical design — OneNGO</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --ink: #1c2430;
+      --muted: #5c6b7a;
+      --line: #d5dde6;
+      --card: #fff;
+      --brand: #1f5f8b;
+      --brand-soft: #e7f0f6;
+      --ok: #1e6b45;
+      --ok-soft: #e7f4ec;
+      --warn: #8a4b08;
+      --warn-soft: #fbf3e6;
+      --bad: #8d2b2b;
+      --bad-soft: #f8ecec;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 "Segoe UI", system-ui, sans-serif; }
+    header, main { width: min(920px, calc(100% - 32px)); margin-inline: auto; }
+    header { padding: 32px 0 8px; }
+    .kicker { margin: 0; color: var(--brand); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+    h1 { margin: 6px 0 8px; font-size: 1.85rem; line-height: 1.2; }
+    h2 { margin: 36px 0 10px; font-size: 1.3rem; }
+    h3 { margin: 0 0 6px; font-size: 1rem; }
+    p { margin: 0 0 10px; }
+    .lede { max-width: 72ch; color: var(--muted); }
+    a { color: var(--brand); }
+    nav { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 16px 0 8px; }
+    nav a { font-size: 0.9rem; }
+    section { padding-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 0.92rem; overflow-wrap: anywhere; }
+    th { background: var(--brand-soft); font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; }
+    tr:last-child td { border-bottom: 0; }
+    code { font-family: Consolas, ui-monospace, monospace; font-size: 0.86em; overflow-wrap: anywhere; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+    .card p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+    .note { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--brand); border-radius: 8px; padding: 10px 12px; margin: 12px 0; }
+    .flow { list-style: none; margin: 16px 0; padding: 0; display: grid; justify-items: center; width: 100%; }
+    .flow > li { width: min(560px, 100%); max-width: 100%; min-width: 0; }
+    .node { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+    .who { display: block; margin-bottom: 2px; color: var(--brand); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+    .node strong { display: block; }
+    .node p { margin: 4px 0 0; color: var(--muted); font-size: 0.9rem; }
+    .node.person { border-color: #b7cfe0; }
+    .node.server { background: var(--brand-soft); }
+    .node.device { background: var(--warn-soft); }
+    .node.stop { background: var(--bad-soft); }
+    .node.ok { background: var(--ok-soft); }
+    .arrow { width: 2px; height: 22px; margin: 0 auto; background: #8aa0b3; position: relative; }
+    .arrow::after { content: ""; position: absolute; left: -4px; bottom: -1px; border: 5px solid transparent; border-top-color: #8aa0b3; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: min(720px, 100%); max-width: 100%; }
+    .lane { display: grid; justify-items: center; }
+    .lane .tag { font-size: 0.75rem; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+    @media (max-width: 700px) { .split { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="kicker">OneNGO · features/passkey-authentication</p>
+    <h1>Passkey technical design</h1>
+    <p class="lede">WebAuthn platform passkeys as an optional sign-in method. The device keeps the private key and checks the fingerprint, face, or PIN. The server stores only the public key and a counter. An authenticator app is a separate, existing two-step check. It is not part of the passkey.</p>
+    <nav>
+      <a href="#shape">Shape</a>
+      <a href="#register">Registration</a>
+      <a href="#signin">Sign-in</a>
+      <a href="#authenticator">Authenticator app</a>
+      <a href="#remove">Removal</a>
+      <a href="#data">Data</a>
+      <a href="#api">HTTP</a>
+      <a href="#checks">Checks</a>
+    </nav>
+  </header>
+  <main>
+    <section id="shape">
+      <h2>Shape</h2>
+      <div class="cards">
+        <article class="card"><h3>Browser</h3><p><code>navigator.credentials.create</code> to save, <code>get</code> to sign in. Converts WebAuthn base64url to the buffers the browser wants.</p></article>
+        <article class="card"><h3>PasskeyService</h3><p>Decides who may register, consumes the one-time challenge, and turns a verified passkey into the existing sign-in pipeline.</p></article>
+        <article class="card"><h3>WebAuthn adapter</h3><p><code>@simplewebauthn/server</code>. Checks challenge, origin, relying-party id, user verification, and the signature.</p></article>
+        <article class="card"><h3>Database</h3><p><code>passkey_credential</code> and <code>passkey_challenge</code>, owner role only. Policy flag <code>passkey_enabled</code>, default off.</p></article>
+      </div>
+      <div class="note">Relying party name is OneNGO. The id is the host of <code>PUBLIC_BASE_URL</code>. Allowed origins are that origin, plus <code>http://localhost:4200</code> when the host is localhost, plus each origin in <code>PASSKEY_ORIGINS</code>.</div>
+      <p>A verified passkey sign-in is assurance AAL2 with methods <code>hwk</code> and <code>user</code>. It is never AAL3. Attestation is <code>none</code>. New keys may be ES256 (<code>-7</code>) or RS256 (<code>-257</code>). The credential must be discoverable (<code>residentKey: required</code>) and user verification is required, so sign-in does not ask for an email.</p>
+    </section>
+
+    <section id="register">
+      <h2>Registration</h2>
+      <p>The person is already signed in. A passkey cannot be the first credential for an account that has never signed in.</p>
+      <ol class="flow">
+        <li class="node person"><span class="who">Browser · Settings</span><strong>Save a passkey on this device</strong><p>Shown only when <code>PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()</code> is true. Name is optional, at most 60 characters. Empty becomes “Passkey”.</p></li>
+        <li class="arrow" aria-hidden="true"></li>
+        <li class="node server"><span class="who">POST /api/me/passkeys/begin</span><strong>Signed-in session required</strong><p>Bearer token. This path is under <code>/api/me</code> so the web client keeps the token. <code>/api/auth/*</code> is treated as signed-out.</p></li>
+        <li class="arrow" aria-hidden="true"></li>
+        <li class="split">
+          <div class="lane"><span class="tag">Two-step is on</span><div class="node"><strong>Password and authenticator code</strong><p>Checked against the stored password and the encrypted TOTP secret. The session alone is not enough.</p></div></div>
+          <div class="lane"><span class="tag">Two-step is off</span><div class="node"><strong>The live session is enough</strong><p>Same rule as first-time two-step setup.</p></div></div>
+        </li>
+        <li class="arrow" aria-hidden="true"></li>
+        <li class="node server"><span class="who">Server</span><strong>Issue a registration challenge</strong><p>Refuse at 10 live passkeys. Options exclude credentials already saved. Challenge row: purpose <code>register</code>, this user, this organisation, expires in 300 seconds.</p></li>
+        <li class="arrow" aria-hidden="true"></li>
+        <li class="node device"><span class="who">Device</span><strong>Fingerprint, face, or PIN</strong><p><code>navigator.credentials.create</code>. Cancel (<code>NotAllowedError</code>) leaves Settings unchanged and shows no error. The private key never leaves the device.</p></li>
+        <li class="arrow" aria-hidden="true"></li>
+        <li class="node server"><span class="who">POST /api/me/passkeys/confirm · 201</span><strong>Consume the challenge, then verify</strong><p>One conditional update marks the challenge used. A replay, a wrong purpose, another organisation, or another user fails before verification. Then origin, relying-party id, challenge, and user verification are checked.</p></li>
+        <li class="arrow" aria-hidden="true"></li>
+        <li class="split">
+          <div class="lane"><span class="tag">Verified</span><div class="node ok"><strong>Store the public key</strong><p>Credential id, public key, counter, transports, device type, backup flag, name. Audit <code>passkey.added</code>.</p></div></div>
+          <div class="lane"><span class="tag">Not verified</span><div class="node stop"><strong>Nothing is stored</strong><p>“The passkey could not be saved.” Duplicate credential id and a full list of 10 are also refused.</p></div></div>
+        </li>
+      </ol>
+    </section>
+
+    <section id="signin">
+      <h2>Sign-in</h2>
+      <ol class="flow">
+        <li class="node person"><span class="who">Browser · organisation sign-in</span><strong>Sign in with this device</strong><p>Shown only when <code>GET /api/auth/passkey/available?tenant=</code> is true and this browser can use a platform authenticator. Unknown organisations answer false.</p></li>
+        <li class="arrow" aria-hidden="true"></li>
+        <li class="node server"><span class="who">POST /api/auth/passkey/options</span><strong>Usernameless challenge</strong><p>No account lookup, so the answer does not reveal who exists. <code>allowCredentials</code> is empty. Challenge purpose <code>assert</code>, no user id, 300 seconds. More than 30 attempts from one address in 15 minutes is refused.</p></li>
+        <li class="arrow" aria-hidden="true"></li>
+        <li class="node device"><span class="who">Device</span><strong>The device offers passkeys for this site</strong><p><code>navigator.credentials.get</code>, then the fingerprint, face, or PIN. Cancel returns to the card with no message.</p></li>
+        <li class="arrow" aria-hidden="true"></li>
+        <li class="node server"><span class="who">POST /api/auth/passkey/sign-in</span><strong>Consume, then verify</strong><p>The challenge must be unused, unexpired, purpose <code>assert</code>, and for this organisation. The credential id must be a live row. Signature, origin, relying-party id, and user verification are checked with the stored public key.</p></li>
+        <li class="arrow" aria-hidden="true"></li>
+        <li class="node server"><span class="who">Server</span><strong>Counter must rise</strong><p>Reported counter greater than stored, except both zero, which some authenticators always report. The update is compare-and-swap on the old counter. A stall is audited as <code>passkey.counter_rejected</code> and refused. Other failures are <code>passkey.sign_in_failed</code>.</p></li>
+        <li class="arrow" aria-hidden="true"></li>
+        <li class="node server"><span class="who">Existing sign-in pipeline</span><strong>Same account rules as a password</strong><p>Active user and member. Organisation still has passkeys on. Evidence is method <code>passkey</code>, AAL2, <code>hwk</code> + <code>user</code>. Every failure the caller can see uses the same sentence, so the response does not say which check failed.</p></li>
+        <li class="arrow" aria-hidden="true"></li>
+        <li class="split">
+          <div class="lane"><span class="tag">No authenticator app</span><div class="node ok"><strong>Session tokens</strong><p>Access token and rotating refresh token, the same pair a password sign-in issues.</p></div></div>
+          <div class="lane"><span class="tag">Authenticator app is on</span><div class="node"><strong>Two-step ticket, 5 minutes</strong><p><code>{ ticket }</code>. The passkey button hides. <code>POST /api/auth/two-step/complete</code> checks the 6-digit code, then issues the tokens. A role that requires two-step but has no app enrolled is refused.</p></div></div>
+        </li>
+      </ol>
+    </section>
+
+    <section id="authenticator">
+      <h2>Authenticator app</h2>
+      <p>The server does not know the app’s name and never calls it. During two-step setup it generates a TOTP secret, shows it as an <code>otpauth://</code> URL, and stores the secret encrypted. The phone app and the server both compute a 6-digit code from that secret and the current 30-second window. A later check compares the typed code with the code the server just computed.</p>
+      <div class="note">A passkey does not replace that secret. If <code>totp_enabled</code> is true, passkey sign-in still stops at the ticket, and adding or removing a passkey still requires the password and a current code.</div>
+    </section>
+
+    <section id="remove">
+      <h2>Removal and policy</h2>
+      <ol class="flow">
+        <li class="node person"><span class="who">Settings</span><strong>Remove</strong><p>Same re-proof as registration when two-step is on.</p></li>
+        <li class="arrow" aria-hidden="true"></li>
+        <li class="node server"><span class="who">POST /api/me/passkeys/:id/revoke · 204</span><strong>Revoke and end sessions</strong><p>Sets <code>revoked_at</code>. Ends this person’s passkey sessions in the current organisation only. Audit <code>passkey.revoked</code>. A later sign-in cannot find the credential.</p></li>
+        <li class="arrow" aria-hidden="true"></li>
+        <li class="node server"><span class="who">Organisation policy</span><strong>Passkeys off ends passkey sessions</strong><p><code>tenant_auth_policy.passkey_enabled</code> defaults to false. Turning it off calls the same session end for method <code>passkey</code> in that organisation. Password sessions stay. Turning passwords off still needs two protected administrators. With passkeys on and a policy of AAL2 or lower, an administrator counts toward that pair only if they hold a live passkey, or another accepted factor.</p></li>
+      </ol>
+    </section>
+
+    <section id="data">
+      <h2>Data</h2>
+      <p>Migration <code>008_passkeys.sql</code>, schema level 8, additive. Credentials belong to the person, not the organisation, and are reached only through the owner role, like <code>app_user</code> and <code>refresh_token</code>.</p>
+      <table>
+        <thead><tr><th>Table</th><th>Keeps</th><th>Does not keep</th></tr></thead>
+        <tbody>
+          <tr><td><code>passkey_credential</code></td><td>User, unique credential id, public key, counter, transports, <code>singleDevice</code> or <code>multiDevice</code>, backed up, name, created, last used, revoked</td><td>Private key, fingerprint, face, PIN</td></tr>
+          <tr><td><code>passkey_challenge</code></td><td>Organisation, purpose <code>register</code> or <code>assert</code>, user when registering, challenge, expiry, used at</td><td>The signed response</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="api">
+      <h2>HTTP</h2>
+      <table>
+        <thead><tr><th>Call</th><th>Auth</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET /api/auth/passkey/available?tenant=</code></td><td>Public</td><td><code>{ enabled }</code>. False for an unknown organisation.</td></tr>
+          <tr><td><code>POST /api/auth/passkey/options</code></td><td>Public</td><td><code>{ challengeId, options }</code></td></tr>
+          <tr><td><code>POST /api/auth/passkey/sign-in</code></td><td>Public</td><td>Token pair, or <code>{ ticket }</code> when two-step applies.</td></tr>
+          <tr><td><code>GET /api/me/passkeys</code></td><td>Session</td><td>Id, name, device type, backed up, created, last used. No key or counter.</td></tr>
+          <tr><td><code>POST /api/me/passkeys/begin</code></td><td>Session</td><td>Registration options. Body may carry password and TOTP.</td></tr>
+          <tr><td><code>POST /api/me/passkeys/confirm</code></td><td>Session</td><td>201 and the saved summary.</td></tr>
+          <tr><td><code>PATCH /api/me/passkeys/:id</code></td><td>Session</td><td>Rename. No re-proof.</td></tr>
+          <tr><td><code>POST /api/me/passkeys/:id/revoke</code></td><td>Session</td><td>204. Re-proof when two-step is on.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="checks">
+      <h2>Checks and limits</h2>
+      <table>
+        <thead><tr><th>Check</th><th>Rule</th></tr></thead>
+        <tbody>
+          <tr><td>Challenge</td><td>Single use, 300 seconds, bound to one organisation and one purpose. Registration is also bound to the signed-in user. Consumed before cryptographic verification.</td></tr>
+          <tr><td>Origin and relying party</td><td>Must match the configured origins and the host of <code>PUBLIC_BASE_URL</code>.</td></tr>
+          <tr><td>User verification</td><td>Required on registration and sign-in. A response without it is refused.</td></tr>
+          <tr><td>Counter</td><td>Must increase, unless both the stored and reported values are 0.</td></tr>
+          <tr><td>Rate limit</td><td>30 sign-in ceremony calls per address per 15 minutes, when the request has an address.</td></tr>
+          <tr><td>List size</td><td>10 live passkeys per person, checked again at confirm.</td></tr>
+          <tr><td>Cross-organisation</td><td>A challenge from one organisation cannot complete sign-in at another. A passkey whose person is not a member there is refused by the normal membership check.</td></tr>
+          <tr><td>Not built</td><td>No conditional UI (passkey autofill). Rename exists on the API and is not on the Settings screen. Re-proof is the two-step password and code, not a check of how recently the session was authenticated. Removing a passkey ends passkey sessions only in the current organisation.</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "description": "NGO platform: requests answered 500 because of an unexpected error. Applied by a person with gcloud; see docs/operations/monitoring/README.md.",
+  "filter": "jsonPayload.alert=\"http.unhandled_error\"",
+  "metricDescriptor": {
+    "metricKind": "DELTA",
+    "valueType": "INT64",
+    "unit": "1",
+    "labels": [{ "key": "method", "valueType": "STRING", "description": "HTTP method of the failed request." }]
+  },
+  "labelExtractors": { "method": "EXTRACT(jsonPayload.method)" }
+}

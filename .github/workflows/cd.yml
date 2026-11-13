@@ -1,0 +1,215 @@
+name: CD (production)
+
+# Called by ci.yml after "CI gate" passes on master. It is not started by a
+# push on its own, so it cannot run without the tests.
+#
+# Order, and what each stage protects:
+#   0. Wait for approval (GitHub environment "prod" required reviewers). The job
+#      does not start until a reviewer approves.
+#   1. Build both servers from this exact commit.
+#   2. Fill the app.yaml placeholders. A missing secret stops here, before
+#      anything outside the runner changes.
+#   3. Migrate the database (npm run deploy:prepare).
+#   4. Deploy both services as new versions that get NO traffic.
+#   5. Curl GET /health on the new versions. Nothing else is checked here.
+#   6. Move traffic to the new versions.
+#   7. Curl GET /health on the public addresses. If that fails, move traffic back.
+#   8. Deploy cron.yaml.
+# The next job opens the deployed pages in Playwright. It does not run the
+# suite in tests/e2e/specs, which signs in and writes records.
+
+on:
+  workflow_call:
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: prod
+    outputs:
+      public_url: ${{ steps.urls.outputs.public_url }}
+      console_url: ${{ steps.urls.outputs.console_url }}
+    env:
+      PROJECT: ${{ vars.GCP_PROJECT_ID }}
+    steps:
+      - name: Publish the addresses for the end-to-end job
+        id: urls
+        run: |
+          echo "public_url=${{ vars.PUBLIC_BASE_URL }}" >> "$GITHUB_OUTPUT"
+          echo "console_url=${{ vars.CONSOLE_PUBLIC_BASE_URL }}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      # One version name per run. Re-running the same commit gets a new name, so
+      # a deploy can never overwrite the version that is serving traffic.
+      - name: Name this release
+        run: echo "VERSION=g${GITHUB_SHA::10}-r${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+
+      - name: Build both servers
+        run: |
+          npm run build:server
+          npm run operator:server:build
+
+      - name: Fill the main service manifest
+        env:
+          REPLACE_WITH_SERVICE_ACCOUNT: ${{ vars.SERVICE_ACCOUNT }}
+          REPLACE_WITH_PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
+          REPLACE_WITH_SYSTEM_DATABASE_SECRET: ${{ secrets.SYSTEM_DATABASE_URL }}
+          REPLACE_WITH_RUNTIME_DATABASE_SECRET: ${{ secrets.RUNTIME_DATABASE_URL }}
+          REPLACE_WITH_TOKEN_SECRET: ${{ secrets.TOKEN_SECRET }}
+          REPLACE_WITH_ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+        run: node .github/scripts/stage-app-engine.mjs apps/onengo/server .deploy/main
+
+      - name: Fill the console service manifest
+        env:
+          REPLACE_WITH_CONSOLE_SERVICE_ACCOUNT: ${{ vars.CONSOLE_SERVICE_ACCOUNT }}
+          REPLACE_WITH_CONSOLE_PUBLIC_BASE_URL: ${{ vars.CONSOLE_PUBLIC_BASE_URL }}
+          REPLACE_WITH_CONSOLE_SYSTEM_DATABASE_SECRET: ${{ secrets.CONSOLE_DATABASE_URL }}
+          REPLACE_WITH_CONSOLE_RUNTIME_DATABASE_SECRET: ${{ secrets.CONSOLE_RUNTIME_URL }}
+          REPLACE_WITH_CONSOLE_ENCRYPTION_KEY: ${{ secrets.CONSOLE_ENCRYPTION_KEY }}
+          REPLACE_WITH_ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+          REPLACE_WITH_CONSOLE_INTERNAL_TOKEN_SECRET: ${{ secrets.CONSOLE_INTERNAL_TOKEN_SECRET }}
+          REPLACE_WITH_CONSOLE_OIDC_ISSUER: ${{ vars.CONSOLE_OIDC_ISSUER }}
+          REPLACE_WITH_CONSOLE_OIDC_CLIENT_ID: ${{ vars.CONSOLE_OIDC_CLIENT_ID }}
+          REPLACE_WITH_CONSOLE_OIDC_CLIENT_SECRET: ${{ secrets.CONSOLE_OIDC_CLIENT_SECRET }}
+          REPLACE_WITH_CONSOLE_OIDC_AUDIENCE: ${{ vars.CONSOLE_OIDC_AUDIENCE }}
+          REPLACE_WITH_CONSOLE_IAP_AUDIENCE: ${{ vars.CONSOLE_IAP_AUDIENCE }}
+        run: node .github/scripts/stage-app-engine.mjs apps/onengo-console/server .deploy/console
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Require an existing App Engine app
+        run: |
+          if ! gcloud app describe --project "$PROJECT" >/dev/null; then
+            echo "Create the App Engine app once: gcloud app create --project=$PROJECT --region=asia-south1"
+            exit 1
+          fi
+
+      # What serves traffic now, so a failed release can be undone. Empty on the
+      # very first deploy of a service.
+      - name: Record the versions now serving
+        run: |
+          serving() {
+            gcloud app versions list --service="$1" --project "$PROJECT" \
+              --filter="traffic_split>0" --format="value(version.id)" 2>/dev/null | head -n 1 || true
+          }
+          echo "PREVIOUS_MAIN=$(serving default)" >> "$GITHUB_ENV"
+          echo "PREVIOUS_CONSOLE=$(serving console)" >> "$GITHUB_ENV"
+
+      # Runs once per release, with the owner login. Old code keeps serving while
+      # the schema moves, so every migration must work with the previous release.
+      - name: Migrate the database
+        env:
+          DATABASE_OWNER_URL: ${{ secrets.DATABASE_OWNER_URL }}
+        run: npm run deploy:prepare
+
+      - name: Deploy the new versions without traffic
+        run: |
+          gcloud app deploy .deploy/main/app.yaml --project "$PROJECT" --version "$VERSION" --no-promote --quiet
+          gcloud app deploy .deploy/console/app.yaml --project "$PROJECT" --version "$VERSION" --no-promote --quiet
+
+      - name: Curl /health on the new versions
+        run: |
+          version_url() {
+            url="$(gcloud app versions describe "$VERSION" --service="$1" --project "$PROJECT" --format='value(versionUrl)' 2>/dev/null || true)"
+            if [ -z "$url" ]; then
+              if [ "$1" = default ]; then url="https://$VERSION-dot-$PROJECT.appspot.com"; else url="https://$VERSION-dot-$1-dot-$PROJECT.appspot.com"; fi
+            fi
+            echo "$url"
+          }
+          node .github/scripts/smoke-test.mjs main "$(version_url default)"
+          node .github/scripts/smoke-test.mjs console "$(version_url console)"
+
+      - name: Move traffic to the new versions
+        id: promote
+        run: |
+          gcloud app services set-traffic default --splits="$VERSION=1" --project "$PROJECT" --quiet
+          gcloud app services set-traffic console --splits="$VERSION=1" --project "$PROJECT" --quiet
+
+      - name: Curl /health on the public addresses
+        run: |
+          node .github/scripts/smoke-test.mjs main "${{ vars.PUBLIC_BASE_URL }}"
+          node .github/scripts/smoke-test.mjs console "${{ vars.CONSOLE_PUBLIC_BASE_URL }}"
+
+      # Only runs when a step after "Move traffic" failed, or "Move traffic"
+      # itself failed part-way. The database is not rolled back.
+      - name: Move traffic back to the previous versions
+        if: failure() && (steps.promote.outcome == 'success' || steps.promote.outcome == 'failure')
+        run: |
+          back() {
+            if [ -n "$2" ]; then
+              gcloud app services set-traffic "$1" --splits="$2=1" --project "$PROJECT" --quiet
+            else
+              echo "::warning::No previous version of $1 to return to. This was its first deploy."
+            fi
+          }
+          back default "$PREVIOUS_MAIN"
+          back console "$PREVIOUS_CONSOLE"
+
+      # App Engine cron targets the default service, so it waits until that is
+      # known to be healthy.
+      - name: Deploy the scheduler
+        run: gcloud app deploy apps/onengo/server/cron.yaml --project "$PROJECT" --quiet
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Production deploy"
+            echo "- Release: \`$VERSION\` from \`${GITHUB_SHA::10}\`"
+            echo "- Previous main version: \`${PREVIOUS_MAIN:-none}\`"
+            echo "- Previous console version: \`${PREVIOUS_CONSOLE:-none}\`"
+            echo "- To go back later, run the Rollback workflow with the previous version name."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  e2e:
+    name: Post-deploy end-to-end
+    needs: deploy
+    if: needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+      - name: Install Playwright
+        working-directory: tests/e2e
+        run: npm ci
+      - name: Install Chromium
+        working-directory: tests/e2e
+        run: npx playwright install --with-deps chromium
+      - name: Open the deployed sign-in pages
+        working-directory: tests/e2e
+        env:
+          CI: true
+          APP_BASE_URL: ${{ needs.deploy.outputs.public_url }}
+          CONSOLE_BASE_URL: ${{ needs.deploy.outputs.console_url }}
+        run: npx playwright test --config=playwright.post-deploy.config.ts
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-deploy-playwright-${{ github.run_id }}
+          path: tests/e2e/playwright-report
+          retention-days: 7

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><!-- ENTITY --> — Business Document</title>
+    <style>
+      :root {
+        --bg: #f7f6f3;
+        --ink: #1c1b19;
+        --muted: #5c574f;
+        --line: #d9d4cb;
+        --accent: #0f5c4c;
+        --warn: #8a4b00;
+        --card: #fffefb;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+        color: var(--ink);
+        background: linear-gradient(180deg, #eef3f1 0%, var(--bg) 40%);
+        line-height: 1.55;
+      }
+      main { max-width: 52rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+      h1 { font-size: 1.85rem; margin: 0 0 0.35rem; color: var(--accent); }
+      .meta { color: var(--muted); font-size: 0.95rem; margin-bottom: 0.75rem; }
+      .badge {
+        display: inline-block; font-size: 0.75rem; letter-spacing: 0.02em;
+        background: #e2ece8; color: var(--accent); border: 1px solid var(--line);
+        border-radius: 999px; padding: 0.1rem 0.6rem; margin: 0 0.3rem 1.5rem 0;
+      }
+      h2 {
+        font-size: 1.15rem; margin: 2rem 0 0.65rem; padding-bottom: 0.35rem;
+        border-bottom: 1px solid var(--line);
+      }
+      h3 { font-size: 1rem; margin: 1.1rem 0 0.4rem; }
+      ul { padding-left: 1.2rem; }
+      table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 0.92rem; }
+      th, td { border: 1px solid var(--line); padding: 0.55rem 0.65rem; text-align: left; vertical-align: top; }
+      th { background: #e8efec; }
+      code { font-family: ui-monospace, Consolas, monospace; font-size: 0.86em; background: #eceae4; padding: 0.05rem 0.3rem; border-radius: 3px; }
+      .src { color: var(--muted); font-size: 0.85rem; }
+      .warn { color: var(--warn); }
+    
+      .tc { background: #f2f7f5; }
+      .tc td:first-child { font-weight: 600; white-space: nowrap; }
+      .scenarios-nav { margin: 0.5rem 0 1rem; font-size: 0.9rem; }
+      .scenarios-nav a { color: var(--accent, #0f5c4c); }
+
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1><!-- Capability display name --></h1>
+      <p class="meta">Domain: <!-- domain --> · Entity: <!-- entity --></p>
+      <span class="badge">Implementation-independent · reconciled against backend + frontend</span>
+
+      <h2>1. Purpose</h2>
+      <p><!-- What this capability exists to do for the business. No tech terms. --></p>
+
+      <h2>2. Actors</h2>
+      <ul>
+        <li><!-- Role + what they are allowed to do --></li>
+      </ul>
+
+      <h2>3. Domain model</h2>
+      <table>
+        <thead><tr><th>Concept</th><th>Business meaning</th></tr></thead>
+        <tbody>
+          <tr><td><!-- e.g. Donation --></td><td><!-- meaning --></td></tr>
+        </tbody>
+      </table>
+
+      <h2>4. Business rules</h2>
+      <ul>
+        <li><!-- Rule in product language, true regardless of layer --></li>
+      </ul>
+
+      <h2>5. User flows</h2>
+      <h3>Find / view</h3>
+      <p><!-- ... --></p>
+      <h3>Create</h3>
+      <p><!-- ... --></p>
+      <h3>Update</h3>
+      <p><!-- ... --></p>
+      <h3>Other actions</h3>
+      <p><!-- approvals, settlements, merges, reversals, etc. --></p>
+
+      <h2>6. Fields &amp; validation</h2>
+      <table>
+        <thead><tr><th>Field</th><th>Rules</th><th>Visibility / conditions</th></tr></thead>
+        <tbody>
+          <tr><td><!-- name --></td><td><!-- required, format, defaults --></td><td><!-- when shown/hidden --></td></tr>
+        </tbody>
+      </table>
+
+      <h2>7. Out of scope / non-goals</h2>
+      <ul>
+        <li><!-- Explicitly not handled --></li>
+      </ul>
+
+      
+      <h2>8. Testable scenarios (for test generation)</h2>
+      <p class="src">Given / When / Then acceptance criteria. Each row seeds one or more test cases. "BE" = backend-enforced, "FE" = frontend-enforced, "E2E" = end-to-end.</p>
+      <table>
+        <thead><tr><th>ID</th><th>Given</th><th>When</th><th>Then (expected)</th><th>Layer</th></tr></thead>
+        <tbody class="tc">
+          <tr><td><!-- PREFIX-01 --></td><td><!-- precondition --></td><td><!-- action --></td><td><!-- expected --></td><td><!-- BE / FE / E2E --></td></tr>
+        </tbody>
+      </table>
+
+
+      <h2>9. Discrepancies (backend vs frontend)</h2>
+      <p class="src">Where the two implementations disagree. Backend enforcement is authoritative for correctness.</p>
+      <table>
+        <thead><tr><th>Topic</th><th>Backend behavior</th><th>Frontend behavior</th><th>Resolution</th></tr></thead>
+        <tbody>
+          <tr><td class="warn"><!-- e.g. field X validation --></td><td><!-- ... --></td><td><!-- ... --></td><td><!-- authoritative rule --></td></tr>
+        </tbody>
+      </table>
+
+      <h2>10. Revision history</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Change (why)</th><th>Side</th><th>Code drivers</th></tr></thead>
+        <tbody>
+          <tr><td><!-- YYYY-MM-DD --></td><td><!-- business delta --></td><td><!-- backend / frontend / both --></td><td class="src"><code><!-- paths --></code></td></tr>
+        </tbody>
+      </table>
+
+      <h2>11. Learning log</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Learning</th><th>How it was inferred</th></tr></thead>
+        <tbody>
+          <tr><td><!-- YYYY-MM-DD --></td><td><!-- clarified business understanding --></td><td><!-- side + file + behavior --></td></tr>
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

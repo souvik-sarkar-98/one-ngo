@@ -1,0 +1,34 @@
+{
+  "key": "donations",
+  "recordType": "donation",
+  "label": "Donations",
+  "pageSize": 12,
+  "layout": "table",
+  "columns": ["number", "donorName", "amount", "method", "paidOn", "status"],
+  "chips": [
+    { "id": "mine", "label": "Mine", "owner": "me" },
+    { "id": "outstanding", "label": "Outstanding", "statusIn": ["raised"] },
+    { "id": "closed", "label": "Closed", "statusIn": ["paid", "cancelled"] }
+  ],
+  "defaultChip": "outstanding",
+  "filters": ["method", "paidOn", "amount"],
+  "row": { "title": "donorName", "subtitle": ["amount", "method"], "meta": "number", "badge": "status" },
+  "detail": {
+    "sections": [
+      { "id": "donation", "label": "Donation", "fields": ["number", "status", "amount", "fee", "netAmount", "method", "paidOn", "reference"] },
+      { "id": "donor", "label": "Donor", "fields": ["donorName", "donorEmail", "donorPhone", "donorPan"] },
+      { "id": "notes", "label": "Notes", "fields": ["notes"] }
+    ]
+  },
+  "create": {
+    "steps": [
+      { "key": "donor", "label": "Donor", "fields": ["donorName", "donorEmail", "donorPhone", "donorPan"] },
+      { "key": "details", "label": "Details", "fields": ["amount", "fee", "notes"] }
+    ],
+    "chips": ["mine", "outstanding"]
+  },
+  "edit": {
+    "fields": ["donorName", "donorEmail", "donorPhone", "donorPan", "amount", "fee", "notes"],
+    "chips": ["mine", "outstanding"]
+  }
+}

@@ -1,0 +1,18 @@
+.wf-section { margin-bottom: 1.5rem; }
+.wf-title { margin: 0 0 .5rem; font-size: 1rem; }
+.wf-panel { display: flex; flex-direction: column; gap: .6rem; }
+.wf-panel__title { margin: .6rem 0 0; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.wf-panel__title:first-child { margin-top: 0; }
+.wf-checks { display: flex; flex-wrap: wrap; gap: .25rem .9rem; border: 0; margin: 0; padding: 0; }
+.wf-checks legend { font-weight: 600; margin-bottom: .25rem; padding: 0; }
+.wf-checks label, .wf-check { font-weight: 400; display: inline-flex; align-items: center; gap: .35rem; }
+.wf-add { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .5rem .75rem; margin: .75rem 0; }
+.wf-add__error { flex-basis: 100%; }
+.wf-applies { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: .75rem; }
+.wf-summary { margin: .25rem 0 0; padding-left: 1.1rem; line-height: 1.6; }
+.wf-issues { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .35rem; }
+.wf-issue { padding: .4rem .6rem; border-radius: var(--radius); font-size: .9rem; border: 1px solid var(--line); }
+.wf-issue--ok { color: var(--ok, #1e7a46); }
+.wf-issue--warning { background: color-mix(in srgb, #c98a00 10%, var(--card, #fff)); }
+.wf-issue--error { background: color-mix(in srgb, #c0392b 10%, var(--card, #fff)); color: var(--danger, #a61b1b); }
+@media (max-width: 900px) { .wf-applies { grid-template-columns: 1fr; } }

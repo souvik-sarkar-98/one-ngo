@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/app",
+    "types": ["node"]
+  },
+  "include": [
+    "src/**/*.ts",
+    "../../../packages/web-kit/src/**/*.ts",
+    "../../../packages/platform/src/api/browser.ts",
+    "../../../packages/platform/src/runtime/definitions/icon-names.ts",
+    "../../../packages/platform/src/shared/**/*.ts",
+    "../../../packages/kernel/src/errors/**/*.ts",
+    "../../../packages/kernel/src/ports/**/*.ts"
+  ],
+  "exclude": ["src/**/*.test.ts"]
+}

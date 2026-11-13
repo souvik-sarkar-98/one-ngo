@@ -1,0 +1,367 @@
+/*
+ * Global look of the app, in two layers so every part can be overridden:
+ *
+ *  1. Tokens (`:root`): colours, radii, sizes and shadows. An organisation theme (core/theme.ts)
+ *     or any later stylesheet changes the look by setting a token, for example
+ *     `:root { --field-height: 44px; --card-radius: 8px; }`.
+ *  2. Base rules and shared classes (.card, .panel, .field, .acts, .auth ...): plain element and
+ *     class selectors with no nesting beyond one level, so a later rule of equal weight wins.
+ *
+ * Screens do not set their own colours, radii or control sizes; they use these classes and tokens.
+ */
+:root {
+  /* Theme colours (set by the organisation theme). */
+  --fg: #1d2733;
+  --muted: #5b6878;
+  --line: #d8dee6;
+  --bg: #f5f7fa;
+  --card: #fff;
+  --brand: #1f5f8b;
+  --brand-fg: #fff;
+  --ok: #1d7a46;
+  --warn: #9a6200;
+  --bad: #b3261e;
+  --radius: 6px;
+
+  /* Text. */
+  --font: 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Devanagari', Helvetica, Arial, sans-serif;
+  --font-mono: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  /* The root is 16px so rem sizes read as drawn in the wireframe; running text is 14px. */
+  --font-size: 16px;
+  --body-size: 14px;
+  --line-height: normal;
+  --label-color: #374151;
+  --label-size: .8rem;
+  --help-color: #64748b;
+  --help-size: .72rem;
+  --error-color: #ba1a1a;
+  --title-size: 1.15rem;
+
+  /* Surfaces: cards (single items), panels (grouped lists and tables). */
+  --card-border: rgba(148, 163, 184, .25);
+  --card-radius: 14px;
+  --card-padding: 12px;
+  --card-shadow: 0 1px 2px #0f172a0a;
+  --panel-border: rgba(148, 163, 184, .22);
+  --panel-radius: 16px;
+  --panel-shadow: 0 1px 2px #0f172a0d, 0 4px 14px #0f172a12;
+  --divider: rgba(148, 163, 184, .2);
+
+  /* Form controls. */
+  --field-height: 40px;
+  --field-height-compact: 32px;
+  --field-padding: 12px;
+  --field-radius: 4px;
+  --field-border: #79747e;
+  --field-bg: #fff;
+  --field-size: .85rem;
+  --field-placeholder: #8a8590;
+  --field-readonly-bg: #f2f2f4;
+  --field-readonly-fg: #6b6870;
+  --field-readonly-border: #c9c6cf;
+  --focus-ring: 2px solid var(--brand);
+
+  /* Buttons. */
+  --button-size: 13px;
+  --button-padding: .45rem .8rem;
+  --button-radius: var(--radius);
+  --button-border: var(--line);
+  --button-bg: var(--card);
+  --button-fg: var(--fg);
+
+  /* Tables. */
+  --th-bg: #f8fafc;
+  --th-fg: #64748b;
+  --th-size: .64rem;
+  --td-size: .76rem;
+  --row-line: rgba(148, 163, 184, .18);
+
+  /* Badges and notices. */
+  --badge-bg: #e8edf3;
+  --badge-fg: var(--muted);
+  --badge-size: .56rem;
+  --notice-radius: 12px;
+  --notice-error-bg: #fdf0ef;
+  --notice-error-border: #efc4c1;
+  --notice-ok-bg: #eef9f2;
+  --notice-ok-border: #bfe3cd;
+  --notice-info-bg: #eef5fb;
+  --notice-info-border: #c6d9e8;
+
+  /* Section headers, list rows and the search box (Records, More). */
+  --section-bg: color-mix(in srgb, var(--brand) 12%, #fff);
+  --section-border: color-mix(in srgb, var(--brand) 25%, #fff);
+  --section-radius: 12px;
+  --row-hover: color-mix(in srgb, var(--brand) 5%, #fff);
+  --search-border: rgba(148, 163, 184, .35);
+  --search-radius: 12px;
+  --search-height: 38px;
+  --chip-active-shadow: none;
+  --action-grid-columns: 4;
+  --action-grid-gap: .5rem;
+  --table-line: rgba(148, 163, 184, .32);
+  --row-menu-size: 24px;
+  --table-row-height: 38px;
+  --content-max: 1100px;
+
+  /* Sign-in and reset screens. */
+  --auth-width: 380px;
+  --auth-top: 30px;
+
+  /* Shared list framework tokens follow the organisation theme. Tints are the wireframe's: 6%, 12%, 25% and 40% of the brand on white. */
+  --primary-50: color-mix(in srgb, var(--brand) 6%, #fff);
+  --primary-100: color-mix(in srgb, var(--brand) 12%, #fff);
+  --primary-200: color-mix(in srgb, var(--brand) 25%, #fff);
+  --primary-300: color-mix(in srgb, var(--brand) 40%, #fff);
+  --primary-500: var(--brand);
+  --primary-600: var(--brand);
+  --primary-700: var(--brand);
+  --primary-800: var(--brand);
+  /* Text and line greys, from light to dark. */
+  --secondary-400: #94a3b8;
+  --secondary-500: #64748b;
+  --secondary-600: #475569;
+  --secondary-700: #334155;
+  --secondary-800: #1e293b;
+  --secondary-900: #0f172a;
+  /* Tinted icon chips (background and foreground). */
+  --uld-icon-orange: #ffedd5;
+  --uld-icon-orange-fg: #c2410c;
+  --uld-icon-blue: #dbeafe;
+  --uld-icon-blue-fg: #1d4ed8;
+  --uld-icon-green: #dcfce7;
+  --uld-icon-green-fg: #15803d;
+  --uld-icon-amber: #fef3c7;
+  --uld-icon-amber-fg: #b45309;
+  --uld-icon-indigo: #e0e7ff;
+  --uld-icon-indigo-fg: #4338ca;
+  --uld-icon-red: #fee2e2;
+  --uld-icon-red-fg: #b91c1c;
+  --uld-icon-neutral: #f1f5f9;
+  --uld-icon-neutral-fg: #475569;
+  --uld-row-hover: color-mix(in srgb, var(--brand) 8%, var(--card));
+  --uld-badge-success-bg: #e3f4ea;
+  --uld-badge-success-fg: var(--ok);
+  --uld-badge-warning-bg: #fdf1dc;
+  --uld-badge-warning-fg: var(--warn);
+  --uld-badge-danger-bg: #fdf0ef;
+  --uld-badge-danger-fg: var(--bad);
+  --uld-badge-neutral-bg: #e8edf3;
+  --uld-badge-neutral-fg: var(--muted);
+
+  font-family: var(--font);
+  color: var(--fg);
+  background: var(--bg);
+  font-size: var(--font-size);
+  line-height: var(--line-height);
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: 0 env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px); font-size: var(--body-size); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+/* Phone layout scrolls, but the bar itself stays hidden. Matches the shell's narrow breakpoint. */
+@media (max-width: 759.98px) {
+  html, body {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  html::-webkit-scrollbar, body::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+a { color: var(--brand); }
+h1 { font-size: var(--title-size); font-weight: 700; margin: 0 0 10px; }
+h2 { font-size: 1rem; font-weight: 700; margin: 1.25rem 0 .6rem; }
+h3 { font-size: .9rem; font-weight: 700; margin: 1rem 0 .5rem; }
+
+/* Surfaces */
+.card { background: var(--card); border: 1px solid var(--card-border); border-radius: var(--card-radius); padding: var(--card-padding); margin-bottom: 10px; box-shadow: var(--card-shadow); }
+.panel { background: var(--card); border: 1px solid var(--panel-border); border-radius: var(--panel-radius); box-shadow: var(--panel-shadow); overflow: hidden; }
+.grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .75rem; }
+.grid-cards a { text-decoration: none; color: inherit; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: 1rem; }
+.toolbar .spacer { flex: 1; }
+.row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+
+/* Buttons. `.acts` stacks actions full width (or in a row with `.h`) under a divider. */
+button, .button {
+  font: inherit; font-size: var(--button-size); padding: var(--button-padding); border-radius: var(--button-radius); border: 1px solid var(--button-border);
+  background: var(--button-bg); color: var(--button-fg); cursor: pointer; text-decoration: none; display: inline-block; text-align: center;
+}
+button.primary, .button.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-fg); }
+button.danger { color: var(--bad); border-color: var(--bad); }
+button.small { padding: .2rem .5rem; font-size: .85rem; }
+button:disabled { opacity: .55; cursor: default; }
+button:focus-visible, .button:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+.acts { display: flex; flex-direction: column; gap: 7px; margin-top: 8px; padding-top: 11px; border-top: 1px solid var(--divider); }
+.acts.h { flex-direction: row; }
+.acts > button, .acts > .button { display: block; width: 100%; }
+.acts.h > button, .acts.h > .button { flex: 1; width: auto; }
+/* A form with two or three columns on wide screens needs a wider centred sheet; phones keep the bottom sheet. */
+@media (min-width: 768px) {
+  .list-detail-sheet:has(.cf-form-step[data-columns='2']),
+  .mobile-form-sheet:has(.cf-form-step[data-columns='2']) {
+    width: min(880px, 100vw - 48px);
+  }
+  .list-detail-sheet:has(.cf-form-step[data-columns='3']),
+  .mobile-form-sheet:has(.cf-form-step[data-columns='3']) {
+    width: min(1080px, 100vw - 48px);
+  }
+}
+
+/* Buttons used across the screens and sheets: .app-btn, --primary, --ghost, .danger; .app-btn-group is the action row (equal widths, wraps when crowded). */
+.app-btn { font: inherit; font-size: var(--button-size); padding: var(--button-padding); border-radius: var(--button-radius); border: 1px solid var(--button-border); background: var(--button-bg); color: var(--button-fg); cursor: pointer; text-align: center; }
+.app-btn--primary { background: var(--brand); border-color: var(--brand); color: var(--brand-fg); }
+.app-btn--ghost, .app-btn--secondary { background: var(--button-bg); }
+.app-btn--block { display: block; width: 100%; }
+/*
+ * The actions under a record's details form one grid with Edit: --action-grid-columns buttons to a row
+ * (4, so 8 buttons fill two rows; a short last row stretches to the full width, and more than 8 start a third row).
+ * The wrapper around the steps and actions steps aside (display: contents) so they share the grid with Edit.
+ */
+.list-dashboard__detail-footer-actions { display: contents; }
+.list-dashboard__detail-footer-actions > .record-panel__group-label { flex: 0 0 100%; }
+html .list-detail-sheet__actions--stacked.list-detail-sheet__actions--stacked { flex-direction: row; flex-wrap: wrap; gap: var(--action-grid-gap); }
+html .list-detail-sheet__actions--stacked .app-btn {
+  flex: 1 1 calc((100% - (var(--action-grid-columns) - 1) * var(--action-grid-gap)) / var(--action-grid-columns));
+  width: auto; min-width: 0; white-space: normal; overflow-wrap: anywhere; line-height: 1.2;
+}
+html .list-detail-sheet__actions--stacked .record-panel__group-label { flex: 0 0 100%; }
+@media (max-width: 600px) { :root { --action-grid-columns: 2; } }
+.app-btn.danger { color: var(--bad); border-color: var(--bad); }
+.app-btn:disabled { opacity: .55; cursor: default; }
+.app-btn:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+.app-btn-group { display: flex; flex-wrap: wrap; gap: 7px; }
+.app-btn-group > .app-btn { flex: 1 1 0; min-width: max-content; }
+.link-button { border: 0; background: transparent; color: var(--brand); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; padding: 2px 4px; }
+
+/* Form fields */
+label { display: block; font-size: var(--label-size); font-weight: 500; color: var(--label-color); margin-bottom: 5px; }
+.field { margin-bottom: 12px; }
+.field .help { display: block; color: var(--help-color); font-size: var(--help-size); margin-top: 4px; }
+.field .error { display: block; color: var(--error-color); font-size: var(--help-size); margin-top: 4px; }
+/* Plain controls only: Material controls (class mat-*) draw their own outline and take the same sizes from the tokens below. */
+:where(input, select, textarea):not([class*='mat-']) {
+  font: inherit; font-size: var(--field-size); width: 100%; padding: 0 var(--field-padding); min-height: var(--field-height);
+  border: 1px solid var(--field-border); border-radius: var(--field-radius); background: var(--field-bg); color: var(--fg);
+}
+:where(textarea):not([class*='mat-']) { padding: 8px var(--field-padding); min-height: 6rem; }
+:where(input, select, textarea):not([class*='mat-']):focus-visible { outline: var(--focus-ring); outline-offset: 1px; }
+:where(input, textarea):not([class*='mat-'])::placeholder { color: var(--field-placeholder); }
+:where(input[type='checkbox'], input[type='radio']):not([class*='mat-']) { width: auto; min-height: 0; }
+textarea.code { font-family: var(--font-mono); font-size: .85rem; min-height: 22rem; white-space: pre; }
+:where(input, textarea):not([class*='mat-']):read-only { background: var(--field-readonly-bg); color: var(--field-readonly-fg); border-color: var(--field-readonly-border); }
+.mat-mdc-form-field { --mat-form-field-container-height: var(--field-height); --mat-form-field-container-vertical-padding: 8px; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0 1rem; }
+.form-grid .wide { grid-column: 1 / -1; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; background: var(--card); }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--row-line); vertical-align: top; font-size: var(--td-size); }
+th { font-size: var(--th-size); color: var(--th-fg); font-weight: 700; letter-spacing: .03em; text-transform: uppercase; background: var(--th-bg); border-bottom-color: var(--card-border); white-space: nowrap; }
+tr.clickable { cursor: pointer; }
+tr.clickable:hover { background: var(--uld-row-hover); }
+td :where(input:not([type='checkbox'], [type='radio']), select):not([class*='mat-']) { min-height: var(--field-height-compact); padding: 0 8px; }
+/* Ticks stay their native size so they never make a row taller than its text. */
+:where(input[type='checkbox'], input[type='radio']):not([class*='mat-']) { margin: 0; padding: 0; vertical-align: middle; }
+
+/* Badges and notices */
+.badge { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: var(--badge-size); font-weight: 700; letter-spacing: .02em; text-transform: uppercase; line-height: 1; white-space: nowrap; background: var(--badge-bg); color: var(--badge-fg); }
+.badge.ok { background: var(--uld-badge-success-bg); color: var(--ok); }
+.badge.warn { background: var(--uld-badge-warning-bg); color: var(--warn); }
+.notice { padding: 9px 12px; border-radius: var(--notice-radius); margin-bottom: 10px; border: 1px solid; font-size: .78rem; }
+.notice.error { color: var(--bad); border-color: var(--notice-error-border); background: var(--notice-error-bg); }
+.notice.ok { color: var(--ok); border-color: var(--notice-ok-border); background: var(--notice-ok-bg); }
+.notice.info { color: var(--brand); border-color: var(--notice-info-border); background: var(--notice-info-bg); }
+.notice ul { margin: .4rem 0 0; padding-left: 1.2rem; }
+.muted { color: var(--muted); }
+.tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--line); margin-bottom: 1rem; }
+.tabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; }
+.tabs button.active { border-bottom-color: var(--brand); color: var(--brand); font-weight: 600; }
+
+/* Collapsible section header, a panel of tappable rows, and the list search box. */
+.sec-head {
+  display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 40px; margin: 0 0 7px; padding: 9px 12px;
+  border: 1px solid var(--section-border); border-radius: var(--section-radius); background: var(--section-bg); color: var(--brand);
+  font: inherit; font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; text-align: start; cursor: pointer;
+}
+.list-rows { margin: 0 0 12px; padding: 0; list-style: none; }
+.list-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; color: inherit; font-size: .82rem; text-decoration: none;
+  border-bottom: 1px solid var(--row-line);
+}
+.list-rows > li:last-child > .list-row { border-bottom: 0; }
+.list-row:hover { background: var(--row-hover); }
+.list-row:focus-visible { outline: var(--focus-ring); outline-offset: -2px; }
+.list-row__text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.list-row__sub { color: var(--help-color); font-size: .74rem; }
+.search-input {
+  width: 100%; min-height: var(--search-height); margin-bottom: 10px; padding: 0 10px 0 32px; border: 1px solid var(--search-border); border-radius: var(--search-radius);
+  font-size: .76rem; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E") no-repeat 10px center / 16px;
+}
+
+/* Overrides of the pinned list toolkit styles. They carry a little more weight (`html` first) so they win over the component styles. */
+html .chip-bar .chip-bar__chip--active { box-shadow: var(--chip-active-shadow); }
+html .table-rows .list-dashboard__row-menu-btn { width: var(--row-menu-size); height: var(--row-menu-size); }
+/* Row lines a little clearer than the toolkit's; the last row stays borderless because the "End of list" line below it carries the rule. */
+html .table-rows.table-rows.table-rows td { border-bottom-color: var(--table-line); }
+/* The detail sheet's label/value rows get the same clearer lines: a stronger outline and a rule between rows. */
+html .list-detail-sections__kv-grid.list-detail-sections__kv-grid { border-color: var(--table-line); }
+html .list-detail-sections__kv-row:not(:last-child) { border-bottom: 1px solid var(--table-line); }
+
+/* Every body row is one fixed height, the same as the "End of list" line below the table; cells are centred in it. */
+html .table-rows.table-rows.table-rows td { height: var(--table-row-height); padding-top: 0; padding-bottom: 0; }
+
+/* Sign-in, reset password: a narrow centred card under a centred title. */
+.auth { width: min(var(--auth-width), calc(100% - 32px)); margin: var(--auth-top) auto 0; }
+.auth h1 { text-align: center; }
+.auth .card { margin: 0; }
+.auth__more { margin: 10px 0 0; text-align: center; }
+.auth__more.switchorg { margin-top: 16px; }
+.auth__hint { margin: 12px 4px 0; text-align: center; font-size: .82rem; line-height: 1.45; }
+
+/* Phone touch targets: at least 44px. `html` plus the parent class outranks the pinned toolkit styles. */
+@media (max-width: 759.98px) {
+  :root { --field-height: 44px; }
+  .app-btn,
+  button.small,
+  .link-button {
+    box-sizing: border-box;
+    min-height: 44px;
+  }
+  .app-btn,
+  button.small {
+    min-width: 44px;
+  }
+  html .chip-bar .chip-bar__chip {
+    box-sizing: border-box;
+    min-width: 44px;
+  }
+  html .applied-filter-pills .applied-filter-pills__pill {
+    box-sizing: border-box;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  html .list-filter-toolbar .list-filter-toolbar__search,
+  html .list-filter-toolbar .list-filter-toolbar__filters-btn {
+    box-sizing: border-box;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  html .mobile-form-sheet .mobile-form-sheet__title-row,
+  html .list-filter-sheet .list-filter-sheet__title-row,
+  html .list-detail-sheet .list-detail-sheet__title-row {
+    padding-inline: 52px;
+  }
+  html .mobile-form-sheet .mobile-form-sheet__close,
+  html .mobile-form-sheet .mobile-form-sheet__back,
+  html .list-filter-sheet .list-filter-sheet__close,
+  html .list-filter-sheet .list-filter-sheet__back,
+  html .list-detail-sheet .list-detail-sheet__close,
+  html .list-detail-sheet .list-detail-sheet__back {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "key": "sendReminder",
+  "recordType": "donation",
+  "label": "Send reminder",
+  "placement": ["panel", "row", "bulk"],
+  "when": "status == 'raised' and not isEmpty(record.donorEmail)",
+  "confirm": "Send a payment reminder to the donor by email?",
+  "steps": [
+    { "type": "notify", "template": "donationReminder", "to": { "email": "record.donorEmail" }, "channels": ["email"] }
+  ]
+}

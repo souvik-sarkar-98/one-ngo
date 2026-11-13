@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Passkey user journey — OneNGO</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --ink: #1c2430;
+      --muted: #5c6b7a;
+      --line: #d5dde6;
+      --card: #ffffff;
+      --brand: #1f5f8b;
+      --brand-soft: #e7f0f6;
+      --ok: #1e6b45;
+      --ok-soft: #e7f4ec;
+      --warn: #8a4b08;
+      --warn-soft: #fbf3e6;
+      --bad: #8d2b2b;
+      --bad-soft: #f8ecec;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 16px/1.5 "Segoe UI", system-ui, sans-serif;
+    }
+    header, main { width: min(1080px, calc(100% - 32px)); margin-inline: auto; }
+    header { padding: 32px 0 8px; }
+    .kicker {
+      margin: 0;
+      color: var(--brand);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    h1 { margin: 6px 0 8px; font-size: 1.75rem; line-height: 1.2; }
+    .lede { margin: 0; max-width: 68ch; color: var(--muted); }
+    .who {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px 28px;
+      margin: 20px 0 0;
+      padding: 14px 16px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .who dt { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+    .who dd { margin: 2px 0 0; }
+    .switcher { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 16px; }
+    .switcher button, .step button, .pager button {
+      font: inherit;
+      cursor: pointer;
+    }
+    .switcher button {
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 8px 14px;
+    }
+    .switcher button[aria-pressed="true"] {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #fff;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 20px;
+      align-items: start;
+      padding-bottom: 48px;
+    }
+    .rail {
+      position: sticky;
+      top: 16px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .step button {
+      width: 100%;
+      text-align: left;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      padding: 12px 14px;
+      color: inherit;
+    }
+    .rail li:last-child button { border-bottom: 0; }
+    .step button[aria-current="step"] { background: var(--brand-soft); }
+    .n {
+      display: inline-grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      margin-right: 8px;
+      border-radius: 50%;
+      background: var(--bg);
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .step button[aria-current="step"] .n { background: var(--brand); color: #fff; }
+    .stage { margin: 0; font-weight: 650; }
+    .actor { display: block; color: var(--muted); font-size: 0.8rem; }
+    .detail { display: grid; gap: 16px; }
+    .screen-wrap, .story, .branches {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .screen-wrap { padding: 20px; }
+    .screen-label { margin: 0 0 12px; color: var(--muted); font-size: 0.8rem; }
+    .phone {
+      width: min(320px, 100%);
+      margin-inline: auto;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--bg);
+      overflow: hidden;
+    }
+    .phone-body { padding: 22px 16px 16px; display: grid; gap: 10px; }
+    .brand {
+      text-align: center;
+      color: var(--brand);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+    }
+    .org { margin: 0; text-align: center; font-weight: 700; }
+    .mark {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--card);
+      color: var(--brand);
+      font-weight: 700;
+    }
+    .card, .sheet {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+    .tabs { display: flex; border-bottom: 1px solid var(--line); margin: -4px 0 4px; }
+    .tabs span { flex: 1; text-align: center; padding-bottom: 6px; font-size: 0.8rem; font-weight: 700; color: var(--muted); }
+    .tabs .on { color: var(--ink); border-bottom: 2px solid var(--brand); }
+    .field { display: grid; gap: 2px; font-size: 0.8rem; color: var(--muted); }
+    .box {
+      height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--bg);
+      padding: 5px 8px;
+      color: var(--ink);
+    }
+    .btn {
+      display: block;
+      text-align: center;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    .btn.primary { background: var(--brand); color: #fff; }
+    .btn.ghost { border: 1px solid var(--line); }
+    .btn.hot { outline: 2px solid var(--brand); outline-offset: 2px; }
+    .link { margin: 0; text-align: center; color: var(--muted); font-size: 0.8rem; }
+    .group-title {
+      margin: 4px 2px 0;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--line);
+      font-size: 0.85rem;
+    }
+    .row small { display: block; color: var(--muted); }
+    .notice { border-radius: 8px; padding: 8px 10px; font-size: 0.8rem; }
+    .notice.info { background: var(--brand-soft); }
+    .notice.ok { background: var(--ok-soft); color: var(--ok); }
+    .notice.bad { background: var(--bad-soft); color: var(--bad); }
+    .sheet { margin: 8px; }
+    .sheet p { margin: 0; font-size: 0.85rem; }
+    .dim { opacity: 0.45; }
+    h2 { margin: 0 0 8px; font-size: 1.2rem; }
+    .story, .branches { padding: 16px 18px; }
+    .story p, .branches p { margin: 0 0 8px; }
+    .story p:last-child, .branches li:last-child { margin-bottom: 0; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .tag {
+      border-radius: 999px;
+      padding: 2px 8px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .tag.person { background: var(--brand-soft); color: var(--brand); border-color: transparent; }
+    .tag.device { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+    .branches h3 { margin: 0 0 8px; font-size: 0.95rem; }
+    .branches ul { margin: 0; padding-left: 1.1rem; }
+    .branches li { margin-bottom: 6px; }
+    .pager { display: flex; justify-content: space-between; gap: 8px; }
+    .pager button {
+      border: 1px solid var(--line);
+      background: var(--card);
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+    .pager button:disabled { opacity: 0.45; cursor: default; }
+    @media (max-width: 800px) {
+      .layout { grid-template-columns: 1fr; }
+      .rail { position: static; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="kicker">OneNGO · Asha Trust</p>
+    <h1>Passkey user journey</h1>
+    <p class="lede">Ravi already signs in with a password. His organisation has turned passkeys on. A passkey lets this device confirm him with a fingerprint, face, or PIN. The password and email code stay available.</p>
+    <dl class="who">
+      <div><dt>Person</dt><dd>Ravi Kumar, clerk</dd></div>
+      <div><dt>Starts from</dt><dd>Signed in, or the Asha Trust sign-in page</dd></div>
+      <div><dt>Device</dt><dd>His own phone or laptop, in a browser that can use a passkey</dd></div>
+      <div><dt>Never shown</dt><dd>The fingerprint, face, or PIN. The device keeps those.</dd></div>
+    </dl>
+  </header>
+  <main>
+    <div class="switcher" role="tablist" aria-label="Journeys" id="switcher"></div>
+    <div class="layout">
+      <ol class="rail" id="rail"></ol>
+      <div class="detail">
+        <section class="screen-wrap" aria-label="Screen">
+          <p class="screen-label" id="screen-label"></p>
+          <div class="phone" id="phone"></div>
+        </section>
+        <section class="story">
+          <div class="meta" id="meta"></div>
+          <h2 id="title"></h2>
+          <p id="does"></p>
+          <p id="sees"></p>
+        </section>
+        <section class="branches">
+          <h3>If it does not go straight through</h3>
+          <ul id="branches"></ul>
+        </section>
+        <div class="pager">
+          <button type="button" id="prev">Previous</button>
+          <button type="button" id="next">Next</button>
+        </div>
+      </div>
+    </div>
+  </main>
+  <script>
+    const journeys = [
+      {
+        id: "save",
+        label: "Save a passkey",
+        steps: [
+          {
+            stage: "Open Settings",
+            actor: "Ravi",
+            title: "He is already signed in",
+            does: "Ravi opens More, then Settings. Passkeys are a section on that page, after two-step sign-in.",
+            sees: "He sees his name, that two-step is on, and a Passkeys heading.",
+            tags: ["Ravi", "OneNGO"],
+            screen: "settings-top",
+            branches: ["If the organisation has not turned passkeys on, this section is not offered and the sign-in button is hidden."]
+          },
+          {
+            stage: "Read the empty list",
+            actor: "Ravi",
+            title: "Nothing is saved on this device yet",
+            does: "He reads the short explanation. He does not have to name the passkey, but he can.",
+            sees: "“No passkeys saved yet.” The hint says his password and email codes still work.",
+            tags: ["Ravi", "OneNGO"],
+            screen: "empty",
+            branches: ["On a browser that cannot save a passkey, the form is replaced by “This browser cannot save passkeys on this device.” Any passkey saved elsewhere still lists."]
+          },
+          {
+            stage: "Prove it is him",
+            actor: "Ravi",
+            title: "Two-step asks for the password and a code",
+            does: "Because two-step is on, he types his password and the current code from his authenticator app before the passkey can be saved or removed.",
+            sees: "“Enter your password and a code from your authenticator app to change passkeys.”",
+            tags: ["Ravi", "OneNGO"],
+            screen: "reauth",
+            branches: ["With two-step off, those two fields are not shown. He goes straight to the device prompt."]
+          },
+          {
+            stage: "Ask the device",
+            actor: "The phone",
+            title: "The device asks for a fingerprint, face, or PIN",
+            does: "He taps “Save a passkey on this device”. The browser opens the device prompt. OneNGO never receives what he uses to confirm.",
+            sees: "A system sheet, such as Windows Hello or the phone’s own biometric prompt, over the Settings page.",
+            tags: ["The device"],
+            screen: "create-prompt",
+            branches: ["If he cancels the prompt, Settings stays as it was. There is no error."]
+          },
+          {
+            stage: "Passkey saved",
+            actor: "OneNGO",
+            title: "The new passkey is on the list",
+            does: "The device returns a public key. OneNGO stores that, not a biometric.",
+            sees: "“Passkey saved.” A row named “My phone”, marked “This device only”. He can keep up to 10.",
+            tags: ["OneNGO"],
+            screen: "saved",
+            branches: ["If the device response cannot be saved, he sees “The passkey could not be saved. Try again.”"]
+          }
+        ]
+      },
+      {
+        id: "signin",
+        label: "Sign in with it",
+        steps: [
+          {
+            stage: "Open the sign-in page",
+            actor: "Ravi",
+            title: "Asha Trust’s own sign-in page",
+            does: "On his next visit he opens the organisation sign-in page. He does not type an email for a passkey.",
+            sees: "The password card is unchanged. Under it: “Sign in with this device”, then “Sign in with Google”.",
+            tags: ["Ravi", "OneNGO"],
+            screen: "signin",
+            branches: ["The passkey button is hidden when the organisation has passkeys off, or when this browser cannot use one. Password and email code remain."]
+          },
+          {
+            stage: "Choose the device",
+            actor: "Ravi",
+            title: "He taps Sign in with this device",
+            does: "He does not pick an account in OneNGO. The device offers the passkeys saved for this site.",
+            sees: "The same sign-in card, with the device button as the action he just took.",
+            tags: ["Ravi"],
+            screen: "signin-hot",
+            branches: ["A copied or replayed passkey is refused with the same message as any other failure. It does not say which check failed."]
+          },
+          {
+            stage: "Confirm on the device",
+            actor: "The phone",
+            title: "Fingerprint, face, or PIN",
+            does: "The operating system checks him. OneNGO only receives the signature.",
+            sees: "The system prompt over the sign-in page. Cancel returns to the card with no message.",
+            tags: ["The device"],
+            screen: "assert-prompt",
+            branches: ["If it does not verify: “Passkey sign-in did not work. Try again, or use your password or an email code.”"]
+          },
+          {
+            stage: "Second step, if it is on",
+            actor: "Ravi",
+            title: "The authenticator app still finishes sign-in",
+            does: "A passkey is enough for the first step. Because two-step is on for Ravi, he still enters the code from his authenticator app.",
+            sees: "“Enter the code from your authenticator app to finish signing in.” The passkey button is not on this step.",
+            tags: ["Ravi", "OneNGO"],
+            screen: "ticket",
+            branches: ["With two-step off, this step is skipped and he is signed in immediately."]
+          },
+          {
+            stage: "Signed in",
+            actor: "OneNGO",
+            title: "He reaches Home",
+            does: "The session is a passkey sign-in. Password sign-in still works on the same account.",
+            sees: "Home, as after any other successful sign-in.",
+            tags: ["OneNGO"],
+            screen: "home",
+            branches: ["Turning passkeys off later ends sessions that were opened with a passkey. His password session is separate."]
+          }
+        ]
+      },
+      {
+        id: "remove",
+        label: "Remove a passkey",
+        steps: [
+          {
+            stage: "Find the row",
+            actor: "Ravi",
+            title: "Settings lists every passkey he has",
+            does: "He opens Settings again. Each row is a name plus whether it stays on this device or syncs.",
+            sees: "“My phone · This device only” and Remove.",
+            tags: ["Ravi", "OneNGO"],
+            screen: "list",
+            branches: ["A synced passkey is labelled “Synced across your devices”. Removing it here stops it signing in to this organisation."]
+          },
+          {
+            stage: "Confirm the change",
+            actor: "Ravi",
+            title: "The same proof as saving one",
+            does: "With two-step on, he enters the password and authenticator code, then taps Remove.",
+            sees: "The password and authenticator fields already on the Passkeys card.",
+            tags: ["Ravi"],
+            screen: "reauth",
+            branches: ["With two-step off, Remove does not ask for a password."]
+          },
+          {
+            stage: "Passkey removed",
+            actor: "OneNGO",
+            title: "That passkey can no longer sign him in",
+            does: "OneNGO revokes the passkey and ends the sessions it opened in Asha Trust.",
+            sees: "“Passkey removed.” The row is gone. His password still signs him in.",
+            tags: ["OneNGO"],
+            screen: "removed",
+            branches: ["Trying the removed passkey on the sign-in page fails with the same message as any other passkey failure."]
+          }
+        ]
+      }
+    ];
+
+    const screens = {
+      "settings-top": () => phone(`
+        <p class="group-title">My profile</p>
+        <div class="card"><strong>Ravi Kumar</strong><div class="link" style="text-align:left">Clerk · Asha Trust</div></div>
+        <p class="group-title">Preferences</p>
+        <div class="card"><div class="row" style="border:0;padding:0"><span><strong>Two-step sign-in</strong><small>On</small></span><span>On</span></div></div>
+        <p class="group-title">Passkeys</p>`),
+      empty: () => phone(`
+        <p class="group-title">Passkeys</p>
+        <div class="card">
+          <p class="link" style="text-align:left">Sign in on this device with its fingerprint, face or PIN, without a password. Your password and email codes still work.</p>
+          <p class="link" style="text-align:left">No passkeys saved yet.</p>
+          ${field("Name", "for example, my phone")}
+          <span class="btn primary">Save a passkey on this device</span>
+        </div>`),
+      reauth: () => phone(`
+        <p class="group-title">Passkeys</p>
+        <div class="card">
+          ${field("Name", "My phone")}
+          ${field("Password", "••••••••")}
+          ${field("Authenticator code", "6 digits")}
+          <p class="link" style="text-align:left">Enter your password and a code from your authenticator app to change passkeys.</p>
+          <span class="btn primary hot">Save a passkey on this device</span>
+        </div>`),
+      "create-prompt": () => phone(`
+        <div class="dim">${cardPasskeys(false)}</div>
+        <div class="sheet">
+          <p class="link" style="text-align:left">This device</p>
+          <p><strong>Verify it is you</strong></p>
+          <p>Fingerprint, face, or device PIN.</p>
+          <span class="btn ghost">Cancel</span>
+        </div>`),
+      saved: () => phone(`
+        <p class="group-title">Passkeys</p>
+        <div class="card">
+          <div class="notice ok">Passkey saved.</div>
+          <div class="row"><span><strong>My phone</strong><small>This device only</small></span><span>Remove</span></div>
+        </div>`),
+      signin: () => signIn(false),
+      "signin-hot": () => signIn(true),
+      "assert-prompt": () => phone(`
+        <div class="dim">${signInInner(false)}</div>
+        <div class="sheet">
+          <p class="link" style="text-align:left">This device</p>
+          <p><strong>Verify it is you</strong></p>
+          <p>Fingerprint, face, or device PIN. OneNGO does not see this.</p>
+          <span class="btn ghost">Cancel</span>
+        </div>`),
+      ticket: () => phone(`
+        <p class="brand">ONENGO</p><div class="mark">AT</div><p class="org">Asha Trust</p>
+        <strong>Sign in</strong>
+        <div class="card">
+          <div class="notice info">Enter the code from your authenticator app to finish signing in.</div>
+          ${field("Authenticator code", "6 digits")}
+          <span class="btn primary">Sign in</span>
+        </div>`),
+      home: () => phone(`
+        <strong>Home</strong>
+        <div class="card"><strong>Good morning, Ravi</strong><p class="link" style="text-align:left">Signed in with this device.</p></div>
+        <div class="card"><span>Donations</span></div>`),
+      list: () => phone(cardPasskeys(true)),
+      removed: () => phone(`
+        <p class="group-title">Passkeys</p>
+        <div class="card">
+          <div class="notice ok">Passkey removed.</div>
+          <p class="link" style="text-align:left">No passkeys saved yet.</p>
+        </div>`)
+    };
+
+    function field(label, value) {
+      return `<label class="field">${label}<span class="box">${value}</span></label>`;
+    }
+    function phone(inner) {
+      return `<div class="phone-body">${inner}</div>`;
+    }
+    function signInInner(hot) {
+      return `
+        <p class="brand">ONENGO</p><div class="mark">AT</div><p class="org">Asha Trust</p>
+        <strong>Sign in</strong>
+        <div class="card">
+          <div class="tabs"><span class="on">Password</span><span>Email code</span></div>
+          ${field("Email", "")}
+          ${field("Password", "")}
+          <span class="btn primary">Sign in</span>
+          <p class="link">Forgot password?</p>
+        </div>
+        <span class="btn ghost ${hot ? "hot" : ""}">Sign in with this device</span>
+        <span class="btn ghost">Sign in with Google</span>`;
+    }
+    function signIn(hot) { return phone(signInInner(hot)); }
+    function cardPasskeys(showRow) {
+      const row = showRow
+        ? `<div class="row"><span><strong>My phone</strong><small>This device only</small></span><span class="hot">Remove</span></div>`
+        : `<p class="link" style="text-align:left">No passkeys saved yet.</p>`;
+      return `
+        <p class="group-title">Passkeys</p>
+        <div class="card">
+          <p class="link" style="text-align:left">Sign in on this device with its fingerprint, face or PIN, without a password.</p>
+          ${row}
+        </div>`;
+    }
+
+    const switcher = document.querySelector("#switcher");
+    const rail = document.querySelector("#rail");
+    const phoneEl = document.querySelector("#phone");
+    let journey = 0;
+    let step = 0;
+
+    function render() {
+      switcher.innerHTML = journeys.map((item, index) =>
+        `<button type="button" role="tab" aria-pressed="${index === journey}" data-journey="${index}">${item.label}</button>`
+      ).join("");
+      const current = journeys[journey];
+      rail.innerHTML = current.steps.map((item, index) => `
+        <li class="step"><button type="button" data-step="${index}" aria-current="${index === step ? "step" : "false"}">
+          <span class="n">${index + 1}</span><span class="stage">${item.stage}</span>
+          <span class="actor">${item.actor}</span>
+        </button></li>`).join("");
+      const item = current.steps[step];
+      document.querySelector("#screen-label").textContent = `${current.label} · step ${step + 1} of ${current.steps.length}`;
+      phoneEl.innerHTML = screens[item.screen]();
+      document.querySelector("#meta").innerHTML = item.tags.map((tag) => {
+        const kind = tag === "Ravi" ? "person" : tag === "The device" ? "device" : "";
+        return `<span class="tag ${kind}">${tag}</span>`;
+      }).join("");
+      document.querySelector("#title").textContent = item.title;
+      document.querySelector("#does").textContent = item.does;
+      document.querySelector("#sees").textContent = "On screen: " + item.sees;
+      document.querySelector("#branches").innerHTML = item.branches.map((line) => `<li>${line}</li>`).join("");
+      document.querySelector("#prev").disabled = step === 0 && journey === 0;
+      document.querySelector("#next").disabled = step === current.steps.length - 1 && journey === journeys.length - 1;
+    }
+
+    document.body.addEventListener("click", (event) => {
+      const journeyButton = event.target.closest("[data-journey]");
+      const stepButton = event.target.closest("[data-step]");
+      if (journeyButton) {
+        journey = Number(journeyButton.dataset.journey);
+        step = 0;
+        render();
+      }
+      if (stepButton) {
+        step = Number(stepButton.dataset.step);
+        render();
+      }
+    });
+    document.querySelector("#prev").addEventListener("click", () => {
+      if (step > 0) step -= 1;
+      else if (journey > 0) {
+        journey -= 1;
+        step = journeys[journey].steps.length - 1;
+      }
+      render();
+    });
+    document.querySelector("#next").addEventListener("click", () => {
+      const last = journeys[journey].steps.length - 1;
+      if (step < last) step += 1;
+      else if (journey < journeys.length - 1) {
+        journey += 1;
+        step = 0;
+      }
+      render();
+    });
+    render();
+  </script>
+</body>
+</html>

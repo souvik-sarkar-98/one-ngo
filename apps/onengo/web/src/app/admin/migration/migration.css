@@ -1,0 +1,105 @@
+.migration__new {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+.migration__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+.migration__field input,
+.migration__field select {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  font: inherit;
+}
+.migration__steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.migration__step {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 0.78rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+.migration__step--on {
+  border-color: var(--brand);
+  color: var(--brand);
+  font-weight: 700;
+}
+.migration__badge {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: var(--line);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.migration__badge[data-status='done'],
+.migration__badge[data-status='ready'] {
+  background: color-mix(in srgb, var(--ok, #1d7a46) 14%, #fff);
+}
+.migration__badge[data-status='failed'],
+.migration__badge[data-status='problems'] {
+  background: color-mix(in srgb, var(--bad) 14%, #fff);
+}
+.migration__badge[data-status='running'] {
+  background: color-mix(in srgb, var(--brand) 14%, #fff);
+}
+.migration__target {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+.migration__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px 12px;
+  margin: 8px 0;
+}
+.migration__counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 6px;
+  margin: 8px 0 12px;
+}
+.migration__counts div {
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  text-align: center;
+}
+.migration__counts b {
+  display: block;
+  font-size: 1.1rem;
+}
+.migration__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.migration__issue {
+  color: var(--bad);
+  font-size: 0.78rem;
+}

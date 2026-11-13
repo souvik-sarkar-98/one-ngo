@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NGO Platform — Operator console</title>
+<style>
+  :root {
+    --fg: #1d2733; --muted: #5b6878; --line: #d8dee6; --bg: #f5f7fa; --card: #fff;
+    --brand: #1f5f8b; --ok: #1d7a46; --warn: #9a6200; --bad: #b3261e; --radius: 6px;
+    --b50: color-mix(in srgb, var(--brand) 6%, #fff); --b100: color-mix(in srgb, var(--brand) 12%, #fff);
+    --page: #eef1f5; --ink: #18212b;
+    --font: 'Segoe UI', Roboto, 'Noto Sans', Helvetica, Arial, sans-serif;
+    --mono: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font); color: var(--ink); background: linear-gradient(180deg, #f6f8fa, var(--page)); }
+  header.page { max-width: 1440px; margin: 0 auto; padding: 36px 40px 18px; }
+  header.page h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -.01em; }
+  header.page p { margin: 0 0 10px; max-width: 980px; line-height: 1.55; color: #36414d; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 16px; }
+  .rules div { background: #fff; border: 1px solid #dfe5eb; border-radius: 10px; padding: 12px 14px; font-size: 13.5px; line-height: 1.5; }
+  .rules b { display: block; color: var(--brand); margin-bottom: 3px; }
+  nav.toc { position: sticky; top: 0; z-index: 20; background: rgba(238,241,245,.94); backdrop-filter: blur(6px); border-bottom: 1px solid #dbe1e7; }
+  nav.toc div { max-width: 1440px; margin: 0 auto; padding: 9px 40px; display: flex; gap: 4px; overflow-x: auto; }
+  nav.toc a { font: 600 12px var(--mono); color: #3a4a5a; text-decoration: none; padding: 6px 10px; border-radius: 6px; white-space: nowrap; }
+  nav.toc a.grp { color: var(--brand); }
+  nav.toc a:hover { background: #fff; }
+  main.page { max-width: 1440px; margin: 0 auto; padding: 0 40px 80px; }
+  section.flow { margin-top: 40px; }
+  .flabel { font: 700 12px var(--mono); color: var(--brand); text-transform: uppercase; letter-spacing: .06em; display: flex; gap: 8px; align-items: center; }
+  .flabel::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+  section.flow > h2 { margin: 4px 0 4px; font-size: 22px; }
+  section.flow > p { margin: 0 0 14px; color: #3a4552; max-width: 980px; line-height: 1.5; }
+  .step { display: grid; grid-template-columns: 52px 330px minmax(0, 1fr); gap: 18px; align-items: start; padding: 18px 0; border-top: 1px dashed #d3dae2; }
+  @media (max-width: 1200px) { .step { grid-template-columns: 44px minmax(0, 1fr); } .step .desk { grid-column: 2; } }
+  .num { width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 2px solid var(--brand); color: var(--brand); font: 700 15px/36px var(--font); text-align: center; }
+  .stephead { grid-column: 2 / -1; margin-bottom: -6px; }
+  .stephead b { font-size: 16px; }
+  .stephead .act { display: inline-block; margin-left: 10px; font-size: 13px; color: #3a4552; }
+  .stephead .act kbd { font: 600 12px var(--font); background: #fff; border: 1px solid #ccd5de; border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; }
+  .stephead code { display: block; margin-top: 4px; font: 12px var(--mono); color: #556373; }
+  .stephead .tag { display: inline-block; margin-left: 8px; font: 700 10px var(--mono); text-transform: uppercase; letter-spacing: .05em; padding: 2px 7px; border-radius: 999px; background: #e8edf3; color: var(--muted); vertical-align: 2px; }
+  .stephead .tag.state { background: #fdf1dc; color: var(--warn); }
+  .stephead .tag.new { background: #e0e7ff; color: #4338ca; }
+  .cap { font: 600 10.5px var(--mono); color: #6a7683; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 5px; }
+  .noteline { font-size: 13px; color: #3a4552; line-height: 1.5; margin-top: 8px; max-width: 760px; }
+  .noteline ul { margin: 6px 0 0; padding-left: 18px; }
+  /* Overview */
+  .ov { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 1100px) { .ov { grid-template-columns: 1fr; } }
+  .ovcard { background: #fff; border: 1px solid #dfe5eb; border-radius: 12px; padding: 14px 16px; }
+  .ovcard h3 { margin: 0 0 8px; font-size: 15px; }
+  table.mx { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.mx th, table.mx td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e5eaf0; vertical-align: top; }
+  table.mx th { font: 700 10.5px var(--mono); text-transform: uppercase; letter-spacing: .04em; color: #6a7683; background: #f8fafc; }
+  table.mx code { font: 11.5px var(--mono); }
+  table.mx td.c { text-align: center; }
+  .map { font: 12.5px var(--mono); line-height: 1.75; color: #2c3a48; }
+  .map .d { color: var(--brand); font-weight: 700; }
+  .map .g { color: #8794a1; }
+  /* Devices */
+  .phone { width: 330px; height: 640px; border-radius: 34px; background: #0f141a; padding: 10px; box-shadow: 0 14px 30px rgba(15,23,42,.18); }
+  .phone .scr { width: 100%; height: 100%; border-radius: 26px; overflow: hidden; background: var(--bg); position: relative; display: flex; flex-direction: column; color: var(--fg); font-size: 14px; }
+  .status { height: 26px; flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; font: 600 11px var(--font); background: var(--brand); color: #fff; }
+  .browser { border-radius: 10px; background: #fff; border: 1px solid #d5dbe2; box-shadow: 0 14px 30px rgba(15,23,42,.12); overflow: hidden; min-width: 0; }
+  .browser .chrome { height: 30px; background: #e9edf1; border-bottom: 1px solid #d5dbe2; display: flex; align-items: center; padding: 0 10px; }
+  .browser .url { flex: 1; height: 20px; border-radius: 6px; background: #fff; font: 11.5px var(--mono); color: #536171; display: flex; align-items: center; padding: 0 9px; overflow: hidden; white-space: nowrap; }
+  .browser .scr { height: 640px; background: var(--bg); position: relative; overflow: hidden; display: flex; flex-direction: column; color: var(--fg); font-size: 14px; }
+  .appbar { height: 50px; flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 12px; background: var(--brand); color: #fff; }
+  .appbar .brand { font-weight: 700; font-size: 15px; }
+  .appbar .org { font-weight: 600; font-size: 13px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pagehead { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; flex-wrap: wrap; }
+  .pagehead .h1 { margin: 0; line-height: 1.25; }
+  .pagehead .back { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; flex: 0 0 auto; }
+  .ib { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; position: relative; font-size: 17px; }
+  .ib.av { background: rgba(255,255,255,.2); font: 700 12px var(--font); }
+  .frame-body { flex: 1; display: flex; min-height: 0; }
+  .main { flex: 1; min-width: 0; overflow: auto; padding: 12px 12px 16px; position: relative; }
+  .browser .main { padding: 16px 20px 20px; }
+  .browser .main > .col { max-width: 680px; margin: 0 auto; }
+  .navbar { flex: 0 0 auto; display: grid; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); background: #fff; border-top: 1px solid var(--line); height: 58px; }
+  .rail { flex: 0 0 auto; width: 84px; background: #fff; border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 10px 0; gap: 4px; }
+  .rail .push { margin-top: auto; }
+  .nv { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 10.5px; color: var(--muted); padding: 6px 0; position: relative; text-align: center; }
+  .nv .g { width: 44px; height: 26px; border-radius: 13px; display: grid; place-items: center; }
+  .nv.on { color: var(--brand); font-weight: 600; }
+  .nv.on .g { background: var(--b100); }
+  .nv svg { width: 20px; height: 20px; fill: currentColor; }
+  .h1 { font-size: 1.15rem; font-weight: 700; margin: 0; }
+  .intro { margin: 0 0 10px; font-size: .75rem; color: var(--muted); line-height: 1.4; }
+  .hit { outline: 3px solid #f3be26; outline-offset: 2px; border-radius: 12px; }
+  .panel { background: #fff; border-radius: 16px; border: 1px solid rgba(148,163,184,.22); box-shadow: 0 1px 2px #0f172a0d, 0 4px 14px #0f172a12; overflow: hidden; margin-bottom: 12px; }
+  .btn { font: inherit; font-size: 13px; min-height: 36px; padding: .45rem .8rem; border-radius: var(--radius); border: 1px solid var(--line); background: #fff; color: var(--fg); display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+  .btn.p { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn.d { background: #fff; border-color: #efc4c1; color: var(--bad); }
+  .btn.dp { background: var(--bad); border-color: var(--bad); color: #fff; }
+  .btn.sm { min-height: 30px; font-size: 12px; padding: .3rem .6rem; }
+  .btn.off { opacity: .45; }
+  .card { background: #fff; border: 1px solid rgba(148,163,184,.25); border-radius: 14px; padding: 12px; margin-bottom: 10px; box-shadow: 0 1px 2px #0f172a0a; }
+  .card .ct { font-weight: 700; font-size: .85rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .cs { font-size: .72rem; color: #64748b; line-height: 1.35; }
+  .listrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid rgba(148,163,184,.18); font-size: .8rem; }
+  .listrow:last-child { border-bottom: 0; }
+  .listrow .who { min-width: 0; flex: 1; }
+  .listrow.dim { opacity: .6; }
+  .note { background: #eef5fb; border: 1px solid #c6d9e8; color: var(--brand); border-radius: 12px; padding: 9px 12px; font-size: .72rem; margin-bottom: 10px; line-height: 1.4; }
+  .note.warn { background: #fff8e6; border-color: #f0d9b5; color: var(--warn); }
+  .note.bad { background: #fdf0ef; border-color: #efc4c1; color: var(--bad); }
+  .note.ok { background: #eef9f2; border-color: #bfe3cd; color: var(--ok); }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .sp { flex: 1; }
+  .crumbs { flex: 0 0 auto; background: #fff; border-bottom: 1px solid var(--line); padding: 0 12px; height: 28px; display: flex; align-items: center; font-size: 11.5px; }
+  .browser .crumbs { padding-left: 16px; height: 30px; font-size: 12.5px; }
+  .crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; min-width: 0; overflow: hidden; white-space: nowrap; }
+  .crumbs li { display: flex; align-items: center; color: var(--muted); }
+  .crumbs li + li::before { content: '›'; margin: 0 6px; color: #94a3b8; }
+  .crumbs a { color: var(--brand); font-weight: 600; }
+  .crumbs li[aria-current] { color: var(--fg); font-weight: 600; }
+  .mf { margin-bottom: 8px; }
+  .mf .l { font-size: .72rem; font-weight: 600; color: #374151; margin-bottom: 3px; }
+  .mf .l i { color: #f97316; font-style: normal; }
+  .mf .h { font-size: .68rem; color: #64748b; margin-top: 3px; }
+  .mf .e { font-size: .68rem; color: #ba1a1a; margin-top: 3px; }
+  .mf .o { border: 1px solid #79747e; border-radius: 4px; min-height: 32px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .78rem; background: #fff; }
+  .mf .o.ro { background: #f2f2f4; color: #6b6870; border-color: #c9c6cf; }
+  .mf .o.err { border-color: #ba1a1a; }
+  .mf .o.ta { min-height: 52px; align-items: flex-start; padding-top: 7px; }
+  .mf .o .ph { color: #8a8590; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+  .phone .grid2 { grid-template-columns: 1fr; }
+  .kv { margin: 0 0 10px; border: 1px solid rgba(148,163,184,.32); border-radius: 12px; overflow: hidden; }
+  .kv div { display: grid; grid-template-columns: 116px 1fr; gap: 8px; padding: 6px 10px; font-size: .7rem; }
+  .kv div:not(:last-child) { border-bottom: 1px solid rgba(148,163,184,.32); }
+  .kv div:nth-child(2n) { background: #f8fafc; }
+  .kv b { font-weight: 600; color: #334155; }
+  .kv code { font: .68rem var(--mono); word-break: break-all; }
+  .badge { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font-size: .64rem; font-weight: 700; letter-spacing: .02em; background: #e8edf3; color: var(--muted); white-space: nowrap; }
+  .badge.ok { background: #e3f4ea; color: var(--ok); }
+  .badge.warn { background: #fdf1dc; color: var(--warn); }
+  .badge.bad { background: #fdf0ef; color: var(--bad); }
+  .badge.mfa { background: #e0e7ff; color: #4338ca; }
+  .badge.info { background: #dbeafe; color: #1d4ed8; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; background: #fff; margin-bottom: 8px; }
+  .seg span { font-size: .72rem; padding: 4px 12px; border-radius: 999px; color: var(--muted); }
+  .seg span.on { background: var(--b100); color: var(--brand); font-weight: 700; }
+  .search { display: flex; align-items: center; gap: 8px; height: 38px; border: 1px solid rgba(148,163,184,.35); border-radius: 12px; background: #fff; padding: 0 10px; font-size: .8rem; color: #8a8590; margin-bottom: 8px; }
+  .search b { color: var(--fg); font-weight: 400; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .chip { font-size: .7rem; padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(148,163,184,.35); background: #fff; color: var(--muted); white-space: nowrap; }
+  .chip.on { background: var(--b100); border-color: color-mix(in srgb, var(--brand) 25%, #fff); color: var(--brand); font-weight: 700; }
+  .chip.tag { background: #f1f5f9; color: #334155; }
+  .chip.tag i { font-style: normal; margin-left: 4px; color: #94a3b8; }
+  .steps { list-style: none; margin: 0; padding: 0; }
+  .steps li { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: .74rem; }
+  .steps .dot { width: 16px; height: 16px; border-radius: 50%; flex: 0 0 auto; display: grid; place-items: center; font-size: 10px; color: #fff; background: #cbd5e1; }
+  .steps .done .dot { background: var(--ok); }
+  .steps .fail .dot { background: var(--bad); }
+  .steps .run .dot { background: #fff; border: 2px solid var(--brand); border-right-color: transparent; }
+  .steps .run { color: var(--brand); font-weight: 600; }
+  .steps .fail { color: var(--bad); font-weight: 600; }
+  .steps .todo { color: #94a3b8; }
+  .tog { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-bottom: 1px solid rgba(148,163,184,.18); font-size: .78rem; }
+  .tog:last-child { border-bottom: 0; }
+  .tog .who { flex: 1; min-width: 0; }
+  .tog.chg { background: #fff8e6; }
+  .sw { width: 34px; height: 20px; border-radius: 999px; background: #cbd5e1; position: relative; flex: 0 0 auto; }
+  .sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px #0003; }
+  .sw.on { background: var(--brand); }
+  .sw.on::after { left: 16px; }
+  .sw.lock { opacity: .45; }
+  .chk { display: flex; align-items: center; gap: 8px; font-size: .74rem; padding: 4px 0; }
+  .chk .bx { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid #79747e; flex: 0 0 auto; display: grid; place-items: center; font-size: 11px; color: #fff; }
+  .chk .bx.on { background: var(--brand); border-color: var(--brand); }
+  .chk .bx.r { border-radius: 50%; }
+  .chk .bx.r.on { background: #fff; box-shadow: inset 0 0 0 3px var(--brand); }
+  .sect { display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: color-mix(in srgb, var(--brand) 12%, #fff); border: 1px solid color-mix(in srgb, var(--brand) 25%, #fff); border-radius: 12px; font-size: .78rem; font-weight: 700; margin-bottom: 6px; }
+  .sect .n { width: 20px; height: 20px; border-radius: 50%; background: var(--brand); color: #fff; font-size: .66rem; display: grid; place-items: center; }
+  .sect .n.ok { background: var(--ok); }
+  .sect .n.bad { background: var(--bad); }
+  .sect .cs { font-weight: 400; margin-left: auto; }
+  .scrim { position: absolute; inset: 0; background: #0f172a59; z-index: 4; }
+  .sheet { position: absolute; z-index: 5; background: #fff; box-shadow: 0 -8px 32px #0f172a1f; padding: 10px 16px 14px; display: flex; flex-direction: column; }
+  .phone .sheet { left: 0; right: 0; bottom: 0; border-radius: 20px 20px 0 0; max-height: 84%; overflow: auto; }
+  .browser .sheet { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(480px, 86%); max-height: 92%; overflow: auto; border-radius: 20px; padding: 16px 22px 18px; box-shadow: 0 18px 48px #0f172a33; }
+  .sheet .handle { width: 36px; height: 4px; border-radius: 999px; background: #cbd5e1; margin: 0 auto 10px; }
+  .browser .sheet .handle { display: none; }
+  .sheet .ttl { text-align: center; font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 12px; }
+  .acts { display: flex; gap: 8px; margin-top: 8px; }
+  .acts .btn { flex: 1; }
+  .auth { flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 30px 14px; overflow: auto; }
+  .auth .card { width: 100%; max-width: 380px; padding: 20px; }
+  .auth .mark { width: 44px; height: 44px; border-radius: 12px; background: var(--brand); color: #fff; font: 800 14px/44px var(--font); text-align: center; margin-bottom: 10px; }
+  .auth .mark.bad { background: var(--bad); }
+  .auth .mark.warn { background: var(--warn); }
+  .spin { width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--b100); border-top-color: var(--brand); margin: 6px 0 12px; }
+  .toast { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: #1e293b; color: #fff; font-size: .74rem; padding: 8px 14px; border-radius: 10px; white-space: nowrap; z-index: 6; }
+  .phone .toast { bottom: 70px; }
+  .savebar { position: sticky; bottom: 0; display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #f0d9b5; border-radius: 12px; padding: 8px 10px; box-shadow: 0 -4px 14px #0f172a14; font-size: .74rem; }
+  .banner { flex: 0 0 auto; padding: 7px 12px; font-size: .72rem; display: flex; align-items: center; gap: 8px; }
+  .banner.off { background: #334155; color: #fff; }
+  .banner.warn { background: #fff8e6; color: var(--warn); border-bottom: 1px solid #f0d9b5; }
+  .sk { height: 12px; border-radius: 6px; background: linear-gradient(90deg, #e8edf3, #f4f6f9, #e8edf3); margin: 7px 0; }
+  .empty { text-align: center; padding: 22px 12px; }
+  .empty .ic { width: 44px; height: 44px; margin: 0 auto 8px; border-radius: 12px; background: var(--b100); color: var(--brand); display: grid; place-items: center; font-size: 20px; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: .7rem; }
+  .tbl th { text-align: left; font-size: .6rem; text-transform: uppercase; letter-spacing: .04em; color: #64748b; background: #f8fafc; padding: 7px 8px; }
+  .tbl td { padding: 8px; border-top: 1px solid rgba(148,163,184,.18); vertical-align: top; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Operator console — complete wireframe</h1>
+  <p>Ravi runs the hosted platform. He signs in to the console with two-factor authentication, looks up organisations, onboards new ones, changes an organisation's state and sign-in, gives colleagues access, and reads what everyone did. Every one of these is a screen. Nothing in the console needs a command line. The only step outside it is creating the very first operator on a new installation, which the database administrator does once with SQL.</p>
+  <p>This page covers every screen and every state the console can be in: the happy path, empty and loading states, refusals, errors, and what each operator sees depending on the actions they hold. Screens tagged <b>state</b> are variants of the screen above them. Screens tagged <b>proposed</b> go beyond what the console server does today and need server work.</p>
+  <div class="rules">
+    <div><b>Same frame as the main app</b>App bar with the product name and the operator's initials, one breadcrumb line, the rail on a wide screen and the bottom bar on a phone, and one centred content column. The same tokens, cards, panels, fields, sheets and badges as the main app. The app bar's second slot reads <i>Operator console</i>. Sign out is the last rail icon on a wide screen; on a phone the initials open a sheet with Sign out.</div>
+    <div><b>Destinations follow grants</b>Organisations, Onboard, Operators and Activity. A destination appears only when the operator holds an action it needs (see the table below). Buttons on a page follow the same rule. An address the operator cannot use shows a no-access page, never a broken screen.</div>
+    <div><b>Fresh two-factor check</b>Suspend, reactivate, close, changing an organisation's sign-in, and every change on Operators send the operator through a fresh two-factor sign-in first. The change is made only when they return, the check names exactly what it allows, and it can be used once within five minutes.</div>
+    <div><b>No command line</b><code>grant.ts</code> and <code>npm run grant</code> are removed. Adding operators, giving and removing actions, changing a login and disabling an operator are all on Operators, and each change is written to <code>platform_audit</code>. Onboarding is a form, not JSON.</div>
+    <div><b>First operator</b>A new installation has no one who could sign in to add the first operator. The database administrator inserts that one operator, with Manage operators, using SQL (<code>utilities/seed/console-operator.sql</code> locally). Everyone after that is added on Operators.</div>
+    <div><b>No lock-out</b>An operator cannot disable themselves, change their own login, or remove their own Manage operators. Anyone on Operators holds Manage operators, so the console always keeps at least one operator who can add others. The server enforces the same rules; the screens show them before anyone tries.</div>
+    <div><b>Lookup, not a directory</b>The console still does not list every organisation. Organisations is a lookup by code or request ID. The only lists are recent lookups in this browser, operators, and activity.</div>
+    <div><b>Plain words, no JSON</b>Every response is drawn as fields, badges, checklists and history. Errors are sentences placed on the field or at the top of the page. Raw JSON is never shown, including at <code>/op/auth/callback</code>.</div>
+  </div>
+</header>
+<nav class="toc"><div id="toc"></div></nav>
+<main class="page" id="flows">
+  <section class="flow" id="overview">
+    <div class="flabel">Overview</div>
+    <h2>Routes and actions</h2>
+    <p>Where each screen lives, and which action an operator needs to see it or press its buttons. <b>Manage operators</b> and <b>Read activity</b> are new actions.</p>
+    <div class="ov">
+      <div class="ovcard"><h3>Route map</h3><div class="map">
+        <div><span class="g">signed out</span></div>
+        <div>/sign-in <span class="g">· refused · session ended · signed out</span></div>
+        <div>/auth/callback <span class="g">· completing sign-in</span></div>
+        <div>/step-up <span class="g">· confirm it's you · cancelled · expired</span></div>
+        <div style="margin-top:6px"><span class="g">signed in</span></div>
+        <div><span class="d">Organisations</span> /organisations</div>
+        <div>&nbsp;&nbsp;/organisations/:code <span class="g">· active · suspended · closed</span></div>
+        <div>&nbsp;&nbsp;/organisations/:code <span class="g">sheets: suspend · reactivate · close · sign-in</span></div>
+        <div>&nbsp;&nbsp;/organisations/requests/:id <span class="g">· running · failed · finished</span></div>
+        <div><span class="d">Onboard</span> /onboard <span class="g">· five sections</span></div>
+        <div>&nbsp;&nbsp;/onboard/review</div>
+        <div><span class="d">Operators</span> /operators <span class="g">sheet: add</span></div>
+        <div>&nbsp;&nbsp;/operators/:id <span class="g">sheets: change login · disable</span></div>
+        <div><span class="d">Activity</span> /activity <span class="g">sheet: entry</span></div>
+        <div style="margin-top:6px">/no-access <span class="g">· any address the operator cannot use</span></div>
+      </div></div>
+      <div class="ovcard"><h3>Actions</h3><table class="mx">
+        <thead><tr><th>Action</th><th>Unlocks</th><th>Fresh 2FA</th></tr></thead>
+        <tbody>
+          <tr><td><code>status</code> Look up organisations</td><td>Organisations destination, organisation and request pages</td><td class="c">—</td></tr>
+          <tr><td><code>onboard</code> Onboard organisations</td><td>Onboard destination, Check and Onboard</td><td class="c">—</td></tr>
+          <tr><td><code>retry</code> Retry onboarding</td><td>Retry on a failed request</td><td class="c">—</td></tr>
+          <tr><td><code>suspend</code> Suspend organisations</td><td>Suspend button</td><td class="c">✓</td></tr>
+          <tr><td><code>reactivate</code> Reactivate organisations</td><td>Reactivate button</td><td class="c">✓</td></tr>
+          <tr><td><code>close</code> Close organisations</td><td>Close button</td><td class="c">✓</td></tr>
+          <tr><td><code>sign_in</code> Change organisation sign-in</td><td>Change sign-in on an organisation</td><td class="c">✓</td></tr>
+          <tr><td><code>operators</code> Manage operators <span class="badge mfa">new</span></td><td>Operators destination, add, change actions, change login, disable</td><td class="c">✓</td></tr>
+          <tr><td><code>audit</code> Read activity <span class="badge mfa">new</span></td><td>Activity destination</td><td class="c">—</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </section>
+</main>
+<script>
+const ICON = {
+  orgs: '<svg viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>',
+  onboard: '<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>',
+  operators: '<svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>',
+  activity: '<svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6a7 7 0 1 1 2.05 4.95l-1.42 1.42A9 9 0 1 0 13 3zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>',
+  out: '<svg viewBox="0 0 24 24"><path d="M10.09 15.59 11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5a2 2 0 0 0-2 2v4h2V5h14v14H5v-4H3v4a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>',
+};
+const ALL_NAV = [['orgs', 'Organisations'], ['onboard', 'Onboard'], ['operators', 'Operators'], ['activity', 'Activity']];
+const hit = (on) => (on ? ' hit' : '');
+const MFA = '<span class="badge mfa">Fresh 2FA</span>';
+
+function nav(k, s) {
+  const items = s.navItems ? ALL_NAV.filter(([key]) => s.navItems.includes(key)) : ALL_NAV;
+  const html = items.map(([key, label]) => `<div class="nv${key === s.nav ? ' on' : ''}"><span class="g">${ICON[key]}</span><span>${label}</span></div>`).join('');
+  return k === 'phone'
+    ? `<div class="navbar" style="--n:${items.length}">${html}</div>`
+    : `<div class="rail">${html}<div class="nv push"><span class="g">${ICON.out}</span><span>Sign out</span></div></div>`;
+}
+function appbar(s, signedIn = true) {
+  return `<div class="appbar"><span class="brand">NGOOne</span><span class="org">Operator console</span><span class="sp"></span>${signedIn ? `<span class="ib av${hit(s.avatarHit)}">${s.initials ?? 'RM'}</span>` : ''}</div>`;
+}
+function crumbs(s) {
+  const items = s.crumbs;
+  return `<nav class="crumbs" aria-label="Breadcrumb"><ol>${items.map((it, i) => i === items.length - 1 ? `<li aria-current="page">${it}</li>` : `<li><a>${it}</a></li>`).join('')}</ol></nav>`;
+}
+function frame(k, s) {
+  const banner = s.banner ? s.banner(k) : '';
+  if (s.bare) {
+    const body = `<div class="auth">${s.body(k)}</div>`;
+    return k === 'phone'
+      ? `<div class="phone"><div class="scr"><div class="status"><span>9:41</span><span>100%</span></div>${appbar(s, false)}${banner}${body}</div></div>`
+      : `<div class="browser"><div class="chrome"><div class="url">${s.url}</div></div><div class="scr">${appbar(s, false)}${banner}${body}</div></div>`;
+  }
+  const head = `<div class="pagehead">${s.back ? '<span class="back" aria-hidden="true">←</span>' : ''}<div class="h1">${s.title}</div>${s.badge ?? ''}${s.titleAction ? `<span class="sp"></span>${s.titleAction(k)}` : ''}</div>`;
+  const body = `<div class="main"><div class="col">${head}${s.body(k)}</div>${s.overlay ? s.overlay(k) : ''}</div>`;
+  return k === 'phone'
+    ? `<div class="phone"><div class="scr"><div class="status"><span>9:41</span><span>100%</span></div>${appbar(s)}${banner}${crumbs(s)}<div class="frame-body">${body}</div>${nav('phone', s)}</div></div>`
+    : `<div class="browser"><div class="chrome"><div class="url">${s.url}</div></div><div class="scr">${appbar(s)}${banner}${crumbs(s)}<div class="frame-body">${nav('desk', s)}${body}</div></div></div>`;
+}
+const field = (l, v, o = {}) => `<div class="mf"><div class="l">${l}${o.req ? ' <i>*</i>' : ''}</div><div class="o${o.ro ? ' ro' : ''}${o.err ? ' err' : ''}${o.ta ? ' ta' : ''}"><span${v ? '' : ' class="ph"'}>${v || (o.ph ?? '')}</span>${o.icon ? `<span>${o.icon}</span>` : ''}</div>${o.err ? `<div class="e">${o.err}</div>` : o.hint ? `<div class="h">${o.hint}</div>` : ''}</div>`;
+const kv = (pairs) => `<div class="kv">${pairs.map(([k, v]) => `<div><b>${k}</b><span>${v}</span></div>`).join('')}</div>`;
+const chk = (label, on, extra = '', radio = false) => `<div class="chk"><span class="bx${radio ? ' r' : ''}${on ? ' on' : ''}">${on && !radio ? '✓' : ''}</span>${label}${extra}</div>`;
+function sheet(title, content, actions) {
+  return `<div class="scrim"></div><div class="sheet"><div class="handle"></div><div class="ttl">${title}</div>${content}<div class="acts">${actions}</div></div>`;
+}
+const toast = (text) => `<div class="toast">${text}</div>`;
+const steps = (list) => `<ul class="steps">${list.map(([state, label]) => `<li class="${state}"><span class="dot">${state === 'done' ? '✓' : state === 'fail' ? '!' : ''}</span>${label}</li>`).join('')}</ul>`;
+const STEP_NAMES = ['Organisation created', 'Profile', 'Administrator role', 'Modules', 'Receipt prefix', 'Financial year', 'Administrator invitation', 'Readiness check', 'Active'];
+const progress = (doneCount, mode) => steps(STEP_NAMES.map((n, i) => [i < doneCount ? 'done' : i === doneCount ? mode : 'todo', n]));
+
+/* ================= Sign in ================= */
+const authCard = (mark, title, inner, cls = '') => `<div class="card"><div class="mark${cls}">${mark}</div><div class="h1" style="margin-bottom:6px">${title}</div>${inner}</div>`;
+function signIn() {
+  return authCard('N1', 'Sign in to the console', `<p class="intro">For the people who run this installation. Your account must already be added to the console, and your identity provider must confirm two-factor sign-in.</p>
+    <div class="row"><span class="btn p${hit(true)}" style="flex:1">Continue to sign in</span></div>
+    <p class="cs" style="margin-top:10px">Not set up yet? Ask an operator who can manage operators to add you.</p>`);
+}
+function callback() {
+  return authCard('N1', 'Completing sign-in…', `<div class="spin"></div><p class="intro">Checking the response from your identity provider. This takes a moment.</p>`);
+}
+function refused() {
+  return authCard('!', "This account can't use the console", `<div class="note bad">You signed in as <b>v@gg.com</b>, but that login isn't added to the console, or it has been disabled.</div>
+    <p class="intro">Ask an operator who can manage operators to add this login. Give them the details below so they can match it exactly.</p>
+    ${kv([['Provider', '<code>https://127.0.0.1:8095</code>'], ['Subject ID', '<code>demo-1b6c0f7a9e2d4c8b53a1</code>']])}
+    <div class="row"><span class="btn" style="flex:1">Copy details</span><span class="btn p${hit(true)}" style="flex:1">Sign in with another account</span></div>`, ' bad');
+}
+function noMfa() {
+  return authCard('!', 'Two-factor sign-in is required', `<div class="note warn">Your identity provider signed you in without two-factor authentication, or the sign-in was more than five minutes old.</div>
+    <p class="intro">Turn on two-factor for your account at the provider, then sign in again.</p>
+    <div class="row"><span class="btn p${hit(true)}" style="flex:1">Sign in again</span></div>`, ' warn');
+}
+function providerDown() {
+  return authCard('!', "Can't reach the identity provider", `<p class="intro">The console couldn't contact the sign-in service. Nothing was changed. Try again in a minute; if it keeps happening, the provider may be down.</p>
+    <div class="row"><span class="btn p${hit(true)}" style="flex:1">Try again</span></div>`, ' warn');
+}
+function sessionEnded() {
+  return authCard('N1', 'Your session ended', `<p class="intro">You were signed out after eight hours, or another operator disabled or re-linked your account. Sign in again to carry on from <b>riverbank</b>.</p>
+    <div class="row"><span class="btn p${hit(true)}" style="flex:1">Sign in again</span></div>`);
+}
+function signedOut() {
+  return authCard('N1', 'Signed out', `<p class="intro">You've signed out of the console on this browser. Your identity provider may still be signed in.</p>
+    <div class="row"><span class="btn p${hit(true)}" style="flex:1">Sign in</span></div>`);
+}
+
+/* ================= Shell ================= */
+function accountSheet() {
+  return sheet('Account', `<div class="row" style="margin-bottom:10px"><span class="ib av" style="background:var(--b100);color:var(--brand)">RM</span><div><b style="font-size:.85rem">Ravi Menon</b><div class="cs">Signed in 09:02 · two-factor confirmed</div></div></div>
+    ${kv([['Actions', 'All 9'], ['Session ends', 'Today, 17:02']])}`, '<span class="btn">Close</span><span class="btn d hit">Sign out</span>');
+}
+function signOutConfirm() {
+  return sheet('Sign out?', '<p class="cs">You will need to sign in again with two-factor authentication.</p>', '<span class="btn">Cancel</span><span class="btn dp hit">Sign out</span>');
+}
+function noAccess() {
+  return `<div class="card empty"><div class="ic">🔒</div><div class="h1" style="font-size:1rem;margin-bottom:6px">You don't have access to Operators</div>
+    <p class="cs">Your account can look up and onboard organisations. Ask an operator who can manage operators if you need more.</p>
+    <div class="row" style="justify-content:center;margin-top:10px"><span class="btn p${hit(true)}">Go to Organisations</span></div></div>`;
+}
+function loading() {
+  return `<div class="card"><div class="sk" style="width:40%"></div><div class="sk"></div><div class="sk" style="width:80%"></div><div class="sk" style="width:65%"></div></div><div class="card"><div class="sk" style="width:30%"></div><div class="sk"></div></div>`;
+}
+function serverError() {
+  return `<div class="note bad">Something went wrong on the server. Nothing was changed. Reference <b>op-7f3a19</b>.</div><div class="row"><span class="sp"></span><span class="btn p${hit(true)}">Try again</span></div>`;
+}
+
+/* ================= Organisations ================= */
+function find(k, opts = {}) {
+  const recent = opts.empty
+    ? `<div class="card empty"><div class="ic">⌕</div><div class="cs">Organisations and requests you open appear here, on this browser only.</div></div>`
+    : `<div class="panel">
+      <div class="listrow"><div class="who"><b>Harbour Trust</b><div class="cs">harbour · opened 10 min ago</div></div><span class="badge ok">Active</span><span class="cs">›</span></div>
+      <div class="listrow"><div class="who"><b>req-2026-11-04-07</b><div class="cs">Lakeside Youth Club · onboarding request</div></div><span class="badge bad">Failed</span><span class="cs">›</span></div>
+      <div class="listrow"><div class="who"><b>Old Town Library Fund</b><div class="cs">oldtown · opened yesterday</div></div><span class="badge">Closed</span><span class="cs">›</span></div>
+    </div><div class="row"><span class="sp"></span><span class="btn sm">Clear recent</span></div>`;
+  const nf = opts.notFound ? `<div class="note bad">No organisation has the code <b>rivrbank</b>. Check the spelling, or switch to Request ID.</div>` : '';
+  return `<p class="intro">Look up one organisation by its code, or an onboarding request by its ID. The console does not list every organisation.</p>
+    ${nf}<div class="card"><div class="seg"><span class="on">Organisation code</span><span>Request ID</span></div>
+    <div class="search${hit(!opts.notFound && !opts.empty)}" ${opts.notFound ? 'style="border-color:#ba1a1a"' : ''}>⌕ <b>${opts.notFound ? 'rivrbank' : opts.empty ? '' : 'riverbank'}</b>${opts.empty ? 'e.g. riverbank' : ''}</div>
+    <div class="row"><span class="sp"></span><span class="btn p${hit(!!opts.notFound)}">Find</span></div></div>
+    <p class="cap" style="margin-top:14px">Recent on this browser</p>${recent}`;
+}
+function orgFacts(state) {
+  const pairs = [['Code', 'riverbank'], ['Legal name', 'Riverbank Community Trust'], ['Region', 'asia-south1 · Asia/Kolkata'], ['Created', '2 Nov 2026 · <code>req-2026-11-02-03</code>'], ['Administrator', 'meera@riverbank.org · invitation accepted'], ['Modules', 'Donations 0.2.1']];
+  if (state === 'closed') pairs.push(['Closed', '4 Nov 2026 by Ravi Menon']);
+  return `<div class="card"><div class="ct">Organisation</div>${kv(pairs)}</div>`;
+}
+function orgSignIn(opts) {
+  const can = opts.can?.includes('sign_in') ?? true;
+  return `<div class="card"><div class="ct">Sign-in ${can ? MFA : ''}</div>
+    <div class="cs" style="margin-bottom:8px">Members sign in with a password and a one-time code. Shared provider: <b>Google</b>, limited to <b>riverbank.org</b>.</div>
+    ${can && opts.state !== 'closed' ? `<div class="row"><span class="sp"></span><span class="btn sm${hit(opts.hitSignIn)}">Change sign-in</span></div>` : ''}</div>`;
+}
+function orgLifecycle(opts) {
+  const can = (a) => opts.can?.includes(a) ?? true;
+  if (opts.state === 'closed') return `<div class="note">This organisation is closed. Members cannot sign in, and it cannot be reopened from the console. Its records are kept for the retention period.</div>`;
+  const buttons = opts.state === 'suspended'
+    ? [can('reactivate') && `<span class="btn p sm${hit(opts.hitReactivate)}">Reactivate</span>`, can('close') && `<span class="btn d sm">Close</span>`]
+    : [can('suspend') && `<span class="btn d sm${hit(opts.hitSuspend)}">Suspend</span>`, can('close') && `<span class="btn d sm${hit(opts.hitClose)}">Close</span>`];
+  const shown = buttons.filter(Boolean);
+  const text = opts.state === 'suspended' ? 'Members cannot sign in. Records are kept.' : 'Suspending stops members signing in and keeps every record. Closing is permanent.';
+  return `<div class="card"><div class="ct">Lifecycle ${shown.length ? MFA : ''}</div><div class="cs" style="margin-bottom:8px">${text}</div>${shown.length ? `<div class="row">${shown.join('')}</div>` : '<div class="cs"><i>You can see this organisation but not change it.</i></div>'}</div>`;
+}
+function orgHistory(state) {
+  const rows = [];
+  if (state === 'closed') rows.push(['Closed', 'Ravi Menon · 4 Nov 2026, 19:10 · "Trust dissolved"']);
+  if (state === 'suspended' || state === 'closed') rows.push(['Suspended', 'Ravi Menon · 4 Nov 2026, 18:22 · "Paused at the trust\'s request"']);
+  rows.push(['Sign-in changed', 'Priya Shah · 3 Nov 2026, 15:40 · Google limited to riverbank.org']);
+  rows.push(['Onboarded', 'Ravi Menon · 2 Nov 2026, 11:05']);
+  return `<div class="card"><div class="ct">History</div>${rows.map(([a, b]) => `<div class="listrow" style="padding:6px 0"><div class="who"><b>${a}</b><div class="cs">${b}</div></div></div>`).join('')}</div>`;
+}
+function organisation(k, opts = {}) {
+  const limited = opts.can && opts.can.length <= 1 ? '<div class="note">You can look up organisations. Changing them needs more actions.</div>' : '';
+  return `${limited}${orgFacts(opts.state)}${orgLifecycle(opts)}${orgSignIn(opts)}${orgHistory(opts.state)}`;
+}
+function suspendSheet() {
+  return sheet('Suspend riverbank', `<div class="note warn">Members of Riverbank Community Trust are signed out and cannot sign in. Records, files and receipts are kept. You can reactivate it later.</div>
+    ${field('Reason', "Paused at the trust's request", { req: true, ta: true, hint: "Kept in the organisation's history" })}
+    <div class="cs">You'll confirm with a fresh two-factor sign-in.</div>`, '<span class="btn">Cancel</span><span class="btn dp hit">Continue</span>');
+}
+function reactivateSheet() {
+  return sheet('Reactivate riverbank', `<p class="cs">Members can sign in again straight away. Nothing else changes.</p>
+    ${field('Reason', '', { ta: true, ph: 'Optional', hint: "Kept in the organisation's history" })}
+    <div class="cs">You'll confirm with a fresh two-factor sign-in.</div>`, '<span class="btn">Cancel</span><span class="btn p hit">Continue</span>');
+}
+function closeSheet() {
+  return sheet('Close riverbank', `<div class="note bad"><b>This is permanent.</b> Members are signed out and can never sign in again. The organisation cannot be reopened from the console. Records are kept only for the retention period.</div>
+    ${field('Reason', 'Trust dissolved', { req: true, ta: true })}
+    ${field('Type the code to confirm', 'riverbank', { req: true, hint: 'riverbank' })}
+    <div class="cs">You'll confirm with a fresh two-factor sign-in.</div>`, '<span class="btn">Cancel</span><span class="btn dp hit">Continue</span>');
+}
+function signInSheet() {
+  return sheet('Riverbank sign-in', `<div class="mf"><div class="l">Ways to sign in</div>
+    ${chk('Password and one-time code', true, ' <span class="cs">· always on</span>')}
+    ${chk('Google (shared provider for this installation)', true)}</div>
+    <div class="mf"><div class="l">Allowed email domains for Google</div>
+    <div class="chips"><span class="chip tag">riverbank.org<i>×</i></span><span class="chip tag">riverbank.in<i>×</i></span></div>
+    <div class="o"><span class="ph">Add a domain, e.g. riverbank.org</span></div>
+    <div class="h">Empty means the provider's own list alone decides. At most 50.</div></div>
+    <div class="note warn">Members who signed in with Google from another domain will need to use their password next time.</div>
+    <div class="cs">You'll confirm with a fresh two-factor sign-in.</div>`, '<span class="btn">Cancel</span><span class="btn p hit">Continue</span>');
+}
+function stepUp(k, opts = {}) {
+  const a = opts.a ?? [['Action', 'Suspend'], ['Organisation', 'riverbank'], ['Reason', "Paused at the trust's request"]];
+  return authCard('2FA', "Confirm it's you", `<p class="intro">${opts.text ?? 'Suspending <b>riverbank</b> needs a fresh two-factor sign-in.'} You'll come straight back and the change is made then.</p>
+    ${kv(a)}<div class="row"><span class="btn" style="flex:1">Cancel</span><span class="btn p${hit(true)}" style="flex:1">Continue to sign in</span></div>`);
+}
+function stepUpFailed(k) {
+  return authCard('!', 'Nothing was changed', `<div class="note warn">The two-factor check was cancelled, took longer than five minutes, or was done by a different account.</div>
+    <p class="intro">Riverbank is still active. Go back and try again.</p>
+    <div class="row"><span class="btn p${hit(true)}" style="flex:1">Back to riverbank</span></div>`, ' warn');
+}
+function request(k, mode) {
+  const head = {
+    failed: '<div class="note bad">Onboarding stopped at <b>Administrator invitation</b>: the invitation email could not be sent. Steps already done are kept.</div>',
+    running: '<div class="note">Onboarding is running. This page updates by itself.</div>',
+    retrying: '<div class="note">Retrying from <b>Administrator invitation</b>…</div>',
+  }[mode];
+  const p = mode === 'failed' ? progress(6, 'fail') : progress(6, 'run');
+  const retry = mode === 'failed'
+    ? `<div class="row" style="margin-top:8px"><span class="cs">Retry continues from the failed step.</span><span class="sp"></span><span class="btn p${hit(true)}">Retry</span></div>`
+    : '';
+  const hist = mode === 'failed' ? `<div class="card"><div class="ct">Attempts</div>
+    <div class="listrow" style="padding:6px 0"><div class="who"><b>Stopped at Administrator invitation</b><div class="cs">4 Nov 2026, 17:41 · SMTP refused the connection</div></div></div>
+    <div class="listrow" style="padding:6px 0"><div class="who"><b>Requested</b><div class="cs">Ravi Menon · 4 Nov 2026, 17:40</div></div></div></div>` : '';
+  return `${head}<div class="card"><div class="ct">Request</div>${kv([['Request ID', '<code>req-2026-11-04-07</code>'], ['Organisation', 'Lakeside Youth Club · lakeside'], ['Requested', 'Ravi Menon · 4 Nov 2026, 17:40']])}</div>
+    <div class="card"><div class="ct">Progress</div>${p}${retry}</div>${hist}`;
+}
+
+/* ================= Onboard ================= */
+function sect(n, title, state, cs) {
+  const cls = state === 'ok' ? ' ok' : state === 'bad' ? ' bad' : '';
+  return `<div class="sect"><span class="n${cls}">${state === 'ok' ? '✓' : state === 'bad' ? '!' : n}</span>${title}<span class="cs">${cs}</span></div>`;
+}
+function onboardOrg() {
+  return `<div class="card"><div class="grid2">${field('Organisation code', 'lakeside', { req: true, hint: 'Lowercase letters, digits and -. Used in the sign-in link.' })}${field('Region', 'asia-south1', { req: true, icon: '▾' })}${field('Display name', 'Lakeside Youth Club', { req: true })}${field('Legal name', 'Lakeside Youth Club Society', { req: true })}${field('Default language', 'English', { req: true, icon: '▾' })}${field('Time zone', 'Asia/Kolkata', { req: true, icon: '▾' })}</div></div>`;
+}
+function onboardContact() {
+  return `<div class="card"><div class="grid2">${field('Contact email', 'office@lakeside.org', { req: true })}${field('Phone', '+91 80 4123 5500')}${field('Website', 'https://lakeside.org', { hint: 'Starting with https://' })}</div>
+    <div class="grid2">${field('Address line 1', '22 Lake View Road', { req: true })}${field('Address line 2', '', { ph: 'Optional' })}${field('City', 'Bengaluru', { req: true })}${field('State', 'Karnataka')}${field('Postal code', '560034', { req: true })}${field('Country', 'IN', { req: true, hint: 'Two-letter code' })}</div></div>`;
+}
+function onboardAdmin(err) {
+  return `<div class="card${hit(!!err)}">${field('Name', 'Anil Kumar', { req: true })}${field('Email', err ? 'anil@lakeside' : 'anil@lakeside.org', { req: true, err: err ? 'Enter a full email address, e.g. anil@lakeside.org.' : '' })}<div class="cs">An invitation is sent here when onboarding finishes. It works once, for seven days. This person gets the Organisation administrator role.</div></div>`;
+}
+function onboardModules() {
+  return `<div class="card"><div class="mf"><div class="l">Modules</div>${chk('Donations', true, ' <span class="cs">· 0.2.1 · donors, donations, receipts</span>')}</div>
+    <div class="grid2">${field('Financial year starts in', 'April', { req: true, icon: '▾' })}${field('Current financial year', '2026-27', { req: true, hint: 'Opened when onboarding finishes' })}${field('Receipt prefix', 'LYC', { hint: 'Capitals, digits and -. Receipts read LYC/2026-27/1.' })}</div></div>`;
+}
+function onboardRegs() {
+  return `<div class="card"><div class="row" style="margin-bottom:6px"><b style="font-size:.8rem">Registrations</b><span class="cs">optional, up to 20</span><span class="sp"></span><span class="btn sm${hit(true)}">Add registration</span></div>
+    <div class="listrow" style="padding:6px 0"><div class="who"><b>12A · AAALY4471K</b><div class="cs">Issued 1 Apr 2021 · Income Tax Department</div></div><span class="cs">Edit · Remove</span></div></div>`;
+}
+function onboard(k, opts = {}) {
+  const top = opts.draft ? `<div class="note">A draft from yesterday, 16:20, is saved on this browser. <b>Continue the draft</b> · <b>Start again</b></div>` : '';
+  return `${top}<p class="intro">Fill in the sections, then Check. Nothing is written until you choose Onboard on the review.</p>
+    ${sect(1, 'Organisation', '', '6 of 6')}${onboardOrg()}
+    ${sect(2, 'Contact and address', '', '›')}
+    ${sect(3, 'First administrator', '', '›')}
+    ${sect(4, 'Modules and finance', '', '›')}
+    ${sect(5, 'Registrations', '', 'optional ›')}
+    <div class="row" style="margin-top:10px"><span class="btn">Save draft</span><span class="sp"></span><span class="btn p${hit(true)}">Check</span></div>`;
+}
+function onboardOpen(which) {
+  const parts = {
+    contact: [sect(1, 'Organisation', 'ok', 'done'), sect(2, 'Contact and address', '', '9 of 9'), onboardContact(), sect(3, 'First administrator', '', '›'), sect(4, 'Modules and finance', '', '›'), sect(5, 'Registrations', '', 'optional ›')],
+    admin: [sect(1, 'Organisation', 'ok', 'done'), sect(2, 'Contact and address', 'ok', 'done'), sect(3, 'First administrator', '', '2 of 2'), onboardAdmin(false), sect(4, 'Modules and finance', '', '›'), sect(5, 'Registrations', '', 'optional ›')],
+    modules: [sect(1, 'Organisation', 'ok', 'done'), sect(2, 'Contact and address', 'ok', 'done'), sect(3, 'First administrator', 'ok', 'done'), sect(4, 'Modules and finance', '', '3 of 3'), onboardModules(), sect(5, 'Registrations', '', 'optional ›')],
+    regs: [sect(1, 'Organisation', 'ok', 'done'), sect(2, 'Contact and address', 'ok', 'done'), sect(3, 'First administrator', 'ok', 'done'), sect(4, 'Modules and finance', 'ok', 'done'), sect(5, 'Registrations', '', '1 added'), onboardRegs()],
+  }[which];
+  return `<p class="intro">Fill in the sections, then Check. Nothing is written until you choose Onboard on the review.</p>${parts.join('')}<div class="row" style="margin-top:10px"><span class="btn">Save draft</span><span class="sp"></span><span class="btn p">Check</span></div>`;
+}
+function regSheet() {
+  return sheet('Add registration', `${field('Type', '80g', { req: true, hint: 'Lowercase letters, digits, - or _, e.g. 80g, 12a, fcra' })}${field('Number', 'AAALY4471KF20214', { req: true })}${field('Issuing authority', 'Income Tax Department')}<div class="grid2">${field('Issued on', '1 Apr 2021')}${field('Expires on', '', { ph: 'Optional' })}</div>`, '<span class="btn">Cancel</span><span class="btn p hit">Add</span>');
+}
+function onboardProblems() {
+  return `<div class="note bad">2 problems. Fix them, then Check again.</div>
+    ${sect(1, 'Organisation', 'bad', '1 problem')}<div class="card">${field('Organisation code', 'harbour', { req: true, err: 'An organisation already has the code harbour.' })}</div>
+    ${sect(2, 'Contact and address', 'ok', 'done')}
+    ${sect(3, 'First administrator', 'bad', '1 problem')}${onboardAdmin(true)}
+    ${sect(4, 'Modules and finance', 'ok', 'done')}
+    ${sect(5, 'Registrations', 'ok', '1 added')}
+    <div class="row" style="margin-top:10px"><span class="sp"></span><span class="btn p">Check</span></div>`;
+}
+function onboardReview() {
+  return `<div class="note ok">Everything checks out. Nothing has been written yet.</div>
+    <div class="card"><div class="ct">Organisation <span class="sp"></span><span class="btn sm">Edit</span></div>${kv([['Code', 'lakeside'], ['Names', 'Lakeside Youth Club · Lakeside Youth Club Society'], ['Region', 'asia-south1 · Asia/Kolkata · English']])}</div>
+    <div class="card"><div class="ct">Contact and address <span class="sp"></span><span class="btn sm">Edit</span></div>${kv([['Contact', 'office@lakeside.org · +91 80 4123 5500'], ['Address', '22 Lake View Road, Bengaluru 560034, Karnataka, IN']])}</div>
+    <div class="card"><div class="ct">Administrator <span class="sp"></span><span class="btn sm">Edit</span></div>${kv([['Name', 'Anil Kumar'], ['Email', 'anil@lakeside.org']])}</div>
+    <div class="card"><div class="ct">Modules and finance <span class="sp"></span><span class="btn sm">Edit</span></div>${kv([['Modules', 'Donations 0.2.1'], ['Financial year', 'April · 2026-27'], ['Receipts', 'LYC/2026-27/1, 2, 3 …'], ['Registrations', '12A · AAALY4471K']])}</div>
+    <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p${hit(true)}">Onboard Lakeside Youth Club</span></div>`;
+}
+function onboardDone() {
+  return `<div class="note ok">Lakeside Youth Club is active. The invitation was sent to anil@lakeside.org.</div>
+    <div class="card"><div class="ct">Progress</div>${progress(9, 'done')}</div>
+    <div class="card"><div class="ct">Next</div>${kv([['Sign-in link', '<code>/o/lakeside/sign-in</code>'], ['Request ID', '<code>req-2026-11-04-08</code>']])}</div>
+    <div class="row"><span class="btn">Onboard another</span><span class="sp"></span><span class="btn p${hit(true)}">Open lakeside</span></div>`;
+}
+
+/* ================= Operators ================= */
+const ACTIONS = [
+  ['status', 'Look up organisations', 'Find an organisation or request and see its status'],
+  ['onboard', 'Onboard organisations', 'Check and create new organisations'],
+  ['retry', 'Retry onboarding', 'Continue a request that stopped'],
+  ['suspend', 'Suspend organisations', 'Stop members signing in; records are kept', true],
+  ['reactivate', 'Reactivate organisations', 'Let a suspended organisation sign in again', true],
+  ['close', 'Close organisations', 'Permanent', true],
+  ['sign_in', 'Change organisation sign-in', 'Shared provider and allowed email domains', true],
+  ['audit', 'Read activity', 'See what every operator did'],
+  ['operators', 'Manage operators', 'Add people to the console and change what they can do', true],
+];
+function operators(k, opts = {}) {
+  const rows = [
+    ['Ravi Menon', 'You · all 9 actions · signed in now', '<span class="badge ok">Active</span>'],
+    ['Priya Shah', '5 actions · last signed in today', '<span class="badge ok">Active</span>'],
+    ['Neha Iyer', '3 actions · never signed in', '<span class="badge info">Not signed in yet</span>'],
+    ['Arjun Rao', 'Disabled 1 Nov 2026 by Ravi Menon', '<span class="badge">Disabled</span>', true],
+  ];
+  if (opts.emptySearch) return `<p class="intro">People who can sign in to this console, and what each of them can do.</p><div class="search">⌕ <b>zara</b></div><div class="card empty"><div class="ic">⌕</div><div class="cs">No operator is called "zara".</div></div>`;
+  const filters = `<div class="chips"><span class="chip on">Active 3</span><span class="chip">Disabled 1</span><span class="chip">All</span></div>`;
+  return `<p class="intro">People who can sign in to this console, and what each of them can do.</p>
+    <div class="search">⌕ Search by name</div>${filters}
+    <div class="panel">${rows.map(([n, s, b, dim], i) => `<div class="listrow${dim ? ' dim' : ''}${hit(opts.hitRow === i)}"><div class="who"><b>${n}</b><div class="cs">${s}</div></div>${b}<span class="cs">›</span></div>`).join('')}</div>
+    ${opts.toast ? toast(opts.toast) : ''}`;
+}
+function addOperator(dup) {
+  const preset = ['status', 'onboard', 'retry'];
+  return `${field('Name', 'Neha Iyer', { req: true, hint: 'Shown in the console and in the audit log' })}
+    ${field('Identity provider', 'https://login.onengo.example/', { req: true, icon: '▾', ro: true, hint: 'The provider this console is set up with' })}
+    ${field('Subject ID', dup ? 'auth0|61aa09c4e7' : 'auth0|65f1c2a9e4b0', { req: true, err: dup ? 'This login already belongs to Priya Shah.' : '', hint: "The person's ID at the provider, not their email. They see it on the refused page if they try to sign in first." })}
+    <div class="mf"><div class="l">Actions</div>
+    <div class="row" style="margin-bottom:4px"><span class="chip on">Look up and onboard</span><span class="chip">Full lifecycle</span><span class="chip">Everything</span></div>
+    ${ACTIONS.map(([key, label, , mfa]) => chk(label, preset.includes(key), mfa ? ' <span class="cs">· fresh 2FA</span>' : '')).join('')}</div>
+    <div class="cs">You'll confirm with a fresh two-factor sign-in.</div>`;
+}
+function operator(k, opts = {}) {
+  const base = opts.self ? ACTIONS.map(() => true) : ACTIONS.map(([key]) => ['status', 'onboard', 'retry', 'suspend', 'reactivate'].includes(key));
+  const changed = opts.changed ? { close: true, retry: false } : {};
+  const toggles = ACTIONS.map(([key, label, hint, mfa], i) => {
+    const lock = opts.self && key === 'operators';
+    const on = key in changed ? changed[key] : base[i];
+    const isChg = key in changed;
+    return `<div class="tog${isChg ? ' chg' : ''}${hit(!opts.self && !opts.changed && key === 'close' && !opts.quiet)}"><div class="who"><b>${label}</b>${mfa ? ' <span class="cs">· fresh 2FA</span>' : ''}<div class="cs">${lock ? 'You cannot remove this from yourself.' : isChg ? (on ? 'Will be given' : 'Will be removed') : hint}</div></div><span class="sw${on ? ' on' : ''}${lock ? ' lock' : ''}"></span></div>`;
+  }).join('');
+  const who = opts.self ? 'your' : "Priya's";
+  const facts = opts.self
+    ? kv([['Status', 'Active'], ['Login', '<code>auth0|5c09…e1</code> at login.onengo.example'], ['Added', '12 Oct 2026 · database setup'], ['Last sign-in', 'Today, 09:02']])
+    : kv([['Status', 'Active'], ['Login', '<code>auth0|61aa…7f</code> at login.onengo.example'], ['Added', '20 Oct 2026 · Ravi Menon'], ['Last sign-in', 'Today, 09:14 · 1 open session']]);
+  const danger = opts.self
+    ? '<div class="cs">You cannot change your own login or disable your own account. Ask another operator who can manage operators.</div>'
+    : `<div class="row"><span class="btn sm${hit(opts.hitLogin)}">Change login</span><span class="btn sm">End sessions</span><span class="sp"></span><span class="btn d sm${hit(opts.hitDisable)}">Disable</span></div>`;
+  const bar = opts.changed ? `<div class="savebar${hit(true)}"><b>2 changes</b><span class="cs">Give Close · remove Retry</span><span class="sp"></span><span class="btn sm">Discard</span><span class="btn p sm">Save</span></div>` : '';
+  const activity = `<div class="card"><div class="ct">Recent activity <span class="sp"></span><span class="btn sm">All</span></div>
+    <div class="listrow" style="padding:6px 0"><div class="who"><b>${opts.self ? 'Suspended riverbank' : 'Changed sign-in for riverbank'}</b><div class="cs">${opts.self ? '4 Nov 2026, 18:22' : '3 Nov 2026, 15:40'}</div></div></div>
+    <div class="listrow" style="padding:6px 0"><div class="who"><b>Onboarded ${opts.self ? 'riverbank' : 'harbour'}</b><div class="cs">${opts.self ? '2 Nov 2026, 11:05' : '28 Oct 2026, 10:12'}</div></div></div></div>`;
+  return `${opts.self ? '<div class="note">This is your own account.</div>' : ''}
+    <div class="card"><div class="ct">Account</div>${facts}${danger}</div>
+    <div class="card" style="padding:0"><div class="ct" style="padding:12px 12px 0">Actions ${MFA}</div><div class="cs" style="padding:4px 12px 6px">Switch what you need, then Save. One fresh two-factor sign-in covers all the changes, which apply on ${who} next request.</div>${toggles}</div>
+    ${bar}${activity}${opts.toast ? toast(opts.toast) : ''}`;
+}
+function disabledOperator() {
+  return `<div class="note">Arjun cannot sign in. His history stays in the audit log.</div>
+    <div class="card"><div class="ct">Account</div>${kv([['Status', 'Disabled'], ['Disabled', '1 Nov 2026 by Ravi Menon · "Left the team"'], ['Login', '<code>auth0|58d2…0b</code> at login.onengo.example'], ['Added', '1 Sep 2026 · Ravi Menon']])}
+    <div class="cs">A disabled operator cannot be enabled again. To give Arjun access later, add him as a new operator; the same login can be used once this account is removed from it.</div></div>
+    <div class="card"><div class="ct">Actions held when disabled</div><div class="chips">${['Look up', 'Onboard', 'Retry'].map((a) => `<span class="chip tag">${a}</span>`).join('')}</div></div>`;
+}
+function changeLoginSheet() {
+  return sheet('Change login for Priya Shah', `<p class="cs">Use this when Priya's account at the identity provider was recreated. Her current sessions end.</p>
+    ${kv([['Current', '<code>auth0|61aa09c4e7</code>']])}
+    ${field('Identity provider', 'https://login.onengo.example/', { req: true, ro: true })}
+    ${field('New subject ID', 'auth0|6720ab31f9', { req: true })}
+    <div class="cs">You'll confirm with a fresh two-factor sign-in.</div>`, '<span class="btn">Cancel</span><span class="btn p hit">Continue</span>');
+}
+function disableSheet() {
+  return sheet('Disable Priya Shah', `<div class="note warn">Priya is signed out everywhere at once and cannot sign in again. Her history stays in the audit log. This cannot be undone here.</div>
+    ${field('Reason', 'Moved to another team', { req: true, ta: true })}
+    <div class="cs">You'll confirm with a fresh two-factor sign-in.</div>`, '<span class="btn">Cancel</span><span class="btn dp hit">Continue</span>');
+}
+
+/* ================= Activity ================= */
+const ACT_ROWS = [
+  ['18:22', 'Ravi Menon', 'Suspended', 'riverbank', 'Fresh 2FA'],
+  ['17:41', 'System', 'Onboarding stopped', 'req-2026-11-04-07', ''],
+  ['17:40', 'Ravi Menon', 'Onboarding requested', 'lakeside', ''],
+  ['16:05', 'Ravi Menon', 'Gave Close to', 'Priya Shah', 'Fresh 2FA'],
+  ['15:40', 'Priya Shah', 'Changed sign-in', 'riverbank', 'Fresh 2FA'],
+  ['09:14', 'Priya Shah', 'Signed in', '', ''],
+];
+function activity(k, opts = {}) {
+  const filters = `<div class="chips"><span class="chip on">Today</span><span class="chip">7 days</span><span class="chip">30 days</span><span class="chip">Operator ▾</span><span class="chip">What ▾</span></div>`;
+  const list = k === 'phone'
+    ? `<div class="panel">${ACT_ROWS.map(([t, w, a, o, m], i) => `<div class="listrow${hit(opts.hitRow && i === 0)}"><div class="who"><b>${a}${o ? ` ${o}` : ''}</b><div class="cs">${w} · ${t}</div></div>${m ? '<span class="badge mfa">2FA</span>' : ''}<span class="cs">›</span></div>`).join('')}</div>`
+    : `<div class="panel"><table class="tbl"><thead><tr><th>Time</th><th>Who</th><th>What</th><th>On</th><th></th></tr></thead><tbody>${ACT_ROWS.map(([t, w, a, o, m], i) => `<tr${opts.hitRow && i === 0 ? ' class="hit"' : ''}><td>${t}</td><td>${w}</td><td>${a}</td><td>${o}</td><td>${m ? '<span class="badge mfa">2FA</span>' : ''}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<p class="intro">Everything operators did in the console, newest first. Entries cannot be changed or deleted.</p>
+    <div class="search">⌕ Organisation code, request ID or operator</div>${filters}${list}
+    <div class="row"><span class="sp"></span><span class="btn sm">Load older</span><span class="btn sm">Download CSV</span></div>`;
+}
+function activityEntry() {
+  return sheet('Suspended riverbank', kv([
+    ['When', '4 Nov 2026, 18:22:07 IST'],
+    ['Operator', 'Ravi Menon'],
+    ['Login', '<code>auth0|5c09…e1</code> at login.onengo.example'],
+    ['Two-factor', 'Fresh check at 18:21:40 · mfa'],
+    ['Organisation', 'riverbank · Riverbank Community Trust'],
+    ['Reason', "Paused at the trust's request"],
+    ['Session', '<code>9f2e…c1</code>'],
+  ]), '<span class="btn">Close</span><span class="btn p hit">Open riverbank</span>');
+}
+
+/* ================= Steps ================= */
+const ORG = ['Organisations'];
+const RB = [...ORG, 'Riverbank Community Trust'];
+const RB_HEAD = { title: 'Riverbank Community Trust', back: true, nav: 'orgs', crumbs: RB, url: '/organisations/riverbank' };
+const OPS = ['Operators'];
+const PRIYA = { title: 'Priya Shah', badge: '<span class="badge ok">Active</span>', back: true, nav: 'operators', crumbs: [...OPS, 'Priya Shah'], url: '/operators/3f0c…' };
+const STEPS = [
+  /* sign in */
+  { id: 'sign-in', group: 'sign', t: 'Sign in', act: 'Open the console', url: '/sign-in', bare: true, body: signIn,
+    note: 'No navigation before sign-in. One button goes to the identity provider. The console accepts the sign-in only if the provider reports two-factor authentication within the last five minutes and the login is linked to an active operator.' },
+  { id: 'callback', group: 'sign', tag: 'state', t: 'Completing sign-in', act: 'Back from the provider', url: '/auth/callback', bare: true, body: callback,
+    note: 'Shown for the moment the server checks the response. On success it goes to the page the operator first asked for, or Organisations.' },
+  { id: 'refused', group: 'sign', tag: 'state', t: 'Refused: login not added', act: 'Sign in with a login that is not added', url: '/sign-in?refused=unknown', bare: true, body: refused,
+    note: 'Replaces the raw JSON error page at /op/auth/callback. The callback redirects here and shows which login was refused, with the provider and subject ID to copy, so an operator who can manage operators can add exactly that login. Nothing about other operators is shown. A disabled operator sees the same page.' },
+  { id: 'no-mfa', group: 'sign', tag: 'state', t: 'Refused: no two-factor', act: 'Provider signs in without 2FA', url: '/sign-in?refused=mfa', bare: true, body: noMfa,
+    note: 'The provider did not report mfa, the sign-in was too old, or the assurance level was not met. The operator is told what to fix at the provider.' },
+  { id: 'provider-down', group: 'sign', tag: 'state', t: "Can't reach the provider", act: 'Provider unavailable', url: '/sign-in?refused=provider', bare: true, body: providerDown,
+    note: 'Covers the discovery document failing, the token exchange failing and an issuer mismatch. One sentence, no technical detail; the details go to the server log.' },
+  { id: 'session-ended', group: 'sign', tag: 'state', t: 'Session ended', act: 'Any request after the session ends', url: '/sign-in?next=/organisations/riverbank', bare: true, body: sessionEnded,
+    note: 'After eight hours, after back-channel logout from the provider, or when another operator disables or re-links this account. Sign in again returns to the same page.' },
+  { id: 'signed-out', group: 'sign', tag: 'state', t: 'Signed out', act: 'Tap <kbd>Sign out</kbd>', url: '/sign-in?signedOut=1', bare: true, body: signedOut,
+    note: 'Confirms the console session ended on this browser.' },
+  /* shell */
+  { id: 'account', group: 'shell', t: 'Account and sign out', act: 'Tap the initials', url: '/organisations', title: 'Organisations', nav: 'orgs', crumbs: ORG, body: (k) => find(k), avatarHit: true, overlay: accountSheet,
+    note: 'The initials open the account sheet on both sizes: name, when two-factor was confirmed, how many actions are held, and when the session ends. Sign out is here on a phone and also the last rail icon on a wide screen.' },
+  { id: 'sign-out', group: 'shell', tag: 'state', t: 'Sign out?', act: 'Tap <kbd>Sign out</kbd>', url: '/organisations', title: 'Organisations', nav: 'orgs', crumbs: ORG, body: (k) => find(k), overlay: signOutConfirm,
+    note: 'The same confirmation as the main app.' },
+  { id: 'limited', group: 'shell', t: 'Fewer actions, fewer destinations', act: 'Priya signs in', url: '/organisations', title: 'Organisations', nav: 'orgs', navItems: ['orgs', 'onboard'], initials: 'PS', crumbs: ORG, body: (k) => find(k),
+    note: 'Priya holds look up, onboard, retry, suspend and reactivate, so Operators and Activity are not in her rail or bottom bar. An operator with only look up sees Organisations alone.' },
+  { id: 'no-access', group: 'shell', tag: 'state', t: 'No access', act: 'Priya opens /operators', url: '/operators', title: 'Operators', nav: '', navItems: ['orgs', 'onboard'], initials: 'PS', crumbs: OPS, body: noAccess,
+    note: 'Any address the operator cannot use shows this page inside the frame. It says which area and offers the first destination they do have. The server refuses the same requests.' },
+  { id: 'loading', group: 'shell', tag: 'state', t: 'Loading', act: 'Open any page', url: '/organisations/riverbank', title: 'Riverbank Community Trust', back: true, nav: 'orgs', crumbs: RB, body: loading,
+    note: 'Grey placeholders in the shape of the cards that are coming. Used on every page that fetches.' },
+  { id: 'offline', group: 'shell', tag: 'state', t: 'Offline', act: 'Network drops', url: '/organisations/riverbank', title: 'Riverbank Community Trust', back: true, nav: 'orgs', crumbs: RB, body: (k) => organisation(k), banner: () => '<div class="banner off">You are offline. Changes are disabled until the connection is back.</div>',
+    note: 'The same offline banner as the main app. Buttons that change anything are disabled while offline; nothing is queued.' },
+  { id: 'server-error', group: 'shell', tag: 'state', t: 'Server error', act: 'A request fails', url: '/organisations/riverbank', title: 'Riverbank Community Trust', back: true, nav: 'orgs', crumbs: RB, body: serverError,
+    note: 'A short sentence, a reference the operator can quote, and Try again. Validation errors are not shown here; they go on the field.' },
+  /* organisations */
+  { id: 'find', group: 'orgs', t: 'Find an organisation', act: 'Rail → <kbd>Organisations</kbd>', url: '/organisations', title: 'Organisations', nav: 'orgs', crumbs: ORG, body: (k) => find(k),
+    note: 'The landing page after sign-in. One search field with a two-way switch: organisation code or request ID. Find opens the organisation or the request. Recent lookups are kept in this browser only, not on the server, and can be cleared.' },
+  { id: 'find-empty', group: 'orgs', tag: 'state', t: 'First visit', act: 'Nothing looked up yet', url: '/organisations', title: 'Organisations', nav: 'orgs', crumbs: ORG, body: (k) => find(k, { empty: true }),
+    note: 'With nothing recent, the list area explains what will appear.' },
+  { id: 'not-found', group: 'orgs', tag: 'state', t: 'Not found', act: 'Find <kbd>rivrbank</kbd>', url: '/organisations?code=rivrbank', title: 'Organisations', nav: 'orgs', crumbs: ORG, body: (k) => find(k, { notFound: true }),
+    note: 'The search stays filled in and outlined. The message suggests the other switch. It does not suggest similar codes, so the console still cannot be used to list organisations.' },
+  { id: 'organisation', group: 'orgs', t: 'Organisation', act: 'Find <kbd>riverbank</kbd>', ...RB_HEAD, badge: '<span class="badge ok">Active</span>', body: (k) => organisation(k, { hitSuspend: true }),
+    note: 'Replaces the JSON dump with readable blocks: Organisation, Lifecycle, Sign-in and History. Lifecycle and Sign-in show only the buttons this operator holds. Suspend and Close use the danger style.' },
+  { id: 'organisation-readonly', group: 'orgs', tag: 'state', t: 'Look-up only', act: 'An operator with only <kbd>status</kbd>', ...RB_HEAD, badge: '<span class="badge ok">Active</span>', navItems: ['orgs'], initials: 'NI', body: (k) => organisation(k, { can: ['status'] }),
+    note: 'Same page without any change buttons. A line says why, so it does not look broken.' },
+  { id: 'suspend', group: 'orgs', t: 'Suspend', act: 'Tap <kbd>Suspend</kbd>', ...RB_HEAD, badge: '<span class="badge ok">Active</span>', body: (k) => organisation(k), overlay: suspendSheet,
+    note: 'A bottom sheet on a phone and a centred panel on a wide screen, as in the main app. The reason is required and goes into History.' },
+  { id: 'step-up', group: 'orgs', t: "Confirm it's you", act: 'Tap <kbd>Continue</kbd>', url: '/step-up?action=suspend&target=riverbank', bare: true, body: (k) => stepUp(k),
+    note: 'The same page for every change that needs a fresh check. It names the action, the target and the reason before leaving for the provider. On return the change is made once and the operator lands back on the page they started from.' },
+  { id: 'step-up-failed', group: 'orgs', tag: 'state', t: 'Check cancelled or expired', act: 'Cancel at the provider', url: '/step-up?failed=1', bare: true, body: stepUpFailed,
+    note: 'Cancelled, more than five minutes, already used, or a different account at the provider. It says plainly that nothing changed.' },
+  { id: 'suspended', group: 'orgs', t: 'Suspended', act: 'Back from the provider', ...RB_HEAD, badge: '<span class="badge warn">Suspended</span>', body: (k) => organisation(k, { state: 'suspended', hitReactivate: true }) + toast('Riverbank Community Trust is suspended'),
+    note: 'The badge, the Lifecycle buttons and History update, and a short message confirms the change. Reactivate replaces Suspend.' },
+  { id: 'reactivate', group: 'orgs', t: 'Reactivate', act: 'Tap <kbd>Reactivate</kbd>', ...RB_HEAD, badge: '<span class="badge warn">Suspended</span>', body: (k) => organisation(k, { state: 'suspended' }), overlay: reactivateSheet,
+    note: 'The reason is optional. The same fresh check follows.' },
+  { id: 'close', group: 'orgs', t: 'Close', act: 'Tap <kbd>Close</kbd>', ...RB_HEAD, badge: '<span class="badge warn">Suspended</span>', body: (k) => organisation(k, { state: 'suspended' }), overlay: closeSheet,
+    note: 'Permanent, so the sheet says so first, needs a reason, and needs the code typed. Continue stays disabled until the code matches.' },
+  { id: 'closed', group: 'orgs', tag: 'state', t: 'Closed', act: 'After closing', ...RB_HEAD, badge: '<span class="badge">Closed</span>', body: (k) => organisation(k, { state: 'closed' }),
+    note: 'No lifecycle or sign-in buttons. The page stays readable for the record.' },
+  { id: 'org-sign-in', group: 'orgs', t: 'Change sign-in', act: 'Tap <kbd>Change sign-in</kbd>', ...RB_HEAD, badge: '<span class="badge ok">Active</span>', body: (k) => organisation(k), overlay: signInSheet,
+    note: "Turns the installation's shared provider on or off for this organisation and limits it to the organisation's email domains. Password sign-in is always on. Needs sign_in and a fresh check." },
+  { id: 'request-running', group: 'orgs', tag: 'state', t: 'Request running', act: 'Find request <kbd>req-2026-11-04-07</kbd>', url: '/organisations/requests/req-2026-11-04-07', title: 'Onboarding request', badge: '<span class="badge info">Running</span>', back: true, nav: 'orgs', crumbs: [...ORG, 'req-2026-11-04-07'], body: (k) => request(k, 'running'),
+    note: 'The steps the service records, drawn as a checklist. The current step spins and the page refreshes by itself.' },
+  { id: 'request-failed', group: 'orgs', t: 'Request failed', act: 'A step fails', url: '/organisations/requests/req-2026-11-04-07', title: 'Onboarding request', badge: '<span class="badge bad">Failed</span>', back: true, nav: 'orgs', crumbs: [...ORG, 'req-2026-11-04-07'], body: (k) => request(k, 'failed'),
+    note: 'The failed step is red with the reason in plain words. Retry appears only for an operator who holds retry, and continues from that step. Attempts are listed.' },
+  { id: 'request-retrying', group: 'orgs', tag: 'state', t: 'Retrying', act: 'Tap <kbd>Retry</kbd>', url: '/organisations/requests/req-2026-11-04-07', title: 'Onboarding request', badge: '<span class="badge info">Retrying</span>', back: true, nav: 'orgs', crumbs: [...ORG, 'req-2026-11-04-07'], body: (k) => request(k, 'retrying'),
+    note: 'Retry is not a fresh-check action. When the request finishes it shows the finished page; if it fails again, the failed page with a second attempt.' },
+  /* onboard */
+  { id: 'onboard', group: 'onboard', t: 'Onboard', act: 'Rail → <kbd>Onboard</kbd>', url: '/onboard', title: 'Onboard an organisation', nav: 'onboard', crumbs: ['Onboard'], body: (k) => onboard(k),
+    note: 'Replaces the JSON text area with a form in five sections, in the order the service creates things. A section header shows how much of it is filled. Check runs validation only, the same as validate-only today.' },
+  { id: 'onboard-draft', group: 'onboard', tag: 'state', t: 'Draft on this browser', act: 'Come back later', url: '/onboard', title: 'Onboard an organisation', nav: 'onboard', crumbs: ['Onboard'], body: (k) => onboard(k, { draft: true }),
+    note: 'Save draft keeps the form in this browser only. Nothing is stored on the server before Onboard.' },
+  { id: 'onboard-contact', group: 'onboard', t: 'Contact and address', act: 'Open section 2', url: '/onboard#contact', title: 'Onboard an organisation', nav: 'onboard', crumbs: ['Onboard'], body: () => onboardOpen('contact'),
+    note: 'The same fields as Profile in the main app. Finished sections fold to a green tick and can be reopened.' },
+  { id: 'onboard-admin', group: 'onboard', t: 'First administrator', act: 'Open section 3', url: '/onboard#administrator', title: 'Onboard an organisation', nav: 'onboard', crumbs: ['Onboard'], body: () => onboardOpen('admin'),
+    note: 'The person who gets the invitation and the Organisation administrator role.' },
+  { id: 'onboard-modules', group: 'onboard', t: 'Modules and finance', act: 'Open section 4', url: '/onboard#modules', title: 'Onboard an organisation', nav: 'onboard', crumbs: ['Onboard'], body: () => onboardOpen('modules'),
+    note: 'Modules are the shipped modules the deploy step published. The financial year and receipt prefix match what the service validates.' },
+  { id: 'onboard-regs', group: 'onboard', t: 'Registrations', act: 'Open section 5', url: '/onboard#registrations', title: 'Onboard an organisation', nav: 'onboard', crumbs: ['Onboard'], body: () => onboardOpen('regs'),
+    note: 'Optional, up to 20, the same list as Registrations in the main app. The same type and number cannot be added twice.' },
+  { id: 'onboard-reg-add', group: 'onboard', tag: 'state', t: 'Add a registration', act: 'Tap <kbd>Add registration</kbd>', url: '/onboard#registrations', title: 'Onboard an organisation', nav: 'onboard', crumbs: ['Onboard'], body: () => onboardOpen('regs').replaceAll(' hit', ''), overlay: regSheet,
+    note: 'The same sheet as the main app. The expiry cannot be before the issue date.' },
+  { id: 'onboard-problems', group: 'onboard', tag: 'state', t: 'Problems found', act: 'Tap <kbd>Check</kbd>', url: '/onboard', title: 'Onboard an organisation', nav: 'onboard', crumbs: ['Onboard'], body: onboardProblems,
+    note: 'Problems from the server are placed on the fields they belong to, and the sections that have them open with a red mark. A code already in use is reported here, before anything is written.' },
+  { id: 'onboard-review', group: 'onboard', t: 'Review', act: 'Tap <kbd>Check</kbd> again', url: '/onboard/review', title: 'Review', back: true, nav: 'onboard', crumbs: ['Onboard', 'Review'], body: onboardReview,
+    note: 'Shown only after a clean Check. Edit goes back to that section and the review is withdrawn until the next Check. The button names the organisation so it is clear what will be created.' },
+  { id: 'onboard-done', group: 'onboard', t: 'Onboarded', act: 'Tap <kbd>Onboard Lakeside Youth Club</kbd>', url: '/organisations/requests/req-2026-11-04-08', title: 'Lakeside Youth Club', badge: '<span class="badge ok">Active</span>', back: true, nav: 'onboard', crumbs: ['Onboard', 'Lakeside Youth Club'], body: onboardDone,
+    note: 'The progress list fills in as the steps finish (the running state above). If a step fails, this becomes the failed request page with Retry. The draft is cleared.' },
+  /* operators */
+  { id: 'operators', group: 'operators', tag: 'new', t: 'Operators', act: 'Rail → <kbd>Operators</kbd>', url: '/operators', title: 'Operators', nav: 'operators', crumbs: OPS, body: (k) => operators(k, { hitRow: 1 }),
+    titleAction: () => '<span class="btn p sm">Add operator</span>',
+    note: 'Only for operators who hold Manage operators. Search and a status filter. Each row shows the name, how many actions they hold, and the status: Active, Not signed in yet, or Disabled.' },
+  { id: 'operators-empty-search', group: 'operators', tag: 'state', t: 'No match', act: 'Search <kbd>zara</kbd>', url: '/operators?q=zara', title: 'Operators', nav: 'operators', crumbs: OPS, body: (k) => operators(k, { emptySearch: true }),
+    titleAction: () => '<span class="btn p sm">Add operator</span>', note: 'The search stays; the list says nothing matched.' },
+  { id: 'add-operator', group: 'operators', tag: 'new', t: 'Add an operator', act: 'Tap <kbd>Add operator</kbd>', url: '/operators?add=1', title: 'Operators', nav: 'operators', crumbs: OPS, body: (k) => operators(k),
+    titleAction: () => '<span class="btn p sm hit">Add operator</span>', overlay: () => sheet('Add operator', addOperator(false), '<span class="btn">Cancel</span><span class="btn p hit">Continue</span>'),
+    note: 'Name, provider and subject ID, the same exact match the console checks at sign-in. The provider is fixed to the one the console is set up with. Three presets fill the actions; each can still be changed. Continue goes through the fresh check, then the operator is added.' },
+  { id: 'add-operator-dup', group: 'operators', tag: 'state', t: 'Login already added', act: 'Continue with a used subject', url: '/operators?add=1', title: 'Operators', nav: 'operators', crumbs: OPS, body: (k) => operators(k),
+    titleAction: () => '<span class="btn p sm">Add operator</span>', overlay: () => sheet('Add operator', addOperator(true), '<span class="btn">Cancel</span><span class="btn p">Continue</span>'),
+    note: 'Checked before the fresh check, so the operator is not sent to the provider for nothing.' },
+  { id: 'added', group: 'operators', tag: 'state', t: 'Added', act: 'Back from the provider', url: '/operators', title: 'Operators', nav: 'operators', crumbs: OPS, body: (k) => operators(k, { toast: 'Neha Iyer can now sign in' }),
+    titleAction: () => '<span class="btn p sm">Add operator</span>', note: 'Neha shows as Not signed in yet until her first sign-in.' },
+  { id: 'operator', group: 'operators', tag: 'new', t: 'An operator', act: 'Tap <kbd>Priya Shah</kbd>', ...PRIYA, body: (k) => operator(k),
+    note: 'Account facts, then one switch per action, then recent activity. Change login, End sessions and Disable sit with the account.' },
+  { id: 'operator-changes', group: 'operators', tag: 'state', t: 'Unsaved changes', act: 'Turn on Close, turn off Retry', ...PRIYA, body: (k) => operator(k, { changed: true }),
+    note: 'Switches change locally first and the rows are tinted. A bar lists the changes with Discard and Save. Save goes through one fresh check for the whole set, then writes each grant or revoke and audits each one. Leaving the page with unsaved changes asks first.' },
+  { id: 'operator-saved', group: 'operators', tag: 'state', t: 'Saved', act: 'Back from the provider', ...PRIYA, body: (k) => operator(k, { quiet: true, toast: 'Priya Shah: Close given, Retry removed' }),
+    note: 'Priya\'s next request uses the new actions; she does not need to sign in again.' },
+  { id: 'change-login', group: 'operators', tag: 'new', t: 'Change login', act: 'Tap <kbd>Change login</kbd>', ...PRIYA, body: (k) => operator(k, { quiet: true }), overlay: changeLoginSheet,
+    note: 'Replaces relink. Her sessions end because they belong to the old login.' },
+  { id: 'disable', group: 'operators', tag: 'new', t: 'Disable', act: 'Tap <kbd>Disable</kbd>', ...PRIYA, body: (k) => operator(k, { quiet: true }), overlay: disableSheet,
+    note: 'A reason is required and goes into the audit log. After the fresh check, the account is disabled and every one of her sessions ends at once.' },
+  { id: 'operator-disabled', group: 'operators', tag: 'state', t: 'Disabled operator', act: 'Tap <kbd>Arjun Rao</kbd>', url: '/operators/7b11…', title: 'Arjun Rao', badge: '<span class="badge">Disabled</span>', back: true, nav: 'operators', crumbs: [...OPS, 'Arjun Rao'], body: disabledOperator,
+    note: 'Read-only. The page keeps what he could do and who disabled him.' },
+  { id: 'self', group: 'operators', tag: 'state', t: 'Your own account', act: 'Tap <kbd>Ravi Menon</kbd>', url: '/operators/9a21…', title: 'Ravi Menon', badge: '<span class="badge ok">Active</span>', back: true, nav: 'operators', crumbs: [...OPS, 'Ravi Menon'], body: (k) => operator(k, { self: true }),
+    note: 'The lock-out guard is visible, not an error after the fact: Manage operators is locked on, and Change login and Disable are replaced by a line saying why. Other switches can still be changed, with the fresh check.' },
+  /* activity */
+  { id: 'activity', group: 'activity', tag: 'new', t: 'Activity', act: 'Rail → <kbd>Activity</kbd>', url: '/activity', title: 'Activity', nav: 'activity', crumbs: ['Activity'], body: (k) => activity(k, { hitRow: true }),
+    note: 'Reads platform_audit, newest first. A table on a wide screen and rows on a phone. Filters for time, operator and kind of change; search by organisation code, request ID or operator. Needs the new Read activity action. Download CSV exports what is filtered.' },
+  { id: 'activity-entry', group: 'activity', tag: 'state', t: 'An entry', act: 'Tap the first row', url: '/activity?entry=4182', title: 'Activity', nav: 'activity', crumbs: ['Activity'], body: (k) => activity(k), overlay: activityEntry,
+    note: 'Everything recorded for that entry, including the fresh-check time. A link opens the organisation or operator it was about.' },
+];
+const GROUPS = [
+  ['sign', 'Sign in', 'Signing in, and every way it can be refused', 'Before any navigation. Every refusal is a readable page, never JSON.'],
+  ['shell', 'Frame', 'The frame around every page', 'Account, sign out, what each operator sees, and the loading, offline, error and no-access states shared by all pages.'],
+  ['orgs', 'Organisations', 'Look up, change state, change sign-in, and follow requests', 'Look up by code or request ID, read the status, change it with a fresh check, and follow or retry onboarding requests.'],
+  ['onboard', 'Onboard', 'A form instead of JSON', 'Five sections, Check, a review, then Onboard.'],
+  ['operators', 'Operators', 'People and their actions, without a command line', 'Add, change actions, change login and disable. Every change needs a fresh check and is audited.'],
+  ['activity', 'Activity', 'What everyone did', 'A readable view of platform_audit. Proposed: needs a read route and the Read activity action.'],
+];
+
+const toc = document.getElementById('toc');
+const root = document.getElementById('flows');
+toc.insertAdjacentHTML('beforeend', '<a class="grp" href="#overview">Overview</a>');
+let n = 0;
+for (const [g, label, h2, p] of GROUPS) {
+  const list = STEPS.filter((s) => s.group === g);
+  toc.insertAdjacentHTML('beforeend', `<a class="grp" href="#g-${g}">${label}</a>`);
+  root.insertAdjacentHTML('beforeend', `<section class="flow" id="g-${g}"><div class="flabel">${label}</div><h2>${h2}</h2><p>${p} The yellow outline marks what the operator taps next.</p>${list.map((s) => {
+    n += 1;
+    const tag = s.tag === 'state' ? '<span class="tag state">state</span>' : s.tag === 'new' ? '<span class="tag new">proposed</span>' : '';
+    return `<div class="step" id="${s.id}"><div class="num">${n}</div><div class="stephead"><b>${s.t}</b>${tag}<span class="act">${s.act}</span><code>${s.url}</code></div><div></div><div><p class="cap">Phone</p>${frame('phone', s)}</div><div class="desk"><p class="cap">Desktop</p>${frame('desk', s)}<div class="noteline">${s.note}</div></div></div>`;
+  }).join('')}</section>`);
+}
+</script>
+</body>
+</html>

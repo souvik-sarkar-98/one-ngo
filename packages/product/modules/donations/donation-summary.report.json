@@ -1,0 +1,38 @@
+{
+  "key": "donationSummary",
+  "label": "Donation summary",
+  "parameters": [
+    { "key": "from", "label": "From", "type": "date", "required": true },
+    { "key": "to", "label": "To", "type": "date", "required": true }
+  ],
+  "datasets": [
+    {
+      "key": "donations",
+      "label": "Donations",
+      "source": "query",
+      "recordType": "donation",
+      "statusIn": ["paid"],
+      "filters": { "paidOn": { "from": "params.from", "to": "params.to" } },
+      "sort": { "field": "paidOn", "dir": "asc" },
+      "fields": ["donorName", "amount", "paidOn", "method"]
+    },
+    {
+      "key": "total",
+      "label": "Total",
+      "source": "aggregate",
+      "recordType": "donation",
+      "measure": "sum",
+      "field": "amount",
+      "statusIn": ["paid"],
+      "filters": { "paidOn": { "from": "params.from", "to": "params.to" } }
+    }
+  ],
+  "calculations": [
+    { "key": "total", "label": "Total", "expression": "sum(datasets.donations.rows, 'amount')" },
+    { "key": "totalWords", "label": "Total in words", "expression": "inWords(calculations.total)" },
+    { "key": "totalMoney", "label": "Total amount", "expression": "formatMoney(calculations.total)" }
+  ],
+  "outputs": {
+    "pdf": { "template": "donationSummary", "pageSize": "A4", "orientation": "portrait" }
+  }
+}

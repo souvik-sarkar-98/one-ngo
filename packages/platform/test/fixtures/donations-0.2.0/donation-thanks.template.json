@@ -1,0 +1,6 @@
+{
+  "key": "donationThanks",
+  "label": "Donation thank-you",
+  "subject": "Thank you for your donation, {{ record.donorName }}",
+  "body": "Dear {{ record.donorName }},\n\nWe have received your donation of Rs. {{ record.amount }} (reference {{ record.number }}). Thank you for supporting our work.\n\nThis is an acknowledgement, not a tax receipt."
+}

@@ -1,0 +1,180 @@
+{
+  "$id": "action",
+  "title": "Record action",
+  "description": "A button on the record panel, the row menu, or the bulk bar. It can ask for a few values first, then runs its steps on the record in order.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["key", "recordType", "label", "placement", "steps"],
+  "properties": {
+    "key": { "$ref": "#/definitions/key", "description": "Stable name of the action; part of its permission", "x-order": 1 },
+    "recordType": { "$ref": "#/definitions/key", "description": "The record type the action runs on", "x-ref": "recordType", "x-order": 2 },
+    "label": { "type": "string", "minLength": 1, "maxLength": 60, "description": "Button text", "x-order": 3 },
+    "placement": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["panel", "row", "bulk"] },
+      "description": "Where the button appears: the record panel footer, the row menu, or the bulk bar for selected rows",
+      "x-order": 4
+    },
+    "when": {
+      "type": "string",
+      "description": "Offered only when this is true for the record, for example record.status == 'raised'",
+      "x-expression": { "recordType": "/recordType" },
+      "x-group": "shownWhen",
+      "x-order": 6
+    },
+    "permission": {
+      "type": "string",
+      "description": "Permission needed to run it; defaults to record:<type>:action:<key>",
+      "x-ref": "permission",
+      "x-order": 5
+    },
+    "confirm": { "type": "string", "maxLength": 300, "description": "Question asked before running, for example Send a reminder to the donor?", "x-group": "confirm", "x-order": 7 },
+    "form": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fields"],
+      "description": "A few values asked for before the steps run; each is available as input.<key>",
+      "x-order": 8,
+      "properties": {
+        "columns": { "enum": [1, 2, 3], "description": "Columns on wide screens (1 on phones); default 1" },
+        "fullWidth": { "type": "array", "uniqueItems": true, "items": { "type": "string" }, "description": "Fields that take a whole row, whatever the column count" },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10,
+          "description": "Fields on the form, top to bottom",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "label", "type"],
+            "properties": {
+              "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_]{0,40}$", "description": "Name used as input.<key>" },
+              "label": { "type": "string", "minLength": 1, "description": "Label shown on the form" },
+              "type": {
+                "enum": ["text", "longText", "number", "money", "date", "boolean", "choice", "email", "phone", "reference"],
+                "description": "Kind of value"
+              },
+              "required": { "type": "boolean", "description": "Must be filled in" },
+              "choices": {
+                "type": "array",
+                "description": "Options for a choice field",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["value", "label"],
+                  "properties": {
+                    "value": { "type": "string", "description": "Stored value" },
+                    "label": { "type": "string", "description": "Shown to people" }
+                  }
+                }
+              },
+              "referenceType": { "type": "string", "description": "Record type to choose from, for a reference field", "x-ref": "recordType" },
+              "min": { "type": "number", "description": "Smallest number allowed" },
+              "max": { "type": "number", "description": "Largest number allowed" },
+              "maxLength": { "type": "integer", "minimum": 1, "description": "Longest text allowed" },
+              "help": { "type": "string", "description": "Hint under the field" },
+              "placeholder": { "type": "string", "maxLength": 200, "description": "Grey example text shown in an empty field" }
+            }
+          }
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "description": "What the action does, in order. Notifications, webhooks and connector calls are sent after the record is saved and never undo it",
+      "x-order": 9,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type"],
+        "allOf": [
+          { "if": { "type": "object", "required": ["type"], "properties": { "type": { "const": "webhook" } } }, "then": { "required": ["connector"] } },
+          { "if": { "type": "object", "required": ["type"], "properties": { "type": { "const": "connector" } } }, "then": { "required": ["connector"] } },
+          { "if": { "type": "object", "required": ["type"], "properties": { "type": { "const": "report" } } }, "then": { "required": ["report"] } }
+        ],
+        "properties": {
+          "type": {
+            "enum": ["setFields", "transition", "createRecord", "notify", "webhook", "connector", "createPayment", "openReceipt", "script", "report"],
+            "description": "Set fields, run a workflow step, create a record, notify people, call a webhook, send through an http connector, ask for a payment, open the receipt print view, run a custom-button script, or open a report"
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "description": "Field values as expressions (set fields, run a step, create a record)",
+            "x-expression": { "recordType": "/recordType" }
+          },
+          "transition": { "type": "string", "description": "Workflow step to run" },
+          "recordType": { "type": "string", "description": "Record type to create", "x-ref": "recordType" },
+          "template": { "type": "string", "description": "Message template to send", "x-ref": "template" },
+          "script": { "type": "string", "description": "Custom-button script to run on the record", "x-ref": "script" },
+          "report": { "type": "string", "description": "Report to open", "x-ref": "report" },
+          "params": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "description": "Report parameters as expressions. The record's id is passed as record",
+            "x-expression": { "recordType": "/recordType" }
+          },
+          "to": { "$ref": "#/definitions/recipient" },
+          "channels": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "enum": ["inApp", "email", "sms", "whatsapp"] },
+            "description": "How the notification is sent; SMS and WhatsApp go to the phone recipient. Default in-app and email"
+          },
+          "connector": { "type": "string", "description": "Connector to call: a webhook connector for webhook steps, an http connector in send mode for connector steps", "x-ref": "connector" },
+          "body": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "description": "Extra values, as expressions: sent in the webhook body, or added to the record an http connector's templates read",
+            "x-expression": { "recordType": "/recordType" }
+          },
+          "provider": { "enum": ["upi", "razorpay", "cashfree"], "description": "Payment provider" },
+          "amount": { "type": "string", "description": "Amount to ask for, as an expression", "x-expression": { "recordType": "/recordType" } },
+          "account": { "type": "string", "description": "Money account that receives the payment" },
+          "onPaid": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["transition"],
+            "description": "What happens when the payment arrives",
+            "properties": {
+              "transition": { "type": "string", "description": "Workflow step to run" },
+              "fields": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Fields filled from the payment",
+                "properties": {
+                  "paidOn": { "type": "string", "description": "Date field for the day it was paid" },
+                  "reference": { "type": "string", "description": "Text field for the payment reference" },
+                  "method": { "type": "string", "description": "Choice field for the payment method" }
+                }
+              },
+              "methodValue": { "type": "string", "description": "Value put in the method field" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,62}$" },
+    "recipient": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Who is notified",
+      "properties": {
+        "roles": { "type": "array", "items": { "type": "string" }, "description": "Everyone with these roles", "x-ref": "role" },
+        "users": { "type": "array", "items": { "type": "string" }, "description": "These people" },
+        "email": { "type": "string", "description": "An email address, as an expression", "x-expression": { "recordType": "/recordType" } },
+        "phone": { "type": "string", "description": "A phone number for SMS and WhatsApp, as an expression", "x-expression": { "recordType": "/recordType" } },
+        "creator": { "type": "boolean", "description": "The person who created the record" },
+        "type": { "enum": ["personField"], "description": "With field: the person chosen in a person field of the record" },
+        "field": { "type": "string", "description": "The person field whose person is notified", "x-ref": "field" }
+      },
+      "dependencies": { "type": ["field"], "field": ["type"] }
+    }
+  }
+}

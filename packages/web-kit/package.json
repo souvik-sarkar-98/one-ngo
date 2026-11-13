@@ -1,0 +1,15 @@
+{
+  "name": "@onengo/web-kit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/public-api.ts"
+  },
+  "peerDependencies": {
+    "@angular/core": "21.2.25"
+  },
+  "dependencies": {
+    "tslib": "^2.6.0"
+  }
+}

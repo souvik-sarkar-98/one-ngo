@@ -1,0 +1,11 @@
+{
+  "name": "@onengo/product",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./locale/*": "./locale/*",
+    "./schemas/*": "./schemas/*",
+    "./modules/*": "./modules/*"
+  }
+}

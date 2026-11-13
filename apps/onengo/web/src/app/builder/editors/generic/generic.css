@@ -1,0 +1,8 @@
+:host { display: block; }
+.gen-section { padding-bottom: .75rem; margin-bottom: 1rem; border-bottom: 1px solid var(--line); }
+.gen-section:last-of-type { border-bottom: 0; margin-bottom: 0; }
+.gen-section__title { margin: 0 0 .5rem; font-size: 1rem; }
+.gen-section .help { color: var(--muted); font-size: .85rem; margin: 0 0 .6rem; }
+.gen-layout--preview { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 1fr); gap: 1.5rem; align-items: start; }
+.gen-layout__preview { position: sticky; top: 1rem; }
+@media (max-width: 1000px) { .gen-layout--preview { grid-template-columns: 1fr; } .gen-layout__preview { position: static; } }

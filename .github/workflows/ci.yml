@@ -1,0 +1,104 @@
+name: CI
+
+# The test gate. Runs on every pull request and every push to develop and master.
+# A push to develop (or a manual run on develop) that passes the gate deploys
+# stage. A push to master (or a manual run on master) that passes the gate
+# deploys production. A pull request deploys nothing.
+#
+# Branch protection should require exactly one check: "CI gate".
+
+on:
+  pull_request:
+  push:
+    branches: [develop, master]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # Typecheck, build both servers and all web apps, then every vitest test:
+  # unit, Postgres integration, row-level security, and the artifact tests that
+  # start the real bundle, check it refuses an unprepared database, and check
+  # that two clean builds are identical.
+  verify:
+    name: Typecheck, build, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: ngo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ngo"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres@localhost:5432/ngo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run ci
+
+  # Known vulnerabilities in production dependencies, high severity and above.
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run ci:audit
+
+  # The one check branch protection requires. It fails unless every job above
+  # passed, so adding a job later only means adding it to `needs` here.
+  ci-gate:
+    name: CI gate
+    if: always()
+    needs: [verify, audit]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every gate job to have passed
+        env:
+          VERIFY: ${{ needs.verify.result }}
+          AUDIT: ${{ needs.audit.result }}
+        run: |
+          echo "verify: $VERIFY"
+          echo "audit:  $AUDIT"
+          test "$VERIFY" = success && test "$AUDIT" = success
+
+  deploy-stage:
+    name: Deploy stage
+    needs: ci-gate
+    if: github.ref == 'refs/heads/develop' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/cd-stage.yml
+
+  deploy-prod:
+    name: Deploy production
+    needs: ci-gate
+    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/cd.yml

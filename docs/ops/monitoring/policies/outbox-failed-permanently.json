@@ -1,0 +1,34 @@
+{
+  "displayName": "NGO platform: background event failed permanently",
+  "documentation": {
+    "mimeType": "text/markdown",
+    "content": "A background event (email, SMS, webhook, automation, payment step) failed all its attempts and will not be retried. Find it in Logs Explorer with `jsonPayload.alert=\"outbox.failed_permanently\"`; the entry has eventId, eventType, tenantId and the last error. The outbox_event row keeps status failed and last_error. Fix the cause (for example a connector's credentials); to retry, set the row's status to pending, attempts to 0 and available_at to now(). Handlers that already finished are not run again. Alert name: outbox.failed_permanently."
+  },
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "Any outbox event failed permanently in 5 minutes",
+      "conditionThreshold": {
+        "filter": "metric.type=\"logging.googleapis.com/user/ngo_outbox_failed_permanently\" AND resource.type=\"gae_app\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "300s",
+            "perSeriesAligner": "ALIGN_SUM",
+            "crossSeriesReducer": "REDUCE_SUM"
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 0,
+        "duration": "0s",
+        "trigger": {
+          "count": 1
+        }
+      }
+    }
+  ],
+  "alertStrategy": {
+    "autoClose": "1800s"
+  },
+  "severity": "ERROR",
+  "enabled": true
+}

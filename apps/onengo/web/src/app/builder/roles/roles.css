@@ -1,0 +1,8 @@
+.role-general { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem 2rem; }
+.role-check { display: flex; align-items: center; gap: .45rem; padding: .2rem 0; }
+.role-grid { width: 100%; border-collapse: collapse; }
+.role-grid th, .role-grid td { padding: .4rem .55rem; border-bottom: 1px solid var(--line); text-align: center; }
+.role-grid th[scope='row'], .role-grid thead th:first-child { text-align: left; }
+.role-pill { display: inline-flex; align-items: center; gap: .25rem; margin: .1rem .3rem .1rem 0; padding: .1rem .5rem; border: 1px solid var(--line); border-radius: 999px; font-size: .85rem; }
+.role-pill.on { border-color: var(--brand); }
+.role-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 0 1rem; }

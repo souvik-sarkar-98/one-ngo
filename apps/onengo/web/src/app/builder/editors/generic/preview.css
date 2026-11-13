@@ -1,0 +1,23 @@
+:host { display: block; min-width: 0; }
+.pv { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: .8rem .9rem; margin-bottom: 1rem; }
+.pv__title { margin: 0 0 .5rem; font-size: .95rem; }
+.pv__row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: .5rem 0; }
+.pv .help, .pv__note { color: var(--muted); font-size: .85rem; margin: .3rem 0; }
+.pv__ok { color: var(--ok); }
+.pv__bad { color: var(--bad); }
+.pv__list { margin: .3rem 0; padding-left: 1.1rem; font-size: .9rem; }
+.pv__mono { font-family: Consolas, 'Courier New', monospace; font-size: .85rem; }
+.pv__chips { display: flex; flex-wrap: wrap; gap: .35rem; margin: .3rem 0 .6rem; }
+.pv__chip { border: 1px solid #c6d9e8; background: #eef5fb; color: var(--brand); border-radius: 999px; padding: .1rem .6rem; font-family: Consolas, 'Courier New', monospace; font-size: .8rem; }
+.pv__mail { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.pv__subject { padding: .5rem .7rem; border-bottom: 1px solid var(--line); font-weight: 600; overflow-wrap: anywhere; }
+.pv__channel { margin: .85rem 0 .2rem; }
+.pv__channel-title { margin: 0 0 .35rem; font-size: .85rem; }
+.pv__frame { display: block; width: 100%; height: 16rem; border: 0; background: #fff; }
+.pv__sheet { height: 297mm; max-width: 210mm; margin: 0 auto; border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12); }
+.pv__sms { border: 1px solid var(--line); border-radius: var(--radius); padding: .55rem .7rem; white-space: pre-wrap; overflow-wrap: anywhere; background: #fff; }
+.pv__params { margin: .3rem 0 0; padding-left: 1.2rem; }
+.pv__table { font-size: .85rem; }
+.pv__table td, .pv__table th { padding: .3rem .45rem; }
+.pv__num { text-align: right; font-variant-numeric: tabular-nums; }
+app-autocomplete { display: block; margin-bottom: .6rem; }

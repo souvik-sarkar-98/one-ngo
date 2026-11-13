@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>OneNGO</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1f5f8b" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <script>
+      (function () {
+        var fromPath = location.pathname.match(/^\/o\/([a-z0-9][a-z0-9-]{0,39})(?:\/|$)/i);
+        var code = fromPath ? fromPath[1].toLowerCase() : '';
+        if (!code) {
+          try {
+            var stored = localStorage.getItem('ngo.lastOrganisation') || '';
+            if (/^[a-z0-9][a-z0-9-]{0,39}$/i.test(stored)) code = stored.toLowerCase();
+          } catch (e) {}
+        }
+        if (!code) return;
+        var encoded = encodeURIComponent(code);
+        var link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = '/api/auth/organisations/' + encoded + '/manifest.webmanifest';
+        document.head.appendChild(link);
+        var apple = document.querySelector('link[rel="apple-touch-icon"]');
+        if (apple) apple.href = '/api/auth/organisations/' + encoded + '/icon/180';
+      })();
+    </script>
+  </head>
+  <body>
+    <app-root></app-root>
+  </body>
+</html>

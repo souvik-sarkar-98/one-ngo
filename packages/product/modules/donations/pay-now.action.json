@@ -1,0 +1,16 @@
+{
+  "key": "payNow",
+  "recordType": "donation",
+  "label": "Pay now",
+  "placement": ["panel"],
+  "when": "status == 'raised'",
+  "steps": [
+    {
+      "type": "createPayment",
+      "provider": "upi",
+      "amount": "record.amount",
+      "account": "upi",
+      "onPaid": { "transition": "markPaid", "fields": { "paidOn": "paidOn", "reference": "reference", "method": "method" }, "methodValue": "upi" }
+    }
+  ]
+}

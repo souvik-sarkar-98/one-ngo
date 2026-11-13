@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "shell",
+      "installMode": "prefetch",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": ["/index.html", "/*.css", "/main-*.js", "/en-*.js", "/media/*.woff2"]
+      }
+    },
+    {
+      "name": "lazy",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": ["/*.js", "!/ngsw-worker.js", "!/safety-worker.js", "!/worker-basic.min.js", "/media/**", "/icons/**"]
+      }
+    }
+  ],
+  "navigationUrls": ["/**", "!/**/*.*", "!/**/*__*", "!/**/*__*/**", "!/api/**", "!/webhooks/**", "!/internal/**"]
+}

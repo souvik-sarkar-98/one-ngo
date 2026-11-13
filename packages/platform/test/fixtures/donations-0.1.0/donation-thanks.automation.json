@@ -1,0 +1,10 @@
+{
+  "key": "donationThanks",
+  "label": "Thank the donor when a donation is paid",
+  "recordType": "donation",
+  "trigger": { "event": "statusChanged", "to": "paid" },
+  "condition": "not isEmpty(record.donorEmail)",
+  "actions": [
+    { "type": "notify", "template": "donationThanks", "to": { "email": "record.donorEmail" }, "channels": ["email"] }
+  ]
+}

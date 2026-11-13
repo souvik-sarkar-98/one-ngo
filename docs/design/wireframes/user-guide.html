@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NGO Platform — User guide screen</title>
+<style>
+  :root {
+    --fg: #1d2733; --muted: #5b6878; --line: #d8dee6; --bg: #f5f7fa; --card: #fff;
+    --brand: #1f5f8b; --ok: #1d7a46; --warn: #9a6200; --hit: #f3be26; --radius: 6px;
+    --b50: color-mix(in srgb, var(--brand) 6%, #fff); --b100: color-mix(in srgb, var(--brand) 12%, #fff); --b200: color-mix(in srgb, var(--brand) 25%, #fff);
+    --page: #eef1f5; --ink: #18212b;
+    --font: 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Devanagari', Helvetica, Arial, sans-serif;
+    --mono: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font); color: var(--ink); background: linear-gradient(180deg, #f6f8fa, var(--page)); }
+  header.page { max-width: 1440px; margin: 0 auto; padding: 36px 40px 18px; }
+  header.page h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -.01em; }
+  header.page p { margin: 0 0 10px; max-width: 980px; line-height: 1.55; color: #36414d; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 16px; }
+  .rules div { background: #fff; border: 1px solid #dfe5eb; border-radius: 10px; padding: 12px 14px; font-size: 13.5px; line-height: 1.5; }
+  .rules b { display: block; color: var(--brand); margin-bottom: 3px; }
+  nav.toc { position: sticky; top: 0; z-index: 20; background: rgba(238,241,245,.94); backdrop-filter: blur(6px); border-bottom: 1px solid #dbe1e7; }
+  nav.toc div { max-width: 1440px; margin: 0 auto; padding: 9px 40px; display: flex; gap: 4px; overflow-x: auto; }
+  nav.toc a { font: 600 12px var(--mono); color: #3a4a5a; text-decoration: none; padding: 6px 10px; border-radius: 6px; white-space: nowrap; }
+  nav.toc a:hover { background: #fff; }
+  main.page { max-width: 1440px; margin: 0 auto; padding: 8px 40px 80px; }
+  section.block { margin-top: 36px; }
+  .flabel { font: 700 12px var(--mono); color: var(--brand); text-transform: uppercase; letter-spacing: .06em; }
+  section.block > h2 { margin: 4px 0 6px; font-size: 22px; }
+  section.block > .lead { margin: 0 0 18px; max-width: 980px; color: #3a4552; line-height: 1.5; }
+
+  .flow { display: grid; gap: 0; max-width: 760px; }
+  .band { background: #fff; border: 1px solid #dfe5eb; border-radius: 12px; padding: 14px 16px 16px; }
+  .band + .join { height: 28px; display: flex; justify-content: center; }
+  .band h3 { margin: 0 0 10px; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--brand); }
+  .nodes { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+  .node { flex: 1 1 180px; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .node b { display: block; font-size: 14px; margin-bottom: 2px; }
+  .node span, .decide span { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+  .node code, .decide code { font-family: var(--mono); font-size: 12px; color: #3a4a5a; }
+  .arrow { width: 2px; height: 18px; background: #b7c2ce; position: relative; }
+  .arrow::after { content: ''; position: absolute; left: -4px; bottom: -1px; border: 5px solid transparent; border-top-color: #b7c2ce; }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .decide { background: #fffdf6; border: 1px solid #e7d7a8; border-radius: 8px; padding: 10px 12px; }
+  .decide b { display: block; margin-bottom: 2px; }
+  .yes { color: var(--ok); font-weight: 700; font-size: 12px; }
+  .no { color: var(--warn); font-weight: 700; font-size: 12px; }
+  @media (max-width: 700px) {
+    .split { grid-template-columns: 1fr; }
+    header.page, main.page, nav.toc div { padding-left: 16px; padding-right: 16px; }
+  }
+
+  .shell { background: #fff; border: 1px solid #dfe5eb; border-radius: 14px; }
+  .guide { max-width: 920px; margin-inline: auto; padding: 20px 16px 16px; }
+  .kicker { margin: 0; color: var(--muted); font-size: 13px; }
+  .guide h3 { margin: 2px 0 12px; font-size: 22px; }
+  .steps { list-style: none; display: flex; gap: 8px; overflow-x: auto; margin: 0 0 12px; padding: 0 0 2px; }
+  .steps li { flex: 1 1 0; min-width: 120px; display: flex; }
+  .steps button { width: 100%; min-height: 44px; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font: inherit; text-align: left; cursor: pointer; color: var(--fg); }
+  .steps button span { color: var(--muted); font-size: 12px; }
+  .steps button[aria-current="step"] { border-color: var(--brand); background: var(--b50); box-shadow: inset 0 0 0 1px var(--brand); }
+  .player { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .stage-wrap { display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: 100%; }
+  .stage-row { display: flex; align-items: center; gap: 12px; width: 100%; }
+  .stage { flex: 1; min-width: 0; }
+  .screen-switch { align-self: flex-end; }
+  .player.mobile { align-items: center; }
+  .player.mobile .stage-wrap { width: auto; max-width: 100%; align-items: center; }
+  .player.mobile .stage-row { width: auto; max-width: 100%; }
+  .player.mobile .stage { flex: 0 1 320px; width: min(100%, 320px); }
+  .player.mobile .screen-switch { align-self: center; }
+  .mode { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: #fff; }
+  .mode button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--fg); padding: 6px 12px; min-height: 36px; font: inherit; cursor: pointer; }
+  .mode button svg { width: 16px; height: 16px; fill: currentColor; }
+  .mode button[aria-pressed="true"] { background: var(--brand); color: #fff; }
+  .count { margin: 0; text-align: center; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .stage-row > button { flex: 0 0 auto; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: var(--brand); color: #fff; display: grid; place-items: center; cursor: pointer; }
+  .stage-row > button svg { width: 22px; height: 22px; fill: currentColor; }
+  .stage-row > button:disabled { opacity: .45; cursor: default; }
+  .stage-row > button:focus-visible, .mode button:focus-visible, .steps button:focus-visible { outline: 2px solid var(--hit); outline-offset: 2px; }
+
+  .phone { display: flex; flex-direction: column; width: min(100%, 320px); min-height: 600px; margin-inline: auto; border-radius: 36px; background: #0f141a; padding: 12px 10px 14px; box-shadow: 0 14px 30px rgba(15,23,42,.18); }
+  .browser { width: 100%; min-width: 0; border-radius: 10px; background: #fff; border: 1px solid #d5dbe2; box-shadow: 0 14px 30px rgba(15,23,42,.12); overflow: hidden; }
+  .scr { width: 100%; height: auto; border-radius: 26px; overflow: hidden; background: var(--bg); display: flex; flex-direction: column; color: var(--fg); font-size: 14px; }
+  .phone .scr { flex: 1; }
+  .browser .scr { border-radius: 0; }
+  .status, .chrome { flex: 0 0 auto; display: flex; align-items: center; }
+  .status { height: 26px; justify-content: space-between; padding: 0 16px; background: var(--brand); color: #fff; font-size: 11px; font-weight: 650; }
+  .chrome { height: 30px; padding: 0 10px; background: #e9edf1; border-bottom: 1px solid #d5dbe2; }
+  .url { flex: 1; height: 20px; border-radius: 6px; background: #fff; display: flex; align-items: center; padding: 0 9px; overflow: hidden; white-space: nowrap; font: 11.5px var(--mono); color: #536171; }
+  .appbar { height: 50px; flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 12px; background: var(--brand); color: #fff; }
+  .appbar .brand { font-weight: 700; }
+  .appbar .org { font-weight: 600; font-size: 13px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sp { flex: 1; }
+  .ib { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; position: relative; }
+  .ib.av { background: rgba(255,255,255,.2); font: 700 12px var(--font); }
+  .dot { position: absolute; top: 2px; right: 0; min-width: 15px; height: 15px; border-radius: 8px; background: #fdf1dc; color: var(--warn); font: 700 9.5px/15px var(--font); text-align: center; }
+  .crumbs { flex: 0 0 auto; height: 28px; display: flex; align-items: center; padding: 0 12px; background: #fff; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); overflow: hidden; white-space: nowrap; }
+  .crumbs b { color: var(--fg); font-weight: 650; }
+  .frame-body { display: flex; }
+  .phone .frame-body { flex: 1; }
+  .phone .main { display: flex; flex-direction: column; }
+  .rail { width: 84px; flex: 0 0 auto; display: flex; flex-direction: column; gap: 4px; padding: 8px 0; background: #fff; border-right: 1px solid var(--line); }
+  .navbar { flex: 0 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); height: 58px; background: #fff; border-top: 1px solid var(--line); }
+  .nv { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--muted); font-size: 10.5px; border-radius: 12px; padding: 4px 0; }
+  .nv .g { width: 44px; height: 26px; border-radius: 13px; display: grid; place-items: center; }
+  .nv svg { width: 20px; height: 20px; fill: currentColor; }
+  .nv.on { color: var(--brand); font-weight: 650; }
+  .nv.on .g { background: var(--b100); }
+  .nv .lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .main { position: relative; flex: 1; min-width: 0; padding: 12px 12px 28px; }
+  .browser .main { padding: 16px 20px 48px; }
+  .phone .navbar { padding-bottom: 6px; height: 64px; }
+  .pagehead { display: flex; align-items: center; gap: 4px; margin: 0 0 10px; }
+  .h1 { margin: 0; font-size: 1.15rem; font-weight: 700; }
+  .back { width: 32px; height: 32px; display: grid; place-items: center; }
+  .chipbar, .ftb, .pills { display: flex; gap: 8px; }
+  .chipbar { overflow: auto; padding-bottom: 10px; }
+  .chip { flex: 0 0 auto; border: 1px solid rgba(148,163,184,.35); background: #fff; border-radius: 999px; padding: 7px 13px; font-size: .7rem; font-weight: 700; }
+  .chip.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .ftb { align-items: center; padding-bottom: 10px; }
+  .search { flex: 1; min-width: 0; min-height: 38px; display: flex; align-items: center; padding: 0 10px; border: 1px solid rgba(148,163,184,.35); border-radius: 12px; background: #fff; color: #94a3b8; font-size: .76rem; overflow: hidden; white-space: nowrap; }
+  .search.typed { color: var(--fg); }
+  .fb { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; padding: 0 11px; border: 1px solid rgba(148,163,184,.35); border-radius: 12px; background: #fff; font-size: .7rem; font-weight: 700; white-space: nowrap; }
+  .fb .lbl { display: none; }
+  .browser .fb .lbl { display: inline; }
+  .cnt { min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px; background: var(--brand); color: #fff; font-size: .6rem; display: inline-flex; align-items: center; justify-content: center; }
+  .pills { flex-wrap: wrap; padding-bottom: 10px; }
+  .pills span { border: 1px solid var(--b200); background: var(--b50); color: var(--brand); border-radius: 999px; padding: 5px 10px; font-size: .66rem; font-weight: 650; }
+  .panel { background: #fff; border: 1px solid rgba(148,163,184,.22); border-radius: 16px; overflow: hidden; }
+  .lr { display: flex; gap: 10px; align-items: flex-start; padding: 11px 10px; border-bottom: 1px solid rgba(148,163,184,.18); }
+  .lr:last-child { border-bottom: 0; }
+  .ico { width: 34px; height: 34px; border-radius: 10px; background: #ffedd5; color: #c2410c; display: grid; place-items: center; font-weight: 700; flex: 0 0 auto; }
+  .c { flex: 1; min-width: 0; }
+  .tt { font-size: .8rem; font-weight: 700; }
+  .st { margin-top: 2px; font-size: .66rem; color: #64748b; }
+  .aside { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .bdg { font-size: .56rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; border-radius: 999px; padding: 4px 8px; background: #fdf1dc; color: var(--warn); }
+  .kebab { color: #64748b; }
+  table.rows { width: 100%; border-collapse: collapse; font-size: .76rem; }
+  table.rows th, table.rows td { text-align: left; padding: 8px 12px; border-bottom: 1px solid rgba(148,163,184,.32); white-space: nowrap; }
+  table.rows th { font-size: .64rem; letter-spacing: .03em; text-transform: uppercase; color: #64748b; background: #f8fafc; }
+  table.rows td.t { font-weight: 700; }
+  .card { background: #fff; border: 1px solid rgba(148,163,184,.25); border-radius: 14px; padding: 10px 12px; margin-bottom: 10px; }
+  .card .gh { font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--brand); margin-bottom: 4px; }
+  .listrow { display: flex; justify-content: space-between; padding: 8px 2px; border-top: 1px solid rgba(148,163,184,.18); font-size: .82rem; }
+  .card .gh + .listrow { border-top: 0; }
+  .fab { position: absolute; right: 16px; bottom: 16px; width: 48px; height: 48px; border-radius: 50%; background: var(--brand); color: #fff; display: grid; place-items: center; font-size: 26px; box-shadow: 0 6px 18px #0f172a33; }
+  .hit { outline: 3px solid var(--hit); outline-offset: 2px; border-radius: 12px; }
+  .nv.hit, .fab.hit { border-radius: 12px; }
+  .fab.hit { border-radius: 50%; outline-offset: 3px; }
+  @media (max-width: 759.98px) {
+    .rail { width: 68px; }
+  }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>User guide screen</h1>
+  <p>The guide is drawn inside the organisation app, so it has no bar of its own. It reads a compiled list of steps, draws one product screen, and outlines the control for that step in yellow. Back and next sit beside that picture. Web and Mobile sit on that screen.</p>
+  <div class="rules">
+    <div><b>One list, no API</b>Steps live in the guide catalogue. Opening the guide does not load an organisation’s record types, workflows, or pages.</div>
+    <div><b>Web or Mobile, on the screen</b>Each screen has its own switch. Mobile is the phone: cards and a bottom bar. Web is the browser: a table and a side rail.</div>
+    <div><b>Yellow outline</b>Each step names one control. That control gets a 3px outline, <code>#f3be26</code>, the same mark as the navigation wireframes.</div>
+  </div>
+</header>
+<nav class="toc"><div>
+  <a href="#load">01 · How a step is loaded</a>
+  <a href="#screen">02 · Guide screen</a>
+</div></nav>
+<main class="page">
+  <section class="block" id="load">
+    <div class="flabel">Flow</div>
+    <h2>How a step is loaded</h2>
+    <p class="lead">Nothing is fetched at open. The catalogue is already inside the built guide. The address only chooses which step to draw.</p>
+    <div class="flow">
+      <article class="band">
+        <h3>Build</h3>
+        <div class="nodes">
+          <div class="node"><b>Catalogue</b><span><code>catalogue.ts</code> exports <code>GUIDE</code>: sections, chapters, and steps. A step has the instruction, the product address, the phone and desktop notes, the screen, and the control to outline.</span></div>
+          <div class="node"><b>Guide build</b><span>The list is compiled into <code>dist/guide/browser</code>. There is no definition request at runtime.</span></div>
+        </div>
+      </article>
+      <div class="join" aria-hidden="true"><span class="arrow"></span></div>
+      <article class="band">
+        <h3>Host</h3>
+        <div class="nodes">
+          <div class="node"><b>OneNGO server</b><span>Serves that build at <code>/guide-app/</code>.</span></div>
+          <div class="node"><b>Guide page</b><span><code>guide-frame.ts</code> shows <code>/guide-app/</code> in a frame. The dev proxy sends that path to port 4300.</span></div>
+        </div>
+      </article>
+      <div class="join" aria-hidden="true"><span class="arrow"></span></div>
+      <article class="band">
+        <h3>Open</h3>
+        <div class="node"><b>Address</b><span><code>/:section/:chapter</code>. An unknown pair is replaced with a real chapter in that section, or with App → Sign in.</span></div>
+      </article>
+      <div class="join" aria-hidden="true"><span class="arrow"></span></div>
+      <article class="band">
+        <h3>Choose the step and the frame</h3>
+        <div class="split">
+          <div class="decide"><b>Step</b><span><code>?step=</code> must be a whole number from 1 to the chapter length. Anything else opens step 1.</span><span class="yes">Previous and Next rewrite this query.</span></div>
+          <div class="decide"><b>Frame</b><span>Web or Mobile is chosen on the screen, not in a guide bar. Mobile draws the phone. Web draws the browser.</span></div>
+        </div>
+      </article>
+      <div class="join" aria-hidden="true"><span class="arrow"></span></div>
+      <article class="band">
+        <h3>Draw</h3>
+        <div class="nodes">
+          <div class="node"><b>Picture</b><span>The stage reads <code>step.screen</code> and draws the phone frame or the browser frame.</span></div>
+          <div class="node"><b>Yellow outline</b><span><code>step.highlight</code> names one control, such as <code>nav:records</code>, <code>chip:All</code>, or <code>search</code>.</span></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="block" id="screen">
+    <div class="flabel">Screen</div>
+    <h2>Guide screen</h2>
+    <p class="lead">Find a donation, one step at a time. The yellow outline is the next tap. Back and next sit beside the picture, and Web or Mobile changes only this picture.</p>
+    <div class="shell">
+      <div class="guide">
+        <p class="kicker">Find a donation</p>
+        <h3 id="step-title"></h3>
+        <ol class="steps"></ol>
+        <div class="player">
+          <div class="stage-wrap">
+            <div class="screen-switch">
+              <div class="mode" role="group" aria-label="This screen">
+                <button type="button" data-choice="web" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 2H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7v2H8v2h8v-2h-2v-2h7a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm0 14H3V4h18v12z"/></svg>Web</button>
+                <button type="button" data-choice="mobile" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 1H7a2 2 0 0 0-2 2v18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm0 18H7V5h10v14z"/></svg>Mobile</button>
+              </div>
+            </div>
+            <div class="stage-row">
+              <button type="button" data-go="-1" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+              <div class="stage"></div>
+              <button type="button" data-go="1" aria-label="Next"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.59 16.59 10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg></button>
+            </div>
+            <p class="count"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+const ICON = {
+  home: '<svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>',
+  records: '<svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>',
+  inbox: '<svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 12h-4a3 3 0 0 1-6 0H5V5h14v10z"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><path d="M6 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm12 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>'
+};
+const ROWS = [
+  ['Asha Rao', '₹1,500.00 · UPI', 'DON/2026-27/00041'],
+  ['Ravi Kumar', '₹5,000.00 · UPI', 'DON/2026-27/00040'],
+  ['Meera Iyer', '₹750.00 · UPI', 'DON/2026-27/00039'],
+  ['Sunita Devi', '₹2,100.00 · UPI', 'DON/2026-27/00038']
+];
+const STEPS = [
+  { title: 'Records, grouped', action: 'Tap Records. Groups stack in one column on every width.', path: '/records', mobile: 'Each record type is a row. There is no table.', web: 'The same single column. Wide screens do not place groups side by side.', highlight: 'nav:records', screen: 'records' },
+  { title: 'Donations list', action: 'Tap Donations. The list opens on its default chip.', path: '/records/donation', mobile: 'Rows are cards. The create button sits above the bottom bar.', web: 'Rows are a table. The Cards/Table switch is available. The create button sits at the bottom right.', highlight: 'chip:All', screen: 'list', chip: 'All', q: '', pills: [] },
+  { title: 'Search, filter and sort', action: 'Type a name, apply Filters, then Sort by amount. The address keeps chip, query, filters and sort.', path: '/records/donation?chip=mine&q=ravi&method=upi&sort=-amount', mobile: 'Filter pills wrap under the toolbar. Sort is a menu. Cards stay cards.', web: 'The same pills and menu. Column headers sort the table as well, with the same arrow.', highlight: 'search', screen: 'list', chip: 'Mine', q: 'ravi', pills: ['UPI', 'Amount from ₹100', 'Amount ▼'] }
+];
+const state = { index: 0, choice: matchMedia('(max-width: 759.98px)').matches ? 'mobile' : 'web' };
+const root = document.querySelector('.shell');
+const q = (sel) => root.querySelector(sel);
+const esc = (value) => String(value).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+const hit = (step, token) => (step.highlight === token ? ' hit' : '');
+
+const list = q('.steps');
+const stepButtons = STEPS.map((step, index) => {
+  const item = document.createElement('li');
+  const button = document.createElement('button');
+  button.type = 'button';
+  const label = document.createElement('span');
+  label.textContent = 'Step ' + (index + 1);
+  button.append(label, document.createTextNode(step.title));
+  button.addEventListener('click', () => { state.index = index; draw(); });
+  item.append(button);
+  list.append(item);
+  return button;
+});
+q('.mode').addEventListener('click', (event) => {
+  const choice = event.target.closest('button')?.dataset.choice;
+  if (!choice) return;
+  state.choice = choice;
+  draw();
+});
+q('.stage-row').addEventListener('click', (event) => {
+  const go = event.target.closest('button')?.dataset.go;
+  if (!go) return;
+  state.index = Math.min(STEPS.length - 1, Math.max(0, state.index + Number(go)));
+  draw();
+});
+
+function layout() {
+  return state.choice;
+}
+function nav(step) {
+  return [['home', 'Home', 'home'], ['records', 'Records', 'records'], ['inbox', 'Inbox', 'inbox'], ['more', 'More', 'more']].map(([key, label, icon]) =>
+    `<div class="nv${key === 'records' ? ' on' : ''}${hit(step, 'nav:' + key)}"><span class="g">${ICON[icon]}</span><span class="lbl">${label}</span>${key === 'inbox' ? '<span class="dot">4</span>' : ''}</div>`
+  ).join('');
+}
+function records() {
+  const groups = [['Fundraising', ['Donors', 'Donations']], ['Other', ['Expenses', 'Assets']]];
+  return `<div class="pagehead"><div class="h1">Records</div></div>` + groups.map(([name, types]) =>
+    `<section class="card"><div class="gh">${name}</div>${types.map((type) => `<div class="listrow"><span>${type}</span><span>›</span></div>`).join('')}</section>`
+  ).join('');
+}
+function listScreen(step, wide) {
+  const chips = ['All', 'Mine', 'Outstanding', 'Closed'].map((chip) =>
+    `<span class="chip${chip === step.chip ? ' on' : ''}${hit(step, 'chip:' + chip)}">${chip}</span>`).join('');
+  const pills = step.pills.length ? `<div class="pills">${step.pills.map((pill) => `<span>${esc(pill)} ×</span>`).join('')}</div>` : '';
+  const body = wide
+    ? `<div class="panel"><table class="rows"><thead><tr><th>Name</th><th>Detail</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody>${ROWS.map(([name, meta, num]) => `<tr><td class="t">${name}</td><td>${num}</td><td>${meta.split(' · ')[0]}</td><td><span class="bdg">Raised</span></td><td class="kebab">⋮</td></tr>`).join('')}</tbody></table></div>`
+    : `<div class="panel">${ROWS.map(([name, meta, num]) => `<div class="lr"><span class="ico">$</span><div class="c"><div class="tt">${name}</div><div class="st">${meta}</div><div class="st">${num}</div></div><div class="aside"><span class="bdg">Raised</span><span class="kebab">⋮</span></div></div>`).join('')}</div>`;
+  return `<div class="pagehead"><span class="back">←</span><div class="h1">Donations</div></div><div class="chipbar">${chips}</div><div class="ftb"><span class="search${step.q ? ' typed' : ''}${hit(step, 'search')}">⌕ ${esc(step.q || 'Search donations')}</span><span class="fb${hit(step, 'sort')}">↕ <span class="lbl">Sort</span></span><span class="fb${hit(step, 'filters')}">≡ <span class="lbl">Filters</span>${step.pills.length ? `<span class="cnt">${step.pills.length}</span>` : ''}</span></div>${pills}${body}<span class="fab">+</span>`;
+}
+function frame(step, wide) {
+  const chrome = wide
+    ? `<div class="chrome"><span class="url">demo.local${esc(step.path)}</span></div>`
+    : '<div class="status"><span>9:41</span><span>100%</span></div>';
+  const bar = '<div class="appbar"><span class="brand">NGOOne</span><span class="org">Demo Foundation</span><span class="sp"></span><span class="ib">🔔<span class="dot">4</span></span><span class="ib av">AS</span></div>';
+  const trail = step.screen === 'list'
+    ? (wide ? 'Records › Fundraising › <b>Donations</b>' : 'Records › … › <b>Donations</b>')
+    : '<b>Records</b>';
+  const body = step.screen === 'list' ? listScreen(step, wide) : records();
+  const navHtml = nav(step);
+  return `${chrome}${bar}<div class="crumbs">${trail}</div><div class="frame-body">${wide ? `<div class="rail">${navHtml}</div>` : ''}<div class="main">${body}</div></div>${wide ? '' : `<div class="navbar">${navHtml}</div>`}`;
+}
+function draw() {
+  const step = STEPS[state.index];
+  const wide = layout() === 'web';
+  q('.player').classList.toggle('mobile', !wide);
+  [...q('.mode').children].forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.choice === state.choice)));
+  stepButtons.forEach((button, index) => index === state.index ? button.setAttribute('aria-current', 'step') : button.removeAttribute('aria-current'));
+  q('#step-title').textContent = step.title;
+  q('.count').textContent = (state.index + 1) + ' of ' + STEPS.length;
+  const stage = q('.stage');
+  stage.innerHTML = wide ? `<div class="browser"><div class="scr">${frame(step, true)}</div></div>` : `<div class="phone"><div class="scr">${frame(step, false)}</div></div>`;
+  q('[data-go="-1"]').disabled = state.index === 0;
+  q('[data-go="1"]').disabled = state.index === STEPS.length - 1;
+}
+draw();
+</script>
+</body>
+</html>

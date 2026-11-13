@@ -1,0 +1,92 @@
+{
+  "$id": "automation",
+  "title": "Automation",
+  "description": "When something happens to a record (or on a schedule), check a condition and run actions. Actions go through the record engine with full validation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["key", "recordType", "trigger", "actions"],
+  "properties": {
+    "key": { "$ref": "#/definitions/key", "description": "Stable name of the automation" },
+    "label": { "type": "string", "description": "Name shown to administrators" },
+    "enabled": { "type": "boolean", "default": true, "description": "Runs only when not false" },
+    "recordType": { "$ref": "#/definitions/key", "description": "The record type it watches", "x-ref": "recordType", "x-group": "when" },
+    "trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event"],
+      "description": "What starts it",
+      "x-group": "when",
+      "properties": {
+        "event": { "enum": ["created", "updated", "statusChanged", "schedule"], "description": "A record is created, updated, changes status, or a schedule comes round" },
+        "to": { "type": "string", "description": "Status changes into this status only" },
+        "from": { "type": "string", "description": "Status changes out of this status only" },
+        "workflow": { "type": "string", "description": "Status changes of this workflow; default the primary one", "x-ref": "workflow" },
+        "cron": { "type": "string", "description": "Five-field cron in UTC: minute hour day-of-month month day-of-week", "x-preview": "cron" },
+        "status": { "type": "string", "description": "Schedule only: run for records in this status" }
+      }
+    },
+    "condition": { "type": "string", "description": "Runs only when this is true for the record", "x-expression": { "recordType": "/recordType" }, "x-group": "when" },
+    "actions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "description": "What it does, in order",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type"],
+        "allOf": [
+          { "if": { "type": "object", "required": ["type"], "properties": { "type": { "const": "webhook" } } }, "then": { "required": ["connector"] } },
+          { "if": { "type": "object", "required": ["type"], "properties": { "type": { "const": "connector" } } }, "then": { "required": ["connector"] } }
+        ],
+        "properties": {
+          "type": {
+            "enum": ["setFields", "notify", "createRecord", "transition", "webhook", "connector"],
+            "description": "Set fields, notify people, create a record, run a workflow step, call a webhook, or send through an http connector"
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "description": "Field values as expressions (set fields, run a step, create a record)",
+            "x-expression": { "recordType": "/recordType" }
+          },
+          "template": { "type": "string", "description": "Message template to send", "x-ref": "template" },
+          "to": { "$ref": "#/definitions/recipient" },
+          "channels": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "enum": ["inApp", "email", "sms", "whatsapp"] },
+            "description": "How the notification is sent; SMS and WhatsApp go to the phone recipient. Default in-app and email"
+          },
+          "recordType": { "type": "string", "description": "Record type to create", "x-ref": "recordType" },
+          "transition": { "type": "string", "description": "Workflow step to run" },
+          "connector": { "type": "string", "description": "Connector to call: a webhook connector for webhook steps, an http connector in send mode for connector steps", "x-ref": "connector" },
+          "body": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "description": "Extra values, as expressions: sent in the webhook body, or added to the record an http connector's templates read",
+            "x-expression": { "recordType": "/recordType" }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,62}$" },
+    "recipient": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Who is notified",
+      "properties": {
+        "roles": { "type": "array", "items": { "type": "string" }, "description": "Everyone with these roles", "x-ref": "role" },
+        "users": { "type": "array", "items": { "type": "string" }, "description": "These people" },
+        "email": { "type": "string", "description": "An email address, as an expression", "x-expression": { "recordType": "/recordType" } },
+        "phone": { "type": "string", "description": "A phone number for SMS and WhatsApp, as an expression", "x-expression": { "recordType": "/recordType" } },
+        "creator": { "type": "boolean", "description": "The person who created the record" },
+        "type": { "enum": ["personField"], "description": "With field: the person chosen in a person field of the record" },
+        "field": { "type": "string", "description": "The person field whose person is notified", "x-ref": "field" }
+      },
+      "dependencies": { "type": ["field"], "field": ["type"] }
+    }
+  }
+}

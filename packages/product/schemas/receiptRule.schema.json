@@ -1,0 +1,65 @@
+{
+  "$id": "receiptRule",
+  "title": "Receipt rule",
+  "description": "Issues a numbered receipt from a series when a record enters a status.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["key", "recordType", "whenStatus", "series", "amount", "date"],
+  "properties": {
+    "key": { "$ref": "#/definitions/key", "description": "Stable name of the rule" },
+    "recordType": { "$ref": "#/definitions/key", "description": "The record type it watches", "x-ref": "recordType", "x-group": "when" },
+    "whenStatus": { "type": "string", "description": "Issues the receipt when a record enters this status", "x-group": "when" },
+    "workflow": { "type": "string", "description": "Workflow whose state whenStatus names; default the primary one", "x-ref": "workflow", "x-group": "when" },
+    "condition": { "type": "string", "description": "Issues a receipt only when this is true for the record", "x-expression": { "recordType": "/recordType" }, "x-group": "when" },
+    "series": { "$ref": "#/definitions/key", "description": "Receipt series the number comes from" },
+    "amount": { "type": "string", "description": "Expression returning the amount received", "x-expression": { "recordType": "/recordType" } },
+    "date": { "type": "string", "description": "Expression returning the receipt date", "x-expression": { "recordType": "/recordType" } },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Wording kept with each receipt this rule issues. The issuer, number, date, signature and void stamp stay as they are.",
+      "x-group": "layout",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200, "description": "Title. Leave empty to use the series name. May use {{ placeholders }}", "x-group": "layout" },
+        "statement": { "type": "string", "maxLength": 2000, "description": "Acknowledgement under the title. May use {{ placeholders }} such as {{ record.donorName }} and {{ receipt.amount }}", "x-group": "layout" },
+        "thanks": { "type": "string", "maxLength": 500, "description": "Line above the signature. May use {{ placeholders }}", "x-group": "layout" },
+        "rows": {
+          "type": "array",
+          "maxItems": 40,
+          "description": "Lines under the acknowledgement, in this order. Leave empty to print the record's filled-in fields.",
+          "x-group": "layout",
+          "items": { "$ref": "#/definitions/row" }
+        },
+        "clauses": {
+          "type": "array",
+          "maxItems": 10,
+          "description": "Extra sentences, each printed only when the issuer holds that registration",
+          "x-group": "layout",
+          "items": { "$ref": "#/definitions/clause" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,62}$" },
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label"],
+      "properties": {
+        "label": { "type": "string", "minLength": 1, "maxLength": 120, "description": "Label printed beside the value" },
+        "field": { "type": "string", "description": "Field of the record type to print. Not a sensitive, hidden or long-text field." },
+        "value": { "type": "string", "description": "Expression for the printed value, used when no field is set", "x-expression": { "recordType": "/recordType" } }
+      }
+    },
+    "clause": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["registration", "text"],
+      "properties": {
+        "registration": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$", "description": "Registration type that must be on the issuer, for example 80g" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 2000, "description": "Sentence to print. May use {{ placeholders }}; {{ registration.number }} is that registration." }
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$id": "reportGroup",
+  "title": "Report group",
+  "description": "A named group of reports on the Reports screen. Reports in no group are listed under Other.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["key", "label", "reports"],
+  "properties": {
+    "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,62}$", "description": "Stable name of the group" },
+    "label": { "type": "string", "minLength": 1, "maxLength": 60, "description": "Group heading" },
+    "order": { "type": "integer", "minimum": 0, "maximum": 1000, "description": "Lower comes first" },
+    "reports": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 30,
+      "uniqueItems": true,
+      "items": { "type": "string" },
+      "description": "Reports in the group, in order; a report in several groups shows in the first",
+      "x-ref": "report"
+    }
+  }
+}

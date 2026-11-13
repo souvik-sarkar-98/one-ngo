@@ -1,0 +1,2 @@
+# kysely-codegen --verify compares the file byte for byte with LF output.
+packages/platform/src/infrastructure/postgres/db-types.ts text eol=lf
