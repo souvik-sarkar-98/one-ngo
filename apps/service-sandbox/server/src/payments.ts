@@ -1,6 +1,6 @@
 import { createHmac, randomBytes } from 'node:crypto';
 import { CASHFREE, PATHS, RAZORPAY } from './constants.js';
-import { basic, header, readForm, readJson, redirect, sendJson, type Handler } from './http.js';
+import { basic, header, readJson, sendJson, type Handler } from './http.js';
 import type { FixtureLog } from './log.js';
 
 export type Provider = 'razorpay' | 'cashfree';
@@ -160,20 +160,23 @@ export function payments(log: FixtureLog, options: { oneNgoBaseUrl: string; post
     if (req.method === 'POST' && action) {
       const order = orders.get(decodeURIComponent(action[2]!));
       if (!order || order.provider !== action[1]) return sendJson(res, 404, { error: 'No such order.' });
-      const form = await readForm(req);
-      const org = (form.get('org') ?? '').trim();
+      const body = await readJson(req);
+      const org = body && typeof body === 'object' && !Array.isArray(body) && typeof (body as { org?: unknown }).org === 'string' ? (body as { org: string }).org.trim() : '';
       if (!/^[A-Za-z0-9_-]{1,64}$/.test(org)) return sendJson(res, 400, { error: 'Give the organisation code.' });
       const outcome: Outcome = action[3] === 'capture' ? 'captured' : 'failed';
       const webhook = order.provider === 'razorpay' ? razorpayWebhook(order, outcome) : cashfreeWebhook(order, outcome);
       const url = `${base}/webhooks/payments/${order.provider}/${encodeURIComponent(org)}`;
+      let answer: { status: number; body: string } | { error: string };
       try {
-        const answer = await post(url, webhook);
-        if (answer.status >= 200 && answer.status < 300) order.status = outcome;
-        log.add('payments', `${outcome === 'captured' ? 'Capture' : 'Fail'} webhook for ${order.orderId}: one-ngo answered ${answer.status}`, { url, answer: answer.body });
+        const posted = await post(url, webhook);
+        if (posted.status >= 200 && posted.status < 300) order.status = outcome;
+        answer = { status: posted.status, body: posted.body };
+        log.add('payments', `${outcome === 'captured' ? 'Capture' : 'Fail'} webhook for ${order.orderId}: one-ngo answered ${posted.status}`, { url, answer: posted.body });
       } catch (error) {
-        log.add('payments', `${outcome === 'captured' ? 'Capture' : 'Fail'} webhook for ${order.orderId} could not reach one-ngo`, { url, error: String(error) });
+        answer = { error: error instanceof Error ? error.message : String(error) };
+        log.add('payments', `${outcome === 'captured' ? 'Capture' : 'Fail'} webhook for ${order.orderId} could not reach one-ngo`, { url, error: answer.error });
       }
-      return redirect(res, '/', 303);
+      return sendJson(res, 200, { orderId: order.orderId, provider: order.provider, status: order.status, webhook: { url, ...answer } });
     }
     return false;
   };

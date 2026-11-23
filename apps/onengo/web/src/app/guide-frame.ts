@@ -24,7 +24,7 @@ import { Session } from './services/session';
       height: 100%;
       border: 0;
       border-radius: 12px;
-      background: #f5f7fa;
+      background: var(--bg);
     }
   `,
   template: `<iframe #guide [title]="'ui.guide.title' | t" src="/guide-app/"></iframe>`,

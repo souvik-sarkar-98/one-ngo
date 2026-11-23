@@ -72,6 +72,10 @@ export interface BuilderGateway {
   discard(kind: string, key: string): Promise<void>;
   rollback(kind: string, key: string, version: number): Promise<void>;
   savePatch(kind: string, key: string, patch: ExtensionPatchRequest['patch']): Promise<void>;
+  /** Turns a module's definition off for the organisation; refused while something published still uses it. */
+  disable(kind: string, key: string): Promise<void>;
+  /** Turns a module's definition that was turned off back on. */
+  enable(kind: string, key: string): Promise<void>;
   /** Checks the body sent (a whole body or `{ patch }`), or the saved draft when none is sent. */
   check(kind: string, key: string, body?: unknown): Promise<CheckResult>;
   changes(kind: string, key: string, against: ChangesAgainst): Promise<ChangesResult>;
@@ -103,6 +107,8 @@ export function httpBuilder(http: HttpLike): BuilderGateway {
     discard: (kind, key) => http.post(`${definition(kind, key)}/discard`),
     rollback: (kind, key, version) => send('POST /api/builder/definitions/:kind/:key/rollback', { kind, key }, { version }),
     savePatch: (kind, key, patch) => send('PUT /api/builder/definitions/:kind/:key/patch', { kind, key }, { patch }),
+    disable: async (kind, key) => void (await http.post(`${definition(kind, key)}/disable`)),
+    enable: async (kind, key) => void (await http.post(`${definition(kind, key)}/enable`)),
     check: (kind, key, body) => http.post<CheckResult>(`${definition(kind, key)}/check`, body ?? {}),
     changes: (kind, key, against) => http.get<ChangesResult>(`${definition(kind, key)}/changes?against=${against}`),
     publishedRecordType: (key) => http.get<{ body: RecordTypeBody }>(`/api/definitions/recordType/${encodeURIComponent(key)}`),

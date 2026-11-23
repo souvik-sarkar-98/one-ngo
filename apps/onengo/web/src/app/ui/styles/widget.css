@@ -3,12 +3,12 @@
   min-width: 0;
 }
 .widget {
-  background: #fff;
+  background: var(--card);
   border: 1px solid rgba(148, 163, 184, 0.25);
   border-radius: 14px;
   padding: 12px;
   margin-bottom: 10px;
-  box-shadow: 0 1px 2px #0f172a0a;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 4%, transparent);
   min-width: 0;
 }
 .widget-groups {
@@ -65,19 +65,19 @@
 .widget__hint {
   margin: 2px 0 0;
   font-size: 0.72rem;
-  color: #64748b;
+  color: var(--grey-500);
 }
 .widget__state {
   margin: 6px 0 0;
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--grey-500);
 }
 .widget__state--error {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  color: #b3261e;
+  color: var(--bad);
 }
 .widget__retry {
   font: inherit;
@@ -85,7 +85,7 @@
   padding: 0.3rem 0.7rem;
   border-radius: 6px;
   border: 1px solid var(--line, #d8dee6);
-  background: #fff;
+  background: var(--card);
   color: var(--fg, #1d2733);
   cursor: pointer;
 }
@@ -101,7 +101,7 @@
   stroke-width: 1;
 }
 .widget__axis {
-  fill: #64748b;
+  fill: var(--grey-500);
   font-size: 9px;
 }
 .widget__bar {
@@ -115,7 +115,7 @@
   stroke-linecap: round;
 }
 .widget__dot {
-  fill: #fff;
+  fill: var(--card);
   stroke: var(--brand, #1f5f8b);
   stroke-width: 2;
 }

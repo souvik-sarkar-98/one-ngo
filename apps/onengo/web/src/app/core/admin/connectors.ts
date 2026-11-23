@@ -5,7 +5,7 @@ import { asGatewayError } from '../records/gateway/gateway';
 import { Snapshots, type AdminGateway, type ConnectorKind, type ConnectorSummary, type ConnectorTestRequest, type ConnectorView, type Delivery, type DeliveryStatus, type SaveConnector } from './admin';
 import { failure, type AdminResult, type Navigate } from './roles';
 
-export const CONNECTOR_KINDS: ConnectorKind[] = ['webhook', 'sms', 'whatsapp', 'http', 'oauth'];
+export const CONNECTOR_KINDS: ConnectorKind[] = ['webhook', 'sms', 'whatsapp', 'http', 'oauth', 'storage', 'email'];
 
 /** A settings field as the forms draw it. */
 export interface ConnectorField {
@@ -35,7 +35,9 @@ interface Setting {
 }
 
 const lookup = (v: FormValues) => v['mode'] === 'lookup';
-const send = (v: FormValues) => v['mode'] !== 'lookup';
+const provider = (name: string) => (v: FormValues) => v['provider'] === name;
+const bucket = (v: FormValues) => v['provider'] === 'gcs' || v['provider'] === 's3';
+const emailHttp = (v: FormValues) => v['provider'] === 'http';
 
 const CONFIG: Record<ConnectorKind, Setting[]> = {
   webhook: [{ key: 'url', required: true }],
@@ -61,14 +63,34 @@ const CONFIG: Record<ConnectorKind, Setting[]> = {
     { key: 'responseMap', type: 'textarea', stored: 'json', required: true, when: lookup, hint: 'ui.admin.connectors.h.responseMap' },
     { key: 'success', type: 'textarea', stored: 'json', hint: 'ui.admin.connectors.h.success' },
     { key: 'timeoutMs', type: 'number', stored: 'number' },
-    { key: 'emailSender', type: 'boolean', stored: 'flag', when: send, hint: 'ui.admin.connectors.h.emailSender' },
-    { key: 'from', required: (v) => v['emailSender'] === true, when: send },
   ],
   oauth: [
     { key: 'authorizationUrl', required: true },
     { key: 'tokenUrl', required: true },
     { key: 'clientId', required: true },
     { key: 'scopes', type: 'textarea', stored: 'lines', required: true, hint: 'ui.admin.connectors.h.scopes' },
+  ],
+  storage: [
+    { key: 'provider', type: 'select', required: true, options: ['gcs', 's3', 'drive'], named: true },
+    { key: 'bucket', required: true, when: bucket },
+    { key: 'prefix', when: bucket, hint: 'ui.admin.connectors.h.prefix' },
+    { key: 'region', required: true, when: provider('s3') },
+    { key: 'endpoint', when: provider('s3'), hint: 'ui.admin.connectors.h.endpoint' },
+    { key: 'credential', type: 'select', required: true, when: provider('drive') },
+    { key: 'folderId', required: true, when: provider('drive'), hint: 'ui.admin.connectors.h.folderId' },
+  ],
+  email: [
+    { key: 'provider', type: 'select', required: true, options: ['gmail', 'http'], named: true },
+    { key: 'credential', type: 'select', required: true, when: provider('gmail'), hint: 'ui.admin.connectors.h.gmailCredential' },
+    { key: 'userId', when: provider('gmail'), hint: 'ui.admin.connectors.h.gmailUserId' },
+    { key: 'method', type: 'select', required: true, when: emailHttp, options: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] },
+    { key: 'url', required: true, when: emailHttp, hint: 'ui.admin.connectors.h.emailPlaceholders' },
+    { key: 'credential', type: 'select', when: emailHttp },
+    { key: 'headers', type: 'textarea', stored: 'json', when: emailHttp, hint: 'ui.admin.connectors.h.headers' },
+    { key: 'body', type: 'textarea', when: emailHttp, hint: 'ui.admin.connectors.h.emailPlaceholders' },
+    { key: 'contentType', type: 'select', when: emailHttp, options: ['json', 'form', 'text'] },
+    { key: 'success', type: 'textarea', stored: 'json', when: emailHttp, hint: 'ui.admin.connectors.h.success' },
+    { key: 'timeoutMs', type: 'number', stored: 'number', when: emailHttp },
   ],
 };
 
@@ -81,10 +103,18 @@ const SECRETS: Record<ConnectorKind, { name: string; required: boolean }[]> = {
   sms: [{ name: 'apiKey', required: false }],
   http: [],
   oauth: [{ name: 'clientSecret', required: true }],
+  storage: [],
+  email: [],
 };
 
+function storageSecrets(v: FormValues): { name: string; required: boolean }[] {
+  if (v['provider'] === 'gcs') return [{ name: 'serviceAccountKey', required: true }];
+  if (v['provider'] === 's3') return [{ name: 'accessKeyId', required: true }, { name: 'secretAccessKey', required: true }];
+  return [];
+}
+
 /** The server keeps an oauth connector's tokens among its secrets; only the client secret is typed here. */
-const NAMED_SECRETS = new Set<ConnectorKind>(['sms', 'whatsapp', 'webhook', 'http']);
+const NAMED_SECRETS = new Set<ConnectorKind>(['sms', 'whatsapp', 'webhook', 'http', 'email']);
 const SECRET_NAME = /^[A-Za-z][A-Za-z0-9_]{0,40}$/;
 
 export const kindLabel = (k: ConnectorKind) => t(`ui.admin.connectors.kind.${k}`);
@@ -95,6 +125,7 @@ export function deliveryLabel(s: DeliveryStatus): string {
 
 /** An account sign-in's state in the list: the summary has no tokens, and `configured` needs the refresh token its connect stored. */
 export function summaryState(c: ConnectorSummary): string {
+  if (c.archived) return t('ui.admin.connectors.archivedState');
   if (c.kind === 'oauth') return t(c.configured ? 'ui.admin.connectors.connected' : 'ui.admin.connectors.notConnected');
   return !c.configured ? t('ui.admin.connectors.notReady') : c.enabled ? t('ui.more.on') : t('ui.more.off');
 }
@@ -149,13 +180,15 @@ function dateTime(iso: string): string {
 
 export interface ConnectorsSnapshot {
   items: ConnectorSummary[];
+  /** Which connectors the list shows: those in use, or the archived ones kept aside. */
+  chip: 'active' | 'archived';
   loading: boolean;
   error: string;
 }
 
 /** Administration › Connectors: SMS, WhatsApp, webhooks, HTTP calls and account sign-in with what uses each. */
 export class ConnectorsList {
-  readonly state = new Snapshots<ConnectorsSnapshot>({ items: [], loading: false, error: '' });
+  readonly state = new Snapshots<ConnectorsSnapshot>({ items: [], chip: 'active', loading: false, error: '' });
   constructor(private readonly gateway: AdminGateway) {}
 
   async load(): Promise<void> {
@@ -165,6 +198,20 @@ export class ConnectorsList {
     } catch (e) {
       this.state.set({ loading: false, error: failure(e) });
     }
+  }
+
+  setChip(chip: string): void {
+    this.state.set({ chip: chip === 'archived' ? 'archived' : 'active' });
+  }
+
+  /** The connectors the chosen chip shows. */
+  shown(): ConnectorSummary[] {
+    const { items, chip } = this.state.value;
+    return items.filter((c) => c.archived === (chip === 'archived'));
+  }
+
+  archivedCount(): number {
+    return this.state.value.items.filter((c) => c.archived).length;
   }
 }
 
@@ -179,7 +226,7 @@ export interface SecretState {
 }
 
 /** How Test is offered for the saved settings. */
-export type TestMode = 'none' | 'phone' | 'email' | 'sample' | 'lookup';
+export type TestMode = 'none' | 'phone' | 'sample' | 'lookup';
 
 export interface ConnectorTestOutcome {
   ok: boolean;
@@ -250,14 +297,16 @@ export class ConnectorSession {
     void this.loadCredentials();
     try {
       const view = await this.gateway.connector(this.key);
+      if (!view) {
+        // Nothing is set up under this key yet: that is the normal start of adding a connector, not a failure.
+        this.state.set({ loading: false, isNew: true, view: null, kindChosen: false, values: {}, secrets: [] });
+        if (kindForNew) this.chooseKind(kindForNew);
+        return;
+      }
       this.use(view);
       this.state.set({ loading: false, deliveries: await this.gateway.deliveries(this.key) });
     } catch (e) {
-      const err = asGatewayError(e, '');
-      if (err.code === 'not_found') {
-        this.state.set({ loading: false, isNew: true, view: null, kindChosen: false, values: {}, secrets: [] });
-        if (kindForNew) this.chooseKind(kindForNew);
-      } else this.state.set({ loading: false, error: failure(e) });
+      this.state.set({ loading: false, error: failure(e) });
     }
   }
 
@@ -276,13 +325,25 @@ export class ConnectorSession {
       this.state.set({ kindChosen: false, values: {}, secrets: [], errors: {} });
       return;
     }
-    const defaults: FormValues = kind === 'sms' ? { method: 'POST', contentType: 'json' } : kind === 'http' ? { mode: 'send', method: 'POST', contentType: 'json', emailSender: false } : {};
-    this.state.set({ kindChosen: true, kind, values: { enabled: false, ...defaults }, secrets: this.secretStates(kind, []), errors: {} });
+    const defaults: FormValues =
+      kind === 'sms'
+        ? { method: 'POST', contentType: 'json' }
+        : kind === 'http'
+          ? { mode: 'send', method: 'POST', contentType: 'json' }
+          : kind === 'storage'
+            ? { provider: 'gcs' }
+            : kind === 'email'
+              ? { provider: 'gmail' }
+              : {};
+    const values = { enabled: false, ...defaults };
+    this.state.set({ kindChosen: true, kind, values, secrets: this.secretStates(kind, [], values), errors: {} });
   }
 
   fields(): ConnectorField[] {
     if (!this.state.value.kindChosen) return [];
     const { kind, values, credentials } = this.state.value;
+    const readOnly = this.isArchived();
+    // On or off is the Switch on / Switch off button, not a field.
     return [
       ...CONFIG[kind]
         .filter((s) => shown(s, values))
@@ -291,19 +352,23 @@ export class ConnectorSession {
           label: t(`ui.admin.connectors.f.${s.key}`),
           type: s.type ?? 'text',
           required: isRequired(s, values),
-          readOnly: false,
+          readOnly,
           options:
             s.key === 'credential'
               ? [{ key: '', label: t('ui.admin.connectors.none') }, ...credentials.map((c) => ({ key: c, label: c }))]
               : (s.options ?? []).map((o) => ({ key: o, label: s.named ? t(`ui.admin.connectors.o.${s.key}.${o}`) : o })),
           ...(s.hint && { hint: t(s.hint) }),
         })),
-      { key: 'enabled', label: t('ui.admin.connectors.enabled'), type: 'boolean' as const, required: false, readOnly: false, options: [] },
     ];
   }
 
   setValues(values: FormValues): void {
-    this.state.set({ values, errors: {} });
+    const s = this.state.value;
+    const secrets =
+      (s.kind === 'storage' || s.kind === 'email') && values['provider'] !== s.values['provider']
+        ? this.secretStates(s.kind, s.view?.secrets ?? [], values)
+        : s.secrets;
+    this.state.set({ values, secrets, errors: {} });
   }
 
   editSecret(name: string): void {
@@ -316,7 +381,8 @@ export class ConnectorSession {
 
   /** Whether secrets can be named here: an http call's placeholders use {{secrets.<name>}}. */
   namesSecrets(): boolean {
-    return this.state.value.kind === 'http';
+    const { kind, values } = this.state.value;
+    return kind === 'http' || (kind === 'email' && values['provider'] === 'http');
   }
 
   setNewSecret(name: string): void {
@@ -345,11 +411,15 @@ export class ConnectorSession {
     }
     const errors: Record<string, string> = {};
     const config: Record<string, unknown> = { ...(s.view?.config ?? {}) };
+    // Some keys appear twice for different kinds of connector (email's `credential` for Gmail and for HTTP).
+    // A hidden entry must not delete a value that a visible entry with the same key has just set.
+    const writes = (f: Setting) => shown(f, s.values) && !((f.stored ?? 'text') === 'flag' && s.values[f.key] !== true);
+    const visible = new Set(CONFIG[s.kind].filter(writes).map((f) => f.key));
     for (const f of CONFIG[s.kind]) {
       const stored = f.stored ?? 'text';
       const raw = s.values[f.key];
       if (!shown(f, s.values) || (stored === 'flag' && raw !== true)) {
-        delete config[f.key];
+        if (!visible.has(f.key)) delete config[f.key];
         continue;
       }
       if (stored === 'flag') {
@@ -386,14 +456,14 @@ export class ConnectorSession {
     }
   }
 
-  /** Test as the saved settings allow it: a phone number, an email address, a sample send, the lookup's inputs, or nothing to ask. */
+  /** Test as the saved settings allow it: a phone number, a sample send, the lookup's inputs, or nothing to ask. */
   testMode(): TestMode {
     const { view } = this.state.value;
     if (!view) return 'none';
-    if (view.kind === 'sms' || view.kind === 'whatsapp') return 'phone';
+    if (view.kind === 'sms' || view.kind === 'whatsapp' || view.kind === 'email') return 'phone';
+    if (view.kind === 'storage') return 'sample';
     if (view.kind !== 'http') return 'none';
-    if (view.config['mode'] === 'lookup') return 'lookup';
-    return view.config['emailSender'] === true ? 'email' : 'sample';
+    return view.config['mode'] === 'lookup' ? 'lookup' : 'sample';
   }
 
   /** The saved lookup's input fields, each given a value to test with. */
@@ -413,7 +483,7 @@ export class ConnectorSession {
   private testRequest(mode: TestMode): ConnectorTestRequest | undefined {
     const s = this.state.value;
     if (mode === 'lookup') return { inputs: Object.fromEntries(this.lookupInputs().map((f) => [f, s.testInputs[f] ?? ''])) };
-    if (mode === 'phone' || mode === 'email') {
+    if (mode === 'phone') {
       const to = s.testTo.trim();
       return to ? { to } : {};
     }
@@ -487,15 +557,52 @@ export class ConnectorSession {
     }
   }
 
+  /** Archived: switched off, hidden from every choice and read-only until restored. */
+  isArchived(): boolean {
+    return this.state.value.view?.archived === true;
+  }
+
+  /** Switches the saved connector on or off, leaving its other settings as saved. */
+  async setEnabled(on: boolean): Promise<AdminResult> {
+    const { view } = this.state.value;
+    if (!view || view.archived) return { ok: false, message: '' };
+    return this.change(() => this.gateway.saveConnector(this.key, { enabled: on }), on ? 'ui.admin.connectors.switchedOn' : 'ui.admin.connectors.switchedOff');
+  }
+
+  /** Archives the connector. The server refuses while a definition, Settings or another connector uses it, and says what. */
+  async archive(): Promise<AdminResult> {
+    if (!this.state.value.view) return { ok: false, message: '' };
+    return this.change(() => this.gateway.archiveConnector(this.key), 'ui.admin.connectors.archivedDone');
+  }
+
+  /** Brings an archived connector back, switched off. */
+  async restore(): Promise<AdminResult> {
+    if (!this.isArchived()) return { ok: false, message: '' };
+    return this.change(() => this.gateway.restoreConnector(this.key), 'ui.admin.connectors.restoredDone');
+  }
+
+  private async change(run: () => Promise<ConnectorView>, done: string): Promise<AdminResult> {
+    this.state.set({ saving: true, error: '' });
+    try {
+      this.use(await run());
+      this.state.set({ saving: false });
+      return { ok: true, message: t(done) };
+    } catch (e) {
+      this.state.set({ saving: false });
+      return { ok: false, message: failure(e) };
+    }
+  }
+
   private use(view: ConnectorView): void {
     const values: FormValues = { enabled: view.enabled };
     for (const f of CONFIG[view.kind]) values[f.key] = shownValue(f.stored ?? 'text', view.config[f.key]);
-    this.state.set({ view, isNew: false, kindChosen: true, kind: view.kind, values, secrets: this.secretStates(view.kind, view.secrets), errors: {} });
+    this.state.set({ view, isNew: false, kindChosen: true, kind: view.kind, values, secrets: this.secretStates(view.kind, view.secrets, values), errors: {} });
   }
 
-  private secretStates(kind: ConnectorKind, set: string[]): SecretState[] {
-    const extra = NAMED_SECRETS.has(kind) ? set.filter((n) => !SECRETS[kind].some((s) => s.name === n)).map((name) => ({ name, required: false })) : [];
-    return [...SECRETS[kind], ...extra].map(({ name, required }) => {
+  private secretStates(kind: ConnectorKind, set: string[], values: FormValues = {}): SecretState[] {
+    const named = kind === 'storage' ? storageSecrets(values) : SECRETS[kind];
+    const extra = NAMED_SECRETS.has(kind) ? set.filter((n) => !named.some((s) => s.name === n)).map((name) => ({ name, required: false })) : [];
+    return [...named, ...extra].map(({ name, required }) => {
       const key = `ui.admin.connectors.s.${name}`;
       const label = t(key);
       return { name, label: label === key ? name : label, required, set: set.includes(name), editing: !set.includes(name), value: '' };

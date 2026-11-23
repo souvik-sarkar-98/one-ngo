@@ -3,7 +3,7 @@ import { notFound, ruleViolation, validationFailed } from '@onengo/kernel/errors
 import { demand } from '../permissions.js';
 import type { Tx, TransactionManager } from '../ports/transaction.js';
 import type { LedgerService } from '../ledger/ledger-service.js';
-import type { MoneyAccount, MoneyAccountKind, MoneyAccountStore } from './ports/money-account-store.js';
+import type { MoneyAccount, MoneyAccountChange, MoneyAccountKind, MoneyAccountStore } from './ports/money-account-store.js';
 import { paiseToDecimal, toPaise } from '../money.js';
 
 /** Setting key for allowed transfer pairs, e.g. [["bank","cash"],["cash","bank"]]. Absent means all pairs are allowed. */
@@ -14,10 +14,20 @@ export interface OpenAccountInput {
   key: string;
   name: string;
   kind: MoneyAccountKind;
+  /** An existing asset ledger account to attach to (for example BANK). Omit to create a new one. */
+  ledgerCode?: string;
   holderUserId?: string;
   custodian?: string;
   upiId?: string;
   allowNegative?: boolean;
+}
+
+export interface UpdateAccountInput {
+  name?: string | null;
+  custodian?: string | null;
+  /** An empty text or null clears the UPI ID. */
+  upiId?: string | null;
+  allowNegative?: boolean | null;
 }
 
 export interface TransferInput {
@@ -45,7 +55,19 @@ export class MoneyAccountService {
     if (!/^[a-z][a-z0-9-]{0,40}$/.test(input.key)) throw validationFailed('Account key must be lowercase letters, digits, or -.');
     if (input.upiId && !/^[\w.-]{2,256}@[a-zA-Z]{2,64}$/.test(input.upiId)) throw validationFailed('Enter a valid UPI ID.');
     return this.transactions.withTenant(ctx.tenantId, async (tx) => {
-      const code = `${input.kind.toUpperCase()}_${input.key.toUpperCase().replace(/-/g, '_')}`.slice(0, 31);
+      if (await this.store.byKey(tx, input.key)) throw ruleViolation(`A money account '${input.key}' already exists.`);
+      let code = `${input.kind.toUpperCase()}_${input.key.toUpperCase().replace(/-/g, '_')}`.slice(0, 31);
+      let ledgerAccountId: string | undefined;
+      if (input.ledgerCode) {
+        // Attach to the books' existing account, so the real account and its ledger balance are one thing.
+        code = input.ledgerCode;
+        const ledger = await this.store.ledgerAccount(tx, code);
+        if (!ledger) throw ruleViolation(`There is no ledger account '${code}' to attach to.`);
+        if (ledger.type !== 'asset') throw ruleViolation(`'${code}' is not an asset account, so it cannot hold money.`);
+        if (!ledger.active) throw ruleViolation(`'${code}' is closed.`);
+        if (ledger.linked) throw ruleViolation(`'${code}' already belongs to another money account.`);
+        ledgerAccountId = ledger.id;
+      }
       const opened = await this.store.open(
         tx,
         ctx.actor.id,
@@ -54,6 +76,7 @@ export class MoneyAccountService {
           name: input.name,
           kind: input.kind,
           ledgerCode: code,
+          ledgerAccountId,
           holderUserId: input.holderUserId ?? null,
           custodian: input.custodian ?? null,
           upiId: input.upiId ?? null,
@@ -63,6 +86,37 @@ export class MoneyAccountService {
       );
       if (!opened) throw ruleViolation(`A ledger account '${code}' already exists.`);
       return this.byKey(tx, input.key);
+    });
+  }
+
+  /** Changes the name, UPI ID, custodian or overdraft rule of an active account. The key, kind and ledger account stay. */
+  async update(ctx: TenantContext, key: string, input: UpdateAccountInput): Promise<MoneyAccount> {
+    demand(ctx.actor, 'money:accounts:manage');
+    // A missing field stays as it is. An empty or null UPI ID or custodian clears it; a name cannot be empty.
+    const name = input.name == null ? undefined : input.name.trim();
+    if (name !== undefined && !name) throw validationFailed('An account needs a name.');
+    const upiId = input.upiId === undefined ? undefined : (input.upiId ?? '').trim() || null;
+    if (upiId && !/^[\w.-]{2,256}@[a-zA-Z]{2,64}$/.test(upiId)) throw validationFailed('Enter a valid UPI ID.');
+    const custodian = input.custodian === undefined ? undefined : (input.custodian ?? '').trim() || null;
+    return this.transactions.withTenant(ctx.tenantId, async (tx) => {
+      const before = await this.byKey(tx, key);
+      if (before.status !== 'active') throw ruleViolation('A closed account cannot be changed.');
+      if (input.allowNegative === false && toPaise(before.balance) < 0) {
+        throw ruleViolation(`${before.name} is below zero now. Bring it back to zero before turning the overdraft off.`);
+      }
+      const change: MoneyAccountChange = {
+        ...(name !== undefined && { name }),
+        ...(custodian !== undefined && { custodian }),
+        ...(upiId !== undefined && { upiId }),
+        ...(input.allowNegative != null && { allowNegative: input.allowNegative }),
+      };
+      if (Object.keys(change).length) {
+        await this.store.update(tx, ctx.actor.id, key, change, {
+          before: { name: before.name, custodian: before.custodian, upiId: before.upiId, allowNegative: before.allowNegative },
+          after: change,
+        });
+      }
+      return this.byKey(tx, key);
     });
   }
 

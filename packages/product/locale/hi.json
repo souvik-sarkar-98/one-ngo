@@ -40,6 +40,7 @@
   "ui.common.search": "खोजें",
   "ui.common.searching": "खोजा जा रहा है…",
   "ui.common.seeAll": "सभी देखें",
+  "ui.common.contactAdministrator": "यह पूरा नहीं हो सका। अपने व्यवस्थापक से संपर्क करें।",
   "ui.common.somethingWentWrong": "हमारी तरफ़ से कुछ गड़बड़ हुई। कृपया थोड़ी देर बाद फिर कोशिश करें।",
   "ui.common.sort": "क्रम",
   "ui.common.startDate": "आरंभ तिथि",

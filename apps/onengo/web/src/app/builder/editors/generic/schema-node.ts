@@ -9,6 +9,7 @@ import { ExpressionInput } from './expression-input';
 import { GenericEditorStore } from './generic-store';
 import { HtmlEditor } from './html-editor';
 import { PREVIEWS } from './previews';
+import { Btn } from '@onengo/web-kit';
 
 const WIDE = new Set(['object', 'variant', 'table', 'map', 'json', 'pills', 'textarea', 'code', 'html', 'expression']);
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -16,7 +17,7 @@ const HEX = /^#[0-9a-f]{6}$/i;
 /** One part of a definition drawn from its schema: a setting, an object of settings, a table of parts, or name–value entries. */
 @Component({
   selector: 'app-schema-node',
-  imports: [NgComponentOutlet, TranslatePipe, Autocomplete, EditableTable, PermissionField, ExpressionInput, HtmlEditor],
+  imports: [Btn, NgComponentOutlet, TranslatePipe, Autocomplete, EditableTable, PermissionField, ExpressionInput, HtmlEditor],
   host: { '[class.wide]': 'wide()' },
   styleUrl: './schema-node.css',
   template: `
@@ -123,7 +124,7 @@ const HEX = /^#[0-9a-f]{6}$/i;
                   <input [value]="draft()" [placeholder]="'ui.builder.generic.addValue' | t" [attr.aria-label]="n.label" (input)="draft.set($any($event.target).value)" />
                 }
               }
-              <button type="button" class="small" [disabled]="!draft().trim()" (click)="addPill(draft())">{{ 'ui.common.add' | t }}</button>
+              <button appBtn size="sm" type="button" [disabled]="!draft().trim()" (click)="addPill(draft())">{{ 'ui.common.add' | t }}</button>
             </span>
           </div>
           @if (n.hint) { <div class="help">{{ n.hint }}</div> }
@@ -179,17 +180,17 @@ const HEX = /^#[0-9a-f]{6}$/i;
                   <input [id]="e.id" [value]="$any(e.value) ?? ''" (input)="store.set(e.path, $any($event.target).value)" />
                 </div>
               }
-              <button type="button" class="small danger gen-entry__remove" [attr.aria-label]="('ui.common.remove' | t) + ': ' + e.name" (click)="store.set(e.path, undefined)">✕</button>
+              <button appBtn="danger" size="sm" type="button" class="gen-entry__remove" [attr.aria-label]="('ui.common.remove' | t) + ': ' + e.name" (click)="store.set(e.path, undefined)">✕</button>
             </div>
           }
-          <button type="button" class="small" (click)="store.addEntry(map())">{{ 'ui.builder.generic.addEntry' | t }}</button>
+          <button appBtn size="sm" type="button" (click)="store.addEntry(map())">{{ 'ui.builder.generic.addEntry' | t }}</button>
         </div>
       }
       @case ('fixed') {}
       @default {
         @if (n.value === undefined) {
           <div class="field">
-            <button type="button" class="small" (click)="store.addPart(n)">{{ 'ui.builder.generic.addPart' | t: { name: n.label } }}</button>
+            <button appBtn size="sm" type="button" (click)="store.addPart(n)">{{ 'ui.builder.generic.addPart' | t: { name: n.label } }}</button>
             @if (n.hint && !bare()) { <div class="help">{{ n.hint }}</div> }
           </div>
         } @else {
@@ -198,13 +199,13 @@ const HEX = /^#[0-9a-f]{6}$/i;
               <div class="gen-part__head">
                 <h4 class="gen-part__title">{{ n.label }}</h4>
                 @if (!n.required) {
-                  <button type="button" class="small" (click)="store.set(n.path, undefined)">{{ 'ui.builder.generic.removePart' | t: { name: n.label } }}</button>
+                  <button appBtn size="sm" type="button" (click)="store.set(n.path, undefined)">{{ 'ui.builder.generic.removePart' | t: { name: n.label } }}</button>
                 }
               </div>
               @if (n.hint) { <p class="help">{{ n.hint }}</p> }
             } @else if (!n.required) {
               <div class="gen-part__head gen-part__head--end">
-                <button type="button" class="small" (click)="store.set(n.path, undefined)">{{ 'ui.builder.generic.removePart' | t: { name: n.label } }}</button>
+                <button appBtn size="sm" type="button" (click)="store.set(n.path, undefined)">{{ 'ui.builder.generic.removePart' | t: { name: n.label } }}</button>
               </div>
             }
             @if (n.control === 'variant') {

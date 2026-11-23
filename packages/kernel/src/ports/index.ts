@@ -45,8 +45,8 @@ export interface FileStore {
  */
 export interface FileStoreResolver {
   forTenant(tenantId: string): Promise<{ ref: string; store: FileStore }>;
-  /** Throws when no store has this reference. */
-  byRef(ref: string): FileStore;
+  /** Throws when no store has this reference. A file is read from the store named when it was written. */
+  byRef(tenantId: string, ref: string): Promise<FileStore>;
 }
 
 export interface AccessClaims {

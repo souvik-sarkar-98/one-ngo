@@ -1,39 +1,27 @@
 import { Component, inject, input } from '@angular/core';
+import { PageHead } from '@onengo/web-kit';
 import { ShellStore } from '../shell/shell-store';
 import { PageBack } from './page-back';
 
-/** The page title, with Back on the left away from the four top-level screens. */
+/** The page title, with Back on the left away from the four top-level screens. The heading itself is the web kit's, shared with the operator console. */
 @Component({
   selector: 'app-screen-heading',
-  imports: [PageBack],
+  imports: [PageBack, PageHead],
   styles: `
     :host {
       display: block;
-    }
-    .screen-heading {
-      display: flex;
-      flex-flow: row nowrap;
-      align-items: center;
-      justify-content: flex-start;
-      gap: 2px;
-      margin: 0 0 var(--screen-heading-gap, 0.75rem);
-    }
-    h1 {
-      margin: 0;
-      min-width: 0;
-      line-height: 1.25;
+      --page-head-gap: 2px;
+      --page-head-wrap: nowrap;
+      --page-head-margin: var(--screen-heading-gap, 0.75rem);
     }
   `,
   template: `
     @if (showBack() || text()) {
-      <header class="screen-heading">
+      <app-page-head [title]="text()">
         @if (showBack()) {
-          <app-page-back />
+          <app-page-back pageHeadBack />
         }
-        @if (text()) {
-          <h1>{{ text() }}</h1>
-        }
-      </header>
+      </app-page-head>
     }
   `,
 })

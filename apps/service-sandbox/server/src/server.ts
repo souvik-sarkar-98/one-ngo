@@ -2,15 +2,15 @@ import { mkdir } from 'node:fs/promises';
 import { createServer, type Server } from 'node:https';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { connectorRoutes, connectorSettings } from './connectors.js';
-import { HOST, HTTPS_PORT, SMTP_PORT } from './constants.js';
-import { homePage } from './home.js';
-import { sendJson, sendText, sendHtml, type Handler, type Request } from './http.js';
+import { connectorRoutes } from './connectors.js';
+import { HOST, HTTPS_PORT } from './constants.js';
+import { sendJson, sendHtml, type Handler, type Request } from './http.js';
 import { FixtureLog } from './log.js';
+import { Mailbox, mailRoutes, mailSummary } from './mail.js';
 import { oidc, type Oidc } from './oidc.js';
+import { openApiDocument, swaggerPage } from './openapi.js';
 import { payments, type Payments, type WebhookPost } from './payments.js';
 import { pwnedRoutes } from './pwned.js';
-import { SmtpFixture } from './smtp.js';
 import { storageRoutes } from './storage.js';
 import { fixtureTls, type FixtureTls } from './tls.js';
 
@@ -22,23 +22,17 @@ export interface FixtureOptions {
   host?: string;
   /** 0 picks a free port (tests). */
   httpsPort?: number;
-  smtpPort?: number;
   /** one-ngo's PUBLIC_BASE_URL; payment webhooks are posted there. */
   oneNgoBaseUrl?: string;
-  /** one-ngo's existing file settings, echoed in the printed env. */
-  fileStoreBucket?: string;
-  fileStorePrefix?: string;
-  defaultOrg?: string;
   webhookPost?: WebhookPost;
 }
 
 export interface Fixture {
   origin: string;
-  smtpPort: number;
   filesDir: string;
   tls: FixtureTls;
   log: FixtureLog;
-  smtp: SmtpFixture;
+  mailbox: Mailbox;
   oidc: Oidc;
   payments: Payments;
   close(): Promise<void>;
@@ -78,49 +72,23 @@ export async function startFixture(options: FixtureOptions = {}): Promise<Fixtur
   });
   const origin = `https://${host}:${httpsPort}`;
 
-  const smtp = new SmtpFixture(log);
-  let smtpPort: number;
-  try {
-    smtpPort = await smtp.listen(options.smtpPort ?? SMTP_PORT, host);
-  } catch (error) {
-    await new Promise<void>((resolve) => server.close(() => resolve()));
-    throw error;
-  }
-
+  const mailbox = new Mailbox();
   const provider = await oidc(origin, log);
   const pay = payments(log, { oneNgoBaseUrl, ...(options.webhookPost ? { post: options.webhookPost } : {}) });
-  const connectors = connectorSettings(origin);
 
   const home: Handler = async (req, res) => {
     if (req.method === 'GET' && req.url.pathname === '/') {
-      return sendHtml(
-        res,
-        200,
-        homePage({
-          origin,
-          smtpHost: host,
-          smtpPort,
-          caPath: tls.caPath,
-          filesDir,
-          oneNgoBaseUrl,
-          fileStoreBucket: options.fileStoreBucket,
-          fileStorePrefix: options.fileStorePrefix,
-          defaultOrg: options.defaultOrg ?? 'demo',
-          connectors,
-          orders: pay.orders(),
-          messages: smtp.messages,
-          log: log.list(),
-        }),
-      );
+      return sendJson(res, 200, { swagger: `${origin}/swagger`, openapi: `${origin}/openapi.json` });
     }
     if (req.method === 'GET' && req.url.pathname === '/api/log') {
-      return sendJson(res, 200, { entries: log.list(), orders: pay.orders(), messages: smtp.messages.map(({ raw: _raw, ...m }) => m) });
+      return sendJson(res, 200, {
+        entries: log.list(),
+        orders: pay.orders(),
+        messages: mailbox.messages.map(mailSummary),
+      });
     }
-    const mail = /^\/mail\/(\d+)$/.exec(req.url.pathname);
-    if (req.method === 'GET' && mail) {
-      const message = smtp.find(Number(mail[1]));
-      return message ? sendText(res, 200, message.raw) : sendJson(res, 404, { error: 'No such message.' });
-    }
+    if (req.method === 'GET' && req.url.pathname === '/openapi.json') return sendJson(res, 200, openApiDocument(origin));
+    if (req.method === 'GET' && req.url.pathname === '/swagger') return sendHtml(res, 200, swaggerPage());
     if (req.method === 'GET' && req.url.pathname === '/favicon.ico') {
       res.writeHead(204).end();
       return true;
@@ -128,20 +96,18 @@ export async function startFixture(options: FixtureOptions = {}): Promise<Fixtur
     return false;
   };
 
-  handlers = [home, provider.routes, pay.routes, storageRoutes(filesDir, log), pwnedRoutes(log), connectorRoutes(log)];
-  log.add('fixture', `Started on ${origin} with SMTP on ${host}:${smtpPort}`);
+  handlers = [home, mailRoutes(mailbox, log), provider.routes, pay.routes, storageRoutes(filesDir, log), pwnedRoutes(log), connectorRoutes(log)];
+  log.add('fixture', `Started on ${origin}`);
 
   return {
     origin,
-    smtpPort,
     filesDir,
     tls,
     log,
-    smtp,
+    mailbox,
     oidc: provider,
     payments: pay,
     async close() {
-      await smtp.close();
       server.closeAllConnections();
       await new Promise<void>((resolve) => server.close(() => resolve()));
     },

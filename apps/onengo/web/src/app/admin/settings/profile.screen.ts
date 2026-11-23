@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { PageFrame, opensInPlace } from '@onengo/web-kit';
+import { Btn, PageFrame, opensInPlace } from '@onengo/web-kit';
 import { TranslatePipe } from '../../services/i18n';
 import { CfForm } from '../../ui/cf-form';
 import { ScreenHeading } from '../../ui/screen-heading';
@@ -8,7 +8,7 @@ import { OrganisationStore } from './organisation-store';
 /** Profile: how to reach the organisation, its address and time zone, saved to the organisation profile. The logo and names are on Identity. */
 @Component({
   selector: 'app-admin-profile',
-  imports: [CfForm, PageFrame, ScreenHeading, TranslatePipe],
+  imports: [Btn, CfForm, PageFrame, ScreenHeading, TranslatePipe],
   providers: [OrganisationStore],
   styleUrl: '../admin.css',
   template: `
@@ -36,7 +36,7 @@ import { OrganisationStore } from './organisation-store';
           <cf-form [fields]="store.addressFields()" [values]="store.profile()" [errors]="store.profileErrors()" idPrefix="org-address" [columns]="3" (valuesChange)="store.profile.set($event)" />
           <div class="admin__line">
             <span class="admin__grow"></span>
-            <button type="button" class="app-btn app-btn--primary" [disabled]="store.savingProfile()" (click)="store.saveProfile()">
+            <button appBtn="primary" type="button" [disabled]="store.savingProfile()" (click)="store.saveProfile()">
               {{ (store.savingProfile() ? 'ui.common.saving' : 'ui.common.save') | t }}
             </button>
           </div>

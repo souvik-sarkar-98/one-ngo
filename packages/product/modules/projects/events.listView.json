@@ -1,0 +1,29 @@
+{
+  "key": "events",
+  "recordType": "event",
+  "label": "Events",
+  "pageSize": 20,
+  "layout": "table",
+  "columns": ["number", "name", "eventDate", "venue", "capacity", "attendeeCount", "status"],
+  "compactColumns": ["name", "eventDate", "status"],
+  "chips": [
+    { "id": "planned", "label": "Planned", "statusIn": ["planned"] },
+    { "id": "held", "label": "Held", "statusIn": ["held"] },
+    { "id": "all", "label": "All" }
+  ],
+  "defaultChip": "planned",
+  "filters": ["eventDate", "project"],
+  "row": { "title": "name", "subtitle": ["venue"], "meta": "eventDate", "badge": "status" },
+  "detail": {
+    "sections": [
+      {
+        "id": "event",
+        "label": "Event",
+        "fields": ["number", "status", "name", "project", "eventDate", "venue", "capacity", "attendeeCount", "description"]
+      },
+      { "id": "attendees", "label": "Attendees", "related": { "recordType": "eventAttendee", "field": "event" } }
+    ]
+  },
+  "create": { "fields": ["name", "project", "eventDate", "venue", "capacity", "description"] },
+  "edit": { "fields": ["name", "project", "eventDate", "venue", "capacity", "description"] }
+}

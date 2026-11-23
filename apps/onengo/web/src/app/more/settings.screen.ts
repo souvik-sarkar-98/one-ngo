@@ -8,7 +8,7 @@ import { ScreenHeading } from '../ui/screen-heading';
 import { MoreStore } from './more-store';
 import { PasskeyManager } from './passkey-manager';
 
-/** Settings: a read-only profile, language, two-step status and About. The user guide is a navigation destination. */
+/** Settings: a read-only profile, language, two-step status, passkeys and About. The user guide is a navigation destination. */
 @Component({
   selector: 'app-settings',
   imports: [TranslatePipe, MobileFormSheet, ScreenHeading, PageFrame, PasskeyManager, InstallSteps],
@@ -163,7 +163,7 @@ import { PasskeyManager } from './passkey-manager';
       flex: 0 0 auto;
       width: 44px;
       height: 44px;
-      color: #94a3b8;
+      color: var(--grey-400);
       font-size: 1.1rem;
     }
     .settings__lead {
@@ -192,6 +192,7 @@ import { PasskeyManager } from './passkey-manager';
     <app-page-frame>
       <app-screen-heading [text]="'ui.nav.settings' | t" />
       @let m = store.model();
+      <app-passkey-manager #passkeys [twoStep]="m.twoStep" [open]="store.panel() === 'passkeys'" (closed)="store.closePanel()" />
 
       <section class="settings__group" aria-labelledby="settings-profile">
         <h2 id="settings-profile" class="settings__heading">{{ 'ui.crumbs.myProfile' | t }}</h2>
@@ -244,10 +245,17 @@ import { PasskeyManager } from './passkey-manager';
               <span class="badge" [class.ok]="m.twoStep">{{ (m.twoStep ? 'ui.more.on' : 'ui.more.off') | t }}</span>
             </div>
           </li>
+          <li>
+            <button type="button" class="settings__row" (click)="store.openPanel('passkeys')">
+              <span class="settings__label">
+                <strong>{{ 'ui.passkeys.title' | t }}</strong>
+                <span class="muted">{{ passkeys.summary() }}</span>
+              </span>
+              <span class="settings__chev" aria-hidden="true">›</span>
+            </button>
+          </li>
         </ul>
       </section>
-
-      <app-passkey-manager [twoStep]="m.twoStep" />
 
       <section class="settings__group" aria-labelledby="settings-help">
         <h2 id="settings-help" class="settings__heading">{{ 'ui.settings.help' | t }}</h2>

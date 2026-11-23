@@ -59,10 +59,11 @@ describe('orders through the product providers', () => {
 
     const capture = await call(fixture, `/orders/razorpay/${created.orderId}/capture`, {
       method: 'POST',
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: 'org=asha',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ org: 'asha' }),
     });
-    expect(capture.status).toBe(303);
+    expect(capture.status).toBe(200);
+    expect(capture.json()).toMatchObject({ orderId: created.orderId, status: 'captured', webhook: { url: 'http://localhost:8080/webhooks/payments/razorpay/asha', status: 200 } });
     const last = sent.at(-1)!;
     expect(last.url).toBe('http://localhost:8080/webhooks/payments/razorpay/asha');
     expect(provider.parseWebhook(last.webhook.body, last.webhook.headers, razorpayCreds)).toMatchObject({ kind: 'paid', orderId: created.orderId, amountPaise: 64000 });
@@ -75,17 +76,19 @@ describe('orders through the product providers', () => {
     expect(created).toMatchObject({ orderId: 'donation-2', checkout: { provider: 'cashfree', mode: 'sandbox' } });
     await provider.createOrder({ amountPaise: 1000, reference: 'donation-3' } as never, { ...cashfreeCreds, environment: 'production' });
 
-    const fail = await call(fixture, '/orders/cashfree/donation-2/fail', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'org=asha' });
-    expect(fail.status).toBe(303);
+    const fail = await call(fixture, '/orders/cashfree/donation-2/fail', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ org: 'asha' }) });
+    expect(fail.status).toBe(200);
+    expect(fail.json()).toMatchObject({ orderId: 'donation-2', status: 'failed', webhook: { url: 'http://localhost:8080/webhooks/payments/cashfree/asha', status: 200 } });
     const last = sent.at(-1)!;
     expect(last.url).toBe('http://localhost:8080/webhooks/payments/cashfree/asha');
     expect(provider.parseWebhook(last.webhook.body, last.webhook.headers, cashfreeCreds)).toMatchObject({ kind: 'failed', orderId: 'donation-2', amountPaise: 25000 });
   });
 
-  it('shows the orders on the log page', async () => {
-    const page = await call(fixture, '/');
-    expect(page.status).toBe(200);
-    expect(page.text).toContain('donation-2');
-    expect(page.text).toContain(`RAZORPAY_API_BASE=${fixture.origin}`);
+  it('lists the orders on the log', async () => {
+    const log = (await call(fixture, '/api/log')).json<{ orders: { reference: string }[] }>();
+    expect(log.orders.some((order) => order.reference === 'donation-2')).toBe(true);
+    const index = (await call(fixture, '/')).json<{ swagger: string; openapi: string }>();
+    expect(index.swagger).toBe(`${fixture.origin}/swagger`);
+    expect(index.openapi).toBe(`${fixture.origin}/openapi.json`);
   });
 });

@@ -1,5 +1,5 @@
 import type { AuditInput, AuditTrail } from '../../domain/ports/audit-trail.js';
-import type { AccountRow, AccountStore, PasswordTokenInput, ProviderPolicy, SessionStore, SignInStore } from '../../domain/identity/ports/identity-directory.js';
+import { EMAIL_PURPOSES, type AccountRow, type AccountStore, type EmailPurpose, type PasswordTokenInput, type ProviderPolicy, type SessionStore, type SignInStore } from '../../domain/identity/ports/identity-directory.js';
 import { emailDomains } from '../../domain/identity/email-domains.js';
 import type { CredentialCrypto } from '@onengo/kernel/ports';
 import type { TenantDirectory } from '../../domain/organisations/ports/organisation-directory.js';
@@ -32,16 +32,19 @@ export interface IdentityConfig {
   codesPerEmail?: number;
   codesPerIp?: number;
   /** Delivers a one-time sign-in code. Wired to the notification engine. */
-  deliverEmailCode?: (input: { tenantId: string; email: string; code: string }) => Promise<void>;
+  deliverEmailCode?: (input: SystemEmailBase & { code: string }) => Promise<void>;
+  /**
+   * Why an organisation cannot use this message template for a system email, or undefined when it can:
+   * it must be a published message (not a document) whose placeholders parse.
+   */
+  templateProblem?: (tenantId: string, templateKey: string) => Promise<string | undefined>;
+  /**
+   * Refuses when this organisation cannot send email. Called before any address is checked,
+   * so the same answer is given whether or not the address belongs to a member. The refusal does not say why.
+   */
+  ensureEmail?: (tenantId: string) => Promise<void>;
   /** Delivers a password reset or invitation link. Wired to the notification engine. */
-  deliverPasswordLink?: (input: {
-    tenantId: string;
-    email: string;
-    kind: 'reset' | 'invite';
-    url: string;
-    organisation: string;
-    locale: string;
-  }) => Promise<void>;
+  deliverPasswordLink?: (input: SystemEmailBase & { kind: 'reset' | 'invite'; url: string }) => Promise<void>;
   /** The language of a member: their own choice, else the organisation's default. Wired to the locale store. */
   localeOf?: (tenantId: string, userId: string) => Promise<string>;
   /** Public address of the web app, e.g. https://ngo.example.org, used in emailed links. */
@@ -52,6 +55,44 @@ export interface IdentityConfig {
   accessCheckMs?: number;
   /** Queued when a member's name or email is written, so fields that follow the account can update. */
   userUpdated?: (tx: Tx, user: { userId: string; name: string; email: string }) => Promise<void>;
+}
+
+/**
+ * What a system email (sign-in code, reset or invitation link) is filled from. `template` is the
+ * organisation's chosen message template for this purpose; without one the default wording is sent.
+ */
+export interface SystemEmailBase {
+  tenantId: string;
+  email: string;
+  template?: string;
+  locale: string;
+  organisation: string;
+  /** The person's profile fields, available to templates as `user.*`. */
+  user: { displayName: string; email: string };
+  expiresInMinutes: number;
+}
+
+const TEMPLATE_KEY = /^[a-z][a-zA-Z0-9_-]{0,62}$/;
+
+/** The organisation's choices as sent: a purpose maps to a template key, or null to clear it. */
+function emailTemplateChoices(value: unknown): Partial<Record<EmailPurpose, string>> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw validationFailed('Send the template choices as an object.');
+  const issues: { path: string; message: string }[] = [];
+  const out: Partial<Record<EmailPurpose, string>> = {};
+  for (const [purpose, key] of Object.entries(value as Record<string, unknown>)) {
+    if (!(EMAIL_PURPOSES as readonly string[]).includes(purpose)) {
+      issues.push({ path: `/${purpose}`, message: `Use one of ${EMAIL_PURPOSES.join(', ')}.` });
+      continue;
+    }
+    if (key === null || key === '') continue;
+    if (typeof key !== 'string' || !TEMPLATE_KEY.test(key)) {
+      issues.push({ path: `/${purpose}`, message: 'Give a template key: a letter, then letters, digits, _ or -.' });
+      continue;
+    }
+    out[purpose as EmailPurpose] = key;
+  }
+  if (issues.length) throw validationFailed('The template choices are not valid.', issues);
+  return out;
 }
 
 /** Records a member name or email change. Composition passes this in; it does not write the audit event itself. */
@@ -251,6 +292,31 @@ export class IdentityService {
     this.actorCache.clear();
   }
 
+  /** The template each system email uses as chosen, whether or not it is still usable. */
+  chosenEmailTemplates(tenantId: string): Promise<Partial<Record<EmailPurpose, string>>> {
+    return this.signIn.emailTemplates(tenantId);
+  }
+
+  /**
+   * Checks the template choices without saving them, so a caller can reject a whole change before it writes.
+   * Every chosen key must pass the template check; a purpose sent as null or left out keeps the default wording.
+   */
+  async checkEmailTemplates(tenantId: string, input: unknown): Promise<Partial<Record<EmailPurpose, string>>> {
+    const next = emailTemplateChoices(input);
+    const issues: { path: string; message: string }[] = [];
+    for (const [purpose, key] of Object.entries(next)) {
+      const problem = await this.config.templateProblem?.(tenantId, key!);
+      if (problem) issues.push({ path: `/${purpose}`, message: problem });
+    }
+    if (issues.length) throw validationFailed('Some templates cannot be used for these emails.', issues);
+    return next;
+  }
+
+  /** Replaces the saved choices with checked ones. The caller has checked who may do this and records the audit. */
+  saveEmailTemplateChoices(tenantId: string, choices: Partial<Record<EmailPurpose, string>>, updatedBy: string): Promise<void> {
+    return this.signIn.saveEmailTemplates(tenantId, choices, updatedBy);
+  }
+
   providerPolicy(tenantId: string, providerId: string): Promise<ProviderPolicy | undefined> {
     return this.signIn.providerPolicy(tenantId, providerId);
   }
@@ -322,7 +388,10 @@ export class IdentityService {
     return this.completeSignIn(user, input.tenantKey, input.totpCode, 'password', email, input.ip);
   }
 
-  /** Always succeeds, so callers cannot learn which addresses are registered. */
+  /**
+   * Succeeds without saying whether the address is registered. When the organisation cannot send email,
+   * every address gets the same refusal, which does not say why.
+   */
   async requestEmailCode(input: { tenantKey: string; email: string; ip?: string }): Promise<void> {
     const email = input.email.trim().toLowerCase();
     const window = 15 * 60;
@@ -331,11 +400,27 @@ export class IdentityService {
     const tenantId = await this.tenantIdForKey(input.tenantKey);
     if (!tenantId) return;
     if (!(await this.signIn.authPolicy(tenantId)).emailCodeEnabled) return;
+    await this.config.ensureEmail?.(tenantId);
     const user = await this.findUser(email);
     if (!user || user.status !== 'active' || !(await this.isActiveMember(tenantId, user.id))) return;
     const code = this.crypto.randomDigits(6);
-    await this.signIn.addEmailCode(email, tenantId, this.crypto.sha256(code), this.config.emailCodeTtlMinutes ?? 10);
-    await this.config.deliverEmailCode?.({ tenantId, email, code });
+    const expiresInMinutes = this.config.emailCodeTtlMinutes ?? 10;
+    await this.signIn.addEmailCode(email, tenantId, this.crypto.sha256(code), expiresInMinutes);
+    const [templates, tenant, locale] = await Promise.all([
+      this.signIn.emailTemplates(tenantId),
+      this.tenants.keyAndName(tenantId),
+      this.config.localeOf?.(tenantId, user.id),
+    ]);
+    await this.config.deliverEmailCode?.({
+      tenantId,
+      email,
+      code,
+      template: templates.sign_in_code,
+      locale: locale ?? 'en',
+      organisation: tenant?.name ?? '',
+      user: { displayName: user.display_name, email },
+      expiresInMinutes,
+    });
   }
 
   async loginWithEmailCode(input: { tenantKey: string; email: string; code: string; totpCode?: string; ip?: string }): Promise<TokenPair> {
@@ -508,17 +593,21 @@ export class IdentityService {
 
   // --------------------------------------------- reset and invitations
 
-  /** Always succeeds, so callers cannot learn which addresses are registered. */
+  /**
+   * Succeeds without saying whether the address is registered. When the organisation cannot send email,
+   * every address gets the same refusal, which does not say why.
+   */
   async requestPasswordReset(input: { tenantKey: string; email: string; ip?: string }): Promise<void> {
     const email = input.email.trim().toLowerCase();
     if (!(await this.limits.hit(`reset:email:${email}`, 3, 15 * 60))) return;
     if (input.ip && !(await this.limits.hit(`reset:ip:${input.ip}`, 10, 15 * 60))) return;
     const tenantId = await this.tenantIdForKey(input.tenantKey);
     if (!tenantId) return;
+    await this.config.ensureEmail?.(tenantId);
     const user = await this.findUser(email);
     if (!user || user.status !== 'active' || !(await this.isActiveMember(tenantId, user.id))) return;
     const token = await this.createToken(user.id, tenantId, 'reset', 30, null);
-    await this.sendLink(tenantId, user.id, user.email, 'reset', token);
+    await this.sendLink(tenantId, user.id, user.email, 'reset', token, 30);
   }
 
   /** Emails a member a link to set their password. Earlier unused invitations stop working. */
@@ -527,9 +616,10 @@ export class IdentityService {
     if (!(await this.isActiveMember(ctx.tenantId, userId))) throw notFound('This person is not a member of the organisation.');
     const email = await this.accounts.activeEmail(userId);
     if (email === undefined) throw notFound('This person is not a member of the organisation.');
+    await this.config.ensureEmail?.(ctx.tenantId);
     const token = await this.createToken(userId, ctx.tenantId, 'invite', 7 * 24 * 60, ctx.actor.id);
     await this.audit(ctx.tenantId, { actorId: ctx.actor.id, action: 'member.invited', entity: 'member', entityId: userId });
-    await this.sendLink(ctx.tenantId, userId, email, 'invite', token);
+    await this.sendLink(ctx.tenantId, userId, email, 'invite', token, 7 * 24 * 60);
   }
 
   /** Whether a reset or invitation link still works, so the page can say so before asking for a password. Reads only: the link is not spent. */
@@ -611,13 +701,35 @@ export class IdentityService {
   }
 
   /** The link carries the language too, so the set-password page opens in it before there is a session. */
-  private async sendLink(tenantId: string, userId: string, email: string, kind: 'reset' | 'invite', token: string): Promise<void> {
-    const tenant = await this.tenants.keyAndName(tenantId);
-    const locale = (await this.config.localeOf?.(tenantId, userId)) ?? 'en';
+  private async sendLink(
+    tenantId: string,
+    userId: string,
+    email: string,
+    kind: 'reset' | 'invite',
+    token: string,
+    expiresInMinutes: number,
+  ): Promise<void> {
+    const [tenant, locale, templates, person] = await Promise.all([
+      this.tenants.keyAndName(tenantId),
+      this.config.localeOf?.(tenantId, userId),
+      this.signIn.emailTemplates(tenantId),
+      this.accounts.summary(userId),
+    ]);
+    const language = locale ?? 'en';
     const base = (this.config.publicBaseUrl ?? '').replace(/\/+$/, '');
     const query = new URLSearchParams({ token, org: tenant!.key, kind });
-    if (locale !== 'en') query.set('lang', locale);
-    await this.config.deliverPasswordLink?.({ tenantId, email, kind, url: `${base}/reset-password?${query}`, organisation: tenant!.name, locale });
+    if (language !== 'en') query.set('lang', language);
+    await this.config.deliverPasswordLink?.({
+      tenantId,
+      email,
+      kind,
+      url: `${base}/reset-password?${query}`,
+      organisation: tenant!.name,
+      locale: language,
+      template: kind === 'reset' ? templates.password_reset : templates.invite,
+      user: { displayName: person?.display_name ?? '', email },
+      expiresInMinutes,
+    });
   }
 
   private async completeSignIn(

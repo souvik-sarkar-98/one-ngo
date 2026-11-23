@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { OPERATOR_ACTIONS, type OperatorAccountContract, type OperatorActionContract } from '@onengo/platform/contracts';
-import { FormProblems } from '@onengo/web-kit';
+import { Btn, FormProblems, PageHead } from '@onengo/web-kit';
 import { OperatorApi, OperatorRequestError } from '../services/operator-api';
 import { clearPending, readPending, readStored, returnPath, savePending } from '../services/pending-step';
 
@@ -15,38 +15,38 @@ const problemsOf = (error: unknown): string[] => error instanceof OperatorReques
 const isAction = (value: string): value is OperatorActionContract => (OPERATOR_ACTIONS as readonly string[]).includes(value);
 
 @Component({
-  standalone: true, imports: [FormsModule, FormProblems, RouterLink],
-  template: `<div class="pagehead"><h1>Operators</h1><span class="sp"></span>
-      @if (api.can('operators')) { <button type="button" class="sm" (click)="startAdd()">Add operator</button> }
-    </div>
-    @if (!api.can('operators')) { <p class="note">Managing operators needs the Manage operators action.</p> }
+  standalone: true, imports: [Btn, PageHead, FormsModule, FormProblems, RouterLink],
+  template: `<app-page-head title="Operators">
+      @if (api.can('operators')) { <button pageHeadActions appBtn="primary" size="sm" type="button" (click)="startAdd()">Add operator</button> }
+    </app-page-head>
+    @if (!api.can('operators')) { <p class="notice info">Managing operators needs the Manage operators action.</p> }
     @else {
       <p class="intro">People who can sign in to this console, and what each of them can do.</p>
       <div class="search"><span aria-hidden="true">⌕</span><input name="q" [(ngModel)]="q" placeholder="Search by name" (ngModelChange)="load()"></div>
       <div class="chips">
-        <button type="button" [class.on]="status === 'active'" (click)="filter('active')">Active {{ count('active') }}</button>
-        <button type="button" [class.on]="status === 'disabled'" (click)="filter('disabled')">Disabled {{ count('disabled') }}</button>
-        <button type="button" [class.on]="status === ''" (click)="filter('')">All</button>
+        <button type="button" class="toggle" [class.on]="status === 'active'" (click)="filter('active')">Active {{ count('active') }}</button>
+        <button type="button" class="toggle" [class.on]="status === 'disabled'" (click)="filter('disabled')">Disabled {{ count('disabled') }}</button>
+        <button type="button" class="toggle" [class.on]="status === ''" (click)="filter('')">All</button>
       </div>
       <app-form-problems [message]="error()" />
       @if (adding()) {
         <section class="sheet">
           <h2>Add operator</h2>
-          @if (stepUpReady()) { <p class="note ok">Verification is complete. Add the operator.</p> }
+          @if (stepUpReady()) { <p class="notice ok">Verification is complete. Add the operator.</p> }
           <label>Name<input name="displayName" [(ngModel)]="displayName"></label>
           <label>Subject id<input name="subject" [(ngModel)]="subject"></label>
           <p class="muted">The login is this console's identity provider plus the subject id.</p>
           <div class="chips">
-            <button type="button" (click)="preset(['status'])">Look up</button>
-            <button type="button" (click)="preset(['status','onboard','retry','suspend','reactivate','close','sign_in'])">Operate</button>
-            <button type="button" (click)="preset(actions)">Everything</button>
+            <button appBtn="primary" type="button" (click)="preset(['status'])">Look up</button>
+            <button appBtn="primary" type="button" (click)="preset(['status','onboard','retry','suspend','reactivate','close','sign_in'])">Operate</button>
+            <button appBtn="primary" type="button" (click)="preset(actions)">Everything</button>
           </div>
           @for (action of actions; track action) {
             <label class="check"><input type="checkbox" [checked]="chosen().includes(action)" (change)="toggle(action)">{{ label(action) }}</label>
           }
           <div class="row">
-            <button type="button" class="ghost" (click)="adding.set(false)">Cancel</button>
-            <button type="button" [disabled]="!displayName.trim() || !subject.trim()" (click)="create()">Continue</button>
+            <button appBtn type="button" (click)="adding.set(false)">Cancel</button>
+            <button appBtn="primary" type="button" [disabled]="!displayName.trim() || !subject.trim()" (click)="create()">Continue</button>
           </div>
         </section>
       }
@@ -125,10 +125,10 @@ export class OperatorsScreen {
 }
 
 @Component({
-  standalone: true, imports: [FormsModule, FormProblems, RouterLink],
-  template: `<div class="pagehead"><h1>{{ account()?.displayName || 'Operator' }}</h1>
+  standalone: true, imports: [Btn, PageHead, FormsModule, FormProblems, RouterLink],
+  template: `<app-page-head [title]="account()?.displayName || 'Operator'">
       @if (account(); as person) { <span class="badge" [class.ok]="person.status === 'active'" [class.bad]="person.status === 'disabled'">{{ person.status === 'active' ? 'Active' : 'Disabled' }}</span> }
-    </div>
+    </app-page-head>
     <app-form-problems [message]="error()" [problems]="problems()" />
     @if (account(); as person) {
       <section class="card">
@@ -138,30 +138,30 @@ export class OperatorsScreen {
           <div><b>Subject</b><span><code>{{ person.identities[0]?.subject || '—' }}</code></span></div>
           @if (person.disabledReason) { <div><b>Disabled</b><span>{{ person.disabledReason }}</span></div> }
         </div>
-        @if (mine()) { <p class="note">This is your account. You can change other actions, and you cannot remove Manage operators, change your login, or disable yourself.</p> }
+        @if (mine()) { <p class="notice info">This is your account. You can change other actions, and you cannot remove Manage operators, change your login, or disable yourself.</p> }
       </section>
       @if (person.status === 'active') {
         <section class="card"><h2>Actions</h2>
-          @if (stepUpReady() === 'grants') { <p class="note ok">Verification is complete. Save the actions.</p> }
+          @if (stepUpReady() === 'grants') { <p class="notice ok">Verification is complete. Save the actions.</p> }
           @for (action of actions; track action) {
             <label class="check"><input type="checkbox" [checked]="selected().includes(action)" [disabled]="mine() && action === 'operators'" (change)="toggle(action)">{{ label(action) }}</label>
           }
         </section>
-        @if (dirty()) { <div class="bar"><span>Unsaved action changes</span><button type="button" (click)="save()">Save</button></div> }
+        @if (dirty()) { <div class="bar"><span>Unsaved action changes</span><button appBtn="primary" type="button" (click)="save()">Save</button></div> }
         @if (!mine()) {
           <section class="card"><h2>Login</h2>
             @if (sheet() === 'login') {
-              @if (stepUpReady() === 'login') { <p class="note ok">Verification is complete. Save the new subject id.</p> }
+              @if (stepUpReady() === 'login') { <p class="notice ok">Verification is complete. Save the new subject id.</p> }
               <label>New subject id<input name="subject" [(ngModel)]="subject"></label>
-              <div class="row"><button type="button" class="ghost" (click)="sheet.set('')">Cancel</button><button type="button" (click)="relink()">Save login</button></div>
-            } @else { <button type="button" class="ghost" (click)="sheet.set('login')">Change login</button> }
+              <div class="row"><button appBtn type="button" (click)="sheet.set('')">Cancel</button><button appBtn="primary" type="button" (click)="relink()">Save login</button></div>
+            } @else { <button appBtn type="button" (click)="sheet.set('login')">Change login</button> }
           </section>
           <section class="card"><h2>Disable</h2>
             @if (sheet() === 'disable') {
-              @if (stepUpReady() === 'disable') { <p class="note ok">Verification is complete. Confirm to disable this operator.</p> }
+              @if (stepUpReady() === 'disable') { <p class="notice ok">Verification is complete. Confirm to disable this operator.</p> }
               <label>Reason<textarea name="reason" [(ngModel)]="reason"></textarea></label>
-              <div class="row"><button type="button" class="ghost" (click)="sheet.set('')">Cancel</button><button type="button" class="danger" [disabled]="!reason.trim()" (click)="disable()">Disable</button></div>
-            } @else { <button type="button" class="danger ghost" (click)="sheet.set('disable')">Disable</button> }
+              <div class="row"><button appBtn type="button" (click)="sheet.set('')">Cancel</button><button appBtn="destructive" type="button" [disabled]="!reason.trim()" (click)="disable()">Disable</button></div>
+            } @else { <button appBtn="danger" type="button" (click)="sheet.set('disable')">Disable</button> }
           </section>
         }
       }

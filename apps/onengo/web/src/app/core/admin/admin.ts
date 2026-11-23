@@ -1,4 +1,4 @@
-import type { ApiKeyView, ConnectorSummary, ConnectorTestRequest, ConnectorView, CreatedApiKey, SettingsRequest } from '../contracts';
+import type { ApiKeyView, ConnectorSummary, ConnectorTestRequest, ConnectorView, CreatedApiKey, DeletedPage, DeletedRecord, RestoredRecord, SettingsRequest } from '../contracts';
 import type { ThemeTokens } from '../models';
 import type { PersonItem, RoleOption } from '../people/people';
 
@@ -16,11 +16,11 @@ export interface RoleMembersPage {
   roles: RoleOption[];
 }
 
-export type ConnectorKind = 'sms' | 'whatsapp' | 'webhook' | 'http' | 'oauth';
+export type ConnectorKind = 'sms' | 'whatsapp' | 'webhook' | 'http' | 'oauth' | 'storage' | 'email';
 export type DeliveryStatus = 'pending' | 'sent' | 'failed';
 
 /** Secrets are listed by name only; their values never reach the app. */
-export type { ConnectorSummary, ConnectorTestRequest, ConnectorView };
+export type { ConnectorSummary, ConnectorTestRequest, ConnectorView, DeletedPage, DeletedRecord, RestoredRecord };
 
 /** `message` carries what a lookup read or that an access token was renewed. */
 export interface ConnectorTestResult {
@@ -102,6 +102,20 @@ export interface OrganisationSettings {
   financialYearStartMonth: number;
   /** A financial year is open or a receipt issued, so the start month can no longer change. */
   financialYearFixed: boolean;
+  /** The HTTP connector that sends this organisation's email, or null when none is chosen. */
+  mailConnector: string | null;
+  /** The address that connector sends from. */
+  mailFrom: string | null;
+  /** Enabled HTTP connectors in send mode, plus a saved key that is no longer enabled. */
+  mailConnectors: { key: string; label: string }[];
+  /** The storage connector new uploads are written to, or null when none is chosen. */
+  fileStoreConnector: string | null;
+  /** Enabled storage connectors, plus a saved key that is no longer enabled. */
+  fileStoreConnectors: { key: string; label: string }[];
+  /** The message template each sign-in email uses; null keeps the default wording. */
+  emailTemplates: { sign_in_code: string | null; password_reset: string | null; invite: string | null };
+  /** Published message templates the organisation may choose for its sign-in emails. */
+  emailTemplateOptions: { key: string; label: string }[];
 }
 
 export type SettingsChange = SettingsRequest;
@@ -130,6 +144,13 @@ export interface JobsQuery {
   offset: number;
 }
 
+export interface DeletedQuery {
+  type?: string;
+  q?: string;
+  limit: number;
+  offset: number;
+}
+
 export interface AuditQuery {
   person?: string;
   area?: string;
@@ -149,8 +170,13 @@ export interface AdminGateway {
   addRoleMembers(role: string, userIds: string[]): Promise<void>;
   removeRoleMember(role: string, userId: string): Promise<void>;
   connectors(): Promise<ConnectorSummary[]>;
-  connector(key: string): Promise<ConnectorView>;
+  /** The connector set up under the key, or null when there is none yet (not an error). */
+  connector(key: string): Promise<ConnectorView | null>;
   saveConnector(key: string, body: SaveConnector): Promise<ConnectorView>;
+  /** Switches the connector off and hides it from every choice; refused while something uses it. */
+  archiveConnector(key: string): Promise<ConnectorView>;
+  /** Lifts an archive. The connector comes back switched off. */
+  restoreConnector(key: string): Promise<ConnectorView>;
   testConnector(key: string, input?: ConnectorTestRequest): Promise<ConnectorTestResult>;
   /** The provider address an oauth connector's Connect sends the browser to. */
   startOauth(key: string): Promise<{ url: string }>;
@@ -167,6 +193,10 @@ export interface AdminGateway {
   failedItems(id: string): Promise<JobItem[]>;
   cancelJob(id: string): Promise<JobRow>;
   audit(q: AuditQuery): Promise<Paged<AuditEntry>>;
+  /** The recycle bin: deleted records, most recently deleted first. */
+  deletedRecords(q: DeletedQuery): Promise<DeletedPage>;
+  /** Brings a deleted record back; `version` is the version it was deleted at. */
+  restoreRecord(id: string, version: number): Promise<RestoredRecord>;
   settings(): Promise<OrganisationSettings>;
   saveSettings(change: SettingsChange): Promise<OrganisationSettings>;
   saveTheme(body: ThemeTokens): Promise<ThemeTokens>;

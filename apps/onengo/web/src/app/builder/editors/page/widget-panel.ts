@@ -4,6 +4,7 @@ import type { FieldType, PageWidget } from '../../../core/models';
 import { TranslatePipe } from '../../../services/i18n';
 import { PermissionField } from '../../../ui/permission-field';
 import { PageEditorStore } from './page-store';
+import { Btn } from '@onengo/web-kit';
 
 const SUMMABLE: FieldType[] = ['number', 'money'];
 const GROUPABLE: FieldType[] = ['choice', 'boolean', 'reference'];
@@ -13,7 +14,7 @@ const PERIODS = ['day', 'week', 'month', 'financialYear'] as const;
 /** The settings of the selected widget: its kind, label, what it shows, and who sees it. */
 @Component({
   selector: 'app-page-widget-panel',
-  imports: [TranslatePipe, PermissionField],
+  imports: [Btn, TranslatePipe, PermissionField],
   styleUrl: './page.css',
   template: `
     @let w = widget();
@@ -130,12 +131,12 @@ const PERIODS = ['day', 'week', 'month', 'financialYear'] as const;
                 [source]="store.permissionSource"
                 (valueChange)="store.setLink(i, n, { permission: $event })" />
               <div class="pg-link__tools">
-                <button type="button" class="small" [disabled]="n === 0" (click)="store.moveLink(i, n, n - 1)">{{ 'ui.pins.moveUp' | t }}</button>
-                <button type="button" class="small" [disabled]="w.items.length < 2" (click)="store.removeLink(i, n)">{{ 'ui.common.remove' | t }}</button>
+                <button appBtn size="sm" type="button" [disabled]="n === 0" (click)="store.moveLink(i, n, n - 1)">{{ 'ui.pins.moveUp' | t }}</button>
+                <button appBtn size="sm" type="button" [disabled]="w.items.length < 2" (click)="store.removeLink(i, n)">{{ 'ui.common.remove' | t }}</button>
               </div>
             </div>
           }
-          <button type="button" class="small" (click)="store.addLink(i)">{{ 'ui.builder.page.addLink' | t }}</button>
+          <button appBtn size="sm" type="button" (click)="store.addLink(i)">{{ 'ui.builder.page.addLink' | t }}</button>
           <span class="help">{{ 'ui.builder.page.linkHint' | t }}</span>
         </fieldset>
       }

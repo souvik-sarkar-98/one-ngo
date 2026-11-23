@@ -102,7 +102,7 @@ describe('alert events', () => {
 });
 
 describe('monitoring definitions', () => {
-  const dir = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'docs', 'ops', 'monitoring');
+  const dir = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'ops', 'monitoring');
   const read = (file: string) => JSON.parse(readFileSync(join(dir, file), 'utf8'));
   const metrics = new Map(readdirSync(join(dir, 'metrics')).map((f) => [basename(f, '.json'), read(join('metrics', f)) as { filter: string }]));
   const policyFilters: string[] = readdirSync(join(dir, 'policies')).flatMap((f) =>

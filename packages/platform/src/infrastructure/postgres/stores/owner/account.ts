@@ -4,7 +4,7 @@ import { typed } from '../../kysely.js';
 import { useTwoStepStep } from './two-step-step.js';
 import type { AccountStore } from '../../../../domain/identity/ports/identity-directory.js';
 
-const ACCOUNT_COLUMNS = ['id', 'email', 'password_hash', 'totp_secret_enc', 'totp_enabled', 'status'] as const;
+const ACCOUNT_COLUMNS = ['id', 'display_name', 'email', 'password_hash', 'totp_secret_enc', 'totp_enabled', 'status'] as const;
 
 /** The owner-level accounts capability. */
 export function pgAccountStore(db: Database): AccountStore {

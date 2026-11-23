@@ -1,5 +1,5 @@
 -- 006_operator: operator control plane. Hosted editions only; a self-managed
--- install can leave this file out (see docs/architecture/migration-schema-analysis.html).
+-- install can leave this file out (see docs/architecture.md (Appendix B)).
 --
 -- The external provider authenticates; these rows decide whether the verified
 -- identity may act. Everything here is reachable only by ngo_operator (and the
@@ -14,6 +14,8 @@ create table operator_account (
   created_by uuid references operator_account(id),
   disabled_at timestamptz,
   disabled_by uuid references operator_account(id),
+  disabled_reason text
+    check (disabled_reason is null or length(trim(disabled_reason)) between 1 and 500),
   check (
     (status = 'active' and disabled_at is null and disabled_by is null)
     or (status = 'disabled' and disabled_at is not null and disabled_by is not null)
@@ -32,7 +34,7 @@ create table operator_identity (
 
 create table operator_grant (
   operator_id uuid not null references operator_account(id),
-  action text not null check (action in ('onboard', 'status', 'retry', 'suspend', 'reactivate', 'close')),
+  action text not null check (action in ('onboard', 'status', 'retry', 'suspend', 'reactivate', 'close', 'sign_in', 'operators', 'audit')),
   granted_at timestamptz not null default now(),
   granted_by uuid references operator_account(id),
   revoked_at timestamptz,
@@ -77,7 +79,7 @@ create index operator_session_account on operator_session (operator_id, expires_
 create table operator_step_up (
   id uuid primary key default gen_random_uuid(),
   session_id uuid not null references operator_session(id),
-  action text not null check (action in ('suspend', 'reactivate', 'close')),
+  action text not null check (action in ('suspend', 'reactivate', 'close', 'sign_in', 'operators')),
   target text not null,
   nonce_hash text not null check (nonce_hash ~ '^[0-9a-f]{64}$'),
   auth_time timestamptz not null,

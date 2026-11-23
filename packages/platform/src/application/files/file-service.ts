@@ -138,8 +138,8 @@ export class FileService {
   }
 
   /** The bytes of a stored file, from the store it was written to. The caller has checked access. */
-  read(file: { storage_key: string; store_ref: string }): Promise<Readable> {
-    return this.stores.byRef(file.store_ref).get(file.storage_key);
+  async read(tenantId: string, file: { storage_key: string; store_ref: string }): Promise<Readable> {
+    return (await this.stores.byRef(tenantId, file.store_ref)).get(file.storage_key);
   }
 
   /**
@@ -156,7 +156,7 @@ export class FileService {
     } else {
       await this.records.assertFieldReadable(ctx, row.record_id, row.field_key ?? '');
     }
-    return { file: toView(row), body: await this.read(row) };
+    return { file: toView(row), body: await this.read(ctx.tenantId, row) };
   }
 
   /** Bytes stored by the organisation and its quota, for people who change organisation settings. */
@@ -178,7 +178,7 @@ export class FileService {
    */
   async cleanup(tenantId: string, limit: number): Promise<number> {
     const rows = await this.tm.withTenant(tenantId, (tx) => this.catalog.removeUnlinked(tx, UNLINKED_HOURS, limit));
-    for (const r of rows) await this.stores.byRef(r.store_ref).delete(r.storage_key);
+    for (const r of rows) await (await this.stores.byRef(tenantId, r.store_ref)).delete(r.storage_key);
     return rows.length;
   }
 

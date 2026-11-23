@@ -27,7 +27,7 @@ import {
 const waiting = 'This record already has a payment waiting.';
 const payNow = 'Pay now';
 const gatewayEnv =
-  'The API must run with RAZORPAY_API_BASE set to the integration fixture (npm run dev does this); set E2E_RAZORPAY_WEBHOOK_SECRET when Razorpay is set up with other keys, and E2E_RAZORPAY_ACTION to use an existing published Razorpay action.';
+  'Set RAZORPAY_API_BASE in .env to the service sandbox. Set E2E_RAZORPAY_WEBHOOK_SECRET when Razorpay is set up with other keys, and E2E_RAZORPAY_ACTION to use an existing published Razorpay action.';
 
 test.describe.serial('FT-E2E-03 Online gateway payment', () => {
   const started = new Date();

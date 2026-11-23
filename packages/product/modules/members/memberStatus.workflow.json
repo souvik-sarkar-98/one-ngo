@@ -1,0 +1,15 @@
+{
+  "key": "memberStatus",
+  "recordType": "member",
+  "initial": "active",
+  "states": [
+    { "key": "active", "label": "Active" },
+    { "key": "inactive", "label": "Inactive" },
+    { "key": "resigned", "label": "Resigned", "final": true }
+  ],
+  "transitions": [
+    { "key": "deactivate", "label": "Mark inactive", "from": ["active"], "to": "inactive" },
+    { "key": "reactivate", "label": "Reactivate", "from": ["inactive"], "to": "active" },
+    { "key": "resign", "label": "Record resignation", "from": ["active", "inactive"], "to": "resigned", "requiredFields": ["notes"] }
+  ]
+}

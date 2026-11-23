@@ -1,11 +1,12 @@
 import { Component, computed, inject } from '@angular/core';
-import { PageFrame } from '@onengo/web-kit';
+import { Btn, PageFrame } from '@onengo/web-kit';
 import { ACCESS_CHIPS } from '../../core/builder/access-map';
 import { t } from '../../core/i18n/i18n';
 import type { DefinitionKind } from '../../core/models';
 import { kindName } from '../../core/starters';
 import { TranslatePipe } from '../../services/i18n';
 import { ChipFilterBar } from '../../ui/chip-bar';
+import { NoticeFocus } from '../../ui/notice-focus';
 import { RolePreview } from '../../ui/role-preview';
 import { MenuButton, type MenuItem } from '../../ui/menu-button';
 import { PageBack } from '../../ui/page-back';
@@ -19,7 +20,7 @@ import { AccessStore } from './access-store';
  */
 @Component({
   selector: 'app-access-screen',
-  imports: [TranslatePipe, ChipFilterBar, MenuButton, PermissionField, RolePreview, PageBack, PageFrame],
+  imports: [Btn, TranslatePipe, ChipFilterBar, MenuButton, PermissionField, RolePreview, NoticeFocus, PageBack, PageFrame],
   providers: [AccessStore],
   styleUrls: ['../builder.css', './access.css'],
   template: `
@@ -30,8 +31,8 @@ import { AccessStore } from './access-store';
           <app-page-back />
           <h1>{{ 'ui.builder.access.roleTitle' | t: { role: role.label } }}</h1>
           <span class="builder-spacer"></span>
-          <button type="button" (click)="store.closeRoleView()">{{ 'ui.builder.access.backToMap' | t }}</button>
-          @if (store.canEditRoles()) { <button type="button" (click)="store.editRole(role.key)">{{ 'ui.builder.access.editRole' | t: { role: role.label } }}</button> }
+          <button appBtn type="button" (click)="store.closeRoleView()">{{ 'ui.builder.access.backToMap' | t }}</button>
+          @if (store.canEditRoles()) { <button appBtn type="button" (click)="store.editRole(role.key)">{{ 'ui.builder.access.editRole' | t: { role: role.label } }}</button> }
         </header>
         <app-chip-filter-bar [chips]="roleChips()" [activeId]="role.key" (chipSelect)="store.openRoleView($event)" />
       } @else {
@@ -46,7 +47,7 @@ import { AccessStore } from './access-store';
         <p class="muted">{{ 'ui.builder.access.intro' | t }}</p>
       }
 
-      @if (store.error()) { <div class="notice error" role="alert">{{ store.error() }}</div> }
+      @if (store.error()) { <div class="notice error" role="alert" appNotice appNoticeError>{{ store.error() }}</div> }
       @if (store.loading() && !store.map()) {
         <p class="muted">{{ 'ui.common.loading' | t }}</p>
       } @else if (role) {
@@ -160,15 +161,15 @@ import { AccessStore } from './access-store';
                         @if (store.editing()?.id === r.id) {
                           <app-permission-field [label]="'ui.builder.access.requires' | t" [value]="store.editing()!.value" [source]="store.permissionSource" [hint]="'ui.builder.access.emptyDefault' | t" (valueChange)="store.type($event)" />
                           <div class="access-edit">
-                            <button type="button" class="primary small" (click)="store.applyEdit(r.element)">{{ 'ui.builder.access.apply' | t }}</button>
-                            <button type="button" class="small" (click)="store.cancelEdit()">{{ 'ui.common.cancel' | t }}</button>
+                            <button appBtn="primary" size="sm" type="button" (click)="store.applyEdit(r.element)">{{ 'ui.builder.access.apply' | t }}</button>
+                            <button appBtn size="sm" type="button" (click)="store.cancelEdit()">{{ 'ui.common.cancel' | t }}</button>
                           </div>
                         } @else {
                           @if (r.permission) { <code>{{ r.permission }}</code> } @else { <span class="muted">{{ 'ui.builder.access.noPermission' | t }}</span> }
                           @if (r.note) { <span class="muted"> {{ r.note }}</span> }
                           @if (r.changed) { <span class="badge warn">{{ 'ui.builder.access.draft' | t }}</span> }
                           @if (r.element.overridable && store.canEdit() && r.element.definition) {
-                            <button type="button" class="small" (click)="store.startEdit(r.element)">{{ 'ui.builder.access.change' | t }}</button>
+                            <button appBtn size="sm" type="button" (click)="store.startEdit(r.element)">{{ 'ui.builder.access.change' | t }}</button>
                           }
                         }
                       </td>
@@ -189,21 +190,21 @@ import { AccessStore } from './access-store';
 
         @let d = store.draft();
         @if (d.error) {
-          <div class="notice error" role="alert">
+          <div class="notice error" role="alert" appNotice appNoticeError>
             {{ d.error }}
             @if (d.issues.length) { <ul>@for (i of d.issues; track $index) { <li><code>{{ i.path }}</code> {{ i.message }}</li> }</ul> }
           </div>
         } @else if (d.issues.length) {
-          <div class="notice info" role="status"><ul>@for (i of d.issues; track $index) { <li><code>{{ i.path }}</code> {{ i.message }}</li> }</ul></div>
+          <div class="notice info" role="status" appNotice><ul>@for (i of d.issues; track $index) { <li><code>{{ i.path }}</code> {{ i.message }}</li> }</ul></div>
         }
-        @if (d.message) { <div class="notice ok" role="status">{{ d.message }}</div> }
+        @if (d.message) { <div class="notice ok" role="status" appNotice>{{ d.message }}</div> }
         @if (d.drafts.length) {
           <footer class="builder-foot">
             <span class="muted">{{ draftsText() }}</span>
             <span class="builder-spacer"></span>
-            <button type="button" [disabled]="d.busy" (click)="discard()">{{ 'ui.builder.discardDraft' | t }}</button>
-            <button type="button" [disabled]="d.busy" (click)="store.check()">{{ 'ui.builder.check' | t }}</button>
-            <button type="button" class="primary" [disabled]="d.busy || !store.canEdit()" (click)="publish()">{{ 'ui.builder.publishEllipsis' | t }}</button>
+            <button appBtn type="button" [disabled]="d.busy" (click)="discard()">{{ 'ui.builder.discardDraft' | t }}</button>
+            <button appBtn type="button" [disabled]="d.busy" (click)="store.check()">{{ 'ui.builder.check' | t }}</button>
+            <button appBtn="primary" type="button" [disabled]="d.busy || !store.canEdit()" (click)="publish()">{{ 'ui.builder.publishEllipsis' | t }}</button>
           </footer>
         }
       }

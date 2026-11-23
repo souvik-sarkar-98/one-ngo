@@ -4,9 +4,11 @@ import { contextOf } from '../context.js';
 import { apiKeyFeedListResponse, apiKeyListResponse, createApiKeyRequest, createdApiKeyResponse, type ApiKeyFeedChoice, type ApiKeyView, type CreateApiKeyRequest, type CreatedApiKey } from '@onengo/platform/contracts';
 import {
   connectorListResponse,
+  connectorLookupResponse,
   connectorOauthStartResponse,
   connectorResponse,
   connectorTestRequest,
+  type ConnectorLookup,
   type ConnectorOauthStartResponse,
   type ConnectorSummary,
   type ConnectorTestRequest,
@@ -109,11 +111,22 @@ export async function adminRoutes(api: FastifyInstance, { deps }: { deps: AdminA
     return reply.status(204).send();
   });
   const connectorView = { response: { 200: connectorResponse } };
-  api.get<{ Params: { key: string }; Reply: ConnectorView }>('/api/admin/connectors/:key', { schema: connectorView }, async (req) =>
-    deps.connectors.get(contextOf(req), req.params.key),
+  /** → { connector }: the connector, or `null` (still 200) when none is set up under the key yet. */
+  api.get<{ Params: { key: string }; Reply: ConnectorLookup }>(
+    '/api/admin/connectors/:key',
+    { schema: { response: { 200: connectorLookupResponse } } },
+    async (req) => ({ connector: await deps.connectors.find(contextOf(req), req.params.key) }),
   );
   api.put<{ Params: { key: string }; Body: SaveConnectorInput; Reply: ConnectorView }>('/api/admin/connectors/:key', { schema: connectorView }, async (req) =>
     deps.connectors.save(contextOf(req), req.params.key, req.body ?? {}),
+  );
+  /** Archives a connector: switched off, left out of every choice and kept with its delivery log. Refused while a definition, Settings or another connector uses it. */
+  api.post<{ Params: { key: string }; Reply: ConnectorView }>('/api/admin/connectors/:key/archive', { schema: connectorView }, async (req) =>
+    deps.connectorOverview.archive(contextOf(req), req.params.key),
+  );
+  /** Lifts an archive. The connector comes back switched off. */
+  api.post<{ Params: { key: string }; Reply: ConnectorView }>('/api/admin/connectors/:key/restore', { schema: connectorView }, async (req) =>
+    deps.connectors.restore(contextOf(req), req.params.key),
   );
   /** { to?, inputs? }: `to` for an SMS, WhatsApp or email test, `inputs` for an http lookup's placeholders. */
   api.post<{ Params: { key: string }; Body: ConnectorTestRequest }>('/api/admin/connectors/:key/test', { schema: { body: connectorTestRequest } }, async (req) =>

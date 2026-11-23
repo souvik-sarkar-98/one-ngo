@@ -6,6 +6,15 @@ export interface LogoRow {
   updated_at: Date | string;
 }
 
+export interface SignatoryRow {
+  id: string;
+  name: string;
+  designation: string;
+  file_id: string | null;
+  version: number;
+  updated_at: Date | string;
+}
+
 export interface LogoFile {
   name: string;
   mime: string;
@@ -21,8 +30,10 @@ export interface SetupFacts {
   series: boolean;
   /** An active member holds a role other than `administratorRole`. */
   operationalRole: boolean;
-  /** The organisation can send its own email: an enabled smtp connector or an enabled http email sender. */
-  smtp: boolean;
+  /** An enabled HTTP send connector is chosen in settings, or still carries the old email-sender flag. */
+  email: boolean;
+  /** Settings names an enabled storage connector. */
+  fileStore: boolean;
   payments: boolean;
 }
 
@@ -37,16 +48,23 @@ export interface OrganisationAdminStore {
   /** Makes `fileId` the logo, one version after the one it replaces. */
   putLogo(tx: Tx, fileId: string, actorId: string): Promise<void>;
   removeLogo(tx: Tx): Promise<{ file_id: string } | undefined>;
-  signatoryText(tx: Tx): Promise<{ name: string | null; designation: string | null }>;
-  /** Writes the name and designation. An empty profile row is created when the organisation has none. */
-  saveSignatoryText(tx: Tx, actorId: string, name: string, designation: string): Promise<{ name: string | null; designation: string | null }>;
-  clearSignatoryText(tx: Tx, actorId: string): Promise<void>;
-  /** The current signature image. */
-  signatory(tx: Tx): Promise<LogoRow | undefined>;
-  /** `fileId` null: the current signature; otherwise that file when it is or was a signature kept by an issued receipt. */
-  signatoryFile(tx: Tx, fileId: string | null): Promise<LogoFile | undefined>;
-  putSignatory(tx: Tx, fileId: string, actorId: string): Promise<void>;
-  removeSignatory(tx: Tx): Promise<{ file_id: string } | undefined>;
+  /** Every signatory, oldest first. */
+  signatories(tx: Tx): Promise<SignatoryRow[]>;
+  /** Every ordered set, by document key. */
+  signatoryUses(tx: Tx): Promise<{ signatory_id: string; document_key: string; position: number }[]>;
+  /** One document's set, in print order. */
+  assigned(tx: Tx, documentKey: string): Promise<SignatoryRow[]>;
+  addSignatory(tx: Tx, actorId: string, name: string, designation: string): Promise<string>;
+  /** False when the signatory is not there. */
+  updateSignatory(tx: Tx, id: string, actorId: string, name: string, designation: string): Promise<boolean>;
+  /** Replaces the signature image and returns the one it replaced. Undefined when the signatory is not there. */
+  putSignatoryImage(tx: Tx, id: string, fileId: string, actorId: string): Promise<{ file_id: string | null } | undefined>;
+  /** Undefined when the signatory is not there. `inUse` when it is still printed on receipts or reports. */
+  removeSignatory(tx: Tx, id: string): Promise<{ file_id: string | null } | 'in_use' | undefined>;
+  /** Replaces one document's ordered set. The ids are known to exist; none clears the document's own set. */
+  replaceDocumentSignatories(tx: Tx, documentKey: string, signatoryIds: string[]): Promise<void>;
+  /** That file when it is a current signature or one an issued receipt or published report keeps. */
+  signatoryFile(tx: Tx, fileId: string): Promise<LogoFile | undefined>;
   setupFacts(tx: Tx, administratorRole: string): Promise<SetupFacts>;
   /** The published organisation theme body, or null when none is published. A tenant theme replaces the platform one. */
   publishedTheme(tx: Tx): Promise<unknown>;

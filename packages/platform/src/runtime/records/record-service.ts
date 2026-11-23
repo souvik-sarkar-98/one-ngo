@@ -7,7 +7,7 @@ import type { TransactionManager, Tx } from '../../domain/ports/transaction.js';
 import { joinTx } from '../../domain/transaction-scope.js';
 import type { DefinitionReader } from '../definitions/ports/definition-reader.js';
 import type { ConnectorFact } from '../definitions/ports/definition-store.js';
-import type { InternalTransitionOptions, RecordView, SaveResult } from './ports/record-result.js';
+import type { DeletedPage, InternalTransitionOptions, RecordView, SaveResult } from './ports/record-result.js';
 import { canReadField, maskFor } from '../definitions/field-permissions.js';
 import { adminOnlyParts, DEFAULT_LOOKUP_LIMIT, MAX_LOOKUP_LIMIT, SCRIPT_ADMIN_PERMISSION } from '../definitions/script-inputs.js';
 import type { ApprovalDef, FieldDef, FieldFilter, RecordTypeDef, ScriptDef, WorkflowDef } from '../definitions/types.js';
@@ -99,6 +99,10 @@ function lookupIssues(lookup: LookupDef, issues: FieldIssue[], inputs: string[])
   for (const i of out.size ? own : issues) for (const f of inputs) add(f, i.message);
   return [...out.values()];
 }
+
+/** Deleting records and restoring them from the recycle bin. */
+const ADMIN_RECORDS = 'admin:records';
+const CHANGED = 'This record was changed by someone else. Reload it and try again.';
 
 const iso = (v: string | Date) => (v instanceof Date ? v.toISOString() : new Date(v).toISOString());
 
@@ -469,6 +473,132 @@ export class RecordService {
         entityId: current.id,
       });
     });
+  }
+
+  // ------------------------------------------------------------ recycle bin
+
+  /**
+   * Deletes one record into the recycle bin: an administrator's act, kept in the audit log.
+   * Refused while the record is tied to ledger entries, receipts, payments or a pending approval,
+   * or while other records still refer to it. Nothing is erased; `restoreRecord` brings it back.
+   */
+  async deleteRecord(ctx: TenantContext, id: string, expectedVersion: number): Promise<void> {
+    demand(ctx.actor, ADMIN_RECORDS);
+    if (!UUID.test(id)) throw notFound('Record not found.');
+    const loadedOf = await this.loadAll(ctx.tenantId);
+    const types = await this.defs.list(ctx.tenantId, 'recordType');
+    await this.inSave(ctx, async (tx) => {
+      const stored = await this.current(tx, id);
+      const loaded = loadedOf(stored.type_key);
+      const current = this.opened(loaded.type.body, stored);
+      if (current.version !== expectedVersion) throw conflict(CHANGED);
+      const why = await this.undeletable(tx, current, types.map((t) => t.body));
+      if (why) throw ruleViolation(why);
+      const gone = await this.store.softDelete(tx, id, expectedVersion, ctx.actor.id);
+      if (!gone) throw conflict(CHANGED);
+      await maintainRollups(this.store, tx, ctx, loaded, current, { ...current, data: {} }, this.sensitive);
+      await this.store.audit(tx, {
+        actorId: ctx.actor.id,
+        action: 'record.deleted',
+        entity: `record:${current.type_key}`,
+        entityId: current.id,
+        before: { number: current.number, version: current.version },
+      });
+    });
+  }
+
+  /**
+   * Brings a deleted record back as it was, at its next version. Refused when a unique value it
+   * holds has been taken since, or when a record it refers to is itself deleted.
+   */
+  async restoreRecord(ctx: TenantContext, id: string, expectedVersion: number): Promise<{ id: string; type: string; number: string | null; version: number }> {
+    demand(ctx.actor, ADMIN_RECORDS);
+    if (!UUID.test(id)) throw notFound('Deleted record not found.');
+    const loadedOf = await this.loadAll(ctx.tenantId);
+    return this.inSave(ctx, async (tx) => {
+      const stored = await this.store.getDeleted(tx, id);
+      if (!stored) throw notFound('Deleted record not found.');
+      const loaded = loadedOf(stored.type_key);
+      const type = loaded.type.body;
+      const current = this.opened(type, stored);
+      if (current.version !== expectedVersion) throw conflict(CHANGED);
+      const issues: FieldIssue[] = [];
+      for (const f of type.fields) {
+        const v = current.data[f.key];
+        if (v === undefined || v === null || v === '') continue;
+        if (f.unique && (await uniqueHolder(this.uniqueLookup(), tx, type, f, String(v), id))) {
+          issues.push({ path: `/${f.key}`, message: `Another ${type.label.toLowerCase()} already has this ${f.label}.` });
+        }
+      }
+      if (issues.length) throw validationFailed('It cannot be restored: another record has taken a value that must be unique.', issues);
+      const refs = type.fields.flatMap((f) => (f.type === 'reference' && typeof current.data[f.key] === 'string' && UUID.test(current.data[f.key] as string) ? [current.data[f.key] as string] : []));
+      if (refs.length) {
+        const live = new Set((await this.store.typesOf(tx, refs)).map((r) => r.id));
+        if (refs.some((r) => !live.has(r))) throw ruleViolation('It refers to a record that is deleted. Restore that record first.');
+      }
+      const back = await this.store.undelete(tx, id, expectedVersion, ctx.actor.id);
+      if (!back) throw conflict(CHANGED);
+      await maintainRollups(this.store, tx, ctx, loaded, { ...current, data: {} }, current, this.sensitive);
+      await this.store.audit(tx, {
+        actorId: ctx.actor.id,
+        action: 'record.restored',
+        entity: `record:${back.type_key}`,
+        entityId: back.id,
+        after: { number: back.number, version: back.version },
+      });
+      return { id: back.id, type: back.type_key, number: back.number, version: back.version };
+    });
+  }
+
+  /** The recycle bin: deleted records, most recently deleted first, optionally of one type or matching some text. */
+  async listDeleted(ctx: TenantContext, q: { typeKey?: string; search?: string; limit?: number; offset?: number } = {}): Promise<DeletedPage> {
+    demand(ctx.actor, ADMIN_RECORDS);
+    const types = (await this.defs.list(ctx.tenantId, 'recordType')).map((t) => t.body);
+    const limit = Math.min(Math.max(Math.trunc(q.limit ?? 25), 1), 100);
+    const offset = Math.max(Math.trunc(q.offset ?? 0), 0);
+    return this.db.withTenant(
+      ctx.tenantId,
+      async (tx) => {
+        const query = { typeKey: q.typeKey || undefined, search: q.search || undefined };
+        const [rows, total] = await Promise.all([this.store.deletedPage(tx, { ...query, limit, offset }), this.store.countDeleted(tx, query)]);
+        const names = new Map<string, string | undefined>();
+        for (const id of new Set(rows.flatMap((r) => (r.updated_by ? [r.updated_by] : [])))) names.set(id, await this.store.userName(tx, id));
+        const items = rows.map((row) => {
+          const type = types.find((t) => t.key === row.type_key);
+          const title = type?.titleField ? this.view(ctx, type, this.opened(type, row)).data[type.titleField] : undefined;
+          return {
+            id: row.id,
+            type: row.type_key,
+            typeLabel: type?.label ?? row.type_key,
+            number: row.number,
+            title: typeof title === 'string' || typeof title === 'number' ? String(title) : null,
+            version: row.version,
+            deletedAt: iso(row.deleted_at),
+            deletedBy: row.updated_by,
+            deletedByName: (row.updated_by && names.get(row.updated_by)) || null,
+          };
+        });
+        return { items, total };
+      },
+      { readOnly: true },
+    );
+  }
+
+  /** Why the record cannot be deleted, or undefined when nothing depends on it. */
+  private async undeletable(tx: Tx, record: RecordRow, types: RecordTypeDef[]): Promise<string | undefined> {
+    const links = await this.store.linksOf(tx, record.id);
+    if (links.journalEntries) return 'It has ledger entries, which must stay with the books. Reverse them instead of deleting the record.';
+    if (links.receipts) return 'It has receipts, which must stay on file. Void them instead of deleting the record.';
+    if (links.payments) return 'It has payments, which must stay on file.';
+    if (links.pendingApproval) return 'It is waiting for an approval. Decide or withdraw the request first.';
+    for (const t of types) {
+      for (const f of t.fields) {
+        if (f.type !== 'reference' || f.referenceType !== record.type_key) continue;
+        const n = await this.store.countLinked(tx, t.key, f.key, record.id);
+        if (n) return `${n} ${n === 1 ? t.label : `${t.label} records`} still refer${n === 1 ? 's' : ''} to it through '${f.label}'. Delete or change ${n === 1 ? 'that one' : 'those'} first.`;
+      }
+    }
+    return undefined;
   }
 
   /**

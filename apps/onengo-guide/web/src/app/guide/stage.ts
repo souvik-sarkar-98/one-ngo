@@ -211,8 +211,8 @@ const DEFAULT_COLUMNS = ['Name', 'Detail', 'Amount', 'Status'];
     .sp { flex: 1; }
     .bell { position: relative; width: 40px; height: 40px; display: grid; place-items: center; }
     .bell svg { width: 22px; height: 22px; fill: currentColor; }
-    .dot { position: absolute; top: 4px; right: 2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: #fdf1dc; color: #9a6200; font-size: .6rem; font-weight: 700; line-height: 16px; text-align: center; }
-    .who { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.2); color: #fff; font-size: .75rem; font-weight: 700; }
+    .dot { position: absolute; top: 4px; right: 2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--badge-warn-bg); color: var(--warn); font-size: .6rem; font-weight: 700; line-height: 16px; text-align: center; }
+    .who { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.2); color: var(--brand-fg); font-size: .75rem; font-weight: 700; }
     .device__body { display: flex; flex: 1; min-height: 0; }
     .rail { display: flex; flex-direction: column; gap: 8px; width: 84px; padding: 12px 0; border-right: 1px solid var(--line); background: var(--card); }
     .rail span, .dock span { justify-content: center; color: var(--muted); font-size: .68rem; }
@@ -250,9 +250,9 @@ const DEFAULT_COLUMNS = ['Name', 'Detail', 'Amount', 'Status'];
     .search { flex: 1; min-width: 0; padding: 0 10px; color: var(--muted); font-size: .8rem; }
     .tool { padding: 0 12px; font-size: .75rem; font-weight: 700; }
     .chips span, .pills span, .btn { border: 1px solid var(--line); border-radius: 999px; padding: 7px 13px; font-size: .75rem; font-weight: 700; }
-    .chips .on { background: var(--brand); color: #fff; border-color: transparent; }
+    .chips .on { background: var(--brand); color: var(--brand-fg); border-color: transparent; }
     .btn { background: var(--card); }
-    .btn.primary { background: var(--brand); color: #fff; border-color: transparent; }
+    .btn.primary { background: var(--brand); color: var(--brand-fg); border-color: transparent; }
     .cards { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
     .cards li { display: flex; flex-direction: column; gap: 2px; padding: 10px; }
     table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .8rem; }
@@ -268,8 +268,8 @@ const DEFAULT_COLUMNS = ['Name', 'Detail', 'Amount', 'Status'];
     label span, aside { display: block; min-height: 36px; margin-top: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--fg); }
     .split { display: grid; gap: 8px; }
     .paper { padding: 16px; }
-    .fab { position: absolute; right: 16px; bottom: 16px; width: 44px; height: 44px; border-radius: 50%; background: var(--brand); color: #fff; display: grid; place-items: center; font-size: 24px; }
-    .hit { outline: 3px solid #f3be26; outline-offset: 2px; border-radius: 8px; }
+    .fab { position: absolute; right: 16px; bottom: 16px; width: 44px; height: 44px; border-radius: 50%; background: var(--brand); color: var(--brand-fg); display: grid; place-items: center; font-size: 24px; }
+    .hit { outline: 3px solid var(--hit); outline-offset: 2px; border-radius: 8px; }
     tr.hit { outline-offset: -3px; }
   `,
 })

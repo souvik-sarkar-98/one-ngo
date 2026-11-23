@@ -1,0 +1,33 @@
+{
+  "key": "assets",
+  "recordType": "asset",
+  "label": "Physical assets",
+  "pageSize": 20,
+  "layout": "table",
+  "columns": ["number", "name", "assetClass", "location", "custodian", "cost", "condition", "status"],
+  "compactColumns": ["name", "location", "status"],
+  "chips": [
+    { "id": "in_use", "label": "In use", "statusIn": ["active"] },
+    { "id": "disposed", "label": "Disposed", "statusIn": ["disposed"] },
+    { "id": "all", "label": "All" }
+  ],
+  "defaultChip": "in_use",
+  "filters": ["assetClass", "location", "condition"],
+  "row": { "title": "name", "subtitle": ["assetClass", "location"], "meta": "cost", "badge": "status" },
+  "detail": {
+    "sections": [
+      {
+        "id": "asset",
+        "label": "Asset",
+        "fields": ["number", "status", "name", "assetClass", "description", "serialNumber", "purchasedOn", "cost", "supplier", "location", "custodian", "condition", "disposedOn", "disposalNote"]
+      },
+      { "id": "invoice", "label": "Invoice", "fields": ["invoice"] }
+    ]
+  },
+  "create": {
+    "fields": ["name", "assetClass", "description", "serialNumber", "purchasedOn", "cost", "supplier", "invoice", "location", "custodian", "condition"]
+  },
+  "edit": {
+    "fields": ["name", "assetClass", "description", "serialNumber", "cost", "supplier", "invoice", "location", "custodian", "condition"]
+  }
+}

@@ -16,10 +16,10 @@
 .expression-field__open {
   flex: 0 0 auto;
   min-width: 40px;
-  border: 1px solid #79747e;
+  border: 1px solid var(--field-border);
   border-left: 0;
   border-radius: 0 4px 4px 0;
-  background: #f5f7fa;
+  background: var(--bg);
   font-style: italic;
   cursor: pointer;
 }
@@ -36,9 +36,9 @@
   box-sizing: border-box;
   height: 40px;
   padding: 0 12px;
-  border: 1px solid #79747e;
+  border: 1px solid var(--field-border);
   border-radius: 4px;
-  background: #fff;
+  background: var(--card);
   font-family: ui-monospace, 'Cascadia Mono', Consolas, 'Courier New', monospace;
   font-size: 0.85rem;
   color: inherit;
@@ -71,7 +71,7 @@
   margin: 4px 0 0;
   padding: 6px 0;
   list-style: none;
-  background: #fff;
+  background: var(--card);
   border-radius: 6px;
   box-shadow: 0 6px 22px rgba(15, 23, 42, 0.22);
   font-size: 0.82rem;
@@ -85,7 +85,7 @@
   cursor: pointer;
 }
 .expression-box__option--active {
-  background: #eef3f8;
+  background: var(--badge-bg);
 }
 .expression-box__note,
 .expression-box__muted {
@@ -117,7 +117,7 @@
   color: var(--muted, #5b6878);
 }
 .expression-box__where mark {
-  background: #fdf0ef;
+  background: var(--badge-bad-bg);
   color: var(--bad, #b3261e);
   text-decoration: underline wavy;
 }
@@ -141,7 +141,7 @@
   padding: 2px 8px;
   border: 1px solid var(--line, #d8dee6);
   border-radius: 999px;
-  background: #f5f7fa;
+  background: var(--bg);
   font-size: 0.75rem;
   cursor: pointer;
 }

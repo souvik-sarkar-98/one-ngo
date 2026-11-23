@@ -1,5 +1,5 @@
 import { Component, ElementRef, HostListener, inject, signal, viewChild } from '@angular/core';
-import { opensInPlace } from '@onengo/web-kit';
+import { Btn, opensInPlace } from '@onengo/web-kit';
 import { TranslatePipe } from '../../services/i18n';
 import { DialogFocus } from '../../ui/dialog';
 import { OrganisationStore } from './organisation-store';
@@ -7,7 +7,7 @@ import { OrganisationStore } from './organisation-store';
 /** The setup checklist: the progress strip on Administration's home, and the checklist it opens. */
 @Component({
   selector: 'app-organisation-sections',
-  imports: [TranslatePipe, DialogFocus],
+  imports: [Btn, TranslatePipe, DialogFocus],
   providers: [OrganisationStore],
   styleUrl: '../admin.css',
   styles: `
@@ -72,7 +72,7 @@ import { OrganisationStore } from './organisation-store';
       <section class="card org__strip" aria-labelledby="org-setup-title">
         <div class="org__head">
           <h2 id="org-setup-title">{{ 'ui.admin.organisation.setupTitle' | t }}</h2>
-          <button type="button" class="link-button" #checklistLink [attr.aria-expanded]="checklistOpen()" aria-haspopup="dialog" (click)="openChecklist()">
+          <button appBtn="link" type="button" #checklistLink [attr.aria-expanded]="checklistOpen()" aria-haspopup="dialog" (click)="openChecklist()">
             {{ 'ui.admin.organisation.setupView' | t }}
           </button>
         </div>
@@ -98,7 +98,7 @@ import { OrganisationStore } from './organisation-store';
             (escape)="closeChecklist()">
             <div class="org__head">
               <h2 id="org-setup-dialog-title">{{ 'ui.admin.organisation.setupTitle' | t }}</h2>
-              <button type="button" class="app-btn" (click)="closeChecklist()">{{ 'ui.common.close' | t }}</button>
+              <button appBtn type="button" (click)="closeChecklist()">{{ 'ui.common.close' | t }}</button>
             </div>
             <p class="muted org__note" id="org-setup-dialog-status">{{ store.setupSummary().status }}</p>
             <div
@@ -127,7 +127,7 @@ import { OrganisationStore } from './organisation-store';
                       <span aria-hidden="true">›</span>
                     </a>
                     @if (item.confirm) {
-                      <button type="button" class="app-btn" [disabled]="store.confirming() !== null" (click)="confirm(item.key)">
+                      <button appBtn type="button" [disabled]="store.confirming() !== null" (click)="confirm(item.key)">
                         {{ (item.key === 'identity' ? 'ui.admin.organisation.confirmIdentity' : 'ui.admin.organisation.confirmReceipts') | t }}
                       </button>
                     }

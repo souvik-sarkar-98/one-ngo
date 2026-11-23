@@ -452,6 +452,66 @@ describe('modules', () => {
   });
 });
 
+describe('turning off one definition a module brought', () => {
+  const state = async (kind: string, key: string) =>
+    ((await get('/api/builder/catalogue', admin, w.ngoB)).json() as { kind: string; key: string; disabled: boolean; publishedVersion: number | null }[]).find(
+      (i) => i.kind === kind && i.key === key,
+    );
+
+  it('stops publishing it, lists it as turned off, and brings it back with the organisation\'s change', async () => {
+    await w.platform.definitions.setExtensionPatch(w.as(w.ngoB), 'listView', 'donors', { label: 'Supporters' });
+    try {
+      expect(await state('listView', 'donors')).toMatchObject({ disabled: false });
+      const off = await post('/api/builder/definitions/listView/donors/disable', {}, publisher, w.ngoB);
+      expect(off.statusCode).toBe(200);
+      expect(await w.platform.definitions.get(w.ngoB, 'listView', 'donors')).toBeUndefined();
+      expect(await state('listView', 'donors')).toMatchObject({ disabled: true, publishedVersion: null });
+      expect((await w.platform.definitions.get(w.ngoA, 'listView', 'donors'))?.body.label).not.toBe('Supporters');
+
+      const detail = (await get('/api/builder/definitions/listView/donors', admin, w.ngoB)).json();
+      expect(detail.published).toBeNull();
+      expect(detail.shipped).toMatchObject({ disabled: true, moduleKey: 'donations', patch: { label: 'Supporters' } });
+
+      // Nothing can change it, and turning it off twice is refused.
+      expect((await post('/api/builder/definitions/listView/donors/disable', {}, publisher, w.ngoB)).statusCode).toBe(422);
+      const patched = await app.inject({ method: 'PUT', url: '/api/builder/definitions/listView/donors/patch', headers: headers(publisher, w.ngoB), payload: { patch: { label: 'Other' } } });
+      expect(patched.statusCode).toBe(422);
+
+      // A module update leaves it off.
+      await post('/api/builder/modules/donations/enable', {}, admin, w.ngoB);
+      expect(await w.platform.definitions.get(w.ngoB, 'listView', 'donors')).toBeUndefined();
+      const review = (await get('/api/builder/modules/donations/update', admin, w.ngoB)).json();
+      expect((review.definitions as { kind: string; key: string }[]).some((d) => d.kind === 'listView' && d.key === 'donors')).toBe(false);
+
+      const on = await post('/api/builder/definitions/listView/donors/enable', {}, publisher, w.ngoB);
+      expect(on.statusCode).toBe(200);
+      expect((await w.platform.definitions.get(w.ngoB, 'listView', 'donors'))?.body.label).toBe('Supporters');
+      expect(await state('listView', 'donors')).toMatchObject({ disabled: false });
+      expect((await post('/api/builder/definitions/listView/donors/enable', {}, publisher, w.ngoB)).statusCode).toBe(422);
+    } finally {
+      await post('/api/builder/definitions/listView/donors/enable', {}, publisher, w.ngoB);
+      await w.platform.definitions.setExtensionPatch(w.as(w.ngoB), 'listView', 'donors', {});
+    }
+  });
+
+  it('refuses while something published still uses it, saying what', async () => {
+    const res = await post('/api/builder/definitions/recordType/donation/disable', {}, publisher, w.ngoB);
+    expect(res.statusCode).toBe(422);
+    expect(res.json().message).toContain("Cannot turn off the record type 'donation' while it is in use");
+    expect((res.json().issues as unknown[]).length).toBeGreaterThan(0);
+    expect(await w.platform.definitions.get(w.ngoB, 'recordType', 'donation')).toBeDefined();
+  });
+
+  it('needs permission to publish, and only applies to what a module brought', async () => {
+    expect((await post('/api/builder/definitions/listView/donors/disable', {}, reader, w.ngoB)).statusCode).toBe(403);
+    expect((await post('/api/builder/definitions/listView/donors/enable', {}, reader, w.ngoB)).statusCode).toBe(403);
+    await w.platform.definitions.saveDraft(w.as(w.ngoB), 'listView', { key: 'own-list', recordType: 'donation' });
+    await w.platform.definitions.publish(w.as(w.ngoB), 'listView', 'own-list');
+    expect((await post('/api/builder/definitions/listView/own-list/disable', {}, publisher, w.ngoB)).statusCode).toBe(404);
+    expect((await post('/api/builder/definitions/listView/nothing/disable', {}, publisher, w.ngoB)).statusCode).toBe(404);
+  });
+});
+
 describe('describe text for each kind', () => {
   const labels: DescribeLabels = {
     recordType: (k) => ({ donor: 'Donor', donation: 'Donation' })[k] ?? k,

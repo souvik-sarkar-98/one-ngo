@@ -10,9 +10,9 @@ import { ApiError } from '../services/api';
 import { I18n } from '../services/i18n';
 import { Session } from '../services/session';
 
-export type MorePanel = 'language' | 'about';
+export type MorePanel = 'language' | 'passkeys' | 'about';
 
-/** The Settings screen's state and its Language and About panels, kept in `?panel=`. */
+/** The Settings screen's state and its Language, Passkeys and About panels, kept in `?panel=`. */
 @Injectable()
 export class MoreStore {
   private readonly router = inject(Router);
@@ -45,7 +45,7 @@ export class MoreStore {
   constructor() {
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((p) => {
       const panel = p.get('panel');
-      this.panel.set(panel === 'language' || panel === 'about' ? panel : null);
+      this.panel.set(panel === 'language' || panel === 'passkeys' || panel === 'about' ? panel : null);
     });
   }
 

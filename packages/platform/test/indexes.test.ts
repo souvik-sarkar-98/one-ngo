@@ -134,7 +134,7 @@ describe('query plans', () => {
     w.platform.db.asSystem(async (tx) => {
       await tx.query(`select set_config('app.tenant_id', $1, true), set_config('app.tenant_seal', app_tenant_seal($1::uuid), true)`, [w.ngoA]);
       for (const s of ['enable_seqscan', ...settings]) await tx.query(`set local ${s} = off`);
-      // The query functions run with this setting (migration 009).
+      // The query functions run with this setting (004_record_query.sql).
       await tx.query('set local random_page_cost = 1.1');
       // app_record_ids runs EXECUTE ... USING, which plans with the argument values known; write them in the same way.
       const literal = `'${JSON.stringify(args).replace(/'/g, "''")}'::jsonb`;

@@ -3,6 +3,7 @@ import { t } from '../core/i18n/i18n';
 import { TranslatePipe } from '../services/i18n';
 import { canvasJpeg, drawReceipt, jpegPdf, pdfName, savePdf } from './receipt-pdf';
 import { PrintStore } from './print-store';
+import { Btn } from '@onengo/web-kit';
 
 /**
  * The receipt print view at /print/receipt/:id: a page laid out for paper.
@@ -12,7 +13,7 @@ import { PrintStore } from './print-store';
  */
 @Component({
   selector: 'app-receipt-print-screen',
-  imports: [TranslatePipe],
+  imports: [Btn, TranslatePipe],
   providers: [PrintStore],
   styles: `
     :host {
@@ -144,17 +145,24 @@ import { PrintStore } from './print-store';
     .print__rows dd:last-of-type {
       border-bottom: 0;
     }
+    .print__signs {
+      display: flex;
+      justify-content: flex-end;
+      gap: 24px;
+      margin-top: 28px;
+    }
+    .print__sign-block {
+      width: 180px;
+      text-align: center;
+    }
     .print__signature {
       display: block;
-      margin-top: 28px;
-      margin-inline-start: auto;
-      max-width: 200px;
+      margin: 0 auto 8px;
+      max-width: 180px;
       max-height: 72px;
     }
     .print__sign {
       margin-top: 8px;
-      margin-inline-start: auto;
-      width: 200px;
       padding-top: 6px;
       border-top: 1px solid #0f172a;
       text-align: center;
@@ -238,16 +246,16 @@ import { PrintStore } from './print-store';
   `,
   template: `
     <div class="print__bar">
-      <button type="button" class="app-btn app-btn--ghost" (click)="store.back()">{{ 'ui.common.back' | t }}</button>
+      <button appBtn type="button" (click)="store.back()">{{ 'ui.common.back' | t }}</button>
       <div class="print__actions">
-        <button type="button" class="app-btn app-btn--ghost" [disabled]="!store.page() || downloading()" [attr.aria-busy]="downloading()" (click)="download()">
+        <button appBtn type="button" [disabled]="!store.page() || downloading()" [attr.aria-busy]="downloading()" (click)="download()">
           {{ 'ui.print.download' | t }}
         </button>
         @if (store.canManageLink()) {
-          <button type="button" class="app-btn app-btn--ghost" [disabled]="!store.page() || store.linkBusy()" (click)="copyLink()">{{ 'ui.print.copyLink' | t }}</button>
-          <button type="button" class="app-btn app-btn--ghost" [disabled]="!store.link() || store.linkBusy()" (click)="revokeLink()">{{ 'ui.print.revokeLink' | t }}</button>
+          <button appBtn type="button" [disabled]="!store.page() || store.linkBusy()" (click)="copyLink()">{{ 'ui.print.copyLink' | t }}</button>
+          <button appBtn type="button" [disabled]="!store.link() || store.linkBusy()" (click)="revokeLink()">{{ 'ui.print.revokeLink' | t }}</button>
         }
-        <button type="button" class="app-btn app-btn--primary" [disabled]="!store.page()" (click)="print()">{{ 'ui.print.print' | t }}</button>
+        <button appBtn="primary" type="button" [disabled]="!store.page()" (click)="print()">{{ 'ui.print.print' | t }}</button>
       </div>
     </div>
     @if (notice()) {
@@ -305,18 +313,26 @@ import { PrintStore } from './print-store';
           <p class="print__clause">{{ clause }}</p>
         }
         <p class="print__thanks">{{ p.thanks }}</p>
-        @if (store.signature()) {
-          <img class="print__signature" [src]="store.signature()" alt="" />
+        @if (p.signatories?.length) {
+          <div class="print__signs">
+            @for (signatory of p.signatories; track $index) {
+              <div class="print__sign-block">
+                @if (store.signatures()[$index]; as src) {
+                  <img class="print__signature" [src]="src" alt="" />
+                }
+                <div class="print__sign">
+                  @if (signatory.name) {
+                    <div class="print__sign-name">{{ signatory.name }}</div>
+                  }
+                  @if (signatory.designation) {
+                    <div class="print__muted">{{ signatory.designation }}</div>
+                  }
+                  <div>{{ 'ui.print.signatory' | t }}</div>
+                </div>
+              </div>
+            }
+          </div>
         }
-        <div class="print__sign" [class.print__sign--alone]="!store.signature()">
-          @if (p.signatory?.name) {
-            <div class="print__sign-name">{{ p.signatory?.name }}</div>
-          }
-          @if (p.signatory?.designation) {
-            <div class="print__muted">{{ p.signatory?.designation }}</div>
-          }
-          <div>{{ 'ui.print.signatory' | t }}</div>
-        </div>
         @if (p.voided) {
           <div class="print__void" role="note">{{ p.voided }}</div>
         }
@@ -380,7 +396,7 @@ export class ReceiptPrintScreen {
     this.downloading.set(true);
     this.downloadError.set('');
     try {
-      const canvas = drawReceipt(page, await this.loadedImage(this.store.logo()), await this.loadedImage(this.store.signature()));
+      const canvas = drawReceipt(page, await this.loadedImage(this.store.logo()), await Promise.all(this.store.signatures().map((src) => this.loadedImage(src))));
       savePdf(jpegPdf(await canvasJpeg(canvas), canvas.width, canvas.height), pdfName(page.number));
     } catch {
       this.downloadError.set(t('ui.print.downloadFailed'));

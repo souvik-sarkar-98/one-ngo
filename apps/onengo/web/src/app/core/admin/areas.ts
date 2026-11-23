@@ -14,7 +14,9 @@ export type AdminAreaId =
   | 'identity'
   | 'profile'
   | 'registrations'
-  | 'migration';
+  | 'signatories'
+  | 'migration'
+  | 'recordBin';
 
 export interface AdminArea {
   id: AdminAreaId;
@@ -47,17 +49,19 @@ const LINKS: Record<AdminAreaId, string> = {
   identity: '/admin/organisation/identity',
   profile: '/admin/organisation/profile',
   registrations: '/admin/organisation/registrations',
+  signatories: '/admin/organisation/signatories',
   migration: '/admin/migration',
+  recordBin: '/admin/recycle-bin',
 };
 
-const SETTINGS_AREAS = new Set<AdminAreaId>(['settings', 'theme', 'layout', 'identity', 'profile', 'registrations']);
+const SETTINGS_AREAS = new Set<AdminAreaId>(['settings', 'theme', 'layout', 'identity', 'profile', 'registrations', 'signatories']);
 
 /** Administration's home groups, in the order the home shows them. Each organisation group is one table's screen. */
 export const ADMIN_GROUPS: { id: string; labelKey: string; areas: readonly AdminAreaId[] }[] = [
-  { id: 'organisation', labelKey: 'ui.admin.organisation', areas: ['identity', 'profile', 'registrations', 'settings'] },
+  { id: 'organisation', labelKey: 'ui.admin.organisation', areas: ['identity', 'profile', 'registrations', 'signatories', 'settings'] },
   { id: 'people', labelKey: 'ui.admin.people', areas: ['people', 'roles'] },
   { id: 'integrations', labelKey: 'ui.admin.integrations', areas: ['connectors', 'apiKeys'] },
-  { id: 'data', labelKey: 'ui.admin.data', areas: ['migration'] },
+  { id: 'data', labelKey: 'ui.admin.data', areas: ['migration', 'recordBin'] },
   { id: 'activity', labelKey: 'ui.admin.activity', areas: ['jobs', 'audit'] },
 ];
 
@@ -72,7 +76,7 @@ export function mayOpen(area: AdminAreaId, c: Capabilities): boolean {
   if (!c) return false;
   if (area === 'roles') return !!(c.roles || c.people);
   if (SETTINGS_AREAS.has(area)) return !!c.settings;
-  if (area === 'people' || area === 'connectors' || area === 'apiKeys' || area === 'jobs' || area === 'audit' || area === 'migration') return !!c[area];
+  if (area === 'people' || area === 'connectors' || area === 'apiKeys' || area === 'jobs' || area === 'audit' || area === 'migration' || area === 'recordBin') return !!c[area];
   return false;
 }
 

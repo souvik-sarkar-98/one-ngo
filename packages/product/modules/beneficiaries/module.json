@@ -1,0 +1,39 @@
+{
+  "key": "beneficiaries",
+  "version": "1.0.0",
+  "label": "Beneficiaries",
+  "description": "People or households the organisation serves, with a consent record for each purpose and case notes with follow-up dates.",
+  "engine": "0.1.0",
+  "dependsOn": ["projects"],
+  "definitions": [
+    "beneficiary.recordType.json",
+    "beneficiaryStatus.workflow.json",
+    "beneficiaries.listView.json",
+    "beneficiaryConsent.recordType.json",
+    "consentStatus.workflow.json",
+    "beneficiaryConsents.listView.json",
+    "caseNote.recordType.json",
+    "caseNotes.listView.json",
+    "beneficiaryRegister.report.json",
+    "beneficiaries.recordGroup.json"
+  ],
+  "setup": {
+    "roles": [
+      {
+        "key": "beneficiary-officer",
+        "label": "Beneficiary officer",
+        "permissions": [
+          "record:beneficiary:*",
+          "record:beneficiary:transition:*",
+          "record:beneficiary:read:all",
+          "record:beneficiary:sensitive",
+          "record:beneficiaryConsent:*",
+          "record:beneficiaryConsent:transition:*",
+          "record:caseNote:*",
+          "people:read",
+          "report:beneficiaryRegister:run"
+        ]
+      }
+    ]
+  }
+}

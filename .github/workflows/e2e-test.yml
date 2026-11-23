@@ -1,0 +1,143 @@
+name: Browser tests
+
+# Browser (Playwright) tests against an environment that is already deployed.
+# Run by hand from the Actions tab. No deploy workflow starts it.
+#
+#   target  stage   the Cloud Run environment
+#           prod    the App Engine environment (the "prod" reviewers approve the run)
+#   suite   full      every spec and journey in tests/e2e/specs. It signs in as the
+#                     seeded Riverbank members and WRITES records, so it runs on
+#                     stage only. Stage's database must hold the Riverbank seed
+#                     (utilities/data/dev-seed.sql). Specs that need something
+#                     stage lacks (a mailbox, the payment fixture) skip themselves.
+#           selected  tests/e2e/post-deploy: read-only checks that open the app and
+#                     console sign-in pages. Safe on either target.
+#
+# The tests come from the branch or tag chosen in "Use workflow from". The
+# addresses come from the target environment's PUBLIC_BASE_URL and
+# CONSOLE_PUBLIC_BASE_URL variables unless you type one in.
+#
+# Optional settings on the stage environment (or the repository):
+#   vars.E2E_ORG, secrets.E2E_PASSWORD  seeded organisation and member password
+#   vars.E2E_CONSOLE = true             also run the operator console journeys
+#                                       (vars.CONSOLE_E2E_OPERATOR names the operator)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Environment to test'
+        required: true
+        type: choice
+        options: [stage, prod]
+        default: stage
+      suite:
+        description: 'full = every spec (stage only); selected = read-only sign-in page checks'
+        required: true
+        type: choice
+        options: [full, selected]
+        default: selected
+      filter:
+        description: 'Only run tests whose title matches this text (optional)'
+        required: false
+        type: string
+      app_url:
+        description: 'App address, if not the environment PUBLIC_BASE_URL (optional)'
+        required: false
+        type: string
+      console_url:
+        description: 'Console address, if not the environment CONSOLE_PUBLIC_BASE_URL (optional)'
+        required: false
+        type: string
+
+concurrency:
+  group: e2e-${{ inputs.target }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: ${{ inputs.suite }} browser tests on ${{ inputs.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: ${{ inputs.target }}
+    steps:
+      # Inputs reach the shell only through env, never pasted into the script.
+      - name: Check the request and find the addresses
+        id: where
+        env:
+          TARGET: ${{ inputs.target }}
+          SUITE: ${{ inputs.suite }}
+          APP_INPUT: ${{ inputs.app_url }}
+          CONSOLE_INPUT: ${{ inputs.console_url }}
+          APP_VAR: ${{ vars.PUBLIC_BASE_URL }}
+          CONSOLE_VAR: ${{ vars.CONSOLE_PUBLIC_BASE_URL }}
+        run: |
+          set -euo pipefail
+          if [ "$TARGET" = prod ] && [ "$SUITE" = full ]; then
+            echo "::error::The full suite signs in and writes records. It is not allowed on prod. Choose suite 'selected'."
+            exit 1
+          fi
+          app="${APP_INPUT:-$APP_VAR}"
+          console="${CONSOLE_INPUT:-$CONSOLE_VAR}"
+          for pair in "app:$app" "console:$console"; do
+            name="${pair%%:*}"; value="${pair#*:}"
+            if [ -z "$value" ] && { [ "$name" = app ] || [ "$SUITE" = selected ]; }; then
+              echo "::error::No $name address. Set PUBLIC_BASE_URL / CONSOLE_PUBLIC_BASE_URL on the $TARGET environment, or type one in when you run this workflow."
+              exit 1
+            fi
+            case "$value" in ''|https://*|http://localhost*) ;; *) echo "::error::The $name address must start with https://"; exit 1 ;; esac
+          done
+          echo "app=${app%/}" >> "$GITHUB_OUTPUT"
+          echo "console=${console%/}" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Browser tests: $SUITE on $TARGET"
+            echo "- App: ${app%/}"
+            echo "- Console: ${console:-not used}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+      - name: Install Playwright
+        working-directory: tests/e2e
+        run: npm ci
+      - name: Install Chromium
+        working-directory: tests/e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Run the tests
+        working-directory: tests/e2e
+        env:
+          CI: true
+          SUITE: ${{ inputs.suite }}
+          FILTER: ${{ inputs.filter }}
+          APP_BASE_URL: ${{ steps.where.outputs.app }}
+          API_BASE_URL: ${{ steps.where.outputs.app }}
+          CONSOLE_BASE_URL: ${{ steps.where.outputs.console }}
+          E2E_ORG: ${{ vars.E2E_ORG || 'riverbank' }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD || 'Password@01' }}
+          CONSOLE_E2E_URL: ${{ inputs.suite == 'full' && vars.E2E_CONSOLE == 'true' && steps.where.outputs.console || '' }}
+          CONSOLE_E2E_OPERATOR: ${{ vars.CONSOLE_E2E_OPERATOR || 'operator.full@onengo.local' }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [ "$SUITE" = selected ]; then args+=(--config=playwright.post-deploy.config.ts); fi
+          if [ -n "$FILTER" ]; then args+=(--grep "$FILTER"); fi
+          npx playwright test "${args[@]}"
+
+      - name: Upload the Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-${{ inputs.suite }}-${{ inputs.target }}-${{ github.run_id }}
+          path: |
+            tests/e2e/playwright-report
+            tests/e2e/test-results
+          retention-days: 7
+          if-no-files-found: ignore

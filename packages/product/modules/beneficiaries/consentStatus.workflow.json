@@ -1,0 +1,12 @@
+{
+  "key": "consentStatus",
+  "recordType": "beneficiaryConsent",
+  "initial": "granted",
+  "states": [
+    { "key": "granted", "label": "Agreed" },
+    { "key": "withdrawn", "label": "Withdrawn", "final": true }
+  ],
+  "transitions": [
+    { "key": "withdraw", "label": "Record withdrawal", "from": ["granted"], "to": "withdrawn", "requiredFields": ["withdrawnOn"] }
+  ]
+}

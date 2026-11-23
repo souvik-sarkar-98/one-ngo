@@ -348,7 +348,14 @@ describe('http and oauth connectors', () => {
   const issues = async (key: string, body: Record<string, unknown>) =>
     ((await expectCode(save(key, body), 'validation_failed')) as Error & { issues: { path: string }[] }).issues.map((i) => i.path);
   const oauthConfig = { authorizationUrl: 'https://id.test/authorize', tokenUrl: 'https://id.test/token', clientId: 'client-1', scopes: ['mail.send'] };
-  const sendConfig = { mode: 'send', method: 'POST', url: 'https://mail.test/send', body: '{"to":"{{message.to}}","raw":"{{ message.mime | base64url }}"}' };
+  const sendConfig = { mode: 'send', method: 'POST', url: 'https://hooks.test/post', body: '{"to":"{{message.to}}","text":"{{message.text}}"}' };
+  const emailHttpConfig = {
+    provider: 'http',
+    method: 'POST',
+    url: 'https://mail.test/send',
+    body: '{"to":"{{message.to}}","raw":"{{ message.mime | base64url }}"}',
+    contentType: 'json',
+  };
 
   beforeAll(async () => {
     await save('mailer-id', { kind: 'oauth', config: oauthConfig, secrets: { clientSecret: 'client-secret-5', refreshToken: 'refresh-token-6' }, enabled: true });
@@ -357,6 +364,7 @@ describe('http and oauth connectors', () => {
   it('refuses an http connector with a plain URL, an unknown placeholder or a credential that is not oauth', async () => {
     expect(await issues('h1', { kind: 'http', config: { ...sendConfig, url: 'http://mail.test/send' } })).toContain('/config/url');
     expect(await issues('h1', { kind: 'http', config: { ...sendConfig, body: '{{record.x}} {{nope.y}}' } })).toEqual(['/config/body']);
+    expect(await issues('h1', { kind: 'http', config: { ...sendConfig, body: '{"raw":"{{ message.mime | base64url }}"}' } })).toEqual(['/config/body']);
     expect(await issues('h1', { kind: 'http', config: { ...sendConfig, url: 'https://mail.test/?t={{credential.accessToken}}' } })).toEqual(['/config/url']);
     expect(await issues('h1', { kind: 'http', config: { ...sendConfig, credential: 'crm' } })).toEqual(['/config/credential']);
     expect(await issues('h1', { kind: 'http', config: { ...sendConfig, mode: 'lookup', method: 'PUT' } })).toEqual(
@@ -364,14 +372,13 @@ describe('http and oauth connectors', () => {
     );
   });
 
-  it('allows one email sender per organisation, in send mode with a From address', async () => {
-    const sender = { ...sendConfig, credential: 'mailer-id', headers: { Authorization: 'Bearer {{credential.accessToken}}' }, emailSender: true, from: 'office@asha.test' };
-    await save('mail-out', { kind: 'http', config: sender, enabled: true });
-    expect(await issues('mail-two', { kind: 'http', config: sender })).toEqual(['/config/emailSender']);
-    expect(await issues('mail-two', { kind: 'http', config: { ...sender, from: undefined, mode: 'lookup' } })).toEqual(
-      expect.arrayContaining(['/config/emailSender', '/config/from']),
-    );
-    expect((await save('mail-out', { config: { ...sender, from: 'info@asha.test' } })).config).toMatchObject({ from: 'info@asha.test' });
+  it('saves an email connector with an http provider and optional oauth credential', async () => {
+    const saved = await save('mail-out', {
+      kind: 'email',
+      config: { ...emailHttpConfig, credential: 'mailer-id', headers: { Authorization: 'Bearer {{credential.accessToken}}' } },
+      enabled: true,
+    });
+    expect(saved.config).toMatchObject({ provider: 'http', credential: 'mailer-id', url: 'https://mail.test/send' });
   });
 
   it('needs the client secret for oauth, and is configured only once connected', async () => {
@@ -388,12 +395,13 @@ describe('http and oauth connectors', () => {
   it('sends with a refreshed access token and redacts it from the logged error', async () => {
     answers = [{ status: 200, body: JSON.stringify({ access_token: ACCESS, expires_in: 3600 }) }, { status: 401, body: `token ${ACCESS} rejected` }];
     const result = await w.platform.connectors.test(w.as(w.ngoA), 'mail-out', { to: 'donor@x.test' });
+    expect(JSON.parse(calls[1]!.body!).raw).toEqual(expect.any(String));
     expect(result).toMatchObject({ ok: false, status: 401 });
     expect(result.error).not.toContain(ACCESS);
     expect(result.error).toContain('[redacted]');
     expect(calls.map((c) => c.url)).toEqual(['https://id.test/token', 'https://mail.test/send']);
     expect(calls[1]!.headers.authorization).toBe(`Bearer ${ACCESS}`);
-    expect(JSON.parse(calls[1]!.body!)).toMatchObject({ to: 'donor@x.test' });
+    expect(JSON.parse(calls[1]!.body!)).toHaveProperty('raw');
     const [log] = await deliveries('mail-out');
     expect(log).toMatchObject({ event: 'connector.test', status: 'failed', responseStatus: 401 });
     expect(log!.error).not.toContain(ACCESS);
@@ -452,14 +460,25 @@ describe('http and oauth connectors', () => {
   });
 
   it('redacts the access token from an answer that echoes it', async () => {
+    await save('token-echo', {
+      kind: 'http',
+      config: {
+        ...sendConfig,
+        url: 'https://hooks.test/echo',
+        credential: 'mailer-id',
+        headers: { Authorization: 'Bearer {{credential.accessToken}}' },
+      },
+      enabled: true,
+    });
     answers = [{ status: 200, body: `{"sent":true,"token":"${ACCESS}"}` }];
     const d = { eventId: null, event: 'test', recordId: null, final: true };
-    const result = await w.platform.connectors.callHttp(w.ngoA, 'mail-out', { message: { to: 'a@x.test' } }, d);
+    const result = await w.platform.connectors.callHttp(w.ngoA, 'token-echo', { message: { to: 'a@x.test', text: 'hi' } }, d);
     expect(result).toMatchObject({ ok: true, status: 200, body: '{"sent":true,"token":"[redacted]"}' });
-    expect(calls.map((c) => c.url)).toEqual(['https://mail.test/send']);
+    expect(calls.map((c) => c.url)).toEqual(['https://hooks.test/echo']);
   });
 
-  it("sends the organisation's email through the email sender as a base64url RFC 822 message, and through SMTP once it is disabled", async () => {
+  it("sends the organisation's email through the connector chosen in settings as a base64url RFC 822 message, and through the stand-in once that connector is disabled", async () => {
+    await w.platform.administration.saveSettings(w.as(w.ngoA), { mailConnector: 'mail-out', mailFrom: 'info@asha.test' });
     const before = w.mail.sent.length;
     const send = (to: string) =>
       w.platform.notifications.notify(w.ngoA, { template: 'phoneNote', to: { email: `'${to}'` }, channels: ['email'], scope: { record: { donorName: 'Asha', amount: 5 } } });
@@ -482,6 +501,7 @@ describe('http and oauth connectors', () => {
 
     await save('mail-out', { enabled: false });
     try {
+      // The product servers set no stand-in and do not fall back to SMTP. This world injects a capture transport.
       await send('later@x.test');
       await w.platform.dispatcher.runOnce();
       expect(calls).toHaveLength(1);
@@ -731,9 +751,9 @@ describe('HTTP routes', () => {
     });
     expect(put.statusCode).toBe(200);
     expect(put.json()).toMatchObject({ key: 'notify-hook', kind: 'webhook', enabled: true, configured: true, secrets: ['signingSecret'] });
-    expect((await call('GET', '/api/admin/connectors/notify-hook')).json()).toMatchObject({ config: { url: 'https://hooks.test/in' } });
-    expect((await call('GET', '/api/admin/connectors/gateway')).json()).toMatchObject({ kind: 'sms', secrets: ['apiKey'] });
-    expect((await call('GET', '/api/admin/connectors/wa')).json()).toMatchObject({ kind: 'whatsapp', secrets: ['accessToken'] });
+    expect((await call('GET', '/api/admin/connectors/notify-hook')).json()).toMatchObject({ connector: { config: { url: 'https://hooks.test/in' } } });
+    expect((await call('GET', '/api/admin/connectors/gateway')).json()).toMatchObject({ connector: { kind: 'sms', secrets: ['apiKey'] } });
+    expect((await call('GET', '/api/admin/connectors/wa')).json()).toMatchObject({ connector: { kind: 'whatsapp', secrets: ['accessToken'] } });
 
     const test = await call('POST', '/api/admin/connectors/notify-hook/test', {});
     expect(test.json()).toEqual({ ok: true, status: 200 });
@@ -755,7 +775,13 @@ describe('HTTP routes', () => {
     expect((await call('PUT', '/api/admin/connectors/notify-hook', { enabled: false }, clerk)).statusCode).toBe(403);
     expect((await call('POST', '/api/admin/connectors/notify-hook/test', {}, clerk)).statusCode).toBe(403);
     expect((await call('GET', '/api/admin/connectors/notify-hook/deliveries', undefined, clerk)).statusCode).toBe(403);
-    expect((await call('GET', '/api/admin/connectors/nothing')).statusCode).toBe(404);
+    // Nothing set up under a key is an ordinary answer, not an error: 200 with no connector, and an empty log.
+    const unset = await call('GET', '/api/admin/connectors/nothing');
+    expect(unset.statusCode).toBe(200);
+    expect(unset.json()).toEqual({ connector: null });
+    const unsetLog = await call('GET', '/api/admin/connectors/nothing/deliveries');
+    expect(unsetLog.statusCode).toBe(200);
+    expect(unsetLog.json()).toEqual([]);
     expect((await call('PUT', '/api/admin/connectors/bad-hook', { kind: 'webhook', config: { url: 'http://x.test' } })).statusCode).toBe(422);
 
     for (const body of responses) for (const secret of SECRETS) expect(body).not.toContain(secret);

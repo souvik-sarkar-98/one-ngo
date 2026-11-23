@@ -37,6 +37,7 @@
           "payments:create",
           "payments:confirm",
           "money:accounts:read",
+          "money:reconcile",
           "people:read",
           "report:donationSummary:run",
           "report:donationRegister:run"
@@ -48,6 +49,9 @@
       { "code": "BANK", "name": "Bank account", "type": "asset" },
       { "code": "CASH", "name": "Cash in hand", "type": "asset" },
       { "code": "DONATION_INCOME", "name": "Donations received", "type": "income" }
+    ],
+    "moneyAccounts": [
+      { "key": "upi", "name": "Main bank account", "kind": "bank", "ledgerCode": "BANK" }
     ],
     "receiptSeries": [
       { "key": "donation-receipt", "prefix": "RCPT", "label": "Donation acknowledgement", "reset": "fiscal_year" }

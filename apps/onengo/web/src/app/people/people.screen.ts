@@ -1,5 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
-import { PageFrame } from '@onengo/web-kit';
+import { Btn, PageFrame } from '@onengo/web-kit';
 import { t } from '../core/i18n/i18n';
 import { TranslatePipe } from '../services/i18n';
 import { Autocomplete } from '../ui/autocomplete';
@@ -20,11 +20,11 @@ import { PeopleStore } from './people-store';
  */
 @Component({
   selector: 'app-people-screen',
-  imports: [FilteredListPage, FilteredInfiniteList, ListFilterSheet, ListDetailSheet, MobileFormSheet, Autocomplete, RowMenu, CreateButton, ScreenHeading, TranslatePipe, PageFrame],
+  imports: [Btn, FilteredListPage, FilteredInfiniteList, ListFilterSheet, ListDetailSheet, MobileFormSheet, Autocomplete, RowMenu, CreateButton, ScreenHeading, TranslatePipe, PageFrame],
   providers: [PeopleStore],
   styleUrls: ['../ui/styles/na-list-dashboard.css', '../ui/styles/app-filtered-infinite-list.css', '../ui/styles/title-action.css'],
   styles: `
-    .people__required { color: #f97316; }
+    .people__required { color: var(--required-color); }
     .people__head {
       display: flex;
       flex-direction: column;
@@ -77,7 +77,7 @@ import { PeopleStore } from './people-store';
       <div class="admin__line admin__line--title">
         <app-screen-heading class="admin__grow" [text]="'ui.crumbs.people' | t" />
         @if (store.manages && !store.narrow() && !store.selectedCount() && !store.selecting()) {
-          <button type="button" class="app-btn app-btn--primary admin__title-action" (click)="store.openAdd()">{{ 'ui.crumbs.addPerson' | t }}</button>
+          <button appBtn="primary" type="button" class="admin__title-action" (click)="store.openAdd()">{{ 'ui.crumbs.addPerson' | t }}</button>
         }
       </div>
       @let rows = store.rows();
@@ -150,7 +150,7 @@ import { PeopleStore } from './people-store';
                 @if (store.selectedCount()) {
                   <div class="filtered-infinite-list__bulk-actions">
                     @for (op of bulkShown(); track op.id) {
-                      <button type="button" class="app-btn" [class.app-btn--primary]="$first" [disabled]="store.busy()" (click)="store.openBulk(op.id)">{{ op.label }}</button>
+                      <button [appBtn]="$first ? 'primary' : ''" type="button" [disabled]="store.busy()" (click)="store.openBulk(op.id)">{{ op.label }}</button>
                     }
                     @if (bulkRest().length) {
                       <app-row-menu [actions]="bulkRest()" (choose)="store.openBulk($event)" />
@@ -194,7 +194,7 @@ import { PeopleStore } from './people-store';
                     <span class="people__role">
                       {{ store.roleLabel(r) }}
                       @if (!store.suspended()) {
-                        <button type="button" [attr.aria-label]="('ui.common.remove' | t) + ' ' + store.roleLabel(r)" (click)="store.removeRoleFromDraft(r)">×</button>
+                        <button type="button" class="people__role-remove" [attr.aria-label]="('ui.common.remove' | t) + ' ' + store.roleLabel(r)" (click)="store.removeRoleFromDraft(r)">×</button>
                       }
                     </span>
                   }
@@ -208,13 +208,13 @@ import { PeopleStore } from './people-store';
           <div detailFooterActions class="app-btn-group">
             @if (store.person(); as p) {
               @if (store.suspended()) {
-                <button type="button" class="app-btn app-btn--primary" [disabled]="store.busy()" (click)="store.reactivate()">{{ 'ui.people.reactivate' | t }}</button>
+                <button appBtn="primary" type="button" [disabled]="store.busy()" (click)="store.reactivate()">{{ 'ui.people.reactivate' | t }}</button>
               } @else {
                 @if (store.rolesChanged()) {
-                  <button type="button" class="app-btn app-btn--primary" [disabled]="store.busy()" (click)="store.saveRoles()">{{ 'ui.people.saveRoles' | t }}</button>
+                  <button appBtn="primary" type="button" [disabled]="store.busy()" (click)="store.saveRoles()">{{ 'ui.people.saveRoles' | t }}</button>
                 }
-                <button type="button" class="app-btn" [disabled]="store.busy()" (click)="store.resend()">{{ 'ui.people.resend' | t }}</button>
-                <button type="button" class="app-btn danger" (click)="store.askSuspend()">{{ 'ui.people.suspend' | t }}</button>
+                <button appBtn type="button" [disabled]="store.busy()" (click)="store.resend()">{{ 'ui.people.resend' | t }}</button>
+                <button appBtn="danger" type="button" (click)="store.askSuspend()">{{ 'ui.people.suspend' | t }}</button>
               }
             }
           </div>
@@ -258,7 +258,7 @@ import { PeopleStore } from './people-store';
               @for (r of store.addRoles(); track r) {
                 <span class="people__role">
                   {{ store.roleLabel(r) }}
-                  <button type="button" [attr.aria-label]="('ui.common.remove' | t) + ' ' + store.roleLabel(r)" (click)="store.removeAddRole(r)">×</button>
+                  <button type="button" class="people__role-remove" [attr.aria-label]="('ui.common.remove' | t) + ' ' + store.roleLabel(r)" (click)="store.removeAddRole(r)">×</button>
                 </span>
               }
             </div>

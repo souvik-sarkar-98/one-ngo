@@ -1,0 +1,33 @@
+{
+  "key": "assetRegister",
+  "label": "Asset register",
+  "datasets": [
+    {
+      "key": "assets",
+      "label": "Assets in use",
+      "source": "query",
+      "recordType": "asset",
+      "statusIn": ["active"],
+      "sort": { "field": "purchasedOn", "dir": "asc" },
+      "fields": ["name", "assetClass", "serialNumber", "purchasedOn", "cost", "location", "condition"]
+    }
+  ],
+  "outputs": {
+    "excel": {
+      "sheets": [
+        {
+          "dataset": "assets",
+          "columns": [
+            { "field": "name", "header": "Asset", "format": "text" },
+            { "field": "assetClass", "header": "Type", "format": "text" },
+            { "field": "serialNumber", "header": "Serial or registration number", "format": "text" },
+            { "field": "purchasedOn", "header": "Purchased on", "format": "date" },
+            { "field": "cost", "header": "Purchase cost", "format": "money", "total": true },
+            { "field": "location", "header": "Location", "format": "text" },
+            { "field": "condition", "header": "Condition", "format": "text" }
+          ]
+        }
+      ]
+    }
+  }
+}

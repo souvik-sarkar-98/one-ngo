@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { PageFrame } from '@onengo/web-kit';
+import { Btn, PageFrame } from '@onengo/web-kit';
 import { roleKey } from '../../core/builder/permission-grid';
 import { TranslatePipe } from '../../services/i18n';
 import { CreateButton } from '../../ui/create-button';
@@ -12,7 +12,7 @@ import { RolesStore } from './roles-store';
 /** Administration › Roles: one list. A role's page has its members and, for people who can, its permissions. */
 @Component({
   selector: 'app-admin-roles',
-  imports: [FilteredListPage, FilteredInfiniteList, ScreenHeading, TranslatePipe, PageFrame, MobileFormSheet, CreateButton],
+  imports: [Btn, FilteredListPage, FilteredInfiniteList, ScreenHeading, TranslatePipe, PageFrame, MobileFormSheet, CreateButton],
   providers: [RolesStore],
   styleUrls: ['../../ui/styles/na-list-dashboard.css', '../admin.css'],
   template: `
@@ -20,7 +20,7 @@ import { RolesStore } from './roles-store';
       <div class="admin__line admin__line--title">
         <app-screen-heading class="admin__grow" [text]="'ui.crumbs.admin.roles' | t" />
         @if (store.canCreate() && !store.narrow()) {
-          <button type="button" class="app-btn app-btn--primary admin__title-action" (click)="store.startNew()">{{ 'ui.builder.roles.new' | t }}</button>
+          <button appBtn="primary" type="button" class="admin__title-action" (click)="store.startNew()">{{ 'ui.builder.roles.new' | t }}</button>
         }
       </div>
       <p class="muted">{{ 'ui.admin.roles.intro' | t }}</p>

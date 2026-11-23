@@ -1,0 +1,31 @@
+{
+  "key": "projects",
+  "recordType": "project",
+  "label": "Projects",
+  "pageSize": 20,
+  "layout": "table",
+  "columns": ["number", "name", "lead", "startsOn", "endsOn", "budget", "status"],
+  "compactColumns": ["name", "status"],
+  "chips": [
+    { "id": "current", "label": "Current", "statusIn": ["planning", "active"] },
+    { "id": "completed", "label": "Completed", "statusIn": ["completed"] },
+    { "id": "all", "label": "All" }
+  ],
+  "defaultChip": "current",
+  "filters": ["startsOn"],
+  "row": { "title": "name", "subtitle": ["location"], "meta": "budget", "badge": "status" },
+  "detail": {
+    "sections": [
+      {
+        "id": "project",
+        "label": "Project",
+        "fields": ["number", "status", "name", "description", "startsOn", "endsOn", "budget", "location", "lead", "goalCount"]
+      },
+      { "id": "goals", "label": "Goals", "related": { "recordType": "projectGoal", "field": "project" } },
+      { "id": "milestones", "label": "Milestones", "related": { "recordType": "milestone", "field": "project" } },
+      { "id": "events", "label": "Events", "related": { "recordType": "event", "field": "project" } }
+    ]
+  },
+  "create": { "fields": ["name", "description", "startsOn", "endsOn", "budget", "location", "lead"] },
+  "edit": { "fields": ["name", "description", "startsOn", "endsOn", "budget", "location", "lead"] }
+}

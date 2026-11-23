@@ -1,0 +1,33 @@
+{
+  "key": "beneficiaryConsent",
+  "label": "Consent",
+  "pluralLabel": "Consents",
+  "description": "What a beneficiary agreed to, and when they agreed or withdrew. Each purpose is recorded separately.",
+  "titleField": "beneficiaryName",
+  "fields": [
+    { "key": "beneficiary", "label": "Beneficiary", "type": "reference", "referenceType": "beneficiary", "required": true, "help": "Choose a beneficiary to fill in their name" },
+    {
+      "key": "beneficiaryName",
+      "label": "Beneficiary name",
+      "type": "text",
+      "maxLength": 200,
+      "searchable": true,
+      "copyFrom": { "reference": "beneficiary", "field": "name" }
+    },
+    {
+      "key": "purpose",
+      "label": "Purpose",
+      "type": "choice",
+      "required": true,
+      "choices": [
+        { "value": "programme", "label": "Taking part in programmes" },
+        { "value": "contact", "label": "Contact by phone or message" },
+        { "value": "photos", "label": "Photos and stories in reports" },
+        { "value": "data", "label": "Sharing details with partners" }
+      ]
+    },
+    { "key": "grantedOn", "label": "Agreed on", "type": "date", "required": true },
+    { "key": "withdrawnOn", "label": "Withdrawn on", "type": "date", "visibleWhen": "status == 'withdrawn'" },
+    { "key": "notes", "label": "Notes", "type": "longText" }
+  ]
+}

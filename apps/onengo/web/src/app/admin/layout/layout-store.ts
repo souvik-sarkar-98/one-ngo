@@ -12,6 +12,7 @@ const NAMES: Record<string, string> = {
   records: 'ui.nav.records',
   inbox: 'ui.nav.inbox',
   reports: 'ui.nav.reports',
+  money: 'ui.money.title',
   admin: 'ui.crumbs.administration',
   builder: 'ui.nav.builder',
   guide: 'ui.nav.guide',

@@ -2,6 +2,7 @@ import { Component, computed, effect, inject, input, untracked } from '@angular/
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
 import { TranslatePipe } from '../services/i18n';
 import { ReportPrintStore } from './report-print-store';
+import { Btn } from '@onengo/web-kit';
 
 /**
  * The report print page at /print/report/:key, laid out like a receipt: no
@@ -11,7 +12,7 @@ import { ReportPrintStore } from './report-print-store';
  */
 @Component({
   selector: 'app-report-print-screen',
-  imports: [TranslatePipe],
+  imports: [Btn, TranslatePipe],
   providers: [ReportPrintStore],
   styles: `
     :host { display: block; min-height: 100vh; background: #f1f5f9; color: #0f172a; }
@@ -27,13 +28,13 @@ import { ReportPrintStore } from './report-print-store';
   `,
   template: `
     <div class="print__bar">
-      <button type="button" class="app-btn app-btn--ghost" (click)="store.back()">{{ 'ui.common.back' | t }}</button>
+      <button appBtn type="button" (click)="store.back()">{{ 'ui.common.back' | t }}</button>
       <span class="print__spacer"></span>
       @if (store.publishedId()) {
-        <button type="button" class="app-btn app-btn--primary" [disabled]="!store.html() || store.busy()" (click)="download()">{{ 'ui.reports.downloadFile' | t }}</button>
+        <button appBtn="primary" type="button" [disabled]="!store.html() || store.busy()" (click)="download()">{{ 'ui.reports.downloadFile' | t }}</button>
       } @else {
         <span class="print__state-label">{{ 'ui.reports.notPublished' | t }}</span>
-        <button type="button" class="app-btn app-btn--primary" [disabled]="!store.html() || store.busy()" [attr.aria-busy]="store.busy()" (click)="store.publish()">
+        <button appBtn="primary" type="button" [disabled]="!store.html() || store.busy()" [attr.aria-busy]="store.busy()" (click)="store.publish()">
           {{ (store.busy() ? 'ui.reports.publishing' : 'ui.reports.publish') | t }}
         </button>
       }

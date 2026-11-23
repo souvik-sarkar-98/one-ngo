@@ -98,6 +98,7 @@ export function defaultNavIcon(key: string): string {
   if (key === 'home' || key.startsWith('page:')) return 'home';
   if (key === 'inbox') return 'inbox';
   if (key === 'reports') return 'assessment';
+  if (key === 'money') return 'accounts';
   if (key === 'guide') return 'menu_book';
   if (key === 'admin') return 'admin_panel_settings';
   if (key === 'builder') return 'build';
@@ -132,6 +133,7 @@ function navTarget(key: string, me: Me | null, defs: RuntimeDefinitions | null, 
   if (key === 'records') return { key, label: t('ui.nav.records'), icon, link: '/records' };
   if (key === 'inbox') return { key, label: t('ui.nav.inbox'), icon, link: '/inbox', ...(badge > 0 ? { badge } : {}) };
   if (key === 'reports') return !me || canRunReports(me.permissions) ? { key, label: t('ui.nav.reports'), icon, link: '/reports' } : null;
+  if (key === 'money') return caps?.money ? { key, label: t('ui.money.title'), icon, link: '/accounts' } : null;
   if (key === 'admin') return hasAdministration(caps) ? { key, label: t('ui.crumbs.administration'), icon, link: '/admin' } : null;
   if (key === 'builder') return caps?.configure ? { key, label: t('ui.builder.title'), icon, link: '/builder' } : null;
   if (key === 'guide') return { key, label: t('ui.nav.guide'), icon, link: '/guide' };
@@ -152,6 +154,7 @@ function navTarget(key: string, me: Me | null, defs: RuntimeDefinitions | null, 
 export function defaultNavigationKeys(me: Me | null, defs: RuntimeDefinitions | null): string[] {
   const keys = ['home', 'records', 'inbox', 'reports'];
   for (const page of defs?.pages ?? []) if (page.key !== 'home') keys.push(`page:${page.key}`);
+  if (me?.capabilities.money) keys.push('money');
   if (hasAdministration(me?.capabilities)) keys.push('admin');
   if (me?.capabilities.configure) keys.push('builder');
   keys.push('guide', 'settings', 'signout');
@@ -222,6 +225,7 @@ function routeKey(path: string): string | null {
   if (!top) return 'home';
   if (top === 'records') return second ? `record:${second}` : 'records';
   if (top === 'pages') return second ? `page:${second}` : null;
+  if (top === 'accounts') return 'money';
   if (top === 'inbox' || top === 'settings' || top === 'admin' || top === 'builder' || top === 'reports' || top === 'guide') return top;
   return null;
 }
@@ -254,6 +258,8 @@ export const plural = (type: RuntimeRecordType): string => type.pluralLabel || t
 export interface RecordGroupView {
   key: string;
   label: string;
+  /** False when the group is kept off Home until a person pins one of its lists. */
+  onHome: boolean;
   types: RuntimeRecordType[];
 }
 
@@ -265,10 +271,10 @@ export function recordGroups(defs: RuntimeDefinitions | null): RecordGroupView[]
   for (const g of defs?.recordGroups ?? []) {
     const members = g.recordTypes.map((k) => types.find((x) => x.key === k)).filter((x): x is RuntimeRecordType => !!x && !placed.has(x.key));
     members.forEach((x) => placed.add(x.key));
-    if (members.length) out.push({ key: g.key, label: g.label, types: members });
+    if (members.length) out.push({ key: g.key, label: g.label, onHome: g.onHome !== false, types: members });
   }
   const rest = types.filter((x) => !placed.has(x.key));
-  if (rest.length) out.push({ key: 'other', label: t('ui.records.otherGroup'), types: rest });
+  if (rest.length) out.push({ key: 'other', label: t('ui.records.otherGroup'), onHome: true, types: rest });
   return out;
 }
 
@@ -302,6 +308,8 @@ export function appTitle(route: ShellRoute, defs: RuntimeDefinitions | null, me:
       return t('ui.nav.inbox');
     case 'reports':
       return t('ui.nav.reports');
+    case 'accounts':
+      return t('ui.money.title');
     case 'pages':
       return defs?.pages?.find((p) => p.key === second)?.label ?? t('ui.nav.more');
     case 'admin':
@@ -321,7 +329,7 @@ type Capabilities = Me['capabilities'];
 
 /** Administration is offered to anyone holding at least one administration permission. */
 export const hasAdministration = (c: Capabilities | undefined): boolean =>
-  !!c && !!(c.people || c.roles || c.connectors || c.apiKeys || c.jobs || c.audit || c.settings || c.migration);
+  !!c && !!(c.people || c.roles || c.connectors || c.apiKeys || c.jobs || c.audit || c.settings || c.migration || c.recordBin);
 
 export interface MoreLink {
   id: string;

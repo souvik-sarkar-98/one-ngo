@@ -1,5 +1,5 @@
--- 005_organisation_privacy: organisation profile, registrations and logo;
--- consent and erasure (DPDP).
+-- 005_organisation_privacy: organisation profile, registrations, logo and authorised
+-- signatories; consent and erasure (DPDP).
 --
 -- consent_event and erasure_request are append-only and hold no personal
 -- values: a data subject is named by kind and id only, so the history survives
@@ -55,6 +55,100 @@ create table tenant_asset (
   updated_at timestamptz not null default now(),
   primary key (tenant_id, kind)
 );
+
+-- Authorised signatories: the people authorised to sign, the ordered set printed on
+-- each document key (a kind such as `receipt` or `report`, or a kind with one of its
+-- types such as `report:donationSummary`; a type with no set of its own uses its
+-- kind's set), and every signature image a receipt or published report was issued with.
+create table organisation_signatory (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null references tenant(id),
+  name text not null check (length(name) between 1 and 120),
+  designation text not null check (length(designation) between 1 and 120),
+  file_id uuid references file_object(id),
+  version integer not null default 0,
+  created_by text not null,
+  created_at timestamptz not null default now(),
+  updated_by text,
+  updated_at timestamptz not null default now()
+);
+create index organisation_signatory_tenant on organisation_signatory (tenant_id, created_at, id);
+create index organisation_signatory_file on organisation_signatory (file_id) where file_id is not null;
+
+create function organisation_signatory_limit() returns trigger language plpgsql as $$
+begin
+  if (select count(*) from organisation_signatory where tenant_id = new.tenant_id) > 20 then
+    raise exception 'an organisation has at most 20 signatories' using errcode = 'P0001';
+  end if;
+  return null;
+end
+$$;
+create trigger organisation_signatory_limit after insert on organisation_signatory
+  for each row execute function organisation_signatory_limit();
+
+-- position 0 is printed first. At most four per document key.
+create table organisation_signatory_use (
+  tenant_id uuid not null references tenant(id),
+  signatory_id uuid not null references organisation_signatory(id),
+  document_key text not null check (document_key ~ '^[a-z][a-z0-9_-]{0,31}(:[a-zA-Z][a-zA-Z0-9_-]{0,62})?$'),
+  position integer not null check (position between 0 and 3),
+  primary key (tenant_id, document_key, position),
+  unique (tenant_id, document_key, signatory_id)
+);
+
+-- Every signature image a receipt was issued with. receipt_issuer stays immutable,
+-- so the first file is still written to receipt_issuer.signatory_file_id as well.
+create table receipt_signatory_file (
+  receipt_id uuid not null references receipt(id),
+  tenant_id uuid not null references tenant(id),
+  file_id uuid not null references file_object(id),
+  position integer not null check (position between 0 and 3),
+  primary key (receipt_id, position)
+);
+create index receipt_signatory_file_file on receipt_signatory_file (file_id);
+
+create function receipt_signatory_file_is_immutable() returns trigger language plpgsql as $$
+begin
+  raise exception 'a receipt''s signatures cannot be changed' using errcode = 'P0001';
+end
+$$;
+create trigger receipt_signatory_file_immutable before update or delete on receipt_signatory_file
+  for each row execute function receipt_signatory_file_is_immutable();
+
+create table published_report_signatory (
+  published_report_id uuid not null references published_report(id),
+  tenant_id uuid not null references tenant(id),
+  file_id uuid not null references file_object(id),
+  position integer not null check (position between 0 and 3),
+  primary key (published_report_id, position)
+);
+create index published_report_signatory_file on published_report_signatory (file_id);
+
+create function published_report_signatory_is_immutable() returns trigger language plpgsql as $$
+begin
+  raise exception 'a published report''s signatures cannot be changed' using errcode = 'P0001';
+end
+$$;
+create trigger published_report_signatory_immutable before update or delete on published_report_signatory
+  for each row execute function published_report_signatory_is_immutable();
+
+do $$
+declare
+  t text;
+begin
+  foreach t in array array[
+    'organisation_signatory', 'organisation_signatory_use', 'receipt_signatory_file', 'published_report_signatory'
+  ] loop
+    execute format('alter table %I enable row level security', t);
+    execute format(
+      'create policy tenant_isolation on %I using (tenant_id = (select app_tenant())) with check (tenant_id = (select app_tenant()))', t);
+  end loop;
+end
+$$;
+
+grant select, insert, update, delete on organisation_signatory to app_runtime;
+grant select, insert, delete on organisation_signatory_use to app_runtime;
+grant select, insert on receipt_signatory_file, published_report_signatory to app_runtime;
 
 create table consent_event (
   id bigint generated always as identity primary key,

@@ -34,7 +34,7 @@ export function joinTransaction(tenantId: string, tx: SqlExecutor): Database {
 
 /**
  * `$1` is the tenant id and `$2` the process's bind key. app_bind_tenant
- * (migration 026) seals `app.tenant_id`, so the runtime role cannot switch
+ * (001_core.sql) seals `app.tenant_id`, so the runtime role cannot switch
  * organisation with set_config.
  */
 export const TENANT_PREAMBLE = [

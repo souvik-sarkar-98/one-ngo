@@ -31,11 +31,12 @@ import { Autocomplete } from '../../../ui/autocomplete';
 import { ExpressionField } from '../../../ui/expression-field';
 import { PermissionField } from '../../../ui/permission-field';
 import { RecordTypeStore } from './record-type-store';
+import { Btn } from '@onengo/web-kit';
 
 /** Everything about the selected field, in the sections that apply to its type. */
 @Component({
   selector: 'app-field-panel',
-  imports: [TranslatePipe, Autocomplete, ExpressionField, PermissionField],
+  imports: [Btn, TranslatePipe, Autocomplete, ExpressionField, PermissionField],
   styleUrl: './record-type.css',
   template: `
     @if (field(); as f) {
@@ -121,12 +122,12 @@ import { RecordTypeStore } from './record-type-store';
                 <div class="rt-choice">
                   <input class="rt-code" [attr.aria-label]="'ui.builder.schema.prop.value' | t" [value]="c.value" (change)="setChoice(i, { value: text($event) })" />
                   <input [attr.aria-label]="'ui.builder.label' | t" [value]="c.label" (input)="setChoice(i, { label: text($event) })" />
-                  <button type="button" class="small" [attr.aria-label]="'ui.builder.moveUp' | t" [disabled]="first" (click)="moveChoice(i, -1)">↑</button>
-                  <button type="button" class="small" [attr.aria-label]="'ui.builder.moveDown' | t" [disabled]="last" (click)="moveChoice(i, 1)">↓</button>
-                  <button type="button" class="small danger" [attr.aria-label]="'ui.common.remove' | t" [disabled]="(f.choices?.length ?? 0) < 2" (click)="removeChoice(i)">✕</button>
+                  <button appBtn size="sm" type="button" [attr.aria-label]="'ui.builder.moveUp' | t" [disabled]="first" (click)="moveChoice(i, -1)">↑</button>
+                  <button appBtn size="sm" type="button" [attr.aria-label]="'ui.builder.moveDown' | t" [disabled]="last" (click)="moveChoice(i, 1)">↓</button>
+                  <button appBtn="danger" size="sm" type="button" [attr.aria-label]="'ui.common.remove' | t" [disabled]="(f.choices?.length ?? 0) < 2" (click)="removeChoice(i)">✕</button>
                 </div>
               }
-              <button type="button" class="small" (click)="addChoice()">{{ 'ui.builder.recordType.addChoice' | t }}</button>
+              <button appBtn size="sm" type="button" (click)="addChoice()">{{ 'ui.builder.recordType.addChoice' | t }}</button>
             </section>
           }
           @case ('reference') {
@@ -298,8 +299,8 @@ import { RecordTypeStore } from './record-type-store';
           <p class="muted">{{ 'ui.builder.recordType.notUsed' | t }}</p>
         }
         <div class="rt-actions">
-          <button type="button" (click)="store.duplicate(f.key)">{{ 'ui.builder.catalogue.duplicate' | t }}</button>
-          <button type="button" class="danger" [disabled]="!!used?.length" (click)="store.remove(f.key)">{{ 'ui.builder.recordType.removeField' | t }}</button>
+          <button appBtn type="button" (click)="store.duplicate(f.key)">{{ 'ui.builder.catalogue.duplicate' | t }}</button>
+          <button appBtn="danger" type="button" [disabled]="!!used?.length" (click)="store.remove(f.key)">{{ 'ui.builder.recordType.removeField' | t }}</button>
         </div>
       </section>
     }

@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type { OperatorOnboardResult, OperatorOrganisationSummary, OperatorStatusContract } from '@onengo/platform/contracts';
-import { FormProblems } from '@onengo/web-kit';
+import { Btn, FormProblems, PageHead } from '@onengo/web-kit';
 import { OperatorApi, OperatorRequestError } from '../services/operator-api';
 import { clearPending, readPending, returnPath, savePending } from '../services/pending-step';
 
@@ -19,32 +19,32 @@ const ORG_STATUS: Record<string, string> = {
 };
 
 @Component({
-  standalone: true, imports: [FormsModule, RouterLink, FormProblems],
-  template: `<div class="pagehead"><h1>Organisations</h1></div>
+  standalone: true, imports: [Btn, PageHead, FormsModule, RouterLink, FormProblems],
+  template: `<app-page-head title="Organisations" />
     @if (!api.can('status')) {
-      <p class="note">You can open the destinations in the menu. Looking up an organisation needs the look-up action.</p>
+      <p class="notice info">You can open the destinations in the menu. Looking up an organisation needs the look-up action.</p>
     } @else {
       <p class="intro">Look up one organisation by its code, or an onboarding request by its ID. The list below is every organisation on this installation.</p>
-      @if (miss()) { <p class="note bad">{{ miss() }}</p> }
+      @if (miss()) { <p class="notice error">{{ miss() }}</p> }
       <section class="card">
         <div class="seg">
-          <button type="button" [class.on]="kind === 'code'" (click)="kind = 'code'">Organisation code</button>
-          <button type="button" [class.on]="kind === 'requestId'" (click)="kind = 'requestId'">Request ID</button>
+          <button type="button" class="toggle" [class.on]="kind === 'code'" (click)="kind = 'code'">Organisation code</button>
+          <button type="button" class="toggle" [class.on]="kind === 'requestId'" (click)="kind = 'requestId'">Request ID</button>
         </div>
         <form (ngSubmit)="find()">
           <div class="search" [class.bad]="!!miss()">
             <span aria-hidden="true">⌕</span>
             <input name="ref" [(ngModel)]="value" [placeholder]="kind === 'code' ? 'e.g. riverbank' : 'Request ID'" autocomplete="off" (ngModelChange)="miss.set('')">
           </div>
-          <div class="row"><span class="sp"></span><button type="submit" [disabled]="!value.trim()">Find</button></div>
+          <div class="row"><span class="sp"></span><button appBtn="primary" type="submit" [disabled]="!value.trim()">Find</button></div>
         </form>
       </section>
       <app-form-problems [message]="error()" />
       <div class="chips">
-        <button type="button" [class.on]="status === ''" (click)="status = ''">All {{ organisations().length }}</button>
-        <button type="button" [class.on]="status === 'active'" (click)="status = 'active'">Active {{ count('active') }}</button>
-        <button type="button" [class.on]="status === 'suspended'" (click)="status = 'suspended'">Suspended {{ count('suspended') }}</button>
-        <button type="button" [class.on]="status === 'closed'" (click)="status = 'closed'">Closed {{ count('closed') }}</button>
+        <button type="button" class="toggle" [class.on]="status === ''" (click)="status = ''">All {{ organisations().length }}</button>
+        <button type="button" class="toggle" [class.on]="status === 'active'" (click)="status = 'active'">Active {{ count('active') }}</button>
+        <button type="button" class="toggle" [class.on]="status === 'suspended'" (click)="status = 'suspended'">Suspended {{ count('suspended') }}</button>
+        <button type="button" class="toggle" [class.on]="status === 'closed'" (click)="status = 'closed'">Closed {{ count('closed') }}</button>
       </div>
       <div class="list">
         @for (org of shown(); track org.code) {
@@ -101,14 +101,13 @@ export class FindScreen {
 }
 
 @Component({
-  standalone: true, imports: [FormsModule, FormProblems, RouterLink],
+  standalone: true, imports: [Btn, PageHead, FormsModule, FormProblems, RouterLink],
   template: `<app-form-problems [message]="error()" [problems]="problems()" />
     @if (status(); as value) {
       @if (value.organisation; as org) {
-        <div class="pagehead">
-          <h1>{{ org.displayName }}</h1>
+        <app-page-head [title]="org.displayName">
           <span class="badge" [class.ok]="org.status === 'active'" [class.warn]="org.status === 'suspended'" [class.bad]="org.status === 'closed' || org.status === 'provisioning_failed'">{{ orgLabel(org.status) }}</span>
-        </div>
+        </app-page-head>
         <section class="card">
           <h2>Organisation</h2>
           <div class="kv">
@@ -119,14 +118,14 @@ export class FindScreen {
           </div>
         </section>
         @if (org.status === 'closed') {
-          <p class="note">This organisation is closed. Members cannot sign in, and it cannot be reopened from the console.</p>
+          <p class="notice info">This organisation is closed. Members cannot sign in, and it cannot be reopened from the console.</p>
         } @else {
           <section class="card"><h2>Lifecycle</h2>
             <p class="muted">{{ org.status === 'suspended' ? 'Members cannot sign in. Records are kept.' : 'Suspending stops members signing in and keeps every record. Closing is permanent.' }}</p>
             <div class="row">
-              @if (org.status === 'active' && api.can('suspend')) { <button type="button" class="danger ghost" (click)="open('suspend')">Suspend</button> }
-              @if (org.status === 'suspended' && api.can('reactivate')) { <button type="button" (click)="open('reactivate')">Reactivate</button> }
-              @if ((org.status === 'suspended' || org.status === 'provisioning_failed') && api.can('close')) { <button type="button" class="danger" (click)="open('close')">Close</button> }
+              @if (org.status === 'active' && api.can('suspend')) { <button appBtn="danger" type="button" (click)="open('suspend')">Suspend</button> }
+              @if (org.status === 'suspended' && api.can('reactivate')) { <button appBtn="primary" type="button" (click)="open('reactivate')">Reactivate</button> }
+              @if ((org.status === 'suspended' || org.status === 'provisioning_failed') && api.can('close')) { <button appBtn="destructive" type="button" (click)="open('close')">Close</button> }
             </div>
           </section>
         }
@@ -137,8 +136,8 @@ export class FindScreen {
           </section>
         }
       } @else {
-        <div class="pagehead"><h1>Onboarding request</h1></div>
-        <p class="note">This request has not created an organisation yet.</p>
+        <app-page-head title="Onboarding request" />
+        <p class="notice info">This request has not created an organisation yet.</p>
       }
       @if (value.onboarding; as request) {
         <section class="card"><h2>Onboarding</h2>
@@ -148,8 +147,8 @@ export class FindScreen {
             <div><b>Step</b><span>{{ request.step }}</span></div>
             <div><b>Invitation</b><span>{{ request.invitation }}</span></div>
           </div>
-          @if (request.failure) { <p class="note bad">{{ request.failure.message }}</p> }
-          @if (request.state === 'provisioning_failed' && api.can('retry')) { <button type="button" (click)="retry()">Retry</button> }
+          @if (request.failure) { <p class="notice error">{{ request.failure.message }}</p> }
+          @if (request.state === 'provisioning_failed' && api.can('retry')) { <button appBtn="primary" type="button" (click)="retry()">Retry</button> }
         </section>
       }
       @if (value.history.length) {
@@ -166,12 +165,12 @@ export class FindScreen {
     @if (sheet(); as action) {
       <section class="sheet">
         <h2>{{ action }}</h2>
-        @if (stepUpReady()) { <p class="note ok">Verification is complete. Confirm to finish.</p> }
+        @if (stepUpReady()) { <p class="notice ok">Verification is complete. Confirm to finish.</p> }
         <label>Reason<textarea name="reason" [(ngModel)]="reason"></textarea></label>
         @if (action === 'close') { <label>Type {{ code() }} to confirm<input name="confirm" [(ngModel)]="confirmCode" autocomplete="off"></label> }
         <div class="row">
-          <button type="button" class="ghost" (click)="sheet.set('')">Cancel</button>
-          <button type="button" [class.danger]="action !== 'reactivate'" [disabled]="!canConfirm()" (click)="commit()">Confirm</button>
+          <button appBtn type="button" (click)="sheet.set('')">Cancel</button>
+          <button appBtn="primary" type="button" [appBtn]="action !== 'reactivate' ? 'destructive' : 'primary'" [disabled]="!canConfirm()" (click)="commit()">Confirm</button>
         </div>
       </section>
     }`,
@@ -236,12 +235,12 @@ export class StatusScreen {
 interface RegistrationDraft { type: string; number: string }
 
 @Component({
-  standalone: true, imports: [FormsModule, FormProblems, RouterLink],
-  template: `<div class="pagehead"><h1>Onboard an organisation</h1></div>
-    @if (!api.can('onboard')) { <p class="note">Onboarding needs the onboard action.</p> }
+  standalone: true, imports: [Btn, PageHead, FormsModule, FormProblems, RouterLink],
+  template: `<app-page-head title="Onboard an organisation" />
+    @if (!api.can('onboard')) { <p class="notice info">Onboarding needs the onboard action.</p> }
     @else if (done(); as result) {
       <section class="card">
-        <p class="note ok">{{ result.displayName }} is onboarded.</p>
+        <p class="notice ok">{{ result.displayName }} is onboarded.</p>
         <div class="kv">
           <div><b>Code</b><span>{{ result.code }}</span></div>
           <div><b>Request</b><span>{{ result.requestId }}</span></div>
@@ -249,7 +248,7 @@ interface RegistrationDraft { type: string; number: string }
           <div><b>Step</b><span>{{ result.step }}</span></div>
           <div><b>Invitation</b><span>{{ result.invitation }}</span></div>
         </div>
-        @if (result.failure) { <p class="note bad">{{ result.failure.message }}</p> }
+        @if (result.failure) { <p class="notice error">{{ result.failure.message }}</p> }
         <a routerLink="/organisations/status" [queryParams]="{ code: result.code }">Open the organisation</a>
       </section>
     } @else if (review()) {
@@ -262,7 +261,7 @@ interface RegistrationDraft { type: string; number: string }
           <div><b>Modules</b><span>{{ modules }}</span></div>
         </div>
         <app-form-problems [message]="error()" [problems]="problems()" />
-        <div class="row"><button type="button" class="ghost" (click)="review.set(false)">Back</button><button type="button" (click)="submit()">Onboard {{ displayName || 'organisation' }}</button></div>
+        <div class="row"><button appBtn type="button" (click)="review.set(false)">Back</button><button appBtn="primary" type="button" (click)="submit()">Onboard {{ displayName || 'organisation' }}</button></div>
       </section>
     } @else {
       <p class="intro">Fill in the sections, then Check. Nothing is written until you choose Onboard on the review.</p>
@@ -321,10 +320,10 @@ interface RegistrationDraft { type: string; number: string }
               <label>Number<input [name]="'number' + $index" [(ngModel)]="row.number" (ngModelChange)="checked.set(false)"></label>
             </div>
           }
-          <button type="button" class="ghost" (click)="addRegistration()">Add a registration</button>
+          <button appBtn type="button" (click)="addRegistration()">Add a registration</button>
         </section>
         <app-form-problems [message]="error()" [problems]="problems()" />
-        <button type="submit">Check</button>
+        <button appBtn="primary" type="submit">Check</button>
       </form>
     }`,
 })

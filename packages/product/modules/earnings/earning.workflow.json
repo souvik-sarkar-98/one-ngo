@@ -1,0 +1,22 @@
+{
+  "key": "earning",
+  "recordType": "earning",
+  "initial": "expected",
+  "states": [
+    { "key": "expected", "label": "Expected" },
+    { "key": "received", "label": "Received", "final": true },
+    { "key": "cancelled", "label": "Cancelled", "final": true }
+  ],
+  "transitions": [
+    {
+      "key": "markReceived",
+      "label": "Mark as received",
+      "from": ["expected"],
+      "to": "received",
+      "requiredFields": ["receivedIn", "receivedOn"],
+      "guard": "record.receivedOn <= today()",
+      "guardMessage": "The date received cannot be in the future."
+    },
+    { "key": "cancel", "label": "Cancel", "from": ["expected"], "to": "cancelled" }
+  ]
+}

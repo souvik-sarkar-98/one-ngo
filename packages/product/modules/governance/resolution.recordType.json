@@ -1,0 +1,33 @@
+{
+  "key": "resolution",
+  "label": "Resolution",
+  "pluralLabel": "Resolutions",
+  "description": "Resolutions put to a meeting. An office bearer vote passes or rejects each one, and a passed resolution is kept as a numbered record.",
+  "titleField": "title",
+  "numbering": { "sequence": "resolution", "format": "RES/{fy}/{seq:4}", "reset": "fiscal_year" },
+  "fields": [
+    { "key": "title", "label": "Title", "type": "text", "required": true, "maxLength": 200, "searchable": true },
+    { "key": "meeting", "label": "Meeting", "type": "reference", "referenceType": "meeting", "help": "The meeting that the resolution is put to" },
+    {
+      "key": "text",
+      "label": "Resolution text",
+      "type": "longText",
+      "required": true,
+      "maxLength": 5000,
+      "editableWhen": "status == 'draft'"
+    },
+    { "key": "votesFor", "label": "Votes for", "type": "number", "min": 0, "visibleWhen": "status == 'proposed' or status == 'passed' or status == 'rejected'" },
+    { "key": "votesAgainst", "label": "Votes against", "type": "number", "min": 0, "visibleWhen": "status == 'proposed' or status == 'passed' or status == 'rejected'" },
+    { "key": "passedOn", "label": "Passed on", "type": "date", "visibleWhen": "status == 'passed'" },
+    { "key": "notes", "label": "Notes", "type": "longText" }
+  ],
+  "rules": [
+    {
+      "key": "votesRecorded",
+      "when": "status == 'passed'",
+      "expression": "not isEmpty(record.votesFor) and not isEmpty(record.votesAgainst)",
+      "message": "Record the votes for and against before a resolution is passed.",
+      "field": "votesFor"
+    }
+  ]
+}

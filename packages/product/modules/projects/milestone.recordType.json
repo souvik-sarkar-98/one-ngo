@@ -1,0 +1,15 @@
+{
+  "key": "milestone",
+  "label": "Milestone",
+  "pluralLabel": "Milestones",
+  "description": "A dated step in a project, marked done when it is reached.",
+  "titleField": "title",
+  "numbering": { "sequence": "milestone", "format": "MLS/{seq:5}", "reset": "never" },
+  "fields": [
+    { "key": "title", "label": "Milestone", "type": "text", "required": true, "maxLength": 200, "searchable": true },
+    { "key": "project", "label": "Project", "type": "reference", "referenceType": "project", "required": true },
+    { "key": "dueOn", "label": "Due on", "type": "date", "required": true },
+    { "key": "doneOn", "label": "Done on", "type": "date", "visibleWhen": "status == 'done'" },
+    { "key": "notes", "label": "Notes", "type": "longText" }
+  ]
+}

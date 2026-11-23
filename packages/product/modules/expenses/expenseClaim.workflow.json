@@ -1,0 +1,26 @@
+{
+  "key": "expenseClaim",
+  "recordType": "expenseClaim",
+  "initial": "draft",
+  "states": [
+    { "key": "draft", "label": "Draft" },
+    { "key": "submitted", "label": "Submitted" },
+    { "key": "approved", "label": "Approved" },
+    { "key": "rejected", "label": "Not approved", "final": true },
+    { "key": "paid", "label": "Paid", "final": true }
+  ],
+  "transitions": [
+    { "key": "submit", "label": "Submit claim", "from": ["draft"], "to": "submitted", "requiredFields": ["billFile"] },
+    { "key": "approve", "label": "Approve", "from": ["submitted"], "to": "approved" },
+    { "key": "reject", "label": "Do not approve", "from": ["submitted"], "to": "rejected", "requiredFields": ["notes"] },
+    {
+      "key": "pay",
+      "label": "Mark as paid",
+      "from": ["approved"],
+      "to": "paid",
+      "requiredFields": ["paidFrom", "paidOn"],
+      "guard": "record.paidOn <= today()",
+      "guardMessage": "The payment date cannot be in the future."
+    }
+  ]
+}

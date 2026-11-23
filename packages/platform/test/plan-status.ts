@@ -4,11 +4,11 @@ import { ROOT } from './layer-graph.js';
 
 /**
  * Allowlist expiry. Entries of test/layer-allowlist.json and test/package-allowlist.json name a block of
- * section 5.1 of docs/architecture/ngo-backend-enhancement-plan.md, and an entry fails once that block is
+ * section 5.1 of docs/plans/ngo-backend-enhancement-plan.md, and an entry fails once that block is
  * Merged or Done. Both files are empty and stay empty. The plan lives in this repository so a clone of
  * one-ngo alone can run the architecture guards.
  */
-export const PLAN_FILE = join(ROOT, '..', '..', 'docs', 'architecture', 'ngo-backend-enhancement-plan.md');
+export const PLAN_FILE = join(ROOT, '..', '..', 'docs', 'plans', 'ngo-backend-enhancement-plan.md');
 
 /** Blocks an allowlist entry may name: none, because no exception is approved. */
 export const OPEN_BLOCKS = { allowlist: [] as readonly string[] };

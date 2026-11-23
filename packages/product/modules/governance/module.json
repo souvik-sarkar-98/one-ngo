@@ -1,0 +1,47 @@
+{
+  "key": "governance",
+  "version": "1.0.0",
+  "label": "Governance",
+  "description": "Meetings with agenda and minutes, resolutions that office bearers pass by vote, and notices emailed to members with a record of each one sent.",
+  "engine": "0.1.0",
+  "dependsOn": ["members"],
+  "definitions": [
+    "meeting.recordType.json",
+    "meetingStatus.workflow.json",
+    "meetings.listView.json",
+    "resolution.recordType.json",
+    "resolutionStatus.workflow.json",
+    "resolutions.listView.json",
+    "resolutionRegister.report.json",
+    "memberNotice.recordType.json",
+    "memberNotice.template.json",
+    "memberNoticeEmail.automation.json",
+    "memberNotices.listView.json",
+    "sendNotice.action.json",
+    "governance.recordGroup.json"
+  ],
+  "setup": {
+    "roles": [
+      {
+        "key": "secretary",
+        "label": "Secretary",
+        "permissions": [
+          "record:meeting:*",
+          "record:meeting:transition:*",
+          "record:resolution:*",
+          "record:resolution:transition:*",
+          "record:memberNotice:*",
+          "record:member:read",
+          "record:member:action:sendNotice",
+          "people:read",
+          "report:resolutionRegister:run"
+        ]
+      },
+      {
+        "key": "office-bearer",
+        "label": "Office bearer",
+        "permissions": ["record:meeting:read", "record:resolution:read", "record:memberNotice:read"]
+      }
+    ]
+  }
+}

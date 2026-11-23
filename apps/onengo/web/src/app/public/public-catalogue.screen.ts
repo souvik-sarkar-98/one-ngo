@@ -5,6 +5,7 @@ import type { ThemeTokens } from '../core/models';
 import { Api, ApiError } from '../services/api';
 import { TranslatePipe } from '../services/i18n';
 import { PUBLIC_STYLES, paintPublic } from './public-look';
+import { Btn } from '@onengo/web-kit';
 
 interface CataloguePage {
   organisation: string;
@@ -18,7 +19,7 @@ interface CataloguePage {
 /** Search of a public catalogue. No sign-in. A row opens the request form only when one is configured. */
 @Component({
   selector: 'app-public-catalogue-screen',
-  imports: [TranslatePipe],
+  imports: [Btn, TranslatePipe],
   styles: PUBLIC_STYLES,
   template: `
     <header class="pub__band">
@@ -32,7 +33,7 @@ interface CataloguePage {
           <h1 class="pub__title">{{ catalogue.label }}</h1>
           <form class="pub__search" role="search" (submit)="$event.preventDefault(); search()">
             <input type="search" [value]="query()" (input)="query.set(text($event))" [attr.aria-label]="'ui.public.search' | t" />
-            <button type="submit" class="app-btn app-btn--primary">{{ 'ui.public.search' | t }}</button>
+            <button appBtn="primary" type="submit">{{ 'ui.public.search' | t }}</button>
           </form>
           @if (!catalogue.items.length) {
             <p class="pub__lede">{{ 'ui.public.none' | t }}</p>
@@ -45,7 +46,7 @@ interface CataloguePage {
                     <p class="pub__field"><span class="pub__field-label">{{ field.label }}:</span>{{ item.values[field.key] }}</p>
                   }
                 </div>
-                @if (item.requestPath) { <a class="app-btn app-btn--primary" [href]="item.requestPath">{{ 'ui.public.request' | t }}</a> }
+                @if (item.requestPath) { <a appBtn="primary" [href]="item.requestPath">{{ 'ui.public.request' | t }}</a> }
               </li>
             }
           </ul>

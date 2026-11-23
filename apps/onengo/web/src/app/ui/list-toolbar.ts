@@ -96,7 +96,7 @@ import { TranslatePipe } from '../services/i18n';
         overflow: hidden;
         border: 1px solid var(--search-border, rgba(148, 163, 184, 0.35));
         border-radius: var(--search-radius, 12px);
-        background: #fff;
+        background: var(--card);
       }
       .list-filter-toolbar__layout .list-filter-toolbar__filters-btn {
         border: 0;

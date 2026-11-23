@@ -8,7 +8,6 @@ import {
   encryptionKeysFromEnvironment,
   installationOidcSummaryFromEnvironment,
   openOperatorDatabase,
-  smtpFromEnvironment,
 } from '../composition/entry.js';
 
 export {
@@ -36,7 +35,6 @@ export {
   encryptionKeysFromEnvironment,
   installationOidcSummaryFromEnvironment,
   openOperatorDatabase,
-  smtpFromEnvironment,
 };
 export type { Database, Logger } from '../composition/entry.js';
 

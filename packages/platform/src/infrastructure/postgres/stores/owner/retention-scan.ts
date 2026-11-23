@@ -21,6 +21,9 @@ export function pgRetentionScan(db: Database): RetentionScan {
                 eb.exists(eb.selectFrom('tenant_asset as a').select(eb.lit(1).as('one')).whereRef('a.file_id', '=', 'f.id')),
                 eb.exists(eb.selectFrom('receipt_issuer as ri').select(eb.lit(1).as('one')).whereRef('ri.logo_file_id', '=', 'f.id')),
                 eb.exists(eb.selectFrom('receipt_issuer as ri').select(eb.lit(1).as('one')).whereRef('ri.signatory_file_id', '=', 'f.id')),
+                eb.exists(eb.selectFrom('organisation_signatory as s').select(eb.lit(1).as('one')).whereRef('s.file_id', '=', 'f.id')),
+                eb.exists(eb.selectFrom('receipt_signatory_file as rs').select(eb.lit(1).as('one')).whereRef('rs.file_id', '=', 'f.id')),
+                eb.exists(eb.selectFrom('published_report_signatory as ps').select(eb.lit(1).as('one')).whereRef('ps.file_id', '=', 'f.id')),
               ]),
             ),
           )

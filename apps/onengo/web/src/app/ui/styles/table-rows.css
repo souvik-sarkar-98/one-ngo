@@ -17,7 +17,7 @@
   color: var(--secondary-500, #64748b);
   padding: 10px 12px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.25);
-  background: #f8fafc;
+  background: var(--th-bg);
   white-space: nowrap;
 }
 .table-rows td {

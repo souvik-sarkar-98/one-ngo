@@ -9,6 +9,7 @@ import { EditableTable } from '../ui/editable-table';
 import { MobileFormSheet } from '../ui/form-panel';
 import { ImportStore } from './import-store';
 import { ListStore } from './list-store';
+import { Btn } from '@onengo/web-kit';
 
 const field = (key: string, label: string, type: CfFieldDef['type'], extra: Partial<CfFieldDef> = {}): CfFieldDef => ({
   key,
@@ -27,7 +28,7 @@ const field = (key: string, label: string, type: CfFieldDef['type'], extra: Part
  */
 @Component({
   selector: 'app-import-panel',
-  imports: [MobileFormSheet, EditableTable, CfForm, TranslatePipe],
+  imports: [Btn, MobileFormSheet, EditableTable, CfForm, TranslatePipe],
   styles: `
     .import-panel__head {
       display: flex;
@@ -45,7 +46,7 @@ const field = (key: string, label: string, type: CfFieldDef['type'], extra: Part
     .import-panel__error {
       margin: 0 0 12px;
       font-size: 0.75rem;
-      color: #b91c1c;
+      color: var(--bad);
     }
     .import-panel__drop {
       display: flex;
@@ -117,13 +118,13 @@ const field = (key: string, label: string, type: CfFieldDef['type'], extra: Part
     .import-panel__problems li {
       padding: 6px 0;
       border-bottom: 1px solid rgba(148, 163, 184, 0.15);
-      color: #b91c1c;
+      color: var(--bad);
     }
     .import-panel__bar {
       height: 8px;
       margin: 8px 0 12px;
       border-radius: 999px;
-      background: #e2e8f0;
+      background: var(--line-soft);
       overflow: hidden;
     }
     .import-panel__bar > i {
@@ -137,12 +138,12 @@ const field = (key: string, label: string, type: CfFieldDef['type'], extra: Part
       padding: 8px 12px;
       border-radius: 10px;
       font-size: 0.8rem;
-      background: #dcfce7;
-      color: #15803d;
+      background: var(--badge-ok-bg);
+      color: var(--ok);
     }
     .import-panel__banner--warning {
-      background: #fef3c7;
-      color: #b45309;
+      background: var(--badge-warn-bg);
+      color: var(--warn);
     }
     .import-panel__block {
       width: 100%;
@@ -252,7 +253,7 @@ const field = (key: string, label: string, type: CfFieldDef['type'], extra: Part
                 <div class="import-panel__count"><b>{{ n(counts.failed) }}</b>{{ 'ui.imports.failed' | t }}</div>
               </div>
               @if (counts.failed) {
-                <button type="button" class="app-btn app-btn--secondary import-panel__block" (click)="io.downloadFailed()">{{ 'ui.imports.downloadFailed' | t }}</button>
+                <button appBtn type="button" class="import-panel__block" (click)="io.downloadFailed()">{{ 'ui.imports.downloadFailed' | t }}</button>
                 <p class="import-panel__muted">{{ 'ui.imports.failedHint' | t }}</p>
               }
             }
@@ -260,35 +261,35 @@ const field = (key: string, label: string, type: CfFieldDef['type'], extra: Part
         }
 
         @if (s.step === 0 || s.step === 1 || s.step === 2) {
-          <button sheetFooterActions type="button" class="app-btn app-btn--ghost" [disabled]="s.busy" (click)="s.step === 0 ? io.imports.close() : io.imports.back()">
+          <button appBtn sheetFooterActions type="button" [disabled]="s.busy" (click)="s.step === 0 ? io.imports.close() : io.imports.back()">
             {{ (s.step === 0 ? 'ui.common.cancel' : 'ui.common.back') | t }}
           </button>
         }
         @if (s.step === 0) {
-          <button sheetFooterActions type="button" class="app-btn app-btn--primary" [disabled]="s.busy || !s.file" (click)="io.imports.upload()">
+          <button appBtn="primary" sheetFooterActions type="button" [disabled]="s.busy || !s.file" (click)="io.imports.upload()">
             {{ 'ui.common.next' | t }}
           </button>
         }
         @if (s.step === 1) {
-          <button sheetFooterActions type="button" class="app-btn app-btn--primary" [disabled]="s.busy || s.loading" (click)="io.imports.checkRows()">
+          <button appBtn="primary" sheetFooterActions type="button" [disabled]="s.busy || s.loading" (click)="io.imports.checkRows()">
             {{ 'ui.common.next' | t }}
           </button>
         }
         @if (s.step === 2) {
-          <button sheetFooterActions type="button" class="app-btn app-btn--primary" [disabled]="s.busy || !s.check?.valid" (click)="io.imports.run()">
+          <button appBtn="primary" sheetFooterActions type="button" [disabled]="s.busy || !s.check?.valid" (click)="io.imports.run()">
             {{ 'ui.imports.run' | t: { count: s.check?.valid ?? 0 } }}
           </button>
         }
         @if (s.step === runStep) {
-          <button sheetFooterActions type="button" class="app-btn app-btn--ghost" (click)="io.imports.close()">{{ 'ui.common.close' | t }}</button>
+          <button appBtn sheetFooterActions type="button" (click)="io.imports.close()">{{ 'ui.common.close' | t }}</button>
         }
         @if (s.step === runStep) {
-          <button sheetFooterActions type="button" class="app-btn danger" [disabled]="s.busy || !!s.job?.cancelRequested" (click)="io.imports.cancel()">
+          <button appBtn="danger" sheetFooterActions type="button" [disabled]="s.busy || !!s.job?.cancelRequested" (click)="io.imports.cancel()">
             {{ 'ui.imports.cancel' | t }}
           </button>
         }
         @if (s.step === resultStep) {
-          <button sheetFooterActions type="button" class="app-btn app-btn--primary" (click)="io.imports.close()">{{ 'ui.imports.done' | t }}</button>
+          <button appBtn="primary" sheetFooterActions type="button" (click)="io.imports.close()">{{ 'ui.imports.done' | t }}</button>
         }
       </app-mobile-form-sheet>
     }

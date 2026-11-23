@@ -46,7 +46,7 @@ export class SignatoryImage {
     if (can(ctx.actor, 'admin:settings')) return this.organisation.keptSignatory(ctx, fileId);
     if (!receiptId) throw forbidden();
     if (!UUID.test(receiptId)) throw notFound('Signature not found.');
-    if ((await this.receipts.signatureFile(ctx, receiptId)) !== fileId) throw notFound('Signature not found.');
+    if (!(await this.receipts.signatureFiles(ctx, receiptId)).includes(fileId)) throw notFound('Signature not found.');
     return this.organisation.keptSignatory(ctx, fileId, true);
   }
 }

@@ -48,7 +48,9 @@ export function wireOperations(
     recordsIn(tenantId, tx, definitions), audit,
   );
   const shares = new RecordSharing(new ShareService(tm, definitions, records), notifications);
-  const actions = new ActionService(tm, definitions, recordsIn, enqueueThrough(audit), payments, finance.receipts);
+  const actions = new ActionService(tm, definitions, recordsIn, enqueueThrough(audit), payments, finance.receipts, (tenantId) =>
+    notifications.requireEmail(tenantId),
+  );
   const bulk = new BulkService(tm, definitions, records, actions, shares, exports, jobs, options.bulkInlineRecords, options.bulkMaxRecords);
   const receiptLinks = new ReceiptLinkService(tm, new PostgresReceiptLinkStore(base.db), definitions, records, finance.receipts, files, crypto, audit);
   const publicForms = new PublicFormService(tm, organisation, definitions, records, new PostgresPublicFormLinkStore(base.db), crypto, audit);

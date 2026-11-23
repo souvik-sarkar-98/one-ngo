@@ -52,6 +52,20 @@ export const signatoryRequest = schemaOf<SignatoryRequest>({
   properties: { name: { type: 'string' }, designation: { type: 'string' } },
 });
 
+/** The ordered signatories one document prints. An empty list clears the document's own set. */
+export interface DocumentSignatoriesRequest {
+  signatories: string[];
+}
+
+export const documentSignatoriesRequest = schemaOf<DocumentSignatoriesRequest>({
+  type: 'object',
+  required: ['signatories'],
+  additionalProperties: false,
+  properties: {
+    signatories: { type: 'array', items: { type: 'string' } },
+  },
+});
+
 export interface RegistrationRequest {
   /** e.g. `trust`, `12a`, `80g`, `fcra`, `pan`. */
   type: string;

@@ -1,0 +1,44 @@
+{
+  "key": "asset",
+  "label": "Physical asset",
+  "pluralLabel": "Physical assets",
+  "description": "Furniture, equipment, vehicles and other things the organisation owns, with where they are and who looks after them.",
+  "titleField": "name",
+  "numbering": { "sequence": "asset", "format": "AST/{seq:5}", "reset": "never" },
+  "fields": [
+    { "key": "name", "label": "Asset name", "type": "text", "required": true, "maxLength": 200, "searchable": true },
+    {
+      "key": "assetClass",
+      "label": "Type",
+      "type": "choice",
+      "required": true,
+      "choices": [
+        { "value": "furniture", "label": "Furniture" },
+        { "value": "it", "label": "IT equipment" },
+        { "value": "vehicle", "label": "Vehicle" },
+        { "value": "building", "label": "Building" },
+        { "value": "other", "label": "Other" }
+      ]
+    },
+    { "key": "description", "label": "Description", "type": "longText", "maxLength": 2000 },
+    { "key": "serialNumber", "label": "Serial or registration number", "type": "text", "maxLength": 100, "searchable": true },
+    { "key": "purchasedOn", "label": "Purchased on", "type": "date", "required": true },
+    { "key": "cost", "label": "Purchase cost", "type": "money", "required": true, "min": 0 },
+    { "key": "supplier", "label": "Supplier", "type": "text", "maxLength": 200 },
+    { "key": "invoice", "label": "Invoice", "type": "file", "accept": ["image", "pdf"], "maxSizeMb": 5 },
+    { "key": "location", "label": "Location", "type": "text", "maxLength": 200, "searchable": true },
+    { "key": "custodian", "label": "Custodian", "type": "person", "help": "The person responsible for the asset" },
+    {
+      "key": "condition",
+      "label": "Condition",
+      "type": "choice",
+      "choices": [
+        { "value": "good", "label": "Good" },
+        { "value": "fair", "label": "Fair" },
+        { "value": "poor", "label": "Poor" }
+      ]
+    },
+    { "key": "disposedOn", "label": "Disposed on", "type": "date", "visibleWhen": "status == 'disposed'" },
+    { "key": "disposalNote", "label": "Disposal note", "type": "longText", "visibleWhen": "status == 'disposed'" }
+  ]
+}

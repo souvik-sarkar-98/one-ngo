@@ -17,15 +17,33 @@ export interface MoneyAccount {
   balance: string;
 }
 
+/** A ledger account that a money account may attach to. */
+export interface LedgerAccountRef {
+  id: string;
+  type: string;
+  active: boolean;
+  /** True when a money account already uses this ledger account. */
+  linked: boolean;
+}
+
 export interface NewMoneyAccount {
   key: string;
   name: string;
   kind: MoneyAccountKind;
   ledgerCode: string;
+  /** Set when attaching to an existing ledger account; otherwise a new one is created. */
+  ledgerAccountId?: string;
   holderUserId: string | null;
   custodian: string | null;
   upiId: string | null;
   allowNegative: boolean;
+}
+
+export interface MoneyAccountChange {
+  name?: string;
+  custodian?: string | null;
+  upiId?: string | null;
+  allowNegative?: boolean;
 }
 
 export interface NewTransfer {
@@ -39,8 +57,12 @@ export interface NewTransfer {
 
 /** Money-account persistence. Writes are audited with the change. */
 export interface MoneyAccountStore {
-  /** Adds the account with its own asset ledger account; false when that ledger account already exists. */
+  /** Adds the account, creating its asset ledger account unless `ledgerAccountId` is given; false when a new ledger account's code already exists. */
   open(tx: Tx, actorId: string, account: NewMoneyAccount, audit: unknown): Promise<boolean>;
+  /** The ledger account with this code, if any. */
+  ledgerAccount(tx: Tx, code: string): Promise<LedgerAccountRef | undefined>;
+  /** Changes the given fields of an active account; `null` clears a nullable one. Returns false when the account is missing. */
+  update(tx: Tx, actorId: string, key: string, change: MoneyAccountChange, audit: unknown): Promise<boolean>;
   list(tx: Tx): Promise<MoneyAccount[]>;
   byKey(tx: Tx, key: string): Promise<MoneyAccount | undefined>;
   /** Locks the accounts in a stable order until the transaction ends; returns how many were found. */

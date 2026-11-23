@@ -1,0 +1,6 @@
+{
+  "key": "expenseNotApproved",
+  "label": "Claim not approved",
+  "subject": "Your expense claim {{ record.number }} was not approved",
+  "body": "Your expense claim {{ record.number }} for {{ record.amount }} was not approved.\n\nReason: {{ record.notes }}"
+}

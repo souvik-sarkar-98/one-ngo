@@ -68,6 +68,7 @@ const shown = (value: unknown): string => (value === null || value === undefined
 /** The workbook's sheets as a page, so a person can check an Excel report before it is published. */
 export function renderSheetsHtml(def: ReportDef, model: ReportModel): string {
   const params = Object.values(model.params).map(shown).filter(Boolean).join(' · ');
+  const signed = (model.signatories ?? []).map((signatory) => [signatory.name, signatory.designation].filter(Boolean).join(', ')).filter(Boolean).join(' · ');
   const sheets = sheetsOf(def, model).map((sheet) => {
     const head = sheet.columns.map((c) => `<th>${escape(c.header || c.field)}</th>`).join('');
     const body = sheet.rows
@@ -84,7 +85,7 @@ h1 { font-size: 16px; margin: 0; } .sub { color: #475569; margin: 2px 0 14px; }
 table { border-collapse: collapse; width: 100%; margin-bottom: 16px; }
 th, td { border: 1px solid #e2e8f0; padding: 4px 8px; text-align: left; white-space: nowrap; }
 th { background: #f1f5f9; } .more { color: #475569; }
-</style><h1>${escape(def.label)}</h1><p class="sub">${escape(params)}</p>${sheets.join('')}`;
+</style><h1>${escape(def.label)}</h1><p class="sub">${escape(params)}</p>${signed ? `<p class="sub">${escape(signed)}</p>` : ''}${sheets.join('')}`;
 }
 
 /** An xlsx workbook: a cover sheet, then one sheet per configured dataset. */
@@ -103,6 +104,7 @@ export async function renderWorkbook(def: ReportDef, model: ReportModel): Promis
   cover.addRow([MANAGEMENT_REPORT]).commit();
   cover.addRow([def.label]).commit();
   cover.addRow(['Organisation', model.org.name]).commit();
+  for (const signatory of model.signatories ?? []) cover.addRow(['Signatory', [signatory.name, signatory.designation].filter(Boolean).join(', ')]).commit();
   cover.addRow(['Generated', model.generatedAt]).commit();
   cover.addRow([]).commit();
   cover.addRow(['Parameter', 'Value']).commit();

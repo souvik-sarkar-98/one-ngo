@@ -1,0 +1,39 @@
+{
+  "key": "earning",
+  "label": "Earning",
+  "pluralLabel": "Earnings",
+  "description": "Income other than donations and membership fees, such as interest, sales or service fees. Received earnings post to the books.",
+  "titleField": "title",
+  "numbering": { "sequence": "earning", "format": "ERN/{fy}/{seq:5}", "reset": "fiscal_year" },
+  "fields": [
+    { "key": "title", "label": "Description", "type": "text", "required": true, "maxLength": 200, "searchable": true, "editableWhen": "status == 'expected'" },
+    {
+      "key": "category",
+      "label": "Category",
+      "type": "choice",
+      "required": true,
+      "editableWhen": "status == 'expected'",
+      "choices": [
+        { "value": "interest", "label": "Interest" },
+        { "value": "sales", "label": "Sales" },
+        { "value": "fees", "label": "Service fees" },
+        { "value": "other", "label": "Other" }
+      ]
+    },
+    { "key": "source", "label": "Received from", "type": "text", "maxLength": 200, "searchable": true, "help": "Who paid, for example the bank or the buyer", "editableWhen": "status == 'expected'" },
+    { "key": "amount", "label": "Amount", "type": "money", "required": true, "min": 1, "editableWhen": "status == 'expected'" },
+    { "key": "expectedOn", "label": "Expected on", "type": "date", "editableWhen": "status == 'expected'" },
+    { "key": "receivedOn", "label": "Received on", "type": "date", "visibleWhen": "status == 'received'" },
+    {
+      "key": "receivedIn",
+      "label": "Received in",
+      "type": "choice",
+      "visibleWhen": "status == 'received'",
+      "choices": [
+        { "value": "BANK", "label": "Bank account" },
+        { "value": "CASH", "label": "Cash in hand" }
+      ]
+    },
+    { "key": "notes", "label": "Notes", "type": "longText" }
+  ]
+}

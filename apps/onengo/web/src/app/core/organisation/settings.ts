@@ -165,6 +165,7 @@ const SETUP_DESTINATIONS: Record<SetupItem['key'], string> = {
   receiptSeries: '/builder?section=money&kind=receiptRule',
   operationalRole: '/admin/roles',
   email: '/admin/connectors',
+  fileStore: '/admin/organisation/settings',
   payments: '/admin/connectors',
 };
 
@@ -179,7 +180,7 @@ export function setupRows(items: SetupItem[]): SetupRow[] {
     label: t(`ui.admin.organisation.setup.${i.key}`),
     hint:
       i.key === 'email'
-        ? t(`ui.admin.organisation.setup.emailHint.${i.detail === 'organisation' || i.detail === 'installation' ? i.detail : 'none'}`)
+        ? t(`ui.admin.organisation.setup.emailHint.${i.detail === 'organisation' ? 'organisation' : 'none'}`)
         : t(`ui.admin.organisation.setup.${i.key}Hint`),
     done: i.done,
     required: i.required,

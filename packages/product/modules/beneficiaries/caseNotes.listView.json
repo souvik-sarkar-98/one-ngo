@@ -1,0 +1,18 @@
+{
+  "key": "caseNotes",
+  "recordType": "caseNote",
+  "label": "Case notes",
+  "pageSize": 20,
+  "layout": "table",
+  "columns": ["subject", "beneficiary", "noteDate", "followUpOn"],
+  "compactColumns": ["subject", "followUpOn"],
+  "filters": ["noteDate", "followUpOn"],
+  "row": { "title": "subject", "subtitle": ["beneficiary"], "meta": "followUpOn" },
+  "detail": {
+    "sections": [
+      { "id": "note", "label": "Note", "fields": ["subject", "beneficiary", "noteDate", "followUpOn", "note"] }
+    ]
+  },
+  "create": { "fields": ["subject", "beneficiary", "noteDate", "followUpOn", "note"] },
+  "edit": { "fields": ["subject", "followUpOn", "note"] }
+}

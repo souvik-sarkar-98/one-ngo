@@ -1,0 +1,18 @@
+{
+  "key": "eventAttendees",
+  "recordType": "eventAttendee",
+  "label": "Attendees",
+  "pageSize": 20,
+  "layout": "table",
+  "columns": ["number", "name", "event", "email", "phone", "attended"],
+  "compactColumns": ["name", "attended"],
+  "filters": ["attended", "event"],
+  "row": { "title": "name", "subtitle": ["event"], "meta": "attended" },
+  "detail": {
+    "sections": [
+      { "id": "attendee", "label": "Attendee", "fields": ["number", "name", "event", "email", "phone", "attended"] }
+    ]
+  },
+  "create": { "fields": ["name", "event", "email", "phone", "attended"] },
+  "edit": { "fields": ["name", "event", "email", "phone", "attended"] }
+}

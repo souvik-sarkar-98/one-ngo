@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { iconLabel } from '@onengo/platform/icons';
-import { Icon, PageFrame } from '@onengo/web-kit';
+import { Btn, Icon, PageFrame } from '@onengo/web-kit';
 import { t } from '../../core/i18n/i18n';
 import { dropIndex, keyMove } from '../../core/ui-logic/reorder';
 import { TranslatePipe } from '../../services/i18n';
@@ -10,18 +10,30 @@ import { LayoutStore } from './layout-store';
 /** The navigation order, each destination's icon, and how wide-screen lists open. */
 @Component({
   selector: 'app-admin-layout',
-  imports: [ScreenHeading, TranslatePipe, PageFrame, Icon],
+  imports: [Btn, ScreenHeading, TranslatePipe, PageFrame, Icon],
   providers: [LayoutStore],
   styleUrl: '../admin.css',
   styles: `
     .layout { display: grid; gap: 16px; }
     .layout__cards { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
-    .layout__card {
-      display: flex;
+    :host .card.layout__card {
+      flex-direction: row;
       flex-wrap: wrap;
       align-items: center;
       gap: 8px;
       margin: 0;
+    }
+    .layout__lists {
+      width: 100%;
+      min-width: 0;
+      margin: 0;
+      box-sizing: border-box;
+    }
+    .layout__lists label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
     }
     .layout__card--dragging { opacity: 0.55; }
     .layout__card--drop-before { box-shadow: inset 0 3px 0 var(--brand); }
@@ -113,7 +125,7 @@ import { LayoutStore } from './layout-store';
       @let d = store.draft();
       <div class="layout">
         <div class="card">
-          <fieldset>
+          <fieldset class="layout__lists">
             <legend>{{ 'ui.admin.layout.listLayout' | t }}</legend>
             <label><input type="radio" name="list-layout" [checked]="d.listLayout === 'cards'" (change)="store.listLayout('cards')" /> {{ 'ui.admin.layout.cards' | t }}</label>
             <label><input type="radio" name="list-layout" [checked]="d.listLayout === 'table'" (change)="store.listLayout('table')" /> {{ 'ui.admin.layout.table' | t }}</label>
@@ -183,7 +195,7 @@ import { LayoutStore } from './layout-store';
                 </div>
                 <span class="layout__name">{{ store.label(key) }}</span>
                 @if (store.removable(key) && store.canPublish()) {
-                  <button type="button" [attr.aria-label]="('ui.common.remove' | t) + ': ' + store.label(key)" (click)="store.remove(key)">{{ 'ui.common.remove' | t }}</button>
+                  <button appBtn type="button" [attr.aria-label]="('ui.common.remove' | t) + ': ' + store.label(key)" (click)="store.remove(key)">{{ 'ui.common.remove' | t }}</button>
                 }
               </li>
             }
@@ -203,8 +215,8 @@ import { LayoutStore } from './layout-store';
           <p class="muted layout__note">{{ 'ui.admin.layout.phoneNote' | t }}</p>
         </section>
         <div class="admin__line">
-          <button type="button" [disabled]="!store.canPublish()" (click)="store.discard()">{{ 'ui.admin.layout.discard' | t }}</button>
-          <button type="button" class="primary" [disabled]="!store.canPublish()" (click)="store.publish()">{{ 'ui.admin.layout.publish' | t }}</button>
+          <button appBtn type="button" [disabled]="!store.canPublish()" (click)="store.discard()">{{ 'ui.admin.layout.discard' | t }}</button>
+          <button appBtn="primary" type="button" [disabled]="!store.canPublish()" (click)="store.publish()">{{ 'ui.admin.layout.publish' | t }}</button>
         </div>
       </div>
     </app-page-frame>

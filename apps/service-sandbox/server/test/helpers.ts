@@ -3,7 +3,6 @@ import { request } from 'node:https';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
-import { fixtureUrl, INTEGRATION_FIXTURE_ORIGIN } from '../../../onengo/server/src/fixture-hosts.js';
 import { startFixture, type Fixture, type FixtureOptions } from '../src/server.js';
 
 export interface Answer {
@@ -34,15 +33,14 @@ export function call(fixture: Fixture, path: string, init: { method?: string; he
 }
 
 /**
- * A `fetch` that trusts the fixture's CA and applies one-ngo's own host rewrite, then moves the fixed fixture
- * origin to this test fixture's port. Lets the product's clients, which name the real hosts, talk to a test fixture.
+ * A `fetch` that trusts this fixture's CA and only calls this fixture.
+ * Callers pass the fixture origin as the client's base. This does not rewrite other hosts.
  */
-export function fixtureFetch(fixture: Fixture): typeof fetch {
+export function trustedFetch(fixture: Fixture): typeof fetch {
   return (async (input: string | URL | Request, init: RequestInit = {}) => {
     const original = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-    const rewritten = new URL(fixtureUrl(original));
-    if (rewritten.origin !== INTEGRATION_FIXTURE_ORIGIN) throw new Error(`one-ngo would not send ${original} to the fixture.`);
-    const target = new URL(`${rewritten.pathname}${rewritten.search}`, fixture.origin);
+    const target = new URL(original);
+    if (target.origin !== fixture.origin) throw new Error(`Refusing to call ${original}; this fixture is ${fixture.origin}.`);
     const headers = Object.fromEntries(new Headers(init.headers).entries());
     const body = init.body;
     return new Promise<Response>((resolve, reject) => {
@@ -64,7 +62,7 @@ export function fixtureFetch(fixture: Fixture): typeof fetch {
 /** A fixture on free ports with its data in a temporary folder. */
 export async function tempFixture(options: FixtureOptions = {}): Promise<{ fixture: Fixture; dataDir: string; cleanup(): Promise<void> }> {
   const dataDir = options.dataDir ?? (await mkdtemp(join(tmpdir(), 'service-sandbox-')));
-  const fixture = await startFixture({ httpsPort: 0, smtpPort: 0, ...options, dataDir });
+  const fixture = await startFixture({ httpsPort: 0, ...options, dataDir });
   return {
     fixture,
     dataDir,

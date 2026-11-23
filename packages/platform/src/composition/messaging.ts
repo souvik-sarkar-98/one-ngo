@@ -3,29 +3,22 @@ import { OAuthCredentials } from '../application/connectors/oauth-credentials.js
 import { NotificationService } from '../application/notifications/notification-service.js';
 import { fetchConnectorHttp } from '../infrastructure/connectors/http.js';
 import { connectorSecretBox } from '../infrastructure/crypto/connector-secrets.js';
-import { decryptSecret } from '@onengo/kernel/crypto';
-import { SmtpTransport } from '@onengo/kernel/notify';
 import type { EmailTransport } from '@onengo/kernel/ports';
 import { MAX_ATTEMPTS } from '../infrastructure/outbox/outbox-dispatcher.js';
 import { PgConnectorStore } from '../infrastructure/postgres/stores/connector-store.js';
 import { pgConnectorOauthState } from '../infrastructure/postgres/stores/owner/connector-oauth-state.js';
-import { enabledSmtpConnector } from '../infrastructure/postgres/stores/delivery-settings.js';
 import { PgNotificationStore } from '../infrastructure/postgres/stores/notification-store.js';
 import type { Definitions } from './definitions.js';
 import type { Base, Cryptography } from './infrastructure.js';
 
-/** Connectors and notifications: email through the organisation's http email sender, its SMTP connector or the installation's, SMS, WhatsApp and webhooks. */
+/** Connectors and notifications: email only through the organisation's email connector, plus SMS, WhatsApp and webhooks. There is no SMTP fallback. */
 export function wireMessaging(base: Base, { definitions }: Definitions, { secretKeys, sensitive }: Cryptography) {
   const { db, tm, owner, logger, options } = base;
   const connectorStore = new PgConnectorStore();
   const transportFor = async (tenantId: string): Promise<EmailTransport | undefined> => {
     const sender = await connectors.emailTransport(tenantId);
     if (sender) return sender;
-    const smtp = await enabledSmtpConnector(db, tenantId);
-    if (smtp?.secret_enc) {
-      const config = smtp.config as unknown as { host: string; port: number; secure: boolean; user: string; from: string };
-      return new SmtpTransport({ ...config, password: decryptSecret(smtp.secret_enc, secretKeys) });
-    }
+    // Tests inject a capture transport. The OneNGO servers do not, so a missing email connector sends nothing.
     return options.defaultEmailTransport;
   };
   const secretBox = connectorSecretBox(secretKeys);

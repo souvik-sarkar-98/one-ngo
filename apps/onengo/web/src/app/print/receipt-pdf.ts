@@ -62,10 +62,10 @@ export function jpegPdf(jpeg: Uint8Array, pixelWidth: number, pixelHeight: numbe
 }
 
 /** Draws the receipt the way the print page shows it, then the caller saves it as a PDF. */
-export function drawReceipt(page: ReceiptPage, logo: HTMLImageElement | null, signature: HTMLImageElement | null = null): HTMLCanvasElement {
+export function drawReceipt(page: ReceiptPage, logo: HTMLImageElement | null, signatures: (HTMLImageElement | null)[] | HTMLImageElement | null = null): HTMLCanvasElement {
   const probe = document.createElement('canvas').getContext('2d');
   if (!probe) throw new Error('Canvas is not available.');
-  const painted = layout(page, logo, signature, probe);
+  const painted = layout(page, logo, Array.isArray(signatures) ? signatures : signatures ? [signatures] : [], probe);
   const canvas = document.createElement('canvas');
   canvas.width = WIDTH * SCALE;
   canvas.height = painted.height * SCALE;
@@ -97,7 +97,7 @@ export function savePdf(bytes: Uint8Array, name: string): void {
   URL.revokeObjectURL(url);
 }
 
-function layout(page: ReceiptPage, logo: HTMLImageElement | null, signature: HTMLImageElement | null, probe: CanvasRenderingContext2D): { height: number; paint: Paint[] } {
+function layout(page: ReceiptPage, logo: HTMLImageElement | null, signatures: (HTMLImageElement | null)[], probe: CanvasRenderingContext2D): { height: number; paint: Paint[] } {
   const paint: Paint[] = [];
   let y = PAD;
   const inner = WIDTH - PAD * 2;
@@ -171,29 +171,41 @@ function layout(page: ReceiptPage, logo: HTMLImageElement | null, signature: HTM
   }
   y += 16;
   y += queueText(paint, probe, page.thanks, { x: PAD, y, width: inner, size: 14, weight: 400, color: MUTED, align: 'center' });
-  y += signature ? 28 : 48;
-  const signW = 200;
-  const signX = WIDTH - PAD - signW;
-  if (signature) {
-    const fitted = fitImage(signature, signW, 72);
-    const imageX = signX + (signW - fitted.width) / 2;
-    const imageY = y;
-    paint.push((ctx) => ctx.drawImage(signature, imageX, imageY, fitted.width, fitted.height));
-    y += fitted.height + 8;
+  const signed = page.signatories?.length ? page.signatories : page.signatory ? [page.signatory] : [];
+  y += signed.length ? 28 : 16;
+  if (signed.length) {
+    const gap = 16;
+    const signW = Math.min(200, Math.floor((inner - gap * (signed.length - 1)) / signed.length));
+    const rowTop = y;
+    let rowBottom = y;
+    signed.forEach((signatory, index) => {
+      const signX = WIDTH - PAD - signW * (signed.length - index) - gap * (signed.length - index - 1);
+      let by = rowTop;
+      const signature = signatures[index];
+      if (signature) {
+        const fitted = fitImage(signature, signW, 72);
+        const imageX = signX + (signW - fitted.width) / 2;
+        const imageY = by;
+        paint.push((ctx) => ctx.drawImage(signature, imageX, imageY, fitted.width, fitted.height));
+        by += fitted.height + 8;
+      }
+      const lineY = by;
+      paint.push((ctx) => {
+        ctx.strokeStyle = LINE;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(signX, lineY);
+        ctx.lineTo(signX + signW, lineY);
+        ctx.stroke();
+      });
+      by += 8;
+      if (signatory.name) by += queueText(paint, probe, signatory.name, { x: signX, y: by, width: signW, size: 14, weight: 600, color: INK, align: 'center' });
+      if (signatory.designation) by += queueText(paint, probe, signatory.designation, { x: signX, y: by, width: signW, size: 13, weight: 400, color: MUTED, align: 'center' });
+      by += queueText(paint, probe, t('ui.print.signatory'), { x: signX, y: by, width: signW, size: 14, weight: 400, color: INK, align: 'center' });
+      rowBottom = Math.max(rowBottom, by);
+    });
+    y = rowBottom;
   }
-  const lineY = y;
-  paint.push((ctx) => {
-    ctx.strokeStyle = LINE;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(signX, lineY);
-    ctx.lineTo(signX + signW, lineY);
-    ctx.stroke();
-  });
-  y += 8;
-  if (page.signatory?.name) y += queueText(paint, probe, page.signatory.name, { x: signX, y, width: signW, size: 14, weight: 600, color: INK, align: 'center' });
-  if (page.signatory?.designation) y += queueText(paint, probe, page.signatory.designation, { x: signX, y, width: signW, size: 13, weight: 400, color: MUTED, align: 'center' });
-  y += queueText(paint, probe, t('ui.print.signatory'), { x: signX, y, width: signW, size: 14, weight: 400, color: INK, align: 'center' });
   const height = y + PAD;
   paint.push((ctx) => {
     ctx.strokeStyle = LINE;

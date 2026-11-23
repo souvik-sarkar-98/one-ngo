@@ -1,8 +1,10 @@
 import { PublishedPaymentTerms } from '../application/payments/payment-terms.js';
+import { BankReconciliationService } from '../domain/accounts/bank-reconciliation-service.js';
 import { MoneyAccountService } from '../domain/accounts/money-account-service.js';
 import { PaymentService } from '../domain/payments/payment-service.js';
 import { paymentSecrets } from '../infrastructure/crypto/payment-secrets.js';
 import { CashfreeProvider, RazorpayProvider } from '../infrastructure/payments/providers.js';
+import { pgBankReconciliationStore } from '../infrastructure/postgres/stores/bank-reconciliation-store.js';
 import { pgMoneyAccountStore } from '../infrastructure/postgres/stores/money-account-store.js';
 import { pgPaymentStore } from '../infrastructure/postgres/stores/payment-store.js';
 import type { Definitions } from './definitions.js';
@@ -14,6 +16,7 @@ export function wirePayments(base: Base, { definitions }: Definitions, { secretK
   const { tm, owner, options } = base;
   return {
     moneyAccounts: new MoneyAccountService(tm, pgMoneyAccountStore, ledger),
+    bankReconciliation: new BankReconciliationService(tm, pgBankReconciliationStore, pgMoneyAccountStore, ledger),
     payments: new PaymentService(tm, pgPaymentStore, owner.tenants, records, new PublishedPaymentTerms(definitions), paymentSecrets(secretKeys), options.paymentProviders ?? [new RazorpayProvider(), new CashfreeProvider()]),
   };
 }

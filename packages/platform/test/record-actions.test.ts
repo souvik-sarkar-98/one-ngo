@@ -39,7 +39,7 @@ beforeAll(async () => {
   );
   personId = u!.id;
   await w.platform.db.asSystem((tx) => tx.query(`insert into tenant_member (tenant_id, user_id) values ($1, $2)`, [w.ngoA, personId]));
-  await w.platform.moneyAccounts.open(w.as(w.ngoA), { key: 'upi', name: 'SBI current', kind: 'bank', upiId: 'asha.trust@sbi' });
+  await w.platform.moneyAccounts.update(w.as(w.ngoA), 'upi', { upiId: 'asha.trust@sbi' });
   await w.platform.connectors.save(w.as(w.ngoA), 'crm', { kind: 'webhook', config: { url: 'https://crm.test/hooks' }, enabled: false });
   w.platform.dispatcher.on('connector.webhook', 'test', async (e) => {
     webhookCalls.push(e.payload);

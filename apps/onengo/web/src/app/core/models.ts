@@ -219,6 +219,8 @@ export interface ThemeTokens {
 export interface RuntimeRecordGroup {
   key: string;
   label: string;
+  /** False when the group is kept off Home. */
+  onHome?: boolean;
   recordTypes: string[];
 }
 
@@ -307,6 +309,8 @@ export interface Me {
     publish: boolean;
     scripts: boolean;
     money: boolean;
+    /** `money:accounts:manage`: open money accounts. */
+    moneyManage?: boolean;
     /** `people:read`: the read-only directory. */
     peopleDirectory?: boolean;
     /** `members:manage`. */
@@ -321,6 +325,8 @@ export interface Me {
     migration?: boolean;
     /** `data:migrate:books`: the opening journal and receipt numbers of a migration. */
     migrationBooks?: boolean;
+    /** dmin:records: delete records and restore them from the recycle bin. */
+    recordBin?: boolean;
   };
   locale?: string;
 }
@@ -394,7 +400,9 @@ export interface ReceiptIssuer {
   registrations: { type: string; number: string; issuingAuthority: string | null }[];
   logoUrl: string | null;
   signatory?: { name: string | null; designation: string | null; file?: { fileId: string; version: number } | null } | null;
+  signatories?: { name: string | null; designation: string | null; file?: { fileId: string; version: number } | null }[];
   signatoryImageUrl?: string | null;
+  signatoryImageUrls?: (string | null)[];
 }
 
 export interface PendingApproval {
@@ -487,6 +495,8 @@ export interface CatalogueItem {
   draftVersion: number | null;
   owner: 'base' | 'tenant';
   moduleKey: string | null;
+  /** A module definition the organisation turned off. It is not published, and can be turned on again. */
+  disabled?: boolean;
 }
 
 export interface BuilderDetail {
@@ -495,7 +505,7 @@ export interface BuilderDetail {
   published: { version: number; owner: 'base' | 'tenant'; baseVersion: number | null; body: Record<string, unknown> } | null;
   draft: { version: number; body: Record<string, unknown> } | null;
   history: { version: number; status: string; base_version: number | null; published_at: string | null }[];
-  shipped: { baseVersion: number; base: Record<string, unknown>; patch: unknown } | null;
+  shipped: { baseVersion: number; base: Record<string, unknown>; patch: unknown; disabled?: boolean; moduleKey?: string | null } | null;
 }
 
 export interface Issue {

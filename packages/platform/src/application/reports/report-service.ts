@@ -1,4 +1,5 @@
 import { Readable } from 'node:stream';
+import type { OrganisationAdminStore } from '../organisations/ports/organisation-admin-store.js';
 import type { TenantContext } from '../../domain/ports/tenant-context.js';
 import { forbidden, notFound, validationFailed, type FieldIssue } from '@onengo/kernel/errors';
 import { ScriptFailure } from '../../domain/script-failure.js';
@@ -17,7 +18,7 @@ import type { RecordService } from '../../runtime/records/record-service.js';
 import type { ScriptSandbox } from '../../runtime/scripts/sandbox.js';
 import type { FileService } from '../files/file-service.js';
 import { renderSheetsHtml, renderWorkbook } from './excel.js';
-import { MANAGEMENT_REPORT, type ReportDatasetView, type ReportModel, type ReportProviders } from './model.js';
+import { MANAGEMENT_REPORT, type ReportDatasetView, type ReportModel, type ReportProviders, type ReportSignatory } from './model.js';
 
 export const REPORT_INLINE_ROWS = 5_000;
 export const REPORT_SHAPE_BYTES = 2 * 1024 * 1024;
@@ -26,6 +27,7 @@ const PAGE = 1_000;
 /** The kept JSON: the rows, and for a PDF the document template. */
 const MODEL_MAX = 8_000_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);
 
 export interface ReportSummary {
   key: string;
@@ -202,6 +204,7 @@ export class ReportService {
     private readonly organisationName: OrganisationName,
     private readonly providers: ReportProviders,
     private readonly published?: PublishedReportStore,
+    private readonly signatorySource?: Pick<OrganisationAdminStore, 'assigned' | 'signatoryFile'>,
     private readonly inlineRows = REPORT_INLINE_ROWS,
   ) {
     jobs.register<ReportInput, Record<string, unknown>>('report', {
@@ -209,7 +212,7 @@ export class ReportService {
       requires: (input) => `report:${input.key}:run`,
       run: async (job) => {
         const def = await this.definition(job.ctx, job.input.key);
-        const model = await this.model(job.ctx, def, job.input.params, true);
+        const model = await this.model(job.ctx, job.input.key, def, job.input.params, true);
         const bytes = await renderWorkbook(def, model);
         const file = await this.files.upload(job.ctx, {
           body: Readable.from([bytes]),
@@ -244,7 +247,8 @@ export class ReportService {
   /** One published file and its page, rebuilt from the JSON kept for it. */
   async getPublished(ctx: TenantContext, id: string): Promise<PublishedReport & { html: string }> {
     const row = await this.kept(ctx, id);
-    return { ...publishedOf(row), html: this.pageFrom(row.model) };
+    const html = this.pageFrom(row.model);
+    return { ...publishedOf(row), html: row.model.document ? await this.withSignatories(ctx, html, row.model.model.signatories ?? []) : html };
   }
 
   /** The Excel file, built from the JSON kept for a report published as Excel. */
@@ -262,14 +266,15 @@ export class ReportService {
     const def = await this.definition(ctx, key);
     const params = parametersOf(def, body.params);
     const format = formatOf(def);
-    const model = await this.model(ctx, def, params, false);
+    const model = await this.model(ctx, key, def, params, false);
     const snapshot = await this.snapshot(ctx, def, model);
     if (Buffer.byteLength(JSON.stringify(snapshot)) > MODEL_MAX) throw validationFailed('This report is too large to publish.');
     if (!this.pageFrom(snapshot)) throw validationFailed('This report has no page to publish.');
     const title = titleOf(def, params, body.title);
+    const signatoryFiles = model.signatories.flatMap((signatory, position) => (signatory.fileId ? [{ fileId: signatory.fileId, position }] : []));
     const saved = await this.tm.withTenant(ctx.tenantId, async (tx) => {
       await this.audit.audit(tx, { actorId: ctx.actor.id, action: 'reports.publish', entity: `report:${key}`, after: { title, params, format } });
-      return this.published!.insert(tx, { reportKey: key, title, params, format, model: snapshot, createdBy: ctx.actor.id });
+      return this.published!.insert(tx, { reportKey: key, title, params, format, model: snapshot, createdBy: ctx.actor.id, signatoryFiles });
     });
     return { id: saved.id, title, format };
   }
@@ -282,10 +287,12 @@ export class ReportService {
   ): Promise<{ model: ReportModel; html: string; format: PublishedFormat; shape: 'none' | 'provider' | 'job' }> {
     const def = await this.definition(ctx, key);
     const params = parametersOf(def, raw);
-    const model = await this.model(ctx, def, params, false);
+    const model = await this.model(ctx, key, def, params, false);
     await this.audited(ctx, key, params, model, 'preview');
     const shape = def.shape && 'script' in def.shape ? 'job' : def.shape && 'provider' in def.shape ? 'provider' : 'none';
-    return { model, html: await this.page(ctx, def, model), format: formatOf(def), shape };
+    const format = formatOf(def);
+    const page = await this.page(ctx, def, model);
+    return { model, html: format === 'pdf' ? await this.withSignatories(ctx, page, model.signatories) : page, format, shape };
   }
 
   /** The workbook, or the job that writes it when the report is too large or has a shape script. */
@@ -301,7 +308,7 @@ export class ReportService {
       const job = await this.jobs.create(ctx, 'report', { key, params }, total);
       return { jobId: job.id };
     }
-    const model = await this.model(ctx, def, params, false);
+    const model = await this.model(ctx, key, def, params, false);
     const bytes = await renderWorkbook(def, model);
     return { fileName: `${def.label}.xlsx`, bytes };
   }
@@ -405,7 +412,7 @@ export class ReportService {
     );
   }
 
-  private async model(ctx: TenantContext, def: ReportDef, params: Record<string, unknown>, shape: boolean): Promise<ReportModel> {
+  private async model(ctx: TenantContext, key: string, def: ReportDef, params: Record<string, unknown>, shape: boolean): Promise<ReportModel> {
     const scope: Record<string, unknown> = { params };
     const datasets: Record<string, ReportDatasetView> = {};
     for (const dataset of def.datasets) datasets[dataset.key] = await this.dataset(ctx, dataset, scope, shape);
@@ -422,13 +429,54 @@ export class ReportService {
       generatedAt: new Date().toISOString(),
       label: MANAGEMENT_REPORT,
       title: def.label,
+      signatories: await this.reportSignatories(ctx, key),
     };
     if (def.shape && 'script' in def.shape && def.shape.script) {
       if (!shape) return model;
-      return this.applyScript(ctx, def, model);
+      const shaped = await this.applyScript(ctx, def, model);
+      return { ...shaped, signatories: shaped.signatories ?? model.signatories };
     }
-    if (def.shape && 'provider' in def.shape && def.shape.provider) return this.applyProvider(def, model);
+    if (def.shape && 'provider' in def.shape && def.shape.provider) {
+      const shaped = await this.applyProvider(def, model);
+      return { ...shaped, signatories: shaped.signatories ?? model.signatories };
+    }
     return model;
+  }
+
+  /** The signatories chosen for this report type; a report with none prints no signature. */
+  private async reportSignatories(ctx: TenantContext, key: string): Promise<ReportSignatory[]> {
+    if (!this.signatorySource) return [];
+    const rows = await this.tm.withTenant(ctx.tenantId, (tx) => this.signatorySource!.assigned(tx, `report:${key}`));
+    return rows.map((row) => ({ name: row.name, designation: row.designation, fileId: row.file_id }));
+  }
+
+  /** Appends the report's signatories after the document, with each image inlined so a sandboxed page can show it. */
+  private async withSignatories(ctx: TenantContext, html: string, signatories: ReportSignatory[]): Promise<string> {
+    if (!signatories.length) return html;
+    const blocks = await Promise.all(signatories.map((signatory) => this.signatoryBlock(ctx, signatory)));
+    const cells = blocks
+      .map((block) => {
+        const image = block.image ? `<img src="${block.image}" alt="" style="display:block;max-width:180px;max-height:72px;margin:0 auto 8px;">` : '';
+        const name = block.name ? `<div style="font-weight:600;">${escapeHtml(block.name)}</div>` : '';
+        const designation = block.designation ? `<div style="color:#475569;">${escapeHtml(block.designation)}</div>` : '';
+        return `<td style="width:${Math.floor(100 / blocks.length)}%;vertical-align:bottom;text-align:center;padding:0 8px;">${image}${name}${designation}<div>Authorised signatory</div></td>`;
+      })
+      .join('');
+    return `${html}<table style="width:100%;margin-top:28px;border-collapse:collapse;font-family:Georgia,'Times New Roman',serif;font-size:13px;color:#0f172a;"><tr>${cells}</tr></table>`;
+  }
+
+  private async signatoryBlock(ctx: TenantContext, signatory: ReportSignatory): Promise<{ name: string; designation: string; image: string | null }> {
+    const image = signatory.fileId ? await this.signatoryImage(ctx, signatory.fileId) : null;
+    return { name: signatory.name, designation: signatory.designation, image };
+  }
+
+  private async signatoryImage(ctx: TenantContext, fileId: string): Promise<string | null> {
+    if (!this.signatorySource) return null;
+    const row = await this.tm.withTenant(ctx.tenantId, (tx) => this.signatorySource!.signatoryFile(tx, fileId));
+    if (!row || row.mime !== 'image/png') return null;
+    const chunks: Buffer[] = [];
+    for await (const chunk of await this.files.read(ctx.tenantId, row)) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    return `data:image/png;base64,${Buffer.concat(chunks).toString('base64')}`;
   }
 
   private async applyProvider(def: ReportDef, model: ReportModel): Promise<ReportModel> {

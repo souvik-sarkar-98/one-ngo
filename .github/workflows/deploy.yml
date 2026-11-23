@@ -1,0 +1,118 @@
+name: Deploy
+
+# Runs once code is merged. Nothing here runs on a pull request.
+#
+#   develop -> test gate -> tag 1.2.0-develop.N -> Cloud Run (stage)
+#   main    -> test gate -> tag 1.2.0           -> App Engine (production)
+#
+# The gate is ci.yml, run again on the merged commit. Production then waits for
+# a reviewer on the "prod" environment before it touches Google Cloud.
+#
+# Browser tests are not part of this pipeline. Run them on demand from the
+# "Browser tests" workflow (e2e.yml).
+#
+# A manual run deploys whichever of the two branches you choose in
+# "Use workflow from".
+
+on:
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Test gate
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+
+  # Creates the release tag for the merged commit, after the gate passes.
+  # The version comes from "version" in the root package.json:
+  #   develop -> <version>-develop.<n>   for example 1.2.0-develop.3
+  #   main    -> <version>               for example 1.2.0
+  # Bump package.json when you start the next release. A re-run on a commit
+  # that already has its tag reuses it. The deploy below runs from this tag.
+  tag:
+    name: Create release tag
+    needs: ci
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: tag
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          git fetch --tags --force --quiet
+          base="$(node -p "require('./package.json').version")"
+          if ! [[ "$base" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::package.json version '$base' must look like 1.2.0."
+            exit 1
+          fi
+          released() { git rev-parse -q --verify "refs/tags/$base" >/dev/null; }
+
+          if [ "$BRANCH" = main ]; then
+            tag="$base"
+            if released && [ -z "$(git tag --points-at HEAD --list "$tag")" ]; then
+              echo "::error::Release $base is already tagged on another commit. Raise the version in package.json before merging to main."
+              exit 1
+            fi
+          else
+            if released; then
+              echo "::error::$base is already released. Raise the version in package.json before merging to develop."
+              exit 1
+            fi
+            tag="$(git tag --points-at HEAD --list "$base-develop.*" | sort -V | tail -n 1)"
+            if [ -z "$tag" ]; then
+              last="$(git tag --list "$base-develop.*" | sed 's/.*\.//' | sort -n | tail -n 1)"
+              tag="$base-develop.$(( ${last:-0} + 1 ))"
+            fi
+          fi
+
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "Tag $tag already points at this commit; reusing it."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$tag" -m "Release $tag" "$GITHUB_SHA"
+            git push origin "refs/tags/$tag"
+          fi
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+          echo "### Release tag: \`$tag\`" >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-stage:
+    name: Stage (Cloud Run)
+    needs: tag
+    if: github.ref == 'refs/heads/develop'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy-cloudrun.yml
+    with:
+      version: ${{ needs.tag.outputs.version }}
+
+  deploy-prod:
+    name: Production (App Engine)
+    needs: tag
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy-gcp.yml
+    with:
+      version: ${{ needs.tag.outputs.version }}

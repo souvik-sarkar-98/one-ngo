@@ -13,11 +13,10 @@ export {
   createLogger,
   databaseFailureFields,
   encryptionKeysFromEnvironment,
-  fileStoreFromEnvironment,
   installationOidcFromEnvironment,
   openServerDatabase,
   paymentProvidersFromEnvironment,
-  smtpFromEnvironment,
+  pwnedPasswordsApiBaseFromEnvironment,
   watchMemory,
   type Database,
 } from '../composition/entry.js';

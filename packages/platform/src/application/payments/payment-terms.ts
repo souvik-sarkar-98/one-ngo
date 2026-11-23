@@ -28,6 +28,30 @@ export class PublishedPaymentTerms implements PaymentTerms {
     return actions.filter((a) => a.steps.some((s) => s.type === 'createPayment' && asks(s, ask))).map(actionPermission);
   }
 
+  async actionAmounts(tenantId: string, record: PayableRecord, ask: PaymentAsk, user: { id: string; roles: string[] }): Promise<unknown[]> {
+    const steps = (await this.defs.list(tenantId, 'action'))
+      .map((a) => a.body)
+      .filter((a) => a.recordType === record.type)
+      .flatMap((a) => a.steps.filter((s): s is PaymentStep => s.type === 'createPayment' && asks(s, ask)));
+    const scope = {
+      record: { ...record.data, id: record.id, number: record.number },
+      previous: {},
+      status: record.status,
+      previousStatus: null,
+      workflow: record.workflow,
+      states: { ...record.states, ...(record.workflow ? { [record.workflow]: record.status } : {}) },
+      user,
+    };
+    return steps.map((s) => {
+      if (/\binput\b/.test(s.amount)) return null;
+      try {
+        return evalValue(s.amount, scope, 'payment amount');
+      } catch {
+        return null;
+      }
+    });
+  }
+
   async receiptAmounts(tenantId: string, record: PayableRecord, onPaid: OnPaid, facts: Record<string, unknown>): Promise<unknown[]> {
     const workflows = (await this.defs.workflowsFor(tenantId, record.type)).map((w) => w.body);
     const wf = workflows.find((w) => w.transitions.some((t) => t.key === onPaid.transition));

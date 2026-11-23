@@ -13,6 +13,7 @@ import { PermissionField } from '../../../ui/permission-field';
 import type { TableColumn } from '../../../ui/table-rows';
 import { FieldPills, type FieldDrop, type FieldOption } from './field-pills';
 import { ListViewEditorStore } from './list-view-store';
+import { Btn } from '@onengo/web-kit';
 
 type Edit = (b: ListViewDef) => ListViewDef;
 type RowPart = 'title' | 'meta' | 'badge';
@@ -34,7 +35,7 @@ const SHOWS_LABEL: Record<ops.ChipShows, string> = {
  */
 @Component({
   selector: 'app-list-view-editor',
-  imports: [NgTemplateOutlet, TranslatePipe, ChipFilterBar, EditableTable, MobileFormSheet, LivePreview, PermissionField, FieldPills],
+  imports: [Btn, NgTemplateOutlet, TranslatePipe, ChipFilterBar, EditableTable, MobileFormSheet, LivePreview, PermissionField, FieldPills],
   providers: [ListViewEditorStore],
   styleUrl: './list-view.css',
   template: `
@@ -95,7 +96,7 @@ const SHOWS_LABEL: Record<ops.ChipShows, string> = {
                         <div class="lv-condition">
                           <div class="lv-condition__head">
                             <span>{{ fieldDef(entry.field)?.label ?? entry.field }}</span>
-                            <button type="button" class="small" (click)="edit(ops.removeChipCondition, i, entry.field)">{{ 'ui.common.remove' | t }}</button>
+                            <button appBtn size="sm" type="button" (click)="edit(ops.removeChipCondition, i, entry.field)">{{ 'ui.common.remove' | t }}</button>
                           </div>
                         @if (fieldDef(entry.field); as f) {
                             @if (ops.conditionKind(f) === 'choice') {
@@ -290,7 +291,7 @@ const SHOWS_LABEL: Record<ops.ChipShows, string> = {
               <h3 class="lv-title">{{ 'ui.builder.schema.prop.create' | t }}</h3>
               <div class="lv-summary">
                 <span>{{ createText() }}</span>
-                <button type="button" class="small" (click)="store.openCreate(true)">{{ 'ui.common.edit' | t }}</button>
+                <button appBtn size="sm" type="button" (click)="store.openCreate(true)">{{ 'ui.common.edit' | t }}</button>
               </div>
               <ng-container *ngTemplateOutlet="requiredNotice" />
               <fieldset class="lv-checks">
@@ -303,7 +304,7 @@ const SHOWS_LABEL: Record<ops.ChipShows, string> = {
               <span class="lv-label">{{ 'ui.builder.schema.prop.presets' | t }}</span>
               <ul class="lv-presets">
                 @for (p of b.create?.presets ?? []; track p.param; let pi = $index) {
-                  <li><code>{{ p.param }}</code> → {{ labelOf(p.field) }} <button type="button" class="small" [attr.aria-label]="('ui.common.remove' | t) + ': ' + p.param" (click)="edit(ops.removePreset, pi)">✕</button></li>
+                  <li><code>{{ p.param }}</code> → {{ labelOf(p.field) }} <button appBtn size="sm" type="button" [attr.aria-label]="('ui.common.remove' | t) + ': ' + p.param" (click)="edit(ops.removePreset, pi)">✕</button></li>
                 }
               </ul>
               <div class="lv-add">
@@ -312,7 +313,7 @@ const SHOWS_LABEL: Record<ops.ChipShows, string> = {
                   <option value="" [selected]="!presetField()"></option>
                   @for (o of enterable(); track o.key) { <option [value]="o.key" [selected]="o.key === presetField()">{{ o.label }}</option> }
                 </select>
-                <button type="button" class="small" [disabled]="!presetParam().trim() || !presetField()" (click)="addPreset()">{{ 'ui.common.add' | t }}</button>
+                <button appBtn size="sm" type="button" [disabled]="!presetParam().trim() || !presetField()" (click)="addPreset()">{{ 'ui.common.add' | t }}</button>
               </div>
             </section>
 
@@ -390,11 +391,11 @@ const SHOWS_LABEL: Record<ops.ChipShows, string> = {
                   [options]="enterable()"
                   (changed)="edit(ops.setCreateStepFields, si, $event)"
                   (received)="place($event, si)" />
-                <button type="button" class="small" (click)="edit(ops.removeCreateStep, si)">{{ 'ui.builder.workflow.removeStep' | t }}</button>
+                <button appBtn size="sm" type="button" (click)="edit(ops.removeCreateStep, si)">{{ 'ui.builder.workflow.removeStep' | t }}</button>
               </div>
             }
           </div>
-          <button type="button" class="small" (click)="edit(ops.addCreateStep, '')">{{ 'ui.builder.workflow.addStep' | t }}</button>
+          <button appBtn size="sm" type="button" (click)="edit(ops.addCreateStep, '')">{{ 'ui.builder.workflow.addStep' | t }}</button>
         }
         <ng-container *ngTemplateOutlet="requiredNotice" />
         <div class="lv-layout">
@@ -409,7 +410,7 @@ const SHOWS_LABEL: Record<ops.ChipShows, string> = {
             }
           </fieldset>
         </div>
-        <button sheetFooterActions type="button" class="app-btn app-btn--primary" (click)="store.openCreate(false)">{{ 'ui.common.close' | t }}</button>
+        <button appBtn="primary" sheetFooterActions type="button" (click)="store.openCreate(false)">{{ 'ui.common.close' | t }}</button>
       </app-mobile-form-sheet>
     } @else {
       <p class="muted">{{ 'ui.common.loading' | t }}</p>

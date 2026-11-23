@@ -1,0 +1,45 @@
+﻿:host {
+  display: block;
+  min-height: 100vh;
+}
+.shell__bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+.shell__body {
+  display: flex;
+  min-height: calc(100vh - var(--bar-height, 56px));
+}
+.shell__rail {
+  display: flex;
+  position: sticky;
+  top: var(--bar-height, 56px);
+  flex: 0 0 auto;
+  height: calc(100vh - var(--bar-height, 56px));
+}
+.shell__rail:empty,
+.shell__bottom:empty,
+.shell--bottom .shell__rail {
+  display: none;
+}
+.shell__main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.shell__content {
+  width: 100%;
+  padding: 1.25rem;
+  box-sizing: border-box;
+}
+.shell--bottom .shell__content {
+  padding: 0.75rem 0.75rem calc(70px + env(safe-area-inset-bottom, 0px));
+}
+.shell__bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+}

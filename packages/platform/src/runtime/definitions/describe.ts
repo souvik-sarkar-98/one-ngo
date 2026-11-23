@@ -466,11 +466,12 @@ const describeRecordGroup: Describer<RecordGroupDef> = (b, a, labels, out) => {
   }
   if (b.label !== a.label) out.push(`Renames the group ${q(b.label)} to ${q(a.label)}`);
   if (b.order !== a.order) out.push(`Moves the group ${q(a.label)} to position ${a.order ?? 0}`);
+  if ((b.onHome ?? true) !== (a.onHome ?? true)) out.push(a.onHome === false ? `Takes the group ${q(a.label)} off Home` : `Puts the group ${q(a.label)} on Home`);
   const d = stringsDiff(b.recordTypes, a.recordTypes);
   for (const k of d.added) out.push(`Adds ${labels.recordType(k)} to the group ${q(a.label)}`);
   for (const k of d.removed) out.push(`Moves ${labels.recordType(k)} out of the group ${q(a.label)}`);
   if (!d.added.length && !d.removed.length && !same(b.recordTypes, a.recordTypes)) out.push(`Reorders the group ${q(a.label)}`);
-  return new Set(['key', 'label', 'order', 'recordTypes']);
+  return new Set(['key', 'label', 'order', 'onHome', 'recordTypes']);
 };
 
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;

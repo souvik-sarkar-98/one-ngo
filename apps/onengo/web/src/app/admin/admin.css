@@ -1,6 +1,26 @@
 :host {
   display: block;
 }
+:host .card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+:host .card > h2:first-child {
+  margin-top: 0;
+}
+:host cf-form {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+.admin__line--footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  width: 100%;
+  box-sizing: border-box;
+}
 .admin__tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 4px 0 12px; }
 .admin__tab { border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 8px 12px; margin-bottom: -1px; font: inherit; color: var(--muted); cursor: pointer; }
 .admin__tab--on { color: inherit; font-weight: 700; border-bottom-color: var(--brand); }
@@ -69,9 +89,9 @@
 .admin__secret {
   margin: 8px 0;
   padding: 10px 12px;
-  border: 1px solid #f0d9b5;
+  border: 1px solid var(--notice-warn-border);
   border-radius: 10px;
-  background: #fff8e6;
+  background: var(--notice-warn-bg);
   font-family: ui-monospace, Consolas, monospace;
   font-size: 0.8rem;
   word-break: break-all;
@@ -101,4 +121,26 @@
   border-radius: 8px;
   background: color-mix(in srgb, var(--bad) 8%, #fff);
   font-size: 0.82rem;
+}
+.admin__footnote {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--brand) 22%, #fff);
+  background: color-mix(in srgb, var(--brand) 6%, #fff);
+  color: var(--brand);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+.admin__footnote h2 {
+  margin: 0 0 6px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: inherit;
+}
+.admin__footnote p {
+  margin: 0 0 8px;
+}
+.admin__footnote p:last-child {
+  margin: 0;
 }

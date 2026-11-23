@@ -1,0 +1,36 @@
+{
+  "key": "expenseRegister",
+  "label": "Expense register",
+  "parameters": [
+    { "key": "from", "label": "From", "type": "date", "required": true },
+    { "key": "to", "label": "To", "type": "date", "required": true }
+  ],
+  "datasets": [
+    {
+      "key": "claims",
+      "label": "Paid claims",
+      "source": "query",
+      "recordType": "expenseClaim",
+      "statusIn": ["paid"],
+      "filters": { "paidOn": { "from": "params.from", "to": "params.to" } },
+      "sort": { "field": "paidOn", "dir": "asc" },
+      "fields": ["title", "category", "amount", "paidOn", "paidFrom"]
+    }
+  ],
+  "outputs": {
+    "excel": {
+      "sheets": [
+        {
+          "dataset": "claims",
+          "columns": [
+            { "field": "title", "header": "Purpose", "format": "text" },
+            { "field": "category", "header": "Category", "format": "text" },
+            { "field": "amount", "header": "Amount", "format": "money", "total": true },
+            { "field": "paidOn", "header": "Paid on", "format": "date" },
+            { "field": "paidFrom", "header": "Paid from", "format": "text" }
+          ]
+        }
+      ]
+    }
+  }
+}

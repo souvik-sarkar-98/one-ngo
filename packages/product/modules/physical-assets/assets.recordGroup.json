@@ -1,0 +1,1 @@
+{ "key": "assets", "label": "Physical assets", "order": 60, "onHome": false, "recordTypes": ["asset"] }

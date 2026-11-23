@@ -59,6 +59,8 @@ interface StoredDefinition {
   patch: unknown;
   history: { version: number; status: 'published' | 'superseded'; body: Record<string, unknown>; published_at: string }[];
   draft: { version: number; body: Record<string, unknown> } | null;
+  /** A module definition the organisation turned off. */
+  disabled?: boolean;
 }
 
 export interface MemoryGateways {
@@ -696,6 +698,7 @@ export function memoryGateway(seed: SampleSeed = sampleSeed()): MemoryGateways {
           draftVersion: d.draft?.version ?? null,
           owner: d.owner,
           moduleKey: d.moduleKey,
+          disabled: !!d.disabled,
         }),
       );
     },
@@ -709,7 +712,7 @@ export function memoryGateway(seed: SampleSeed = sampleSeed()): MemoryGateways {
         published: p ? { version: p.version, owner: d.owner, baseVersion: d.baseVersion, body: clone(p.body) } : null,
         draft: clone(d.draft),
         history: d.history.map((h) => ({ version: h.version, status: h.status, base_version: d.baseVersion, published_at: h.published_at })),
-        shipped: d.owner === 'base' && d.base ? { baseVersion: d.baseVersion ?? 1, base: clone(d.base), patch: clone(d.patch) } : null,
+        shipped: d.owner === 'base' && d.base ? { baseVersion: d.baseVersion ?? 1, base: clone(d.base), patch: clone(d.patch), disabled: !!d.disabled, moduleKey: d.moduleKey } : null,
       };
       return out;
     },
@@ -750,8 +753,30 @@ export function memoryGateway(seed: SampleSeed = sampleSeed()): MemoryGateways {
       canPublish(kind);
       const d = definition(kind, key);
       if (d.owner !== 'base' || !d.base) throw fail('invalid', 'Only shipped definitions are changed with a patch.');
+      if (d.disabled) throw fail('definition_invalid', `The ${kind} '${key}' is turned off. Turn it on before changing it.`);
       d.patch = clone(patch);
       publishBody(d, applyExtensionPatch(d.base, patch));
+    },
+    async disable(kind, key) {
+      log('builder', 'disable', [kind, key]);
+      canPublish(kind);
+      const d = definition(kind, key);
+      if (d.owner !== 'base' || !d.base) throw fail('not_found', `${kind} '${key}' is not a shipped definition.`);
+      if (d.disabled) throw fail('definition_invalid', `The ${kind} '${key}' is already turned off.`);
+      // Only record types are referred to here: by the workflows that name one as their `recordType`.
+      const users = [...definitions.values()].filter((o) => kind === 'recordType' && o !== d && !o.disabled && published(o)?.body['recordType'] === key);
+      if (users.length) throw fail('definition_invalid', `The ${kind} '${key}' is still in use. Change or remove these first.`);
+      for (const h of d.history) if (h.status === 'published') h.status = 'superseded';
+      d.disabled = true;
+      if (kind === 'recordType') s.definitions.recordTypes = s.definitions.recordTypes.filter((t) => t.key !== key);
+    },
+    async enable(kind, key) {
+      log('builder', 'enable', [kind, key]);
+      canPublish(kind);
+      const d = definition(kind, key);
+      if (!d.disabled || !d.base) throw fail('definition_invalid', `The ${kind} '${key}' is not turned off.`);
+      d.disabled = false;
+      publishBody(d, applyExtensionPatch(d.base, d.patch ?? {}));
     },
     async check(kind, key, body) {
       log('builder', 'check', [kind, key, body]);

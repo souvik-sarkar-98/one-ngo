@@ -35,7 +35,7 @@ export const GUIDE: readonly GuideSection[] = [
     id: 'app',
     label: 'App',
     icon: 'home',
-    source: 'docs/design/wireframes/ngo-app-navigation-flows.html',
+    source: 'docs/wireframes/ngo-app-navigation-flows.html',
     chapters: [
       {
         id: 'sign-in',
@@ -661,7 +661,7 @@ export const GUIDE: readonly GuideSection[] = [
     id: 'builder',
     label: 'Builder',
     icon: 'records',
-    source: 'docs/design/wireframes/ngo-builder-screens.html',
+    source: 'docs/wireframes/ngo-builder-screens.html',
     chapters: [
       {
         id: 'catalogue',
@@ -714,7 +714,7 @@ export const GUIDE: readonly GuideSection[] = [
     id: 'sign-in',
     label: 'Sign-in',
     icon: 'people',
-    source: 'docs/design/wireframes/release-2-sign-in-wireframe.html',
+    source: 'docs/wireframes/release-2-sign-in-wireframe.html',
     chapters: [
       {
         id: 'organisation',
@@ -760,7 +760,7 @@ export const GUIDE: readonly GuideSection[] = [
     id: 'organisation',
     label: 'Org',
     icon: 'settings',
-    source: 'docs/design/wireframes/org-admin-appearance.html',
+    source: 'docs/wireframes/org-admin-appearance.html',
     chapters: [
       {
         id: 'information',
@@ -843,7 +843,7 @@ export const GUIDE: readonly GuideSection[] = [
     id: 'connectors',
     label: 'Connectors',
     icon: 'search',
-    source: 'docs/architecture/connector-runtime.html',
+    source: 'docs/connector-runtime.html',
     chapters: [
       {
         id: 'shape',

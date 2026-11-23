@@ -7,7 +7,7 @@ import { AuditSession } from './audit';
 import { ConnectorSession } from './connectors';
 import { JobsSession, failedCsv } from './jobs';
 import { RoleMembersSession } from './roles';
-import { identityChange, identityValues, monthOptions, settingsChange, settingsValues, sizeText, storagePercent } from './settings';
+import { emailTemplateValues, emailTemplatesChange, identityChange, identityValues, mailChange, monthOptions, settingsChange, settingsValues, sizeText, storagePercent } from './settings';
 import { fakeAddress, memoryAdmin } from './testing';
 
 const caps = (c: Partial<Me['capabilities']>): Me['capabilities'] => ({ configure: false, publish: false, scripts: false, money: false, ...c });
@@ -56,11 +56,12 @@ describe('Administration home', () => {
     expect(ids(caps({ people: true }))).toEqual(['people', 'roles']);
     expect(ids(caps({ roles: true }))).toEqual(['roles']);
     expect(ids(caps({ apiKeys: true, audit: true }))).toEqual(['apiKeys', 'audit']);
-    expect(ids(caps({ settings: true }))).toEqual(['identity', 'profile', 'registrations', 'settings']);
+    expect(ids(caps({ settings: true }))).toEqual(['identity', 'profile', 'registrations', 'signatories', 'settings']);
     expect(ids(caps({ people: true, roles: true, connectors: true, apiKeys: true, jobs: true, audit: true, settings: true }))).toEqual([
       'identity',
       'profile',
       'registrations',
+      'signatories',
       'settings',
       'people',
       'roles',
@@ -80,6 +81,7 @@ describe('Administration home', () => {
       ['Identity', '/admin/organisation/identity'],
       ['Profile', '/admin/organisation/profile'],
       ['Registrations', '/admin/organisation/registrations'],
+      ['Signatories', '/admin/organisation/signatories'],
       ['Settings', '/admin/organisation/settings'],
     ]);
     expect(h.activity.map((a) => [a.label, a.link])).toEqual([['Background jobs', '/admin/jobs']]);
@@ -226,7 +228,7 @@ describe('connectors', () => {
     const s = new ConnectorSession(m.gateway, 'crm', addr.nav);
     await s.load();
     expect(s.state.value.secrets.map((x) => [x.name, x.set, x.editing])).toEqual([['signingSecret', true, false]]);
-    expect(s.fields().map((f) => f.key)).toEqual(['url', 'enabled']);
+    expect(s.fields().map((f) => f.key)).toEqual(['url']);
     expect((await s.save()).ok).toBe(true);
     expect(m.calls.find((c) => c.op === 'saveConnector')!.args[1]).toEqual({ enabled: true, config: { url: 'https://crm.test/in' } });
     s.editSecret('signingSecret');
@@ -249,7 +251,7 @@ describe('connectors', () => {
     const s = new ConnectorSession(m.gateway, 'gateway', fakeAddress().nav);
     await s.load('sms');
     expect(s.state.value.isNew).toBe(true);
-    expect(s.fields().map((f) => f.key)).toEqual(['url', 'method', 'body', 'contentType', 'enabled']);
+    expect(s.fields().map((f) => f.key)).toEqual(['url', 'method', 'body', 'contentType']);
     expect(await s.save()).toEqual({ ok: false, message: '' });
     expect(s.state.value.errors).toEqual({ url: 'Address (https://) is required.' });
     s.setValues({ ...s.state.value.values, url: 'https://sms.test/send' });
@@ -261,7 +263,8 @@ describe('connectors', () => {
     const m = memoryAdmin();
     const s = new ConnectorSession(m.gateway, 'ifsc', fakeAddress().nav);
     await s.load('http');
-    expect(s.fields().map((f) => f.key)).toContain('emailSender');
+    expect(s.fields().map((f) => f.key)).not.toContain('emailSender');
+    expect(s.fields().map((f) => f.key)).not.toContain('from');
     s.setValues({ ...s.state.value.values, mode: 'lookup', method: 'GET', url: 'https://ifsc.test/x', inputs: 'ifsc\n', responseMap: '{ "bankName": "BANK"', timeoutMs: '5000', success: '[200]' });
     expect(s.fields().map((f) => f.key)).not.toContain('emailSender');
     expect((await s.save()).ok).toBe(false);
@@ -301,7 +304,10 @@ describe('organisation settings', () => {
   it('sends only what changed and checks numbers; a fixed financial year start is not sent', async () => {
     const s = await memoryAdmin().gateway.settings();
     const v = settingsValues(s);
-    expect(v).toEqual({ quotaGb: '1', apiRequestsPerMinute: '120', corsOrigins: '', financialYearStartMonth: '4' });
+    expect(v).toEqual({ quotaGb: '1', apiRequestsPerMinute: '120', corsOrigins: '', financialYearStartMonth: '4', mailConnector: '', mailFrom: '', fileStoreConnector: '' });
+    expect(mailChange(v)).toEqual({ change: { mailConnector: null, mailFrom: null } });
+    expect(mailChange({ ...v, mailConnector: 'gmail' })).toEqual({ errors: { mailFrom: 'From address is required.' } });
+    expect(mailChange({ ...v, mailConnector: 'gmail', mailFrom: ' office@asha.test ' })).toEqual({ change: { mailConnector: 'gmail', mailFrom: 'office@asha.test' } });
     expect(settingsChange(s, v)).toEqual({ change: {} });
     expect(settingsChange(s, { ...v, quotaGb: '2', apiRequestsPerMinute: '60', financialYearStartMonth: '1' })).toEqual({
       change: { storageQuotaBytes: 2 * 1024 ** 3, apiRequestsPerMinute: 60, financialYearStartMonth: 1 },
@@ -325,5 +331,15 @@ describe('organisation settings', () => {
     expect(sizeText(s.storage.usedBytes)).toBe('412 MB');
     expect(sizeText(s.storage.quotaBytes)).toBe('1 GB');
     expect(storagePercent(s.storage)).toBe(40);
+  });
+
+  it('sends all three sign-in email choices when one changed, and an empty choice is the default wording', async () => {
+    const s = await memoryAdmin().gateway.settings();
+    const v = emailTemplateValues(s);
+    expect(v).toEqual({ signInCodeTemplate: '', passwordResetTemplate: '', inviteTemplate: '' });
+    expect(emailTemplatesChange(s, v)).toEqual({ change: {} });
+    expect(emailTemplatesChange(s, { ...v, passwordResetTemplate: 'welcome', inviteTemplate: ' ' })).toEqual({
+      change: { emailTemplates: { sign_in_code: null, password_reset: 'welcome', invite: null } },
+    });
   });
 });

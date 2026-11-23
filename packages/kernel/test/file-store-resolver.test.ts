@@ -13,10 +13,10 @@ describe('single store resolver', () => {
     const resolver = singleStoreResolver(store);
     await expect(resolver.forTenant('tenant-a')).resolves.toEqual({ ref: PLATFORM_STORE, store });
     await expect(resolver.forTenant('tenant-b')).resolves.toEqual({ ref: 'platform', store });
-    expect(resolver.byRef('platform')).toBe(store);
+    expect(await resolver.byRef('tenant-a', 'platform')).toBe(store);
   });
 
-  it('refuses a reference it does not have', () => {
-    expect(() => singleStoreResolver(store).byRef('org:gcs')).toThrow("No file store is configured for 'org:gcs'.");
+  it('refuses a reference it does not have', async () => {
+    await expect(singleStoreResolver(store).byRef('tenant-a', 'org:gcs')).rejects.toThrow("No file store is configured for 'org:gcs'.");
   });
 });

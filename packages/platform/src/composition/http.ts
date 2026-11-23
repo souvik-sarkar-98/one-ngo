@@ -20,6 +20,7 @@ import {
   QueryApprovals,
   QueryRecords,
   RecordApproval,
+  RecordBin,
   TransitionRecord,
   UpdateRecord,
 } from '../application/records/record-use-cases.js';
@@ -68,7 +69,7 @@ export function httpDeps(
   { receipts }: Finance,
   messaging: Messaging,
   id: Identity,
-  { moneyAccounts, payments }: Payments,
+  { moneyAccounts, bankReconciliation, payments }: Payments,
   jobsWiring: Jobs,
   { files, imports, exports }: Files,
   { approvals, shares, actions, bulk, printView, receiptLinks, publicForms, dataFeeds }: Operations,
@@ -115,6 +116,7 @@ export function httpDeps(
       listRecords: new ListRecords(records),
       queryRecords: new QueryRecords(records),
       aggregateRecords: new AggregateRecords(runtime, aggregates),
+      recordBin: new RecordBin(records),
       shares,
       bulk,
       runAction: new RunAction(actions),
@@ -139,7 +141,7 @@ export function httpDeps(
       rollback: new RollbackDefinition(definitions),
       support: wireBuilderSupport(base, defs, recs, messaging, id, jobsWiring),
     },
-    payments: { moneyAccounts, payments, requestPayment: new RequestPayment(actions), confirmPayment: new ConfirmPaymentManually(payments) },
+    payments: { moneyAccounts, bankReconciliation, payments, requestPayment: new RequestPayment(actions), confirmPayment: new ConfirmPaymentManually(payments) },
     admin: {
       roles,
       access,

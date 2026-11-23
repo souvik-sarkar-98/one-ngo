@@ -1,12 +1,15 @@
 import { sql } from 'kysely';
-import type {
-  ConnectorListRow,
-  ConnectorRow,
-  ConnectorStore,
-  DeliveryAttempt,
-  DeliveryRow,
-  DeliveryStatus,
-  SaveConnector,
+import {
+  FILE_STORE_SETTING,
+  MAIL_CONNECTOR_SETTING,
+  MAIL_FROM_SETTING,
+  type ConnectorListRow,
+  type ConnectorRow,
+  type ConnectorStore,
+  type DeliveryAttempt,
+  type DeliveryRow,
+  type DeliveryStatus,
+  type SaveConnector,
 } from '../../../application/connectors/ports/connector-store.js';
 import type { Tx } from '../../../domain/ports/transaction.js';
 import { pg } from '../tx.js';
@@ -14,11 +17,13 @@ import { pg } from '../tx.js';
 const APP_TENANT = sql<string>`app_tenant()`;
 const NOW = sql<Date>`now()`;
 
+const CONNECTOR_COLUMNS = ['key', 'type', 'config', 'secret_enc', 'enabled', 'archived_at', 'updated_by', 'updated_at'] as const;
+
 export class PgConnectorStore implements ConnectorStore {
   connector(tx: Tx, key: string): Promise<ConnectorRow | undefined> {
     return pg(tx)
       .selectFrom('connector')
-      .select(['key', 'type', 'config', 'secret_enc', 'enabled', 'updated_by', 'updated_at'])
+      .select(CONNECTOR_COLUMNS)
       .where('tenant_id', '=', APP_TENANT)
       .where('key', '=', key)
       .$castTo<ConnectorRow>()
@@ -28,7 +33,7 @@ export class PgConnectorStore implements ConnectorStore {
   lockConnector(tx: Tx, key: string): Promise<ConnectorRow | undefined> {
     return pg(tx)
       .selectFrom('connector')
-      .select(['key', 'type', 'config', 'secret_enc', 'enabled', 'updated_by', 'updated_at'])
+      .select(CONNECTOR_COLUMNS)
       .where('tenant_id', '=', APP_TENANT)
       .where('key', '=', key)
       .forUpdate()
@@ -40,22 +45,61 @@ export class PgConnectorStore implements ConnectorStore {
     await pg(tx).updateTable('connector').set({ secret_enc: secretEnc }).where('tenant_id', '=', APP_TENANT).where('key', '=', key).execute();
   }
 
-  emailSender(tx: Tx): Promise<ConnectorRow | undefined> {
-    return pg(tx)
-      .selectFrom('connector')
-      .select(['key', 'type', 'config', 'secret_enc', 'enabled', 'updated_by', 'updated_at'])
+  async mailChoice(tx: Tx): Promise<{ connector: string | null; from: string | null }> {
+    const rows = await pg(tx)
+      .selectFrom('tenant_setting')
+      .select(['key', 'value'])
       .where('tenant_id', '=', APP_TENANT)
-      .where('type', '=', 'http')
-      .where('enabled', '=', true)
-      .where(sql<string>`config->>'emailSender'`, '=', 'true')
-      .orderBy('key')
-      .limit(1)
-      .$castTo<ConnectorRow>()
-      .executeTakeFirst();
+      .where('key', 'in', [MAIL_CONNECTOR_SETTING, MAIL_FROM_SETTING])
+      .execute();
+    const value = (key: string) => rows.find((r) => r.key === key)?.value;
+    const connector = value(MAIL_CONNECTOR_SETTING);
+    const from = value(MAIL_FROM_SETTING);
+    return {
+      connector: typeof connector === 'string' && connector ? connector : null,
+      from: typeof from === 'string' && from ? from : null,
+    };
   }
 
-  list(tx: Tx, kinds: readonly string[]): Promise<ConnectorListRow[]> {
+  emailConnectors(tx: Tx): Promise<{ key: string; enabled: boolean; provider: string | null }[]> {
     return pg(tx)
+      .selectFrom('connector')
+      .select(['key', 'enabled', sql<string | null>`config->>'provider'`.as('provider')])
+      .where('tenant_id', '=', APP_TENANT)
+      .where('type', '=', 'email')
+      .orderBy('key')
+      .execute();
+  }
+
+  async storeChoice(tx: Tx): Promise<string | null> {
+    const row = await pg(tx).selectFrom('tenant_setting').select('value').where('tenant_id', '=', APP_TENANT).where('key', '=', FILE_STORE_SETTING).executeTakeFirst();
+    return typeof row?.value === 'string' && row.value ? row.value : null;
+  }
+
+  storageConnectors(tx: Tx): Promise<{ key: string; enabled: boolean; provider: string | null; hasSecret: boolean }[]> {
+    return pg(tx)
+      .selectFrom('connector')
+      .select(['key', 'enabled', sql<string | null>`config->>'provider'`.as('provider'), sql<boolean>`secret_enc is not null`.as('hasSecret')])
+      .where('tenant_id', '=', APP_TENANT)
+      .where('type', '=', 'storage')
+      .orderBy('key')
+      .execute();
+  }
+
+  async storageHeld(tx: Tx, key: string): Promise<{ files: boolean; chosen: boolean }> {
+    const file = await pg(tx)
+      .selectFrom('file_object')
+      .select(sql`1`.as('one'))
+      .where('tenant_id', '=', APP_TENANT)
+      .where('store_ref', '=', `connector:${key}`)
+      .where('deleted_at', 'is', null)
+      .limit(1)
+      .executeTakeFirst();
+    return { files: file !== undefined, chosen: (await this.storeChoice(tx)) === key };
+  }
+
+  async list(tx: Tx, kinds: readonly string[]): Promise<ConnectorListRow[]> {
+    const rows = await pg(tx)
       .selectFrom('connector as c')
       .leftJoinLateral(
         (eb) =>
@@ -70,12 +114,13 @@ export class PgConnectorStore implements ConnectorStore {
             .as('d'),
         (j) => j.onTrue(),
       )
-      .select(['c.key', 'c.type', 'c.secret_enc', 'c.enabled', 'd.status as last_status', 'd.created_at as last_at'])
+      .select(['c.key', 'c.type', 'c.config', 'c.secret_enc', 'c.enabled', 'c.archived_at', 'd.status as last_status', 'd.created_at as last_at'])
       .where('c.tenant_id', '=', APP_TENANT)
       .where('c.type', '=', sql<string>`any(${[...kinds]})`)
       .orderBy('c.key')
       .$narrowType<{ last_status: DeliveryStatus | null }>()
       .execute();
+    return rows.map((r) => ({ ...r, config: (r.config && typeof r.config === 'object' && !Array.isArray(r.config) ? r.config : {}) as Record<string, unknown> }));
   }
 
   async enabledKeys(tx: Tx, kind: string): Promise<string[]> {
@@ -105,6 +150,33 @@ export class PgConnectorStore implements ConnectorStore {
         }),
       )
       .execute();
+  }
+
+  async setArchived(tx: Tx, key: string, archived: boolean, actorId: string): Promise<void> {
+    await pg(tx)
+      .updateTable('connector')
+      .set({
+        archived_at: archived ? NOW : null,
+        archived_by: archived ? actorId : null,
+        ...(archived ? { enabled: false } : {}),
+        updated_by: actorId,
+        updated_at: NOW,
+      })
+      .where('tenant_id', '=', APP_TENANT)
+      .where('key', '=', key)
+      .execute();
+  }
+
+  async credentialUsers(tx: Tx, key: string): Promise<string[]> {
+    const rows = await pg(tx)
+      .selectFrom('connector')
+      .select('key')
+      .where('tenant_id', '=', APP_TENANT)
+      .where('archived_at', 'is', null)
+      .where(sql<string | null>`config->>'credential'`, '=', key)
+      .orderBy('key')
+      .execute();
+    return rows.map((r) => r.key);
   }
 
   delivery(tx: Tx, connectorKey: string, deliveryId: string) {

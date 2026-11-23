@@ -14,10 +14,10 @@
 }
 .editable-table__frame,
 .editable-table__panel {
-  background: #fff;
+  background: var(--card);
   border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.22);
-  box-shadow: 0 1px 2px #0f172a0d, 0 4px 14px #0f172a12;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 5%, transparent), 0 4px 14px color-mix(in srgb, var(--ink) 7%, transparent);
   overflow: hidden;
 }
 .editable-table__frame {
@@ -35,10 +35,10 @@
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--grey-500);
   padding: 9px 11px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.25);
-  background: #f8fafc;
+  background: var(--th-bg);
   white-space: nowrap;
 }
 .editable-table__table td {
@@ -50,7 +50,7 @@
   cursor: pointer;
 }
 .editable-table__row:hover {
-  background: #f8fafc;
+  background: var(--th-bg);
 }
 .editable-table__row:focus-visible {
   outline: 2px solid var(--brand, #1f5f8b);
@@ -89,18 +89,18 @@
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: #a3afbd;
+  color: var(--grey-400);
   cursor: grab;
 }
 .editable-table__icon-btn {
-  color: #64748b;
+  color: var(--grey-500);
   cursor: pointer;
 }
 .editable-table__handle:hover,
 .editable-table__handle:focus-visible,
 .editable-table__icon-btn:hover,
 .editable-table__icon-btn:focus-visible {
-  background: #f1f5f9;
+  background: var(--surface-sunk);
   color: #475569;
 }
 .editable-table__add {
@@ -120,7 +120,7 @@
   --icon-size: 18px;
 }
 .editable-table__add:hover {
-  background: #f8fafc;
+  background: var(--th-bg);
 }
 .editable-table__panel {
   padding: 12px 16px 16px;
@@ -160,7 +160,7 @@
   padding: 4px 8px;
   line-height: 1;
   white-space: nowrap;
-  background: #f1f5f9;
+  background: var(--surface-sunk);
   color: #475569;
 }
 .editable-table__badge--primary {
@@ -168,14 +168,14 @@
   color: var(--brand, #1f5f8b);
 }
 .editable-table__badge--success {
-  background: #e3f4ea;
-  color: #1d7a46;
+  background: var(--badge-ok-bg);
+  color: var(--ok);
 }
 .editable-table__badge--warning {
-  background: #fdf1dc;
-  color: #9a6200;
+  background: var(--badge-warn-bg);
+  color: var(--warn);
 }
 .editable-table__badge--danger {
-  background: #fde8e7;
-  color: #b3261e;
+  background: var(--badge-bad-bg);
+  color: var(--bad);
 }

@@ -1,0 +1,30 @@
+{
+  "key": "resolutionRegister",
+  "label": "Register of passed resolutions",
+  "datasets": [
+    {
+      "key": "resolutions",
+      "label": "Passed resolutions",
+      "source": "query",
+      "recordType": "resolution",
+      "statusIn": ["passed"],
+      "sort": { "field": "passedOn", "dir": "asc" },
+      "fields": ["title", "votesFor", "votesAgainst", "passedOn"]
+    }
+  ],
+  "outputs": {
+    "excel": {
+      "sheets": [
+        {
+          "dataset": "resolutions",
+          "columns": [
+            { "field": "title", "header": "Resolution", "format": "text" },
+            { "field": "votesFor", "header": "Votes for", "format": "number" },
+            { "field": "votesAgainst", "header": "Votes against", "format": "number" },
+            { "field": "passedOn", "header": "Passed on", "format": "date" }
+          ]
+        }
+      ]
+    }
+  }
+}

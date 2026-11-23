@@ -7,6 +7,7 @@ import { CfForm } from '../ui/cf-form';
 import { MobileFormSheet } from '../ui/form-panel';
 import { BulkStore } from './bulk-store';
 import { ListStore } from './list-store';
+import { Btn } from '@onengo/web-kit';
 
 /**
  * The bulk panel: the operation's fields asked once for every selected
@@ -15,12 +16,12 @@ import { ListStore } from './list-store';
  */
 @Component({
   selector: 'app-bulk-panel',
-  imports: [MobileFormSheet, CfForm, TranslatePipe],
+  imports: [Btn, MobileFormSheet, CfForm, TranslatePipe],
   styles: `
     .bulk-panel__error {
       margin: 0 0 12px;
       font-size: 0.75rem;
-      color: #b91c1c;
+      color: var(--bad);
     }
     .bulk-panel__muted {
       font-size: 0.72rem;
@@ -30,7 +31,7 @@ import { ListStore } from './list-store';
       height: 8px;
       margin: 8px 0 12px;
       border-radius: 999px;
-      background: #e2e8f0;
+      background: var(--line-soft);
       overflow: hidden;
     }
     .bulk-panel__bar > i {
@@ -44,7 +45,7 @@ import { ListStore } from './list-store';
       padding: 8px 12px;
       border-radius: 10px;
       font-size: 0.8rem;
-      background: #dcfce7;
+      background: var(--badge-ok-bg);
     }
     .bulk-panel__problems {
       margin: 0;
@@ -101,11 +102,11 @@ import { ListStore } from './list-store';
         }
 
         @if (s.summary || s.error) {
-          <button sheetFooterActions type="button" class="app-btn app-btn--primary" (click)="bulk.close()">{{ 'ui.imports.done' | t }}</button>
+          <button appBtn="primary" sheetFooterActions type="button" (click)="bulk.close()">{{ 'ui.imports.done' | t }}</button>
         } @else if (s.job) {
           <ng-container sheetFooterActions>
-            <button type="button" class="app-btn app-btn--ghost" (click)="bulk.close()">{{ 'ui.common.close' | t }}</button>
-            <button type="button" class="app-btn danger" [disabled]="s.job.cancelRequested" (click)="bulk.stop()">{{ 'ui.bulk.stop' | t }}</button>
+            <button appBtn type="button" (click)="bulk.close()">{{ 'ui.common.close' | t }}</button>
+            <button appBtn="danger" type="button" [disabled]="s.job.cancelRequested" (click)="bulk.stop()">{{ 'ui.bulk.stop' | t }}</button>
           </ng-container>
         }
       </app-mobile-form-sheet>

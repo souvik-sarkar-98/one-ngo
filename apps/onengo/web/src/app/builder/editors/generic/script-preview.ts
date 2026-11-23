@@ -3,6 +3,7 @@ import type { ScriptTry } from '../../../core/builder/http-previews';
 import { TranslatePipe } from '../../../services/i18n';
 import { PreviewRecord, type ChosenRecord } from './preview-record';
 import { PreviewStore } from './preview-store';
+import { Btn } from '@onengo/web-kit';
 
 type Body = Record<string, unknown>;
 
@@ -11,7 +12,7 @@ const shown = (v: unknown) => (v === null || v === undefined ? '—' : JSON.stri
 /** "Try it": runs the draft code in the server's sandbox on a chosen record, without saving, and shows what it changed. */
 @Component({
   selector: 'app-script-preview',
-  imports: [TranslatePipe, PreviewRecord],
+  imports: [Btn, TranslatePipe, PreviewRecord],
   styleUrl: './preview.css',
   template: `
     <section class="pv" aria-labelledby="script-try-title">
@@ -22,7 +23,7 @@ const shown = (v: unknown) => (v === null || v === undefined ? '—' : JSON.stri
         <p class="pv__note">{{ 'ui.builder.script.needsType' | t }}</p>
       }
       <div class="pv__row">
-        <button type="button" class="small" [disabled]="running() || !recordType() || !code()" (click)="run()">{{ 'ui.builder.script.try' | t }}</button>
+        <button appBtn size="sm" type="button" [disabled]="running() || !recordType() || !code()" (click)="run()">{{ 'ui.builder.script.try' | t }}</button>
       </div>
       @if (failed(); as f) { <div class="pv__bad" role="alert">{{ f }}</div> }
       @if (result(); as r) {

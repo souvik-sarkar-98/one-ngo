@@ -1,0 +1,1 @@
+{ "key": "membership", "label": "Membership", "order": 30, "recordTypes": ["member", "membershipFee"] }

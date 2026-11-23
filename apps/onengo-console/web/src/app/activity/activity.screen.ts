@@ -1,24 +1,24 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type { OperatorActivityEntryContract } from '@onengo/platform/contracts';
-import { FormProblems } from '@onengo/web-kit';
+import { Btn, FormProblems, PageHead } from '@onengo/web-kit';
 import { OperatorApi, OperatorRequestError } from '../services/operator-api';
 
 const messageOf = (error: unknown): string => error instanceof Error ? error.message : 'The request failed.';
 const problemsOf = (error: unknown): string[] => error instanceof OperatorRequestError ? error.problems : [];
 
 @Component({
-  standalone: true, imports: [FormsModule, FormProblems],
-  template: `<div class="pagehead"><h1>Activity</h1></div>
-    @if (!api.can('audit')) { <p class="note">Reading activity needs the Read activity action.</p> }
+  standalone: true, imports: [Btn, PageHead, FormsModule, FormProblems],
+  template: `<app-page-head title="Activity" />
+    @if (!api.can('audit')) { <p class="notice info">Reading activity needs the Read activity action.</p> }
     @else {
       <p class="intro">Everything operators did in the console, newest first. Entries cannot be changed or deleted.</p>
       <div class="search"><span aria-hidden="true">⌕</span><input name="q" [(ngModel)]="q" placeholder="Organisation code, request ID or operator" (ngModelChange)="load()"></div>
       <div class="chips">
-        <button type="button" [class.on]="range === 'today'" (click)="setRange('today')">Today</button>
-        <button type="button" [class.on]="range === '7'" (click)="setRange('7')">7 days</button>
-        <button type="button" [class.on]="range === '30'" (click)="setRange('30')">30 days</button>
-        <button type="button" [class.on]="range === 'all'" (click)="setRange('all')">All</button>
+        <button type="button" class="toggle" [class.on]="range === 'today'" (click)="setRange('today')">Today</button>
+        <button type="button" class="toggle" [class.on]="range === '7'" (click)="setRange('7')">7 days</button>
+        <button type="button" class="toggle" [class.on]="range === '30'" (click)="setRange('30')">30 days</button>
+        <button type="button" class="toggle" [class.on]="range === 'all'" (click)="setRange('all')">All</button>
       </div>
       <app-form-problems [message]="error()" [problems]="problems()" />
       <table class="wide">
@@ -46,10 +46,10 @@ const problemsOf = (error: unknown): string[] => error instanceof OperatorReques
             <div><b>Subject</b><code>{{ entry.subject || '—' }}</code></div>
           </div>
           @if (entry.detail) { <pre>{{ json(entry.detail) }}</pre> }
-          <div class="row"><button type="button" class="ghost" (click)="selected.set(null)">Close</button><span class="sp"></span><button type="button" class="ghost" (click)="download()">Download CSV</button></div>
+          <div class="row"><button appBtn type="button" (click)="selected.set(null)">Close</button><span class="sp"></span><button appBtn type="button" (click)="download()">Download CSV</button></div>
         </section>
       } @else {
-        <div class="row"><span class="sp"></span><button type="button" class="ghost" (click)="download()">Download CSV</button></div>
+        <div class="row"><span class="sp"></span><button appBtn type="button" (click)="download()">Download CSV</button></div>
       }
     }`,
 })

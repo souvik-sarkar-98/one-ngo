@@ -96,7 +96,6 @@ describe('production server bundle', () => {
       PORT: String(port),
       PUBLIC_BASE_URL: base,
       WEB_ROOT: work,
-      FILE_STORE_DIR: join(work, 'files'),
       BREACHED_PASSWORD_CHECK: 'off',
     };
     const roleUrl = (role: string) => {

@@ -4,6 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { t } from '../core/i18n/i18n';
 import { withDefaults } from './labels';
+import { Btn } from '@onengo/web-kit';
 
 const LABELS = () => ({ more: t('ui.common.moreActions') });
 
@@ -13,13 +14,12 @@ const LABELS = () => ({ more: t('ui.common.moreActions') });
  */
 @Component({
   selector: 'app-row-menu',
-  imports: [MatMenuModule, MatIconModule, MatDividerModule],
+  imports: [Btn, MatMenuModule, MatIconModule, MatDividerModule],
   styleUrl: './styles/na-list-dashboard.css',
   template: `
     @if (look() === 'table') {
-      <button
+      <button appBtn size="sm"
         type="button"
-        class="small"
         [attr.aria-label]="labels().more"
         [matMenuTriggerFor]="menu"
         (click)="$event.stopPropagation()"

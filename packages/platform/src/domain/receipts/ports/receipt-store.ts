@@ -69,7 +69,7 @@ export interface ReceiptStore extends FiscalYearSettings {
   forRecord(tx: Tx, recordId: string): Promise<Receipt[]>;
 }
 
-/** The organisation's issuer details as they apply on a date. */
+/** The organisation's issuer details as they apply on a date, with the signatories chosen for the receipt rule `ruleKey`. */
 export interface IssuerSource {
-  snapshot(tx: Tx, onDate: string): Promise<IssuerSnapshot>;
+  snapshot(tx: Tx, onDate: string, ruleKey?: string): Promise<IssuerSnapshot>;
 }

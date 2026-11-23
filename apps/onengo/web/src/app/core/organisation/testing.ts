@@ -1,4 +1,4 @@
-import type { OrganisationGateway, OrganisationView, Registration, SetupChecklist } from './organisation';
+import type { DocumentSignatories, OrganisationGateway, OrganisationView, Registration, SetupChecklist } from './organisation';
 
 const fail = (code: string, message: string, issues: { path: string; message: string }[] = []) => Object.assign(new Error(message), { code, issues });
 
@@ -19,7 +19,8 @@ export function memoryOrganisation(start: Partial<OrganisationView> = {}) {
     timezone: 'Asia/Kolkata',
     registrations: [],
     logo: null,
-    signatory: null,
+    signatories: [],
+    signatorySets: {},
     setup: { complete: false, completedAt: null, items: [] },
     ...structuredClone(start),
   };
@@ -32,7 +33,8 @@ export function memoryOrganisation(start: Partial<OrganisationView> = {}) {
       { key: 'fiscalYear', required: true, done: true },
       { key: 'receiptSeries', required: true, done: flags.receiptsReviewed },
       { key: 'operationalRole', required: true, done: true },
-      { key: 'email', required: false, done: false, detail: 'none' },
+      { key: 'email', required: true, done: false, detail: 'none' },
+      { key: 'fileStore', required: true, done: false },
       { key: 'payments', required: false, done: false },
     ];
     const complete = items.every((i) => !i.required || i.done);
@@ -40,6 +42,10 @@ export function memoryOrganisation(start: Partial<OrganisationView> = {}) {
     return { complete, completedAt: flags.completedAt, items };
   };
   const view = (): OrganisationView => structuredClone({ ...org, setup: checklist() });
+  const documentSignatories = (): DocumentSignatories => ({
+    signatories: org.signatories.map(({ id, name, designation }) => ({ id, name, designation })),
+    sets: structuredClone(org.signatorySets),
+  });
   const taken = (type: string, number: string, except: string | null) => org.registrations.some((r) => r.id !== except && r.type === type && r.number === number.toUpperCase());
   const shaped = (id: string, body: Parameters<OrganisationGateway['addRegistration']>[0]): Registration => {
     if (body.issuedOn && body.expiresOn && body.expiresOn < body.issuedOn) {
@@ -112,23 +118,55 @@ export function memoryOrganisation(start: Partial<OrganisationView> = {}) {
       if (!org.logo) throw fail('not_found', 'The organisation has no logo.');
       org = { ...org, logo: null };
     },
-    async saveSignatory(body) {
-      log('saveSignatory', body);
+    async addSignatory(body) {
+      log('addSignatory', body);
       if (!body.name.trim() || !body.designation.trim()) throw fail('validation_failed', 'The signatory is not valid.', [{ path: 'name', message: 'The name is required.' }]);
-      org = { ...org, signatory: { name: body.name.trim(), designation: body.designation.trim(), image: org.signatory?.image ?? null } };
+      const id = `sig-${++ids}`;
+      const signatories = [...org.signatories, { id, name: body.name.trim(), designation: body.designation.trim(), image: null }];
+      org = { ...org, signatories };
       return view();
     },
-    async setSignature(file) {
-      log('setSignature', file.type, file.size);
+    async updateSignatory(id, body) {
+      log('updateSignatory', id, body);
+      if (!org.signatories.some((s) => s.id === id)) throw fail('not_found', 'Signatory not found.');
+      if (!body.name.trim() || !body.designation.trim()) throw fail('validation_failed', 'The signatory is not valid.', [{ path: 'name', message: 'The name is required.' }]);
+      org = { ...org, signatories: org.signatories.map((s) => (s.id === id ? { ...s, name: body.name.trim(), designation: body.designation.trim() } : s)) };
+      return view();
+    },
+    async setSignature(id, file) {
+      log('setSignature', id, file.type, file.size);
+      const current = org.signatories.find((s) => s.id === id);
+      if (!current) throw fail('not_found', 'Signatory not found.');
       if (file.type !== 'image/png') throw fail('validation_failed', 'The signature must be a PNG image.', [{ path: 'signatory', message: 'A PNG image.' }]);
-      const version = (org.signatory?.image?.version ?? 0) + 1;
-      org = { ...org, signatory: { name: org.signatory?.name ?? null, designation: org.signatory?.designation ?? null, image: { url: `/api/organisation/signatories/file?v=${version}`, version, updatedAt: '2026-10-26T09:00:00.000Z' } } };
+      const version = (current.image?.version ?? 0) + 1;
+      const image = { url: `/api/organisation/signatories/${id}?v=${version}`, version, updatedAt: '2026-10-26T09:00:00.000Z' };
+      org = { ...org, signatories: org.signatories.map((s) => (s.id === id ? { ...s, image } : s)) };
       return view();
     },
-    async removeSignatory() {
-      log('removeSignatory');
-      if (!org.signatory) throw fail('not_found', 'The organisation has no signatory.');
-      org = { ...org, signatory: null };
+    async removeSignatory(id) {
+      log('removeSignatory', id);
+      if (!org.signatories.some((s) => s.id === id)) throw fail('not_found', 'Signatory not found.');
+      if (Object.values(org.signatorySets).some((ids) => ids.includes(id))) throw fail('conflict', 'Take this signatory off receipts and reports before removing it.');
+      org = { ...org, signatories: org.signatories.filter((s) => s.id !== id) };
+    },
+    async documentSignatories() {
+      log('documentSignatories');
+      return documentSignatories();
+    },
+    async saveDocumentSignatories(documentKey, signatories) {
+      log('saveDocumentSignatories', documentKey, signatories);
+      if (!/^(?:receipt|report):[a-z][a-zA-Z0-9_-]*$/.test(documentKey)) {
+        throw fail('validation_failed', 'This document does not take signatories.', [{ path: 'document', message: 'Choose a receipt rule or a report.' }]);
+      }
+      const known = new Set(org.signatories.map((s) => s.id));
+      if (signatories.some((id) => !known.has(id)) || signatories.length > 4) {
+        throw fail('validation_failed', 'The signatories are not valid.', [{ path: 'signatories', message: 'Choose a signatory that exists.' }]);
+      }
+      const sets = { ...org.signatorySets };
+      if (signatories.length) sets[documentKey] = [...signatories];
+      else delete sets[documentKey];
+      org = { ...org, signatorySets: sets };
+      return documentSignatories();
     },
     async setup() {
       log('setup');

@@ -140,12 +140,12 @@ try {
 // ------------------- Start the sandbox if enabled. -------------------
 
 if (!noSandbox) {
-  bootApp('one-ngo-sandbox', 'apps/service-sandbox/server', ['--import', 'tsx', 'src/main.ts', '--port', String(sandboxPort)], sandboxPort);
+  bootApp('one-ngo-sandbox', 'apps/service-sandbox/server', ['--import', 'tsx', 'src/main.ts', '--https-port', String(sandboxPort)], sandboxPort);
 }
 
 //-------------------- Start the app, web app and guide. -------------------
 bootApp('one-ngo', 'apps/onengo/server', ['scripts/dev.mjs', '--port', String(appPort)], appPort);
-bootApp('one-ngo-web', 'apps/onengo/web', ['scripts/dev.mjs', '--port', String(appWebPort),'--api-port', String(appPort)], appWebPort, 60_000, false);
+bootApp('one-ngo-web', 'apps/onengo/web', ['scripts/dev.mjs', '--port', String(appWebPort), '--api-port', String(appPort)], appWebPort, 60_000, false);
 bootApp('one-ngo-guide', 'apps/onengo-guide/web', ['scripts/dev.mjs', '--port', String(appWebGuidePort)], appWebGuidePort, 60_000, false);
 
 if (!noConsole) {

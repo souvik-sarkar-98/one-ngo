@@ -66,8 +66,8 @@
   padding: 0 4px;
   box-sizing: border-box;
   border-radius: 8px;
-  background: #fdf1dc;
-  color: #9a6200;
+  background: var(--badge-warn-bg);
+  color: var(--warn);
   font-size: 0.6rem;
   font-weight: 700;
   line-height: 16px;

@@ -1,6 +1,5 @@
 import { Readable } from 'node:stream';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { notFound } from '@onengo/kernel/errors';
 import { recordQueryOf, type RecordsApi, type RequestContext, type ShareInput } from '@onengo/platform/main';
 import { contextOf } from '../context.js';
 import { approvalDecisionRequest, approvalQueryRequest, type ApprovalDecisionRequest, type ApprovalQueryRequest } from '@onengo/platform/contracts';
@@ -9,7 +8,10 @@ import {
   aggregateRequest,
   bulkRequest,
   createRecordRequest,
+  deletedPageResponse,
   recordQueryRequest,
+  restoreRecordRequest,
+  restoredRecordResponse,
   transitionRequest,
   updateRecordRequest,
   type ActionRequest,
@@ -17,6 +19,7 @@ import {
   type BulkRequest,
   type CreateRecordRequest,
   type RecordQueryRequest,
+  type RestoreRecordRequest,
   type TransitionRequest,
   type UpdateRecordRequest,
 } from '@onengo/platform/contracts';
@@ -87,6 +90,33 @@ export async function recordRoutes(api: FastifyInstance, { deps }: { deps: Recor
     },
   );
 
+  /**
+   * An administrator's delete: ?version= is the version they read. The record goes to the recycle bin
+   * and can be restored; refused while it has ledger entries, receipts, payments, a pending approval or records referring to it.
+   */
+  api.delete<{ Params: { type: string; id: string }; Querystring: { version: number } }>(
+    '/api/records/:type/:id',
+    { schema: { querystring: { type: 'object', required: ['version'], properties: { version: { type: 'integer' } } } } },
+    async (req, reply) => {
+      await deps.recordBin.delete(contextOf(req), req.params.id, req.query.version);
+      return reply.status(204).send();
+    },
+  );
+
+  /** ?type=&q=&limit=&offset= → { items, total }: the records an administrator deleted, newest first. */
+  api.get<{ Querystring: { type?: string; q?: string; limit?: string; offset?: string } }>(
+    '/api/admin/recycle-bin',
+    { schema: { response: { 200: deletedPageResponse } } },
+    async (req) => deps.recordBin.list(contextOf(req), req.query),
+  );
+
+  /** { expectedVersion }: brings a deleted record back. Refused when a unique value was taken since, or a record it refers to is deleted. */
+  api.post<{ Params: { id: string }; Body: RestoreRecordRequest }>(
+    '/api/admin/recycle-bin/:id/restore',
+    { schema: { body: restoreRecordRequest, response: { 200: restoredRecordResponse } } },
+    async (req) => deps.recordBin.restore(contextOf(req), req.params.id, req.body.expectedVersion),
+  );
+
   api.post<{ Params: { type: string; id: string; transition: string }; Body: TransitionRequest }>(
     '/api/records/:type/:id/transitions/:transition',
     { schema: { body: transitionRequest } },
@@ -129,10 +159,10 @@ export async function recordRoutes(api: FastifyInstance, { deps }: { deps: Recor
     return reply.status(204).send();
   });
 
+  /** → { path }: the live public link, or `path: null` (still 200) when the record has none. An unknown or unreadable record is still 404. */
   api.get<{ Params: { type: string; id: string } }>('/api/records/:type/:id/public-link', async (req) => {
     const link = await deps.publicForms.linkFor(contextOf(req), req.params.id);
-    if (!link) throw notFound('Not found.');
-    return link;
+    return { path: link?.path ?? null };
   });
   api.delete<{ Params: { type: string; id: string } }>('/api/records/:type/:id/public-link', async (req, reply) => {
     await deps.publicForms.revoke(contextOf(req), req.params.id);

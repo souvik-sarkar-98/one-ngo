@@ -29,6 +29,8 @@ export interface PasswordSettings extends Omit<PasswordPolicyOptions, 'logger' |
   /** Extra common passwords, one per line (e.g. a published top-100,000 list). */
   commonPasswordsFile?: string;
   fetch?: BreachFetch;
+  /** Replaces `https://api.pwnedpasswords.com`. Unset keeps Have I Been Pwned. */
+  apiBase?: string;
 }
 
 /** Sign-in, sessions, roles, people, access checks, API keys and PINs. */
@@ -38,18 +40,31 @@ export function wireIdentity(base: Base, { definitions, runtime }: Definitions, 
     userUpdated: recordUserUpdated(base.audit),
     tokenSecret: options.tokenSecret,
     crypto,
-    deliverEmailCode: ({ tenantId, email, code }) =>
-      notifications.sendImmediateEmail(
-        tenantId,
-        email,
-        'Your sign-in code',
-        `Your sign-in code is ${code}. It expires in 10 minutes. If you did not ask for it, ignore this email.`,
-      ),
+    deliverEmailCode: async ({ tenantId, email, code, template, locale, organisation, user, expiresInMinutes }) => {
+      await notifications.sendSystemEmail(tenantId, email, {
+        purpose: 'sign_in_code',
+        template,
+        locale,
+        scope: { code, organisation, user, expiresInMinutes },
+        fallback: {
+          subject: 'Your sign-in code',
+          body: `Your sign-in code is ${code}. It expires in ${expiresInMinutes} minutes. If you did not ask for it, ignore this email.`,
+        },
+      });
+    },
     publicBaseUrl: options.publicBaseUrl,
+    templateProblem: (tenantId, key) => notifications.systemTemplateProblem(tenantId, key),
+    ensureEmail: (tenantId) => notifications.requireEmail(tenantId),
     passwordPolicy: passwordPolicy(options.passwords, logger),
-    deliverPasswordLink: async ({ tenantId, email, kind, url, organisation, locale }) => {
-      const { subject, body } = passwordLinkEmail(await runtime.text(tenantId, locale), { kind, url, organisation });
-      await notifications.sendImmediateEmail(tenantId, email, subject, body);
+    deliverPasswordLink: async ({ tenantId, email, kind, url, organisation, locale, template, user, expiresInMinutes }) => {
+      const fallback = passwordLinkEmail(await runtime.text(tenantId, locale), { kind, url, organisation });
+      await notifications.sendSystemEmail(tenantId, email, {
+        purpose: kind === 'reset' ? 'password_reset' : 'invite',
+        template,
+        locale,
+        scope: { url, organisation, user, expiresInMinutes },
+        fallback,
+      });
     },
     localeOf: (tenantId, userId) => runtime.localeOfMember(tenantId, userId),
   });
@@ -96,11 +111,11 @@ export function passkeyRelyingParty(publicBaseUrl: string | undefined, extraOrig
 }
 
 function passwordPolicy(settings: PasswordSettings = {}, logger: Base['logger']): PasswordPolicy {
-  const { timeoutMs, commonPasswordsFile: file, fetch, ...rules } = settings;
+  const { timeoutMs, commonPasswordsFile: file, fetch, apiBase, ...rules } = settings;
   return new PasswordPolicy({
     ...rules,
     commonPasswords: file ? commonPasswordsFile(file) : undefined,
-    breaches: pwnedPasswords({ timeoutMs, fetch }),
+    breaches: pwnedPasswords({ timeoutMs, fetch, apiBase }),
     logger,
   });
 }

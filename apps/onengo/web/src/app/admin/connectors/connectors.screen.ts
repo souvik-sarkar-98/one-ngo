@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { PageFrame } from '@onengo/web-kit';
+import { Btn, PageFrame } from '@onengo/web-kit';
 import { TranslatePipe } from '../../services/i18n';
 import { CfForm } from '../../ui/cf-form';
 import { CreateButton } from '../../ui/create-button';
@@ -12,7 +12,7 @@ import { ConnectorsStore } from './connectors-store';
 /** Administration › Connectors: SMS, WhatsApp, webhooks, HTTP calls and account sign-in with what uses each and how the last delivery went. */
 @Component({
   selector: 'app-admin-connectors',
-  imports: [FilteredListPage, FilteredInfiniteList, MobileFormSheet, CfForm, CreateButton, ScreenHeading, TranslatePipe, PageFrame],
+  imports: [Btn, FilteredListPage, FilteredInfiniteList, MobileFormSheet, CfForm, CreateButton, ScreenHeading, TranslatePipe, PageFrame],
   providers: [ConnectorsStore],
   styleUrls: ['../../ui/styles/na-list-dashboard.css', '../../ui/styles/title-action.css'],
   template: `
@@ -20,7 +20,7 @@ import { ConnectorsStore } from './connectors-store';
       <div class="admin__line admin__line--title">
         <app-screen-heading class="admin__grow" [text]="'ui.crumbs.admin.connectors' | t" />
         @if (!store.narrow()) {
-          <button type="button" class="app-btn app-btn--primary admin__title-action" (click)="store.openCreate()">{{ 'ui.admin.connectors.new' | t }}</button>
+          <button appBtn="primary" type="button" class="admin__title-action" (click)="store.openCreate()">{{ 'ui.admin.connectors.new' | t }}</button>
         }
       </div>
       @let s = store.state();
@@ -28,7 +28,9 @@ import { ConnectorsStore } from './connectors-store';
       <section class="list-dashboard" [attr.aria-busy]="s.loading">
         <app-filtered-list-page>
           <app-filtered-infinite-list
-            [chips]="[]"
+            [chips]="store.chips()"
+            [activeChipId]="s.chip"
+            (chipSelect)="store.setChip($event)"
             [items]="store.rows()"
             [loading]="s.loading"
             [error]="s.error"

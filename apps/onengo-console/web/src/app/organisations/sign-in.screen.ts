@@ -5,7 +5,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type {
   OperatorAssuranceContract, OperatorProviderCheckContract, OperatorProviderOptInContract, OperatorSignInContract,
 } from '@onengo/platform/contracts';
-import { FormProblems } from '@onengo/web-kit';
+import { Btn, FormProblems } from '@onengo/web-kit';
 import { OperatorApi } from '../services/operator-api';
 
 interface ProviderForm {
@@ -39,19 +39,19 @@ const optInForm = (optIn: OperatorProviderOptInContract | null): OptInForm => ({
  * change, so a client secret is never kept in the browser while it is away at the identity provider.
  */
 @Component({
-  standalone: true, imports: [FormsModule, FormProblems, NgTemplateOutlet, RouterLink],
+  standalone: true, imports: [Btn, FormsModule, FormProblems, NgTemplateOutlet, RouterLink],
   template: `<h1>Sign-in for {{view()?.organisation?.displayName ?? code()}}</h1>
     <p class="muted"><a routerLink="/organisations/status" [queryParams]="{ code: code() }">Back to status</a>
       · Code {{code()}} @if (view(); as v) { · {{v.organisation.status}} }</p>
     <app-form-problems [message]="error()" />
-    @if (notice()) { <p class="notice">{{notice()}}</p> }
+    @if (notice()) { <p class="notice info">{{notice()}}</p> }
     @if (view(); as v) {
       <section class="card">
         @if (stepUpId()) {
           <p><strong>Verified.</strong> You can make one change in the next five minutes.</p>
         } @else {
           <p class="muted">Changes need a fresh multi-factor sign-in. Verify, then make one change.</p>
-          <button (click)="verify()">Verify to make a change</button>
+          <button appBtn="primary" (click)="verify()">Verify to make a change</button>
         }
         <label>Reason for the change (kept in the audit)<textarea rows="2" [(ngModel)]="reason"></textarea></label>
       </section>
@@ -64,7 +64,7 @@ const optInForm = (optIn: OperatorProviderOptInContract | null): OptInForm => ({
         </select></label>
         <p class="muted">Passwords can be switched off only while two administrators can still sign in another way.
           Switching passwords back on always works.</p>
-        <button [disabled]="!canChange()" (click)="savePolicy()">Save policy</button>
+        <button appBtn="primary" [disabled]="!canChange()" (click)="savePolicy()">Save policy</button>
       </section>
 
       @for (shared of v.shared; track shared.id) {
@@ -72,7 +72,7 @@ const optInForm = (optIn: OperatorProviderOptInContract | null): OptInForm => ({
           <p class="muted">{{shared.issuer}}
             @if (shared.allowedDomains.length) { · installation domains {{shared.allowedDomains.join(', ')}} }</p>
           <ng-container *ngTemplateOutlet="optIn; context: { id: shared.id }" />
-          <button class="secondary" (click)="test(shared.id)">Test connection</button>
+          <button appBtn (click)="test(shared.id)">Test connection</button>
           <ng-container *ngTemplateOutlet="checks; context: { id: shared.id }" />
         </section>
       } @empty {
@@ -84,9 +84,9 @@ const optInForm = (optIn: OperatorProviderOptInContract | null): OptInForm => ({
           <p class="muted">{{own.issuer}} · client {{own.clientId}} · domains {{own.allowedDomains.join(', ')}}
             · secret {{own.secretSet ? 'stored' : 'missing'}} · changed {{own.updatedAt}}</p>
           <ng-container *ngTemplateOutlet="optIn; context: { id: own.id }" />
-          <button class="secondary" (click)="edit(own)">Edit</button>
-          <button class="secondary" (click)="test(own.id)">Test connection</button>
-          <button class="danger" [disabled]="!canChange()" (click)="remove(own.id)">Remove</button>
+          <button appBtn (click)="edit(own)">Edit</button>
+          <button appBtn (click)="test(own.id)">Test connection</button>
+          <button appBtn="destructive" [disabled]="!canChange()" (click)="remove(own.id)">Remove</button>
           <ng-container *ngTemplateOutlet="checks; context: { id: own.id }" />
         </section>
       }
@@ -101,8 +101,8 @@ const optInForm = (optIn: OperatorProviderOptInContract | null): OptInForm => ({
         <label>Client secret<input type="password" autocomplete="new-password" [(ngModel)]="form.clientSecret"
           [placeholder]="form.existing ? 'Stored. Leave empty to keep it.' : ''"></label>
         <label>Email domains it may sign in (comma separated)<input [(ngModel)]="form.domains"></label>
-        <button [disabled]="!canChange()" (click)="saveProvider()">Save provider</button>
-        @if (form.existing) { <button class="secondary" (click)="form = blank()">Cancel</button> }
+        <button appBtn="primary" [disabled]="!canChange()" (click)="saveProvider()">Save provider</button>
+        @if (form.existing) { <button appBtn (click)="form = blank()">Cancel</button> }
       </section>
     }
 
@@ -113,7 +113,7 @@ const optInForm = (optIn: OperatorProviderOptInContract | null): OptInForm => ({
           @for (level of levels; track level.value) { <option [value]="level.value">{{level.label}}</option> }
         </select></label>
         <label>Only these email domains (comma separated, empty for no extra limit)<input [(ngModel)]="o.domains"></label>
-        <button [disabled]="!canChange()" (click)="saveOptIn(id)">Save opt-in</button>
+        <button appBtn="primary" [disabled]="!canChange()" (click)="saveOptIn(id)">Save opt-in</button>
       }
     </ng-template>
     <ng-template #checks let-id="id">

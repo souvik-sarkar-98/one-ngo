@@ -1,7 +1,7 @@
 import { Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { PageFrame } from '@onengo/web-kit';
+import { Btn, PageFrame } from '@onengo/web-kit';
 import { t } from '../core/i18n/i18n';
 import type { FormValues } from '../core/records/record/forms';
 import { Api, ApiError } from '../services/api';
@@ -49,7 +49,7 @@ interface PublishedFile {
  */
 @Component({
   selector: 'app-report-screen',
-  imports: [PageFrame, TranslatePipe, ScreenHeading, ListCreateSheet, CreateButton],
+  imports: [Btn, PageFrame, TranslatePipe, ScreenHeading, ListCreateSheet, CreateButton],
   styleUrls: ['../ui/styles/na-list-dashboard.css', '../ui/styles/title-action.css'],
   styles: `
     :host { display: block; }
@@ -71,7 +71,7 @@ interface PublishedFile {
       <div class="admin__line admin__line--title">
         <app-screen-heading class="admin__grow" [text]="report()?.label || ('ui.nav.reports' | t)" />
         @if (report() && !narrow()) {
-          <button type="button" class="app-btn app-btn--primary admin__title-action" (click)="openCreate()">{{ 'ui.reports.new' | t }}</button>
+          <button appBtn="primary" type="button" class="admin__title-action" (click)="openCreate()">{{ 'ui.reports.new' | t }}</button>
         }
       </div>
       @if (error()) {
@@ -98,8 +98,8 @@ interface PublishedFile {
                   <span class="list-row__sub">{{ file.createdByName ?? '' }}</span>
                 </span>
                 <span class="report-card__actions">
-                  <button type="button" class="app-btn app-btn--secondary" (click)="preview(file)">{{ 'ui.reports.preview' | t }}</button>
-                  <button type="button" class="app-btn app-btn--secondary" [disabled]="busy()" (click)="download(file)">{{ 'ui.reports.downloadFile' | t }}</button>
+                  <button appBtn type="button" (click)="preview(file)">{{ 'ui.reports.preview' | t }}</button>
+                  <button appBtn type="button" [disabled]="busy()" (click)="download(file)">{{ 'ui.reports.downloadFile' | t }}</button>
                 </span>
               </li>
             }
@@ -123,8 +123,8 @@ interface PublishedFile {
                     <td>{{ file.createdByName ?? '' }}</td>
                     <td>
                       <div class="app-btn-group">
-                        <button type="button" class="app-btn app-btn--secondary" (click)="preview(file)">{{ 'ui.reports.preview' | t }}</button>
-                        <button type="button" class="app-btn app-btn--secondary" [disabled]="busy()" (click)="download(file)">{{ 'ui.reports.downloadFile' | t }}</button>
+                        <button appBtn type="button" (click)="preview(file)">{{ 'ui.reports.preview' | t }}</button>
+                        <button appBtn type="button" [disabled]="busy()" (click)="download(file)">{{ 'ui.reports.downloadFile' | t }}</button>
                       </div>
                     </td>
                   </tr>

@@ -1,5 +1,6 @@
 import { Component, input, output } from '@angular/core';
 import { MatMenuModule } from '@angular/material/menu';
+import { Btn } from '@onengo/web-kit';
 
 export interface MenuItem {
   id: string;
@@ -11,10 +12,10 @@ export interface MenuItem {
 /** A labelled button that opens a menu, such as "+ New". */
 @Component({
   selector: 'app-menu-button',
-  imports: [MatMenuModule],
+  imports: [Btn, MatMenuModule],
   styles: [`.menu-button__group { border-top: 1px solid var(--line, #e2e8f0); }`],
   template: `
-    <button type="button" [class.primary]="primary()" [disabled]="disabled()" [matMenuTriggerFor]="menu">{{ label() }}</button>
+    <button [appBtn]="primary() ? 'primary' : ''" type="button" [disabled]="disabled()" [matMenuTriggerFor]="menu">{{ label() }}</button>
     <mat-menu #menu="matMenu" xPosition="before">
       @for (item of items(); track item.id) {
         <button type="button" mat-menu-item [class.menu-button__group]="item.group" (click)="choose.emit(item.id)">

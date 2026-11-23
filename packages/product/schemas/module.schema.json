@@ -36,6 +36,21 @@
             }
           }
         },
+        "moneyAccounts": {
+          "type": "array",
+          "description": "Real bank, cash or wallet accounts to open, each attached to one of the ledger accounts above",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "name", "kind", "ledgerCode"],
+            "properties": {
+              "key": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,40}$", "description": "Short name of the account, used by payment actions and transfers" },
+              "name": { "type": "string", "description": "Account name" },
+              "kind": { "enum": ["bank", "cash", "wallet", "investment"], "description": "Kind of account" },
+              "ledgerCode": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,30}$", "description": "Code of an asset ledger account this module creates" }
+            }
+          }
+        },
         "roles": {
           "type": "array",
           "description": "Roles to create",

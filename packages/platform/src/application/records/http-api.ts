@@ -16,6 +16,7 @@ import type {
   QueryApprovals,
   QueryRecords,
   RecordApproval,
+  RecordBin,
   TransitionRecord,
   UpdateRecord,
 } from './record-use-cases.js';
@@ -36,6 +37,7 @@ export interface RecordsApi {
   listRecords: ListRecords;
   queryRecords: QueryRecords;
   aggregateRecords: AggregateRecords;
+  recordBin: RecordBin;
   shares: Pick<RecordSharing, 'list' | 'candidates' | 'share' | 'remove'>;
   bulk: Pick<BulkService, 'run'>;
   runAction: RunAction;

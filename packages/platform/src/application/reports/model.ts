@@ -9,6 +9,14 @@ export interface ReportDatasetView {
   value?: number;
 }
 
+/** One signatory printed on a report, in the order it is shown. */
+export interface ReportSignatory {
+  name: string;
+  designation: string;
+  /** The signature image kept with this report. Null when none was saved. */
+  fileId: string | null;
+}
+
 /** The data a document template and a workbook both read. */
 export interface ReportModel {
   org: { name: string };
@@ -20,6 +28,8 @@ export interface ReportModel {
   label: string;
   /** The report's own name. */
   title: string;
+  /** The ordered set printed on reports when this model was built. */
+  signatories: ReportSignatory[];
 }
 
 /** A module registers one of these to shape a report in code. None are shipped. */

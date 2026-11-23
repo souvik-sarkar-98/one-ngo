@@ -1,0 +1,24 @@
+{
+  "key": "earnings",
+  "recordType": "earning",
+  "label": "Earnings",
+  "pageSize": 20,
+  "layout": "table",
+  "columns": ["number", "title", "category", "source", "amount", "expectedOn", "receivedOn", "receivedIn", "status"],
+  "compactColumns": ["title", "amount", "status"],
+  "chips": [
+    { "id": "expected", "label": "Expected", "statusIn": ["expected"] },
+    { "id": "received", "label": "Received", "statusIn": ["received"] },
+    { "id": "all", "label": "All" }
+  ],
+  "defaultChip": "expected",
+  "filters": ["category", "receivedOn", "receivedIn"],
+  "row": { "title": "title", "subtitle": ["category", "source"], "meta": "amount", "badge": "status" },
+  "detail": {
+    "sections": [
+      { "id": "earning", "label": "Earning", "fields": ["number", "status", "title", "category", "source", "amount", "expectedOn", "receivedOn", "receivedIn", "notes"] }
+    ]
+  },
+  "create": { "fields": ["title", "category", "source", "amount", "expectedOn", "notes"] },
+  "edit": { "fields": ["title", "category", "source", "amount", "expectedOn", "notes"] }
+}

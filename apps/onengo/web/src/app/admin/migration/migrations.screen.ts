@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { opensInPlace, PageFrame } from '@onengo/web-kit';
+import { Btn, opensInPlace, PageFrame } from '@onengo/web-kit';
 import { TranslatePipe } from '../../services/i18n';
 import { ScreenHeading } from '../../ui/screen-heading';
 import { MigrationStore } from './migration-store';
@@ -7,7 +7,7 @@ import { MigrationStore } from './migration-store';
 /** Data migrations of the organisation, newest first, and a new one by name. */
 @Component({
   selector: 'app-admin-migrations',
-  imports: [ScreenHeading, TranslatePipe, PageFrame],
+  imports: [Btn, ScreenHeading, TranslatePipe, PageFrame],
   providers: [MigrationStore],
   styleUrls: ['../admin.css', './migration.css'],
   template: `
@@ -29,7 +29,7 @@ import { MigrationStore } from './migration-store';
             <span>{{ 'ui.admin.migration.name' | t }}</span>
             <input type="text" maxlength="120" [value]="store.name()" (input)="store.name.set($any($event.target).value)" />
           </label>
-          <button type="submit" class="app-btn app-btn--primary" [disabled]="s.busy">{{ 'ui.admin.migration.new' | t }}</button>
+          <button appBtn="primary" type="submit" [disabled]="s.busy">{{ 'ui.admin.migration.new' | t }}</button>
         </form>
         @if (s.loading) {
           <p class="muted" role="status">{{ 'ui.common.loading' | t }}</p>

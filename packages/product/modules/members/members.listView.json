@@ -1,0 +1,26 @@
+{
+  "key": "members",
+  "recordType": "member",
+  "label": "Members",
+  "pageSize": 20,
+  "layout": "table",
+  "columns": ["number", "name", "category", "city", "joinedOn", "feesPaid", "status"],
+  "compactColumns": ["name", "status"],
+  "chips": [
+    { "id": "active", "label": "Active", "statusIn": ["active"] },
+    { "id": "inactive", "label": "Inactive", "statusIn": ["inactive"] },
+    { "id": "all", "label": "All" }
+  ],
+  "defaultChip": "active",
+  "filters": ["category", "city", "joinedOn"],
+  "row": { "title": "name", "subtitle": ["category", "email"], "meta": "number", "badge": "status" },
+  "detail": {
+    "sections": [
+      { "id": "member", "label": "Member", "fields": ["number", "name", "category", "status", "joinedOn", "login", "email", "phone", "address", "city", "notes"] },
+      { "id": "fees", "label": "Membership fees", "fields": ["feesPaid", "feesTotal"] },
+      { "id": "feeList", "label": "Fee payments", "related": { "recordType": "membershipFee", "field": "member", "total": "amount" } }
+    ]
+  },
+  "create": { "fields": ["name", "category", "joinedOn", "login", "email", "phone", "address", "city", "notes"] },
+  "edit": { "fields": ["name", "category", "joinedOn", "login", "email", "phone", "address", "city", "notes"] }
+}

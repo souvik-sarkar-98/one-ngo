@@ -88,7 +88,7 @@ export async function prepareDatabase(url: string): Promise<string> {
 
   await withClient(url, async (c) => {
     await c.query('begin');
-    // Migration 001 touches the same objects; the migrator holds this key around each file.
+    // 001_core.sql touches the same objects; the migrator holds this key around each file.
     await c.query('select pg_advisory_xact_lock($1::bigint)', [MIGRATION_LOCK_KEY.toString()]);
     await c.query(`do $$
       begin

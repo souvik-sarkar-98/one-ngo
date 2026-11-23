@@ -1,0 +1,31 @@
+{
+  "key": "earnings",
+  "version": "1.0.0",
+  "label": "Earnings",
+  "description": "Income other than donations and membership fees, such as interest, sales and service fees. Received earnings post to the books.",
+  "engine": "0.1.0",
+  "dependsOn": ["donations"],
+  "definitions": [
+    "earning.recordType.json",
+    "earning.workflow.json",
+    "earnings.listView.json",
+    "earningReceived.postingRule.json",
+    "earningsRegister.report.json",
+    "income.recordGroup.json"
+  ],
+  "setup": {
+    "roles": [
+      {
+        "key": "earnings-manager",
+        "label": "Earnings manager",
+        "permissions": ["record:earning:*", "record:earning:transition:*", "money:accounts:read", "report:earningsRegister:run"]
+      }
+    ],
+    "accounts": [
+      { "code": "EARN_INTEREST", "name": "Interest earned", "type": "income" },
+      { "code": "EARN_SALES", "name": "Sales income", "type": "income" },
+      { "code": "EARN_FEES", "name": "Service fees", "type": "income" },
+      { "code": "EARN_OTHER", "name": "Other earnings", "type": "income" }
+    ]
+  }
+}

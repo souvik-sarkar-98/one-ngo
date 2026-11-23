@@ -7,11 +7,12 @@ import { EditableTable } from '../../../ui/editable-table';
 import { ExpressionField } from '../../../ui/expression-field';
 import type { TableColumn } from '../../../ui/table-rows';
 import { RecordTypeStore } from './record-type-store';
+import { Btn } from '@onengo/web-kit';
 
 /** Checks a record must pass to be saved, each with the message people see. */
 @Component({
   selector: 'app-record-type-rules',
-  imports: [TranslatePipe, EditableTable, ExpressionField],
+  imports: [Btn, TranslatePipe, EditableTable, ExpressionField],
   styleUrl: './record-type.css',
   template: `
     <h3 class="rt-heading">{{ 'ui.builder.recordType.rulesCount' | t: { count: rows().length } }}</h3>
@@ -38,7 +39,7 @@ import { RecordTypeStore } from './record-type-store';
             <input id="rule-message" required [value]="r.message" (input)="set(r.key, { message: text($event) })" />
           </div>
           <div class="rt-actions">
-            <button type="button" class="danger" (click)="store.removeRule(r.key)">{{ 'ui.builder.recordType.removeRule' | t }}</button>
+            <button appBtn="danger" type="button" (click)="store.removeRule(r.key)">{{ 'ui.builder.recordType.removeRule' | t }}</button>
           </div>
         }
       </div>

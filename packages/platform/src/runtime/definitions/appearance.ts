@@ -22,7 +22,7 @@ export interface AppearanceLayout {
   icons?: Record<string, string>;
 }
 
-const SLOT = /^(home|records|inbox|reports|people|admin|builder|guide|settings|signout|record:[a-z][a-zA-Z0-9_-]{0,62}|page:[a-z][a-zA-Z0-9_-]{0,62})$/;
+const SLOT = /^(home|records|inbox|reports|money|people|admin|builder|guide|settings|signout|record:[a-z][a-zA-Z0-9_-]{0,62}|page:[a-z][a-zA-Z0-9_-]{0,62})$/;
 const THEME_FIELDS = ['label', 'brand', 'brandForeground', 'background', 'surface', 'text', 'muted', 'line', 'radius'] as const;
 
 /** The stored layout, or null when nothing has been published or the stored value cannot be read. */

@@ -46,7 +46,15 @@ export class PgPublishedReportStore implements PublishedReportStore {
        returning id`,
       [row.reportKey, row.title, JSON.stringify(row.params), row.format, JSON.stringify(row.model), row.createdBy],
     );
-    return { id: rows[0]!.id };
+    const id = rows[0]!.id;
+    for (const file of row.signatoryFiles ?? []) {
+      await executorOf(tx).query(
+        `insert into published_report_signatory (published_report_id, tenant_id, file_id, position)
+         values ($1::uuid, app_tenant(), $2::uuid, $3)`,
+        [id, file.fileId, file.position],
+      );
+    }
+    return { id };
   }
 
   async list(tx: Tx, reportKey: string): Promise<PublishedReportRow[]> {

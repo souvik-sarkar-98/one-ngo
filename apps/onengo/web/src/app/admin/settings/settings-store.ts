@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import type { OrganisationSettings } from '../../core/admin/admin';
 import { failure } from '../../core/admin/roles';
-import { identityChange, identityValues, monthOptions, settingsChange, settingsValues, sizeText, storagePercent } from '../../core/admin/settings';
+import { emailTemplateValues, emailTemplatesChange, identityChange, identityValues, mailChange, monthOptions, settingsChange, settingsValues, sizeText, storagePercent } from '../../core/admin/settings';
 import { t } from '../../core/i18n/i18n';
 import { languageName } from '../../core/i18n/languages';
 import type { FormValues } from '../../core/records/record/forms';
@@ -57,7 +57,19 @@ export class SettingsStore extends AdminBase {
   });
   readonly storage = computed<CfFieldDef[]>(() => {
     this.i18n.locale();
-    return [{ key: 'quotaGb', label: t('ui.admin.settings.quota'), type: 'number', required: true, readOnly: false, options: [], placeholder: enterPlaceholder('ui.admin.settings.quota') }];
+    const options = (this.settings()?.fileStoreConnectors ?? []).map((c) => ({ key: c.key, label: c.label }));
+    return [
+      { key: 'quotaGb', label: t('ui.admin.settings.quota'), type: 'number', required: true, readOnly: false, options: [], placeholder: enterPlaceholder('ui.admin.settings.quota') },
+      {
+        key: 'fileStoreConnector',
+        label: t('ui.admin.settings.fileStore'),
+        type: 'select',
+        required: false,
+        readOnly: false,
+        options: [{ key: '', label: t('ui.admin.settings.fileStoreNone') }, ...options],
+        hint: t('ui.admin.settings.fileStoreHint'),
+      },
+    ];
   });
   readonly api = computed<CfFieldDef[]>(() => {
     this.i18n.locale();
@@ -65,6 +77,57 @@ export class SettingsStore extends AdminBase {
       { key: 'apiRequestsPerMinute', label: t('ui.admin.settings.apiRate'), type: 'number', required: true, readOnly: false, options: [], placeholder: enterPlaceholder('ui.admin.settings.apiRate') },
       { key: 'corsOrigins', label: t('ui.admin.settings.cors'), type: 'textarea', required: false, readOnly: false, options: [], hint: t('ui.admin.settings.corsHint') },
     ];
+  });
+  readonly mail = computed<CfFieldDef[]>(() => {
+    this.i18n.locale();
+    const chosen = String(this.values()['mailConnector'] ?? '');
+    const options = [{ key: '', label: t('ui.admin.settings.mailNone') }, ...(this.settings()?.mailConnectors ?? []).map((c) => ({ key: c.key, label: c.label }))];
+    const fields: CfFieldDef[] = [
+      { key: 'mailConnector', label: t('ui.admin.settings.mailConnector'), type: 'select', required: false, readOnly: false, options },
+    ];
+    if (chosen) {
+      fields.push({
+        key: 'mailFrom',
+        label: t('ui.admin.settings.mailFrom'),
+        type: 'text',
+        required: true,
+        readOnly: false,
+        options: [],
+        hint: t('ui.admin.settings.mailFromHint'),
+        placeholder: enterPlaceholder('ui.admin.settings.mailFrom'),
+      });
+    }
+    return fields;
+  });
+  /** The sign-in email templates: one choice per email. A saved template that is no longer published stays visible, so it can be changed. */
+  readonly emails = computed<CfFieldDef[]>(() => {
+    this.i18n.locale();
+    const s = this.settings();
+    const options = (s?.emailTemplateOptions ?? []).map((o) => ({ key: o.key, label: o.label }));
+    const choice = (key: string, label: string, saved: string | null): CfFieldDef => ({
+      key,
+      label,
+      type: 'select',
+      required: false,
+      readOnly: false,
+      options: [
+        { key: '', label: t('ui.admin.settings.emailDefault') },
+        ...options,
+        ...(saved && !options.some((o) => o.key === saved) ? [{ key: saved, label: t('ui.admin.settings.emailNotPublished', { label: saved }) }] : []),
+      ],
+    });
+    return [
+      choice('signInCodeTemplate', t('ui.admin.settings.emailSignInCode'), s?.emailTemplates.sign_in_code ?? null),
+      choice('passwordResetTemplate', t('ui.admin.settings.emailPasswordReset'), s?.emailTemplates.password_reset ?? null),
+      choice('inviteTemplate', t('ui.admin.settings.emailInvite'), s?.emailTemplates.invite ?? null),
+    ];
+  });
+  /** The financial year start month as people read it, for the read-only books card. */
+  readonly fyMonthLabel = computed(() => {
+    const s = this.settings();
+    if (!s) return '';
+    const month = monthOptions().find((o) => o.key === String(s.financialYearStartMonth));
+    return month?.label ?? '';
   });
   readonly finance = computed<CfFieldDef[]>(() => {
     this.i18n.locale();
@@ -100,11 +163,15 @@ export class SettingsStore extends AdminBase {
     }
   }
 
-  /** Saves one screen's fields: Identity's names and language, or Settings' storage, API and financial year. */
-  async save(part: 'identity' | 'settings'): Promise<void> {
+  /** Saves one part of the organisation screens: identity, settings (storage, API, financial year), mail, or sign-in emails. */
+  async save(part: 'identity' | 'settings' | 'mail' | 'emails'): Promise<void> {
     const s = this.settings();
     if (!s || this.saving()) return;
-    const out = part === 'identity' ? identityChange(s, this.values()) : settingsChange(s, this.values());
+    const out =
+      part === 'identity' ? identityChange(s, this.values())
+      : part === 'mail' ? mailChange(this.values())
+      : part === 'emails' ? emailTemplatesChange(s, this.values())
+      : settingsChange(s, this.values());
     if ('errors' in out) return this.errors.set(out.errors);
     this.errors.set({});
     if (!Object.keys(out.change).length) return;
@@ -122,6 +189,6 @@ export class SettingsStore extends AdminBase {
 
   private use(s: OrganisationSettings): void {
     this.settings.set(s);
-    this.values.set({ ...identityValues(s), ...settingsValues(s) });
+    this.values.set({ ...identityValues(s), ...settingsValues(s), ...emailTemplateValues(s) });
   }
 }

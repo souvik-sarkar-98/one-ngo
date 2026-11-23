@@ -4,6 +4,7 @@ import type { FormValue } from '../../core/records/record/forms';
 import { TranslatePipe } from '../../services/i18n';
 import type { CfFieldDef } from '../cf-types';
 import { SignatureView } from './signature-view';
+import { Btn } from '@onengo/web-kit';
 
 /**
  * A signature field: a drawing pad (pointer events on a canvas, so a finger,
@@ -14,7 +15,7 @@ import { SignatureView } from './signature-view';
  */
 @Component({
   selector: 'app-signature-field',
-  imports: [SignatureView, TranslatePipe],
+  imports: [Btn, SignatureView, TranslatePipe],
   styles: `
     :host {
       display: block;
@@ -22,12 +23,12 @@ import { SignatureView } from './signature-view';
     .signature-field__pad {
       position: relative;
       height: 160px;
-      border: 1px solid #cbd5e1;
+      border: 1px solid var(--line-strong);
       border-radius: 10px;
-      background: #fff;
+      background: var(--card);
     }
     .signature-field__pad[data-invalid='true'] {
-      border-color: #ba1a1a;
+      border-color: var(--error-color);
     }
     canvas,
     .signature-field__held {
@@ -43,7 +44,7 @@ import { SignatureView } from './signature-view';
       left: 16px;
       right: 16px;
       bottom: 34px;
-      border-top: 1px solid #94a3b8;
+      border-top: 1px solid var(--grey-400);
       pointer-events: none;
     }
     .signature-field__hint {
@@ -51,7 +52,7 @@ import { SignatureView } from './signature-view';
       left: 16px;
       bottom: 10px;
       font-size: 0.72rem;
-      color: #94a3b8;
+      color: var(--grey-400);
       pointer-events: none;
     }
     .signature-field__row {
@@ -70,14 +71,14 @@ import { SignatureView } from './signature-view';
     .signature-field__signer input {
       height: 40px;
       padding: 0 10px;
-      border: 1px solid #79747e;
+      border: 1px solid var(--field-border);
       border-radius: 4px;
       font: inherit;
       font-size: 0.875rem;
     }
     .signature-field__muted {
       font-size: 0.75rem;
-      color: #64748b;
+      color: var(--grey-500);
     }
   `,
   template: `
@@ -87,7 +88,7 @@ import { SignatureView } from './signature-view';
       <app-signature-view [file]="v.file" [line]="v.line" />
       @if (!f.readOnly) {
         <div class="signature-field__row">
-          <button type="button" class="app-btn" (click)="clear()">{{ 'ui.common.clear' | t }}</button>
+          <button appBtn type="button" (click)="clear()">{{ 'ui.common.clear' | t }}</button>
         </div>
       }
     } @else if (f.readOnly) {
@@ -110,7 +111,7 @@ import { SignatureView } from './signature-view';
         <div class="signature-field__hint">{{ 'ui.fields.signature.signAbove' | t }}</div>
       </div>
       <div class="signature-field__row">
-        <button type="button" class="app-btn" [disabled]="!s?.drawing" (click)="clear()">{{ 'ui.common.clear' | t }}</button>
+        <button appBtn type="button" [disabled]="!s?.drawing" (click)="clear()">{{ 'ui.common.clear' | t }}</button>
       </div>
       @if (f.typedName) {
         <label class="signature-field__signer">
@@ -216,7 +217,7 @@ export class SignatureField {
     ctx.lineWidth = 2.2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#1d2733';
+    ctx.strokeStyle = 'var(--fg)';
     const held = this.signature()?.drawing;
     if (held && !this.inked()) {
       const img = new Image();

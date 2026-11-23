@@ -103,6 +103,10 @@ export interface DefinitionStore {
   patch(tx: Tx, kind: DefinitionKind, key: string): Promise<{ patch: unknown } | undefined>;
   patches(tx: Tx): Promise<{ kind: DefinitionKind; key: string; patch: unknown }[]>;
   savePatch(tx: Tx, kind: DefinitionKind, key: string, patch: unknown, actorId: string): Promise<void>;
+  /** The shipped definitions the organisation turned off. Their patches stay, and module updates do not publish them again. */
+  disabledDefinitions(tx: Tx): Promise<{ kind: DefinitionKind; key: string }[]>;
+  /** Marks a shipped definition as turned off or on again. Does not change what is published. */
+  setDefinitionDisabled(tx: Tx, kind: DefinitionKind, key: string, disabled: boolean, actorId: string): Promise<void>;
 
   /** 
 amedRecipientsSetting is the organisation setting that holds the named fixed recipients (NAMED_RECIPIENTS_SETTING). */

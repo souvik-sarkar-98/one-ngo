@@ -1,0 +1,17 @@
+{
+  "key": "memberNotices",
+  "recordType": "memberNotice",
+  "label": "Notices to members",
+  "pageSize": 20,
+  "layout": "table",
+  "columns": ["number", "subject", "memberName", "email"],
+  "compactColumns": ["subject", "memberName"],
+  "row": { "title": "subject", "subtitle": ["memberName", "email"], "meta": "number" },
+  "detail": {
+    "sections": [
+      { "id": "notice", "label": "Notice", "fields": ["number", "subject", "body"] },
+      { "id": "recipient", "label": "Sent to", "fields": ["member", "memberName", "email"] }
+    ]
+  },
+  "create": { "fields": ["member", "subject", "body"] }
+}

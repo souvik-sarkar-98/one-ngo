@@ -1,9 +1,8 @@
 import { fileAuditArchiver, gcsAuditArchiver } from '../infrastructure/audit/audit-archive.js';
 import { parseKey, parseKeys } from '@onengo/kernel/crypto';
-import { GcsFileStore, gcsJsonClient, LocalFileStore, metadataServerToken } from '@onengo/kernel/files';
-import { SmtpTransport } from '@onengo/kernel/notify';
+import { gcsJsonClient, metadataServerToken } from '@onengo/kernel/files';
 import { checkMemory, JsonLogger } from '@onengo/kernel/observability';
-import type { EmailTransport, FileStore, Logger } from '@onengo/kernel/ports';
+import type { EmailTransport, Logger } from '@onengo/kernel/ports';
 import { connectSupportedDatabase, unsupportedFields } from '../infrastructure/postgres/database-support.js';
 import type { Database } from '../infrastructure/postgres/db.js';
 import { connectorAllowedHosts, fetchConnectorHttp, type ConnectorHttp } from '../infrastructure/connectors/http.js';
@@ -16,10 +15,10 @@ export type { Environment } from '@onengo/kernel/env';
 
 /**
  * What the process entry points (main, deploy, organisation) need that belongs to the installation:
- * its logger, database, mail, keys and file store, read from the environment. The entry points
- * import these instead of the adapters.
+ * its logger, database and keys, read from the environment. Organisation files use the storage connector chosen in Settings. The entry points
+ * import these instead of the adapters. Outgoing email is the organisation's email connector, not SMTP.
  */
-export type { Database, Logger, EmailTransport, FileStore };
+export type { Database, Logger, EmailTransport };
 
 export const createLogger = (): Logger => new JsonLogger();
 
@@ -63,6 +62,28 @@ function httpsBase(env: Environment, name: string): string | undefined {
   return raw;
 }
 
+/** An https origin: no user, path, query, or fragment. A trailing slash is accepted and dropped. */
+function httpsOrigin(env: Environment, name: string): string | undefined {
+  const raw = env[name]?.trim();
+  if (!raw) return undefined;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error(`${name} is not an address: ${raw}`);
+  }
+  if (url.protocol !== 'https:') throw new Error(`${name} must be an https:// address.`);
+  if (url.username || url.password || url.search || url.hash || (url.pathname !== '/' && url.pathname !== '')) {
+    throw new Error(`${name} must be an https origin, with no path.`);
+  }
+  return url.origin;
+}
+
+/** `PWNED_PASSWORDS_API_BASE` replaces `https://api.pwnedpasswords.com`. Unset keeps Have I Been Pwned. */
+export function pwnedPasswordsApiBaseFromEnvironment(env: Environment): string | undefined {
+  return httpsOrigin(env, 'PWNED_PASSWORDS_API_BASE');
+}
+
 /**
  * The payment gateways. `RAZORPAY_API_BASE` replaces `https://api.razorpay.com`; `CASHFREE_API_BASE`, when set,
  * replaces both the Cashfree sandbox and production hosts. Unset keeps the real hosts.
@@ -89,20 +110,6 @@ export function openOperatorDatabase(env: Environment = process.env): Promise<Da
   return connectSupportedDatabase(targetEnvironment(env, connectionString), (url) =>
     PgDatabase.connect({ connectionString: url, runtimeConnectionString, maxConnections: 2 }),
   ).then(({ db }) => db);
-}
-
-/** `SMTP_*`: the installation's mail transport; none when `SMTP_HOST` is not set. */
-export function smtpFromEnvironment(env: Environment, required: (name: string) => string): EmailTransport | undefined {
-  return env.SMTP_HOST
-    ? new SmtpTransport({
-        host: env.SMTP_HOST,
-        port: Number(env.SMTP_PORT ?? 587),
-        secure: env.SMTP_SECURE === '1',
-        user: required('SMTP_USER'),
-        password: required('SMTP_PASSWORD'),
-        from: required('SMTP_FROM'),
-      })
-    : undefined;
 }
 
 const GOOGLE_ISSUER = 'https://accounts.google.com';
@@ -168,13 +175,6 @@ export function auditArchiveFromEnvironment(
     ? gcsAuditArchiver(gcsJsonClient({ bucket, accessToken }), env.AUDIT_ARCHIVE_PREFIX ?? 'audit-archive/')
     : fileAuditArchiver(dir!);
   return { auditDays, archiveAudit };
-}
-
-/** Cloud Storage when `FILE_STORE_BUCKET` is set, a local folder otherwise. */
-export function fileStoreFromEnvironment(env: Environment, defaultLocalDir: string): FileStore {
-  return env.FILE_STORE_BUCKET
-    ? new GcsFileStore(gcsJsonClient({ bucket: env.FILE_STORE_BUCKET, accessToken: metadataServerToken() }), env.FILE_STORE_PREFIX ?? '')
-    : new LocalFileStore(env.FILE_STORE_DIR ?? defaultLocalDir);
 }
 
 /** Each serving instance checks its own memory; cron ticks reach one instance and can be an hour apart. */

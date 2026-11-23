@@ -1,0 +1,24 @@
+{
+  "key": "milestones",
+  "recordType": "milestone",
+  "label": "Milestones",
+  "pageSize": 20,
+  "layout": "table",
+  "columns": ["number", "title", "project", "dueOn", "doneOn", "status"],
+  "compactColumns": ["title", "status"],
+  "chips": [
+    { "id": "open", "label": "Open", "statusIn": ["open"] },
+    { "id": "done", "label": "Done", "statusIn": ["done"] },
+    { "id": "all", "label": "All" }
+  ],
+  "defaultChip": "open",
+  "filters": ["dueOn"],
+  "row": { "title": "title", "subtitle": ["project"], "meta": "dueOn", "badge": "status" },
+  "detail": {
+    "sections": [
+      { "id": "milestone", "label": "Milestone", "fields": ["number", "status", "title", "project", "dueOn", "doneOn", "notes"] }
+    ]
+  },
+  "create": { "fields": ["title", "project", "dueOn", "notes"] },
+  "edit": { "fields": ["title", "project", "dueOn", "notes"] }
+}

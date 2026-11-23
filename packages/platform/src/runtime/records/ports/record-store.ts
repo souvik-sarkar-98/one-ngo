@@ -18,6 +18,29 @@ export interface RecordRow {
   updated_at: string | Date;
 }
 
+/** A deleted record as the recycle bin reads it: who last touched it (the person who deleted it) and when it was deleted. */
+export interface DeletedRecordRow extends RecordRow {
+  deleted_at: string | Date;
+  updated_by: string | null;
+}
+
+/** What links a record to money or approvals, which a delete must not orphan. */
+export interface RecordLinks {
+  journalEntries: boolean;
+  receipts: boolean;
+  payments: boolean;
+  pendingApproval: boolean;
+}
+
+/** Which deleted records the recycle bin lists. */
+export interface DeletedQuery {
+  typeKey?: string;
+  /** Matches the record number and its searchable text. */
+  search?: string;
+  limit: number;
+  offset: number;
+}
+
 /** What a save writes: `data` as stored (sensitive values sealed) with the keyed hashes of unique sensitive values. */
 interface WrittenRecord {
   status: string | null;
@@ -103,6 +126,18 @@ export interface RecordStore {
   update(tx: Tx, id: string, expectedVersion: number, changes: RecordChanges): Promise<RecordRow | undefined>;
   /** Marks the live record deleted at `expectedVersion`. Undefined when it has moved on or is gone. */
   softDelete(tx: Tx, id: string, expectedVersion: number, actorId: string): Promise<RecordRow | undefined>;
+  /** The deleted record `id`, or undefined when it is live or does not exist. */
+  getDeleted(tx: Tx, id: string): Promise<DeletedRecordRow | undefined>;
+  /** One page of deleted records, most recently deleted first. */
+  deletedPage(tx: Tx, query: DeletedQuery): Promise<DeletedRecordRow[]>;
+  /** How many deleted records the query matches, ignoring its paging. */
+  countDeleted(tx: Tx, query: Pick<DeletedQuery, 'typeKey' | 'search'>): Promise<number>;
+  /** Brings the deleted record back at `expectedVersion`, raising its version. Undefined when it has moved on or is not deleted. */
+  undelete(tx: Tx, id: string, expectedVersion: number, actorId: string): Promise<RecordRow | undefined>;
+  /** What ties the record to ledger entries, receipts, payments and pending approvals. */
+  linksOf(tx: Tx, id: string): Promise<RecordLinks>;
+  /** How many live records of `typeKey` hold `value` in `field`. */
+  countLinked(tx: Tx, typeKey: string, field: string, value: string): Promise<number>;
   /** Sets one rollup value on the live record `id` of `typeKey`. */
   setRollup(tx: Tx, typeKey: string, id: string, fieldKey: string, value: number): Promise<void>;
   /** Lays `values` over the record's data. */

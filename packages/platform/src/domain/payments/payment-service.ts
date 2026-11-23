@@ -65,6 +65,13 @@ export interface PaymentTerms {
   /** Permissions of the published actions whose `createPayment` step asks for exactly this; empty when none does. */
   actionPermissions(tenantId: string, recordType: string, ask: PaymentAsk): Promise<string[]>;
   /**
+   * What the same published steps charge for this record: one amount per matching
+   * step, evaluated on the record as `ActionService` does. A step whose amount
+   * reads what the person typed into the action's form (or cannot be evaluated)
+   * gives null: the server cannot know that amount, so it does not constrain it.
+   */
+  actionAmounts(tenantId: string, record: PayableRecord, ask: PaymentAsk, user: { id: string; roles: string[] }): Promise<unknown[]>;
+  /**
    * The amounts of the receipts the record would be issued once its `onPaid`
    * step runs with `facts` filled in; empty when that step issues none.
    */
@@ -196,6 +203,11 @@ export class PaymentService {
       providerPaymentId: null,
     });
     if (refused) throw ruleViolation(refused);
+    const amountRefused = await this.amountRefusal(ctx.tenantId, record, { provider: input.provider, onPaid: input.onPaid, upiAccountKey: input.upiAccountKey ?? '' }, paise, {
+      id: ctx.actor.id,
+      roles: [...ctx.actor.roles],
+    });
+    if (amountRefused) throw ruleViolation(amountRefused);
 
     let upiLink: string | null = null;
     let orderId: string | null = null;
@@ -372,7 +384,27 @@ export class PaymentService {
     if (!(await this.terms.actionPermissions(tenantId, record.type, ask)).length) {
       return 'No published record action asks for this payment any more; record it on the record by hand.';
     }
-    return this.receiptRefusal(tenantId, record, intent, { ...confirm, reference: intent.reference });
+    const receiptRefused = await this.receiptRefusal(tenantId, record, intent, { ...confirm, reference: intent.reference });
+    return receiptRefused ?? (await this.amountRefusal(tenantId, record, ask, toPaise(intent.amount), { id: 'system:payments', roles: ['system'] }));
+  }
+
+  /**
+   * Why the amount is not what the published step charges for this record, or
+   * null when it is, or when the step's amount is not fixed by the record.
+   */
+  private async amountRefusal(
+    tenantId: string,
+    record: PayableRecord,
+    ask: PaymentAsk,
+    paise: number,
+    user: { id: string; roles: string[] },
+  ): Promise<string | null> {
+    const charged = await this.terms.actionAmounts(tenantId, record, ask, user);
+    if (!charged.length || charged.some((a) => a === null || a === undefined)) return null;
+    if (charged.some((a) => isMoney(a) && toPaise(a) === paise)) return null;
+    const first = charged[0];
+    const shown = isMoney(first) ? paiseToDecimal(toPaise(first)) : String(first);
+    return `The payment is for ${paiseToDecimal(paise)} but the record's payment action charges ${shown}.`;
   }
 
   /** Why the record's receipt would not match the payment, or null when every receipt its paid step issues carries the payment's amount. */

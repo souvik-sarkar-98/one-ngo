@@ -54,6 +54,7 @@ const MONEY: [string, string][] = [
   ['money:accounts:read', 'See money accounts (API only)'],
   ['money:accounts:manage', 'Open and change money accounts (API only)'],
   ['money:transfer', 'Move money between accounts (API only)'],
+  ['money:reconcile', 'Import bank statements, match them to the books and sign off (API only)'],
 ];
 
 const SETUP: [string, string][] = [
@@ -70,6 +71,7 @@ const SETUP: [string, string][] = [
   ['admin:api-keys', 'Manage API keys'],
   ['admin:jobs', "See and cancel other people's background jobs"],
   ['admin:audit', 'See the audit log'],
+  ['admin:records', 'Delete records and restore them from the recycle bin'],
   ['admin:settings', 'Change organisation settings'],
   ['data:export', "Export all of the organisation's data (API only)"],
   ['data:migrate', 'Bring in CSV files from another system'],

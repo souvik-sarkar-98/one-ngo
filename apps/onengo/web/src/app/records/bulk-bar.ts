@@ -4,6 +4,7 @@ import { TranslatePipe } from '../services/i18n';
 import { RowMenu } from '../ui/row-menu';
 import { BulkStore } from './bulk-store';
 import { ListStore } from './list-store';
+import { Btn } from '@onengo/web-kit';
 
 /**
  * The bulk bar while rows are selected: the count, Clear selection, "Select
@@ -12,7 +13,7 @@ import { ListStore } from './list-store';
  */
 @Component({
   selector: 'app-bulk-bar',
-  imports: [RowMenu, TranslatePipe],
+  imports: [Btn, RowMenu, TranslatePipe],
   styleUrl: '../ui/styles/app-filtered-infinite-list.css',
   styles: `
     :host {
@@ -47,7 +48,7 @@ import { ListStore } from './list-store';
       @if (bulk.count()) {
         <div class="filtered-infinite-list__bulk-actions">
           @for (op of shown(); track op.id) {
-            <button type="button" class="app-btn" [class.app-btn--primary]="$first" (click)="bulk.run(op)">{{ op.label }}</button>
+            <button [appBtn]="$first ? 'primary' : ''" type="button" (click)="bulk.run(op)">{{ op.label }}</button>
           }
           @if (rest().length) {
             <app-row-menu [actions]="rest()" (choose)="choose($event)" />

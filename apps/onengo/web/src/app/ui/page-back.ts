@@ -49,7 +49,7 @@ import { Icon } from '@onengo/web-kit';
   `,
   template: `
     @if (showBack()) {
-      <button type="button" [attr.aria-label]="label()" (click)="back()">
+      <button type="button" class="page-back__button" [attr.aria-label]="label()" (click)="back()">
         <app-icon name="back" />
       </button>
     }

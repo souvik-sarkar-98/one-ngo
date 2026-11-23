@@ -1,12 +1,15 @@
 import { compileExpression } from '../../runtime/expressions/expression.js';
 import type { Actor, TenantContext } from '../../domain/ports/tenant-context.js';
 import { notFound, ruleViolation, validationFailed } from '@onengo/kernel/errors';
+import { CONTACT_ADMINISTRATOR, emailUnavailable } from './email-unavailable.js';
 import type { OutboxEvent } from './ports/outbox-event.js';
 import type { AuditTrail } from '../../domain/ports/audit-trail.js';
 import type { TransactionManager, Tx } from '../../domain/ports/transaction.js';
 import type { DefinitionReader } from '../../runtime/definitions/definition-service.js';
 import { canReadField, isReadProtected, MASK } from '../../runtime/definitions/field-permissions.js';
-import { renderEmailHtml, renderTemplate } from '../../runtime/definitions/template.js';
+import { checkTemplate, renderEmailHtml, renderTemplate } from '../../runtime/definitions/template.js';
+import { ExpressionError } from '../../runtime/expressions/expression.js';
+import type { EmailPurpose } from '../../domain/identity/ports/identity-directory.js';
 import type { FieldDef, NotifyChannel, RecipientDef } from '../../runtime/definitions/types.js';
 import type { SensitiveFields } from '../../runtime/records/sensitive.js';
 import type { NewNotification, NotificationStore } from './ports/notification-store.js';
@@ -71,6 +74,15 @@ export interface InboxOptions {
 const UUID = /^[0-9a-f-]{36}$/i;
 
 export type TransportResolver = (tenantId: string) => Promise<EmailTransport | undefined>;
+
+/** A sign-in code, reset or invitation email: its template (if the organisation chose one), the values it may use, and the default wording. */
+export interface SystemEmail {
+  purpose: EmailPurpose;
+  template?: string;
+  locale: string;
+  scope: Record<string, unknown>;
+  fallback: { subject: string; body: string };
+}
 
 export class NotificationService {
   constructor(
@@ -209,8 +221,14 @@ export class NotificationService {
     });
   }
 
+  /** Refuses when this organisation cannot send email. The message does not say why. */
+  async requireEmail(tenantId: string): Promise<void> {
+    if (!(await this.transportFor(tenantId))) throw emailUnavailable();
+  }
+
   /** Sends now (for sign-in codes); falls back to the queue if sending fails. */
   async sendImmediateEmail(tenantId: string, to: string, subject: string, body: string, html?: string): Promise<void> {
+    await this.requireEmail(tenantId);
     const id = await this.tm.withTenant(tenantId, (tx) =>
       this.insert(tx, { userId: null, channel: 'email', to, subject, body, ...(html ? { html } : {}), status: 'pending' }),
     );
@@ -221,13 +239,66 @@ export class NotificationService {
     }
   }
 
+  /**
+   * Sends a sign-in code, reset or invitation email. The organisation's chosen message template for the purpose
+   * is filled in, in the person's language, when it is still usable; otherwise the default wording is sent and
+   * the fallback is recorded in the audit.
+   */
+  async sendSystemEmail(tenantId: string, to: string, input: SystemEmail): Promise<'template' | 'default'> {
+    if (input.template) {
+      const rendered = await this.renderSystemTemplate(tenantId, input.template, input.locale, input.scope);
+      if (rendered) {
+        await this.sendImmediateEmail(tenantId, to, rendered.subject, rendered.body, rendered.html);
+        return 'template';
+      }
+      await this.tm.withTenant(tenantId, (tx) => this.audit.event(tx, 'auth.email_template_fallback', { purpose: input.purpose, template: input.template }));
+    }
+    await this.sendImmediateEmail(tenantId, to, input.fallback.subject, input.fallback.body);
+    return 'default';
+  }
+
+  /** Why a template cannot be used for a system email, or undefined when it can. */
+  async systemTemplateProblem(tenantId: string, key: string): Promise<string | undefined> {
+    const template = await this.defs.get(tenantId, 'template', key);
+    if (!template) return `Template '${key}' is not published.`;
+    if (template.body.kind === 'document') return `Template '${key}' is a document. Use a message template.`;
+    const errors = [template.body.subject, template.body.body, template.body.html ?? ''].flatMap((text) => checkTemplate(text));
+    return errors.length ? `Template '${key}' has placeholders that do not parse: ${errors.join('; ')}` : undefined;
+  }
+
+  /** The template filled in for the person's language; undefined when it is missing or a placeholder fails. */
+  private async renderSystemTemplate(
+    tenantId: string,
+    key: string,
+    locale: string,
+    scope: Record<string, unknown>,
+  ): Promise<{ subject: string; body: string; html?: string } | undefined> {
+    const template = await this.defs.get(tenantId, 'template', key);
+    if (!template || template.body.kind === 'document') return undefined;
+    const translations = (await this.defs.list(tenantId, 'translation')).map((t) => t.body);
+    const entries = Object.assign({}, ...translations.filter((t) => t.locale === locale).map((t) => t.entries)) as Record<string, string>;
+    const path = `template.${template.key}`;
+    try {
+      const htmlSource = entries[`${path}.html`] ?? template.body.html;
+      const html = htmlSource?.trim() ? renderEmailHtml(htmlSource, scope) : '';
+      return {
+        subject: renderTemplate(entries[`${path}.subject`] ?? template.body.subject, scope).slice(0, 200),
+        body: renderTemplate(entries[`${path}.body`] ?? template.body.body, scope),
+        ...(html ? { html } : {}),
+      };
+    } catch (error) {
+      if (error instanceof ExpressionError) return undefined;
+      throw error;
+    }
+  }
+
   /** Dispatcher handler for queued emails. Throws so the dispatcher retries. */
   async deliverEmail(tenantId: string, notificationId: string): Promise<void> {
     const n = await this.tm.withTenant(tenantId, (tx) => this.store.outgoing(tx, notificationId));
     if (!n || n.status === 'sent') return;
     const transport = await this.transportFor(tenantId);
     if (!transport) {
-      await this.mark(tenantId, notificationId, 'skipped', 'Email is not configured for this organisation.');
+      await this.mark(tenantId, notificationId, 'skipped', CONTACT_ADMINISTRATOR);
       return;
     }
     try {

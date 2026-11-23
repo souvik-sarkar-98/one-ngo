@@ -8,7 +8,7 @@ import { safeNext } from '@onengo/web-kit';
 import { createWorld, type TestWorld } from '../../../../../packages/platform/test/helpers.js';
 
 /**
- * Probes for S4-4, S4-5, S4-17 and the row-level security inventory (docs/reports/s4-review-2026-10-26.md).
+ * Probes for S4-4, S4-5, S4-17 and the row-level security inventory (architecture section 9.1).
  * Each asserts the SAFE behaviour.
  */
 

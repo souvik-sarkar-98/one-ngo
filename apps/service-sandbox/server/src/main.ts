@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { HTTPS_PORT, SMTP_PORT } from './constants.js';
-import { envBlock } from './home.js';
+import { HTTPS_PORT } from './constants.js';
 import { DEFAULT_DATA_DIR, startFixture } from './server.js';
 
 function portNumber(raw: string | undefined, label: string, fallback: number): number {
@@ -15,7 +14,7 @@ function portFromEnv(name: string, fallback: number): number {
   return portNumber(process.env[name], name, fallback);
 }
 
-/** `--https-port` and `--smtp-port` override the environment. Unset keeps 8095 and 2525. */
+/** `--https-port` overrides the environment. Unset keeps 8095. */
 function portFromArg(flag: string): number | undefined {
   const index = process.argv.indexOf(flag);
   if (index === -1) return undefined;
@@ -44,24 +43,19 @@ const nonEmpty = (value: string | undefined) => (value ? value : undefined);
 
 const fixture = await startFixture({
   httpsPort: portFromArg('--https-port') ?? portFromEnv('FIXTURE_HTTPS_PORT', HTTPS_PORT),
-  smtpPort: portFromArg('--smtp-port') ?? portFromEnv('FIXTURE_SMTP_PORT', SMTP_PORT),
   ...(process.env.FIXTURE_DATA_DIR ? { dataDir: process.env.FIXTURE_DATA_DIR } : {}),
   oneNgoBaseUrl: nonEmpty(process.env.ONENGO_BASE_URL) ?? nonEmpty(setting('PUBLIC_BASE_URL')) ?? `http://localhost:${nonEmpty(setting('PORT')) ?? '8080'}`,
-  fileStoreBucket: nonEmpty(setting('FILE_STORE_BUCKET')),
-  fileStorePrefix: setting('FILE_STORE_PREFIX'),
-  defaultOrg: nonEmpty(process.env.DEMO_ORG) ?? 'demo',
 }).catch((error: unknown) => {
   console.error(`The integration fixture could not start: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 });
 
-// Paste into one-ngo's .env and restart one-ngo:
-// ${envBlock({ origin: fixture.origin, smtpHost: '127.0.0.1', smtpPort: fixture.smtpPort, caPath: fixture.tls.caPath, fileStoreBucket: nonEmpty(setting('FILE_STORE_BUCKET')), fileStorePrefix: setting('FILE_STORE_PREFIX') })}
-console.log(`one-ngo integration fixture (test use only)
-  Log page: ${fixture.origin}/
-  SMTP:     127.0.0.1:${fixture.smtpPort}
-  Files:    ${fixture.filesDir}
-Refer to the README.html for instructions on how to use this fixture.
+console.log(`one-ngo service sandbox (test use only)
+  API:     ${fixture.origin}/
+  Swagger: ${fixture.origin}/swagger
+  Inbox:   ${fixture.origin}/inbox
+  Files:   ${fixture.filesDir}
+Copy the sandbox URLs you want into .env. See README.html.
 Your browser will warn about the certificate once on the sign-in page; accepting it is enough for that session.
 Press Ctrl+C to stop.`);
 

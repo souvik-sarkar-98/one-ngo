@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { PageFrame } from '@onengo/web-kit';
+import { Btn, PageFrame } from '@onengo/web-kit';
 import { MIGRATION_STEPS } from '../../core/admin/migration';
 import { TranslatePipe } from '../../services/i18n';
 import { ScreenHeading } from '../../ui/screen-heading';
@@ -11,7 +11,7 @@ import { MigrationStore } from './migration-store';
  */
 @Component({
   selector: 'app-admin-migration',
-  imports: [ScreenHeading, TranslatePipe, PageFrame],
+  imports: [Btn, ScreenHeading, TranslatePipe, PageFrame],
   providers: [MigrationStore],
   styleUrls: ['../admin.css', './migration.css'],
   template: `
@@ -49,7 +49,7 @@ import { MigrationStore } from './migration-store';
           </div>
         }
         @if (store.running() && store.step() !== 'run') {
-          <div class="notice" role="status">{{ 'ui.admin.migration.isRunning' | t }} <button type="button" class="app-btn" (click)="store.goStep('run')">{{ 'ui.crumbs.migrationStep.run' | t }}</button></div>
+          <div class="notice" role="status">{{ 'ui.admin.migration.isRunning' | t }} <button appBtn type="button" (click)="store.goStep('run')">{{ 'ui.crumbs.migrationStep.run' | t }}</button></div>
         }
 
         @switch (store.step()) {
@@ -68,11 +68,11 @@ import { MigrationStore } from './migration-store';
                       <span class="muted">{{ 'ui.admin.migration.fileFacts' | t: { columns: src.columns.length, rows: src.rowCount } }}</span>
                     </span>
                     <span class="migration__badge" [attr.data-status]="src.mapping ? 'done' : ''">{{ (src.mapping ? 'ui.admin.migration.mapped' : 'ui.admin.migration.notMapped') | t }}</span>
-                    <button type="button" class="app-btn" [disabled]="s.busy || store.running()" (click)="store.removeSource(src.id)">{{ 'ui.admin.migration.remove' | t }}</button>
+                    <button appBtn type="button" [disabled]="s.busy || store.running()" (click)="store.removeSource(src.id)">{{ 'ui.admin.migration.remove' | t }}</button>
                   </li>
                 }
               </ul>
-              <div class="migration__actions"><button type="button" class="app-btn app-btn--primary" (click)="store.goStep('map')">{{ 'ui.common.next' | t }}</button></div>
+              <div class="migration__actions"><button appBtn="primary" type="button" (click)="store.goStep('map')">{{ 'ui.common.next' | t }}</button></div>
             }
           }
 
@@ -97,7 +97,7 @@ import { MigrationStore } from './migration-store';
                   <section class="migration__target">
                     <div class="admin__line">
                       <strong class="admin__grow">{{ store.typeOf(x.type)?.label ?? x.type }}</strong>
-                      <button type="button" class="app-btn" (click)="store.removeTarget(i)">{{ 'ui.admin.migration.removeTarget' | t }}</button>
+                      <button appBtn type="button" (click)="store.removeTarget(i)">{{ 'ui.admin.migration.removeTarget' | t }}</button>
                     </div>
                     <div class="migration__grid">
                       <label class="migration__field">
@@ -156,8 +156,8 @@ import { MigrationStore } from './migration-store';
                   </label>
                 </div>
                 <div class="migration__actions">
-                  <button type="button" class="app-btn app-btn--primary" [disabled]="s.busy || !store.draft().length || store.running()" (click)="store.saveMapping()">{{ 'ui.admin.migration.saveMapping' | t }}</button>
-                  <button type="button" class="app-btn" (click)="store.goStep('order')">{{ 'ui.common.next' | t }}</button>
+                  <button appBtn="primary" type="button" [disabled]="s.busy || !store.draft().length || store.running()" (click)="store.saveMapping()">{{ 'ui.admin.migration.saveMapping' | t }}</button>
+                  <button appBtn type="button" (click)="store.goStep('order')">{{ 'ui.common.next' | t }}</button>
                 </div>
               }
             }
@@ -172,12 +172,12 @@ import { MigrationStore } from './migration-store';
                     <strong>{{ i + 1 }} · {{ src.fileName }}</strong>
                     <span class="muted">{{ src.mapping ? store.typesOf(src.mapping.targets) : ('ui.admin.migration.leftOut' | t) }}</span>
                   </span>
-                  <button type="button" class="app-btn" [disabled]="first || s.busy || store.running()" [attr.aria-label]="'ui.admin.migration.up' | t" (click)="store.move(src.id, -1)">↑</button>
-                  <button type="button" class="app-btn" [disabled]="last || s.busy || store.running()" [attr.aria-label]="'ui.admin.migration.down' | t" (click)="store.move(src.id, 1)">↓</button>
+                  <button appBtn type="button" [disabled]="first || s.busy || store.running()" [attr.aria-label]="'ui.admin.migration.up' | t" (click)="store.move(src.id, -1)">↑</button>
+                  <button appBtn type="button" [disabled]="last || s.busy || store.running()" [attr.aria-label]="'ui.admin.migration.down' | t" (click)="store.move(src.id, 1)">↓</button>
                 </li>
               }
             </ul>
-            <div class="migration__actions"><button type="button" class="app-btn app-btn--primary" (click)="store.goStep('books')">{{ 'ui.common.next' | t }}</button></div>
+            <div class="migration__actions"><button appBtn="primary" type="button" (click)="store.goStep('books')">{{ 'ui.common.next' | t }}</button></div>
           }
 
           @case ('books') {
@@ -198,10 +198,10 @@ import { MigrationStore } from './migration-store';
                   <label class="migration__field"><span>{{ 'ui.admin.migration.account' | t }}</span><input type="text" [value]="l.accountCode" (input)="store.setLine(i, 'accountCode', $any($event.target).value)" /></label>
                   <label class="migration__field"><span>{{ 'ui.admin.migration.debit' | t }}</span><input type="text" inputmode="decimal" [value]="l.debit ?? ''" (input)="store.setLine(i, 'debit', $any($event.target).value)" /></label>
                   <label class="migration__field"><span>{{ 'ui.admin.migration.credit' | t }}</span><input type="text" inputmode="decimal" [value]="l.credit ?? ''" (input)="store.setLine(i, 'credit', $any($event.target).value)" /></label>
-                  <button type="button" class="app-btn" (click)="store.removeLine(i)">{{ 'ui.admin.migration.remove' | t }}</button>
+                  <button appBtn type="button" (click)="store.removeLine(i)">{{ 'ui.admin.migration.remove' | t }}</button>
                 </div>
               }
-              <div class="migration__actions"><button type="button" class="app-btn" (click)="store.addLine()">{{ 'ui.admin.migration.addLine' | t }}</button></div>
+              <div class="migration__actions"><button appBtn type="button" (click)="store.addLine()">{{ 'ui.admin.migration.addLine' | t }}</button></div>
               @if ((b.lines ?? []).length) {
                 @let bal = store.balance();
                 <p [class.migration__issue]="!bal.balanced" class="muted">{{ 'ui.admin.migration.balance' | t: { debit: bal.debit / 100, credit: bal.credit / 100 } }}</p>
@@ -211,15 +211,15 @@ import { MigrationStore } from './migration-store';
                 <div class="migration__grid">
                   <label class="migration__field"><span>{{ 'ui.admin.migration.series' | t }}</span><input type="text" [value]="r.series" (input)="store.setReceipt(i, 'series', $any($event.target).value)" /></label>
                   <label class="migration__field"><span>{{ 'ui.admin.migration.next' | t }}</span><input type="number" min="1" step="1" [value]="r.next" (input)="store.setReceipt(i, 'next', $any($event.target).value)" /></label>
-                  <button type="button" class="app-btn" (click)="store.removeReceipt(i)">{{ 'ui.admin.migration.remove' | t }}</button>
+                  <button appBtn type="button" (click)="store.removeReceipt(i)">{{ 'ui.admin.migration.remove' | t }}</button>
                 </div>
               }
               <div class="migration__actions">
-                <button type="button" class="app-btn" (click)="store.addReceipt()">{{ 'ui.admin.migration.addReceipt' | t }}</button>
-                <button type="button" class="app-btn app-btn--primary" [disabled]="s.busy || store.running()" (click)="store.saveBooks()">{{ 'ui.admin.migration.saveBooks' | t }}</button>
+                <button appBtn type="button" (click)="store.addReceipt()">{{ 'ui.admin.migration.addReceipt' | t }}</button>
+                <button appBtn="primary" type="button" [disabled]="s.busy || store.running()" (click)="store.saveBooks()">{{ 'ui.admin.migration.saveBooks' | t }}</button>
               </div>
             }
-            <div class="migration__actions"><button type="button" class="app-btn" (click)="store.goStep('check')">{{ 'ui.common.next' | t }}</button></div>
+            <div class="migration__actions"><button appBtn type="button" (click)="store.goStep('check')">{{ 'ui.common.next' | t }}</button></div>
           }
 
           @case ('check') {
@@ -253,9 +253,9 @@ import { MigrationStore } from './migration-store';
               <p class="muted">{{ 'ui.admin.migration.notChecked' | t }}</p>
             }
             <div class="migration__actions">
-              <button type="button" class="app-btn" [disabled]="s.busy || store.running()" (click)="store.check()">{{ (p.check ? 'ui.admin.migration.checkAgain' : 'ui.admin.migration.checkNow') | t }}</button>
+              <button appBtn type="button" [disabled]="s.busy || store.running()" (click)="store.check()">{{ (p.check ? 'ui.admin.migration.checkAgain' : 'ui.admin.migration.checkNow') | t }}</button>
               @if (p.status === 'checked' && p.check) {
-                <button type="button" class="app-btn app-btn--primary" [disabled]="s.busy || !p.check.ready" (click)="store.run()">{{ 'ui.admin.migration.run' | t: { count: p.check.ready } }}</button>
+                <button appBtn="primary" type="button" [disabled]="s.busy || !p.check.ready" (click)="store.run()">{{ 'ui.admin.migration.run' | t: { count: p.check.ready } }}</button>
               }
             </div>
           }
@@ -266,7 +266,7 @@ import { MigrationStore } from './migration-store';
               @let job = s.job;
               <p><strong>{{ 'ui.admin.migration.progress' | t: { done: job?.progress ?? 0, total: job?.total ?? 0 } }}</strong></p>
               <div class="admin__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="store.percent()"><i [style.width.%]="store.percent()"></i></div>
-              <div class="migration__actions"><button type="button" class="app-btn" [disabled]="s.busy || !!job?.cancelRequested" (click)="store.cancel()">{{ 'ui.admin.migration.cancel' | t }}</button></div>
+              <div class="migration__actions"><button appBtn type="button" [disabled]="s.busy || !!job?.cancelRequested" (click)="store.cancel()">{{ 'ui.admin.migration.cancel' | t }}</button></div>
             } @else if (p.status === 'done') {
               <div class="notice ok" role="status">{{ 'ui.admin.migration.finished' | t }}</div>
             } @else if (p.status === 'failed') {
@@ -284,7 +284,7 @@ import { MigrationStore } from './migration-store';
                         <span class="muted">{{ 'ui.admin.migration.sourceResult' | t: { created: k.created, updated: k.updated, failed: k.failed } }}</span>
                       </span>
                       @if (k.failed && p.status !== 'running') {
-                        <button type="button" class="app-btn" (click)="store.downloadFailed(src.id)">{{ 'ui.admin.migration.downloadFailed' | t }}</button>
+                        <button appBtn type="button" (click)="store.downloadFailed(src.id)">{{ 'ui.admin.migration.downloadFailed' | t }}</button>
                       }
                     </li>
                   }
@@ -294,7 +294,7 @@ import { MigrationStore } from './migration-store';
             @if (p.booksResult?.error) {
               <div class="notice error" role="alert">{{ 'ui.admin.migration.booksError' | t: { error: p.booksResult?.error ?? '' } }}</div>
               @if (store.booksAllowed() && p.status === 'done' && !p.booksAppliedAt) {
-                <div class="migration__actions"><button type="button" class="app-btn app-btn--primary" [disabled]="s.busy" (click)="store.applyBooks()">{{ 'ui.admin.migration.applyBooks' | t }}</button></div>
+                <div class="migration__actions"><button appBtn="primary" type="button" [disabled]="s.busy" (click)="store.applyBooks()">{{ 'ui.admin.migration.applyBooks' | t }}</button></div>
               }
             } @else if (p.booksAppliedAt) {
               <div class="notice ok" role="status">{{ 'ui.admin.migration.booksAppliedOn' | t: { date: p.booksAppliedAt.slice(0, 10) } }}</div>

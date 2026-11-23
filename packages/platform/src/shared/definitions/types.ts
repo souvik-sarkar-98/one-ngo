@@ -123,6 +123,8 @@ export interface RecordGroupDef {
   label: string;
   /** Lower comes first. */
   order?: number;
+  /** Show the group's card on Home. Default true; false keeps it off Home until a person pins one of its lists. */
+  onHome?: boolean;
   recordTypes: string[];
 }
 
@@ -676,6 +678,12 @@ export interface ModuleManifest {
   definitions: string[];
   setup?: {
     accounts?: { code: string; name: string; type: 'asset' | 'liability' | 'equity' | 'income' | 'expense' }[];
+    /**
+     * Real accounts opened with the module, each attached to one of its `accounts` (so a bank account and its
+     * ledger balance are one thing). The organisation adds the UPI ID afterwards. Skipped if the key or the
+     * ledger account is already taken.
+     */
+    moneyAccounts?: { key: string; name: string; kind: 'bank' | 'cash' | 'wallet' | 'investment'; ledgerCode: string }[];
     receiptSeries?: { key: string; prefix: string; label: string; reset?: 'fiscal_year' | 'never' }[];
     roles?: { key: string; label: string; permissions: string[]; requireTwoStep?: boolean }[];
   };

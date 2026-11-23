@@ -17,6 +17,11 @@ describe('organisation appearance', () => {
       items: ['home', 'records', 'inbox', 'reports', 'builder', 'page:demo', 'admin', 'guide', 'settings', 'signout'],
       listLayout: 'table',
     }).items).toContain('reports');
+    expect(layoutOf({ items: ['home', 'money', 'settings'], listLayout: 'table', icons: { money: 'accounts' } })).toEqual({
+      items: ['home', 'money', 'settings'],
+      listLayout: 'table',
+      icons: { money: 'accounts' },
+    });
     expect(() => layoutOf({ items: ['records'], listLayout: 'cards' })).toThrow();
     expect(() => layoutOf({ items: ['home', 'home'], listLayout: 'table' })).toThrow();
     expect(() => layoutOf({ items: ['home', 'settings'], more: ['inbox'], listLayout: 'table' })).toThrow();

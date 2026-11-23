@@ -5,8 +5,7 @@ import { ScriptFailure, ScriptPool, ScriptSandbox, type ScriptRunInput } from '.
 import { createWorld, type TestWorld } from '../helpers.js';
 
 /**
- * Probes for S4-2 and S4-8 (docs/reports/s4-review-2026-10-26.md). Each asserts the SAFE
- * behaviour; `it.fails` marks a finding the current code still has.
+ * Probes for S4-2 and S4-8 (architecture section 9.1). Each asserts the SAFE behaviour.
  */
 
 const base: ScriptRunInput = { hook: 'validate', code: '', record: {}, previous: null, status: null, recordType: 't', user: { id: 'u', roles: [] } };

@@ -7,12 +7,16 @@ import { demand } from '../../domain/permissions.js';
 import type { TransactionManager } from '../../domain/ports/transaction.js';
 import { FY_START_SETTING } from '../../domain/ledger/fiscal-year.js';
 import { API_ACTOR_PREFIX, API_CORS_SETTING, API_RATE_SETTING, corsOriginsOf, requireCorsOrigins } from '../../domain/identity/api-key-policy.js';
+import { FILE_STORE_SETTING, MAIL_CONNECTOR_SETTING, MAIL_FROM_SETTING, type ConnectorStore } from '../connectors/ports/connector-store.js';
+import { parseEmailConfig } from '../../infrastructure/email/email-connector.js';
+import { parseStorageConfig } from '../../infrastructure/files/storage-connector.js';
 import { QUOTA_SETTING } from '../shared/platform-settings.js';
 import { LAYOUT_SETTING, layoutOf, readLayout, themeOf, type AppearanceLayout } from '../../runtime/definitions/appearance.js';
 import type { DefinitionService } from '../../runtime/definitions/definition-service.js';
 import type { ThemeDef } from '../../runtime/definitions/types.js';
 import { LOCALE_PATTERN, SHIPPED_LOCALES } from '../../runtime/definitions/messages.js';
 import type { AdministrationStore } from './ports/administration-store.js';
+import type { EmailPurpose } from '../../domain/identity/ports/identity-directory.js';
 
 /** Audit areas for the filter, by the audited entity. */
 export const AUDIT_AREAS = {
@@ -22,7 +26,7 @@ export const AUDIT_AREAS = {
   setup: { entities: ['module'], prefixes: ['definition:'] },
   connectors: { entities: ['connector'], prefixes: [] },
   apiKeys: { entities: ['api_key'], prefixes: [] },
-  money: { entities: ['money_account', 'transfer', 'fiscal_period', 'journal_entry', 'payment_intent', 'receipt'], prefixes: [] },
+  money: { entities: ['money_account', 'bank_statement_line', 'bank_reconciliation', 'transfer', 'fiscal_period', 'journal_entry', 'payment_intent', 'receipt'], prefixes: [] },
   files: { entities: ['file'], prefixes: [] },
   organisation: { entities: ['tenant'], prefixes: [] },
 } as const satisfies Record<string, { entities: readonly string[]; prefixes: readonly string[] }>;
@@ -55,6 +59,29 @@ export interface AuditEntry {
   after: unknown;
 }
 
+/** The message template each sign-in email uses. A purpose with null keeps the default wording. */
+export interface EmailTemplateChoices {
+  sign_in_code: string | null;
+  password_reset: string | null;
+  invite: string | null;
+}
+
+/** What settings need from identity to read, check and save the sign-in email templates. */
+export interface SignInEmailTemplates {
+  chosenEmailTemplates(tenantId: string): Promise<Partial<Record<EmailPurpose, string>>>;
+  checkEmailTemplates(tenantId: string, input: unknown): Promise<Partial<Record<EmailPurpose, string>>>;
+  saveEmailTemplateChoices(tenantId: string, choices: Partial<Record<EmailPurpose, string>>, updatedBy: string): Promise<void>;
+}
+
+function choicesOf(chosen: Partial<Record<EmailPurpose, string>>): EmailTemplateChoices {
+  return { sign_in_code: chosen.sign_in_code ?? null, password_reset: chosen.password_reset ?? null, invite: chosen.invite ?? null };
+}
+
+/** The choices that are set. A purpose with no choice keeps the default wording. */
+function chosenOnly(choices: EmailTemplateChoices): Partial<Record<EmailPurpose, string>> {
+  return Object.fromEntries(Object.entries(choices).filter(([, key]) => key !== null)) as Partial<Record<EmailPurpose, string>>;
+}
+
 export interface OrganisationSettings {
   /** Read-only: the organisation code in sign-in links, set when the organisation was onboarded. */
   code: string;
@@ -73,6 +100,20 @@ export interface OrganisationSettings {
   financialYearFixed: boolean;
   /** Fixed recipients scripts may notify by name; a script can never supply an address itself. */
   namedRecipients: Record<string, NamedRecipient>;
+  /** The email connector that sends this organisation's mail, or null when none is chosen. */
+  mailConnector: string | null;
+  /** The address that connector sends from. Null when no connector is chosen. */
+  mailFrom: string | null;
+  /** Enabled email connectors, plus a saved key that is no longer enabled, so it can be changed. */
+  mailConnectors: { key: string; label: string }[];
+  /** The storage connector new uploads are written to, or null when none is chosen. */
+  fileStoreConnector: string | null;
+  /** Enabled storage connectors, plus a saved key that is no longer enabled. */
+  fileStoreConnectors: { key: string; label: string }[];
+  /** The message template each sign-in email uses; null keeps the default wording. */
+  emailTemplates: EmailTemplateChoices;
+  /** Published message templates the organisation may choose for its sign-in emails. */
+  emailTemplateOptions: { key: string; label: string }[];
 }
 
 export interface SettingsInput {
@@ -85,6 +126,14 @@ export interface SettingsInput {
   corsOrigins?: unknown;
   financialYearStartMonth?: unknown;
   namedRecipients?: unknown;
+  /** The key of an enabled email connector, or null to send no organisation email. */
+  mailConnector?: unknown;
+  /** Required when a mail connector is chosen. One line, at most 320 characters. */
+  mailFrom?: unknown;
+  /** The key of an enabled, configured storage connector. */
+  fileStoreConnector?: unknown;
+  /** The sign-in email templates. Sent in full: a purpose sent as null, or left out, keeps the default wording. */
+  emailTemplates?: unknown;
 }
 
 const RECIPIENT_NAME = /^[a-z][a-zA-Z0-9_-]{0,62}$/;
@@ -138,6 +187,8 @@ export class AdministrationService {
     private readonly definitions: DefinitionService,
     private readonly storageOf: (tenantId: string) => Promise<{ used: number; quota: number }>,
     private readonly defaultApiRate: number,
+    private readonly connectors: Pick<ConnectorStore, 'connector' | 'mailChoice' | 'emailConnectors' | 'storeChoice' | 'storageConnectors'>,
+    private readonly signInEmails: SignInEmailTemplates,
   ) {}
 
   /** Newest first. `person` is a user id or `api:<key name>`; dates are inclusive calendar days. */
@@ -177,16 +228,22 @@ export class AdministrationService {
 
   async settings(ctx: TenantContext): Promise<OrganisationSettings> {
     demand(ctx.actor, 'admin:settings');
-    const { row, startMonth, fixed, named, cors } = await this.transactions.withTenant(ctx.tenantId, async (tx) => ({
-      row: await this.store.settings(tx, API_RATE_SETTING),
-      startMonth: await this.store.fiscalYearStartMonth(tx),
-      fixed: await this.store.financialYearFixed(tx),
-      named: await this.store.setting(tx, NAMED_RECIPIENTS_SETTING),
-      cors: await this.store.setting(tx, API_CORS_SETTING),
-    }));
+    const { row, startMonth, fixed, named, cors, mail, fileStore } = await this.transactions.withTenant(ctx.tenantId, async (tx) => {
+      const choice = await this.connectors.mailChoice(tx);
+      return {
+        row: await this.store.settings(tx, API_RATE_SETTING),
+        startMonth: await this.store.fiscalYearStartMonth(tx),
+        fixed: await this.store.financialYearFixed(tx),
+        named: await this.store.setting(tx, NAMED_RECIPIENTS_SETTING),
+        cors: await this.store.setting(tx, API_CORS_SETTING),
+        mail: this.mailStores(choice.connector, choice.from, await this.connectors.emailConnectors(tx)),
+        fileStore: this.fileStores(await this.connectors.storeChoice(tx), await this.connectors.storageConnectors(tx)),
+      };
+    });
     if (!row) throw notFound('Unknown organisation.');
     const storage = await this.storageOf(ctx.tenantId);
     const rate = Math.trunc(Number(row.rate));
+    const emailTemplates = choicesOf(await this.signInEmails.chosenEmailTemplates(ctx.tenantId));
     return {
       code: row.key,
       name: row.name,
@@ -199,7 +256,23 @@ export class AdministrationService {
       financialYearStartMonth: startMonth,
       financialYearFixed: fixed,
       namedRecipients: named && typeof named === 'object' && !Array.isArray(named) ? (named as Record<string, NamedRecipient>) : {},
+      mailConnector: mail.connector,
+      mailFrom: mail.from,
+      mailConnectors: mail.options,
+      fileStoreConnector: fileStore.connector,
+      fileStoreConnectors: fileStore.options,
+      emailTemplates,
+      emailTemplateOptions: await this.messageTemplates(ctx.tenantId),
     };
+  }
+
+  /** The organisation's published message templates, as choices. Document templates are for reports and are not offered. */
+  private async messageTemplates(tenantId: string): Promise<{ key: string; label: string }[]> {
+    const published = await this.definitions.list(tenantId, 'template');
+    return published
+      .filter((t) => (t.body.kind ?? 'message') === 'message')
+      .map((t) => ({ key: t.key, label: t.body.label?.trim() || t.key }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   }
 
   /** Changes only the settings sent; every change is audited with what it was before. */
@@ -215,6 +288,10 @@ export class AdministrationService {
       corsOrigins: string[];
       financialYearStartMonth: number;
       namedRecipients: Record<string, NamedRecipient>;
+      mailConnector: string | null;
+      mailFrom: string | null;
+      fileStoreConnector: string;
+      emailTemplates: EmailTemplateChoices;
     }> = {};
     if (input.namedRecipients !== undefined) next.namedRecipients = namedRecipientsOf(input.namedRecipients);
     if (input.name !== undefined) {
@@ -248,7 +325,16 @@ export class AdministrationService {
     if (input.financialYearStartMonth !== undefined) {
       next.financialYearStartMonth = wholeNumber(input.financialYearStartMonth, 1, 12, 'financialYearStartMonth', 'The financial year start month is a whole number from 1 (January) to 12 (December).');
     }
+    if (input.fileStoreConnector !== undefined) next.fileStoreConnector = await this.fileStoreChoice(ctx.tenantId, input.fileStoreConnector);
+    const mailRequested = input.mailConnector !== undefined || input.mailFrom !== undefined;
+    if (mailRequested) {
+      const mail = await this.mailChoice(ctx.tenantId, input, current);
+      next.mailConnector = mail.connector;
+      next.mailFrom = mail.from;
+    }
+    if (input.emailTemplates !== undefined) next.emailTemplates = choicesOf(await this.signInEmails.checkEmailTemplates(ctx.tenantId, input.emailTemplates));
     const was = {
+      ...(input.emailTemplates !== undefined ? { emailTemplates: current.emailTemplates } : {}),
       name: current.name,
       legalName: current.legalName,
       defaultLanguage: current.defaultLanguage,
@@ -257,9 +343,11 @@ export class AdministrationService {
       corsOrigins: current.corsOrigins,
       financialYearStartMonth: current.financialYearStartMonth,
       namedRecipients: current.namedRecipients,
+      ...(mailRequested ? { mailConnector: current.mailConnector, mailFrom: current.mailFrom } : {}),
+      ...(input.fileStoreConnector !== undefined ? { fileStoreConnector: current.fileStoreConnector } : {}),
     };
-    const changed = (Object.keys(next) as (keyof typeof next)[]).filter((k) => JSON.stringify(next[k]) !== JSON.stringify(was[k]));
-    if (!changed.length) return current;
+    const changed = (Object.keys(next) as (keyof typeof next)[]).filter((k) => JSON.stringify(next[k]) !== JSON.stringify(was[k as keyof typeof was]));
+    if (!changed.length && !mailRequested) return current;
     const startMonthChanged = changed.includes('financialYearStartMonth');
     if (startMonthChanged && current.financialYearFixed) throw ruleViolation(FY_FIXED_MESSAGE);
     if (next.name !== undefined || next.legalName !== undefined || next.defaultLanguage !== undefined) {
@@ -276,6 +364,12 @@ export class AdministrationService {
         if (await this.store.financialYearFixed(tx)) throw ruleViolation(FY_FIXED_MESSAGE);
         await put(FY_START_SETTING, next.financialYearStartMonth!);
       }
+      if (mailRequested) {
+        await put(MAIL_CONNECTOR_SETTING, next.mailConnector ?? null);
+        await put(MAIL_FROM_SETTING, next.mailFrom ?? null);
+      }
+      if (changed.includes('fileStoreConnector')) await put(FILE_STORE_SETTING, next.fileStoreConnector!);
+      if (!changed.length) return;
       await this.store.audit(tx, {
         actorId: ctx.actor.id,
         action: 'settings.changed',
@@ -285,7 +379,59 @@ export class AdministrationService {
         after: Object.fromEntries(changed.map((k) => [k, next[k]])),
       });
     });
+    // Checked above, so a rejected change writes nothing; the templates are saved after the settings and their audit.
+    if (changed.includes('emailTemplates')) await this.signInEmails.saveEmailTemplateChoices(ctx.tenantId, chosenOnly(next.emailTemplates!), ctx.actor.id);
     return this.settings(ctx);
+  }
+
+  private mailStores(
+    connector: string | null,
+    from: string | null,
+    rows: { key: string; enabled: boolean; provider: string | null }[],
+  ): { connector: string | null; from: string | null; options: { key: string; label: string }[] } {
+    const options = rows.filter((c) => c.enabled || c.key === connector).map((c) => ({ key: c.key, label: c.provider ? `${c.key} (${c.provider})` : c.key }));
+    if (connector && !options.some((o) => o.key === connector)) options.push({ key: connector, label: connector });
+    return { connector, from, options };
+  }
+
+  private fileStores(
+    connector: string | null,
+    rows: { key: string; enabled: boolean; provider: string | null }[],
+  ): { connector: string | null; options: { key: string; label: string }[] } {
+    const options = rows.filter((c) => c.enabled || c.key === connector).map((c) => ({ key: c.key, label: c.provider ? `${c.key} (${c.provider})` : c.key }));
+    if (connector && !options.some((o) => o.key === connector)) options.push({ key: connector, label: connector });
+    return { connector, options };
+  }
+
+  /** An enabled storage connector whose config is complete. */
+  private async fileStoreChoice(tenantId: string, value: unknown): Promise<string> {
+    const key = typeof value === 'string' ? value.trim() : '';
+    if (!key) throw validationFailed('Choose an enabled storage connector.', [{ path: 'fileStoreConnector', message: 'Choose an enabled storage connector.' }]);
+    const row = await this.transactions.withTenant(tenantId, (tx) => this.connectors.connector(tx, key));
+    const config = row && row.type === 'storage' ? parseStorageConfig(row.config) : undefined;
+    const ready = !!config && (config.provider === 'drive' || !!row?.secret_enc);
+    if (!row?.enabled || !ready) throw validationFailed('Choose an enabled storage connector.', [{ path: 'fileStoreConnector', message: 'Choose an enabled storage connector.' }]);
+    return row.key;
+  }
+
+  /** The mail connector and From address in a settings save. An empty connector clears both. */
+  private async mailChoice(tenantId: string, input: SettingsInput, current: OrganisationSettings): Promise<{ connector: string | null; from: string | null }> {
+    if (input.mailConnector !== undefined && input.mailConnector !== null && typeof input.mailConnector !== 'string') {
+      throw validationFailed('Choose an enabled email connector.', [{ path: 'mailConnector', message: 'Choose an enabled email connector.' }]);
+    }
+    if (input.mailConnector === null || input.mailConnector === '') return { connector: null, from: null };
+    const key = typeof input.mailConnector === 'string' ? input.mailConnector : current.mailConnector;
+    if (!key) throw validationFailed('Choose an enabled email connector.', [{ path: 'mailConnector', message: 'Choose an enabled email connector.' }]);
+    const row = await this.transactions.withTenant(tenantId, (tx) => this.connectors.connector(tx, key));
+    if (!row?.enabled || row.type !== 'email' || !parseEmailConfig(row.config)) {
+      throw validationFailed('Choose an enabled email connector.', [{ path: 'mailConnector', message: 'Choose an enabled email connector.' }]);
+    }
+    const fromRaw = input.mailFrom !== undefined ? input.mailFrom : current.mailFrom;
+    const from = typeof fromRaw === 'string' ? fromRaw.trim() : '';
+    if (!from || from.length > 320 || /[\r\n]/.test(typeof fromRaw === 'string' ? fromRaw : '')) {
+      throw validationFailed('Give a From address of one line.', [{ path: 'mailFrom', message: 'One line, at most 320 characters.' }]);
+    }
+    return { connector: key, from };
   }
 
   /** Publishes the organisation theme. An open draft of that theme is discarded. */

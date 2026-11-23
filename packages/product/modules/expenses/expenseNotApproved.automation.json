@@ -1,0 +1,9 @@
+{
+  "key": "expenseNotApproved",
+  "label": "Tell the claimant when a claim is not approved",
+  "recordType": "expenseClaim",
+  "trigger": { "event": "statusChanged", "to": "rejected" },
+  "actions": [
+    { "type": "notify", "template": "expenseNotApproved", "to": { "creator": true }, "channels": ["inApp", "email"] }
+  ]
+}

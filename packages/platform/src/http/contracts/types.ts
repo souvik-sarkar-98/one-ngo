@@ -14,7 +14,7 @@ export type {
   TwoStepConfirmRequest,
   TokenResponse,
 } from './auth.js';
-export type { ConnectorView, ConnectorSummary, ConnectorTestRequest, ConnectorOauthStartResponse } from './connectors.js';
+export type { ConnectorView, ConnectorLookup, ConnectorSummary, ConnectorTestRequest, ConnectorOauthStartResponse } from './connectors.js';
 export type { DraftRequest, ExtensionPatchRequest, RollbackRequest } from './definitions.js';
 export type { FieldIssue, ErrorResponse } from './errors.js';
 export type { RazorpayCredentialsRequest, CashfreeCredentialsRequest, GatewaySummary } from './gateways.js';
@@ -31,6 +31,10 @@ export type {
   AggregateRequestBody,
   BulkOperationRequest,
   BulkRequest,
+  RestoreRecordRequest,
+  RestoredRecord,
+  DeletedRecord,
+  DeletedPage,
 } from './records.js';
 export type { CreateRoleRequest, UpdateRoleRequest, RoleMembersRequest } from './roles.js';
 export type { SettingsRequest } from './settings.js';

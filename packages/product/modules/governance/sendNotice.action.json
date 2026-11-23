@@ -1,0 +1,28 @@
+{
+  "key": "sendNotice",
+  "recordType": "member",
+  "label": "Send notice",
+  "placement": ["panel", "row", "bulk"],
+  "when": "status == 'active'",
+  "confirm": "Email this notice to each selected member?",
+  "form": {
+    "columns": 1,
+    "fields": [
+      { "key": "subject", "label": "Subject", "type": "text", "required": true, "maxLength": 200 },
+      { "key": "body", "label": "Message", "type": "longText", "required": true, "maxLength": 10000 }
+    ]
+  },
+  "steps": [
+    {
+      "type": "createRecord",
+      "recordType": "memberNotice",
+      "values": {
+        "member": "record.id",
+        "memberName": "record.name",
+        "email": "record.email",
+        "subject": "input.subject",
+        "body": "input.body"
+      }
+    }
+  ]
+}

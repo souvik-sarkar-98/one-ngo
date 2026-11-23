@@ -1,0 +1,26 @@
+{
+  "key": "meetings",
+  "recordType": "meeting",
+  "label": "Meetings",
+  "pageSize": 20,
+  "layout": "table",
+  "columns": ["number", "title", "meetingType", "scheduledOn", "venue", "status"],
+  "compactColumns": ["title", "scheduledOn", "status"],
+  "chips": [
+    { "id": "planned", "label": "Planned", "statusIn": ["planned"] },
+    { "id": "held", "label": "Held", "statusIn": ["held", "closed"] },
+    { "id": "all", "label": "All" }
+  ],
+  "defaultChip": "planned",
+  "filters": ["meetingType", "scheduledOn"],
+  "row": { "title": "title", "subtitle": ["meetingType", "venue"], "meta": "scheduledOn", "badge": "status" },
+  "detail": {
+    "sections": [
+      { "id": "meeting", "label": "Meeting", "fields": ["number", "status", "title", "meetingType", "scheduledOn", "venue", "heldOn", "attendance", "agenda"] },
+      { "id": "minutes", "label": "Minutes", "fields": ["minutes"] },
+      { "id": "resolutions", "label": "Resolutions", "related": { "recordType": "resolution", "field": "meeting" } }
+    ]
+  },
+  "create": { "fields": ["title", "meetingType", "scheduledOn", "venue", "agenda"] },
+  "edit": { "fields": ["title", "meetingType", "scheduledOn", "venue", "agenda", "attendance", "minutes"] }
+}

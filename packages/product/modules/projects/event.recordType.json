@@ -1,0 +1,22 @@
+{
+  "key": "event",
+  "label": "Event",
+  "pluralLabel": "Events",
+  "description": "Events the organisation holds, with the venue, the date and the attendee list.",
+  "titleField": "name",
+  "numbering": { "sequence": "event", "format": "EVT/{fy}/{seq:4}", "reset": "fiscal_year" },
+  "fields": [
+    { "key": "name", "label": "Event name", "type": "text", "required": true, "maxLength": 200, "searchable": true },
+    { "key": "project", "label": "Project", "type": "reference", "referenceType": "project", "help": "The project this event belongs to, if any" },
+    { "key": "eventDate", "label": "Event date", "type": "date", "required": true },
+    { "key": "venue", "label": "Venue", "type": "text", "maxLength": 200, "searchable": true },
+    { "key": "capacity", "label": "Capacity", "type": "number", "min": 1 },
+    { "key": "description", "label": "Description", "type": "longText", "maxLength": 5000 },
+    {
+      "key": "attendeeCount",
+      "label": "Attended",
+      "type": "number",
+      "rollup": { "recordType": "eventAttendee", "reference": "event", "measure": "count", "where": "record.attended == true" }
+    }
+  ]
+}

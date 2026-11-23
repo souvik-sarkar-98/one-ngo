@@ -21,6 +21,7 @@ const ADMIN_AREAS: Routes = [
   { path: 'api-keys', canActivate: [may('apiKeys')], loadComponent: () => import('./api-keys/api-keys.screen').then((m) => m.ApiKeysScreen) },
   { path: 'jobs', canActivate: [may('jobs')], loadComponent: () => import('./jobs/jobs.screen').then((m) => m.JobsScreen) },
   { path: 'audit', canActivate: [may('audit')], loadComponent: () => import('./audit/audit.screen').then((m) => m.AuditScreen) },
+  { path: 'recycle-bin', canActivate: [may('recordBin')], loadComponent: () => import('./recycle-bin/recycle-bin.screen').then((m) => m.RecycleBinScreen) },
   // Migration explains a refusal on its own screen rather than sending the person back to Administration.
   { path: 'migration', loadComponent: () => import('./migration/migrations.screen').then((m) => m.MigrationsScreen) },
   { path: 'migration/:id', redirectTo: 'migration/:id/files' },
@@ -32,6 +33,7 @@ const ADMIN_AREAS: Routes = [
   { path: 'organisation/identity', canActivate: [may('identity')], loadComponent: () => import('./settings/identity.screen').then((m) => m.IdentityScreen) },
   { path: 'organisation/profile', canActivate: [may('profile')], loadComponent: () => import('./settings/profile.screen').then((m) => m.ProfileScreen) },
   { path: 'organisation/registrations', canActivate: [may('registrations')], loadComponent: () => import('./settings/registrations.screen').then((m) => m.RegistrationsScreen) },
+  { path: 'organisation/signatories', canActivate: [may('signatories')], loadComponent: () => import('./settings/signatories.screen').then((m) => m.SignatoriesScreen) },
   { path: 'organisation/settings', canActivate: [may('settings')], loadComponent: () => import('./settings/settings.screen').then((m) => m.SettingsScreen) },
   { path: 'organisation/policies', redirectTo: 'organisation/settings' },
   { path: 'organisation/usage', redirectTo: 'organisation/settings' },

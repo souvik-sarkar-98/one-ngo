@@ -10,9 +10,9 @@ import { Connectivity } from './connectivity';
     .offline-banner {
       margin: 0;
       padding: 0.6rem 1.25rem;
-      background: #fdf1dc;
+      background: var(--badge-warn-bg);
       color: var(--warn);
-      border-bottom: 1px solid #f0d9a8;
+      border-bottom: 1px solid var(--notice-warn-border);
       font-size: 0.9rem;
     }
   `,

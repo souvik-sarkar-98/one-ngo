@@ -75,10 +75,12 @@ export class OrganisationStore extends AdminBase {
   readonly logoError = signal('');
   readonly logoBusy = signal(false);
 
+  /** `new`, a signatory id, or null when the name form is closed. */
+  readonly editingSignatory = signal<string | null>(null);
   readonly signatoryName = signal('');
   readonly signatoryDesignation = signal('');
   readonly signatoryErrors = signal<Record<string, string>>({});
-  readonly signature = signal<string | null>(null);
+  readonly signatures = signal<Record<string, string>>({});
   readonly signatureError = signal('');
   readonly signatoryBusy = signal(false);
 
@@ -250,14 +252,39 @@ export class OrganisationStore extends AdminBase {
     }
   }
 
+  beginAdd(): void {
+    this.editingSignatory.set('new');
+    this.signatoryName.set('');
+    this.signatoryDesignation.set('');
+    this.signatoryErrors.set({});
+    this.signatureError.set('');
+  }
+
+  beginEdit(id: string): void {
+    const found = this.view()?.signatories.find((signatory) => signatory.id === id);
+    if (!found) return;
+    this.editingSignatory.set(id);
+    this.signatoryName.set(found.name);
+    this.signatoryDesignation.set(found.designation);
+    this.signatoryErrors.set({});
+  }
+
+  cancelSignatory(): void {
+    this.editingSignatory.set(null);
+    this.signatoryErrors.set({});
+  }
+
   async saveSignatory(): Promise<void> {
-    if (this.signatoryBusy()) return;
+    const editing = this.editingSignatory();
+    if (!editing || this.signatoryBusy()) return;
     const errors = signatoryErrors(this.signatoryName(), this.signatoryDesignation());
     this.signatoryErrors.set(errors);
     if (Object.keys(errors).length) return;
     this.signatoryBusy.set(true);
     try {
-      this.use(await this.org.saveSignatory({ name: this.signatoryName().trim(), designation: this.signatoryDesignation().trim() }));
+      const body = { name: this.signatoryName().trim(), designation: this.signatoryDesignation().trim() };
+      this.use(editing === 'new' ? await this.org.addSignatory(body) : await this.org.updateSignatory(editing, body));
+      this.editingSignatory.set(null);
       this.show({ ok: true, message: t('ui.admin.organisation.signatorySaved') });
     } catch (e) {
       const { message, errors: field } = fieldIssues(e, ['name', 'designation']);
@@ -268,14 +295,14 @@ export class OrganisationStore extends AdminBase {
     }
   }
 
-  async chooseSignature(file: File | undefined): Promise<void> {
+  async chooseSignature(id: string, file: File | undefined): Promise<void> {
     if (!file || this.signatoryBusy()) return;
     const problem = signatureProblem(file);
     this.signatureError.set(problem ?? '');
     if (problem) return;
     this.signatoryBusy.set(true);
     try {
-      this.use(await this.org.setSignature(file));
+      this.use(await this.org.setSignature(id, file));
       this.show({ ok: true, message: t('ui.admin.organisation.signatorySaved') });
     } catch (e) {
       const { message, errors } = fieldIssues(e, ['signatory']);
@@ -285,13 +312,12 @@ export class OrganisationStore extends AdminBase {
     }
   }
 
-  async removeSignatory(): Promise<void> {
+  async removeSignatory(id: string): Promise<void> {
     if (this.signatoryBusy()) return;
     this.signatoryBusy.set(true);
     try {
-      await this.org.removeSignatory();
+      await this.org.removeSignatory(id);
       this.signatureError.set('');
-      this.signatoryErrors.set({});
       this.use(await this.org.view());
       this.show({ ok: true, message: t('ui.admin.organisation.signatoryRemoved') });
     } catch (e) {
@@ -341,19 +367,31 @@ export class OrganisationStore extends AdminBase {
 
   private use(o: OrganisationView): void {
     const logoChanged = o.logo?.url !== this.view()?.logo?.url;
-    const signatureChanged = o.signatory?.image?.url !== this.view()?.signatory?.image?.url;
     this.view.set(o);
     this.profile.set(profileValues(o));
-    this.signatoryName.set(o.signatory?.name ?? '');
-    this.signatoryDesignation.set(o.signatory?.designation ?? '');
     if (logoChanged) {
       const src = organisationLogo(o.logo?.url);
       if (!src) this.logo.set(null);
       else void this.organisation.image(src).then((d) => this.logo.set(d), () => this.logo.set(null));
     }
-    if (!signatureChanged) return;
-    const signature = organisationLogo(o.signatory?.image?.url);
-    if (!signature) this.signature.set(null);
-    else void this.organisation.image(signature).then((d) => this.signature.set(d), () => this.signature.set(null));
+    const previous = this.signatures();
+    const next: Record<string, string> = {};
+    for (const signatory of o.signatories) {
+      const src = organisationLogo(signatory.image?.url);
+      if (!src) continue;
+      const kept = previous[signatory.id];
+      if (kept && this.viewImages.get(signatory.id) === src) next[signatory.id] = kept;
+      else {
+        this.viewImages.set(signatory.id, src);
+        void this.organisation.image(src).then(
+          (data) => this.signatures.update((current) => ({ ...current, [signatory.id]: data })),
+          () => undefined,
+        );
+      }
+    }
+    this.signatures.set(next);
   }
+
+  /** The image address last requested for each signatory, so a repeat view does not fetch it again. */
+  private readonly viewImages = new Map<string, string>();
 }

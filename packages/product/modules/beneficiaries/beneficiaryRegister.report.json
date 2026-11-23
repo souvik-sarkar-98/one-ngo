@@ -1,0 +1,31 @@
+{
+  "key": "beneficiaryRegister",
+  "label": "Register of enrolled beneficiaries",
+  "datasets": [
+    {
+      "key": "beneficiaries",
+      "label": "Enrolled beneficiaries",
+      "source": "query",
+      "recordType": "beneficiary",
+      "statusIn": ["enrolled"],
+      "sort": { "field": "enrolledOn", "dir": "asc" },
+      "fields": ["name", "city", "phone", "householdSize", "enrolledOn"]
+    }
+  ],
+  "outputs": {
+    "excel": {
+      "sheets": [
+        {
+          "dataset": "beneficiaries",
+          "columns": [
+            { "field": "name", "header": "Name", "format": "text" },
+            { "field": "city", "header": "City", "format": "text" },
+            { "field": "phone", "header": "Phone", "format": "text" },
+            { "field": "householdSize", "header": "People in household", "format": "number" },
+            { "field": "enrolledOn", "header": "Enrolled on", "format": "date" }
+          ]
+        }
+      ]
+    }
+  }
+}

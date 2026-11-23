@@ -6,6 +6,7 @@ import { TranslatePipe } from '../../../services/i18n';
 import { GenericEditorStore } from './generic-store';
 import { PreviewRecord, type ChosenRecord } from './preview-record';
 import { PreviewStore } from './preview-store';
+import { Btn } from '@onengo/web-kit';
 
 type Body = Record<string, unknown>;
 
@@ -25,7 +26,7 @@ const htmlDocument = (html: string) => frame(html, false);
 /** Placeholder chips and a filled preview of every channel, plus "Send a test to me". */
 @Component({
   selector: 'app-template-preview',
-  imports: [TranslatePipe, PreviewRecord],
+  imports: [Btn, TranslatePipe, PreviewRecord],
   styleUrl: './preview.css',
   template: `
     <section class="pv" aria-labelledby="tpl-preview-title">
@@ -79,7 +80,7 @@ const htmlDocument = (html: string) => frame(html, false);
       }
       @if (!document()) {
       <div class="pv__row">
-        <button type="button" class="small" [disabled]="sending()" (click)="sendTest()">{{ 'ui.builder.preview.sendTest' | t }}</button>
+        <button appBtn size="sm" type="button" [disabled]="sending()" (click)="sendTest()">{{ 'ui.builder.preview.sendTest' | t }}</button>
         @if (sent(); as s) { <span class="pv__ok" role="status">{{ 'ui.builder.preview.sentTo' | t: { email: s } }}</span> }
         @if (sendError(); as e) { <span class="pv__bad" role="alert">{{ e }}</span> }
       </div>

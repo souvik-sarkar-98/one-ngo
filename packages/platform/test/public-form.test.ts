@@ -357,6 +357,10 @@ describe('public forms', () => {
     expect(link.json()).toEqual({ path });
     const revoked = await app.inject({ method: 'DELETE', url: `/api/records/answer/${items[0]!.id}/public-link`, headers: staff() });
     expect(revoked.statusCode).toBe(204);
+    // A record with no live link is an ordinary answer, not an error: 200 with no path.
+    const none = await app.inject({ method: 'GET', url: `/api/records/answer/${items[0]!.id}/public-link`, headers: staff() });
+    expect(none.statusCode).toBe(200);
+    expect(none.json()).toEqual({ path: null });
     const gone = await app.inject({ method: 'GET', url: `/api/public/records/${tokenOf(path)}` });
     const random = await app.inject({ method: 'GET', url: '/api/public/records/abcdefghijklmnopqrstuvwxyz012345' });
     expect(gone.statusCode).toBe(404);

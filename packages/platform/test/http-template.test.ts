@@ -11,10 +11,11 @@ describe('http connector templates', () => {
     expect(() => renderHttp(send({ headers: { authorization: 'Bearer {{credential.accessToken}}' } }), {}, {})).toThrow(HttpTemplateError);
   });
 
+  it('rejects mail-only message parts on a generic http send connector', () => {
+    expect(() => renderHttp(send({ body: '{"raw":"{{ message.mime | base64url }}"}' }), { message: { mime: 'x' } }, {})).toThrow(HttpTemplateError);
+  });
+
   it('base64url-encodes a value like Buffer does, then encodes it for the location', () => {
-    const mime = 'From: a@example.org\r\nSubject: Héllo ~?\r\n\r\nBody>>>';
-    const { request } = renderHttp(send({ body: '{"raw":"{{ message.mime | base64url }}"}' }), { message: { mime } }, {});
-    expect(JSON.parse(request.body!).raw).toBe(Buffer.from(mime).toString('base64url'));
     const url = renderHttp(send({ method: 'GET', url: 'https://api.example.org/?q={{message.subject|base64}}' }), { message: { subject: 'a?b>' } }, {}).request.url;
     expect(url).toBe(`https://api.example.org/?q=${encodeURIComponent(Buffer.from('a?b>').toString('base64'))}`);
   });

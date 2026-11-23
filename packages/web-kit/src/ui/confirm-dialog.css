@@ -1,0 +1,30 @@
+﻿.confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--overlay, rgba(15, 23, 42, 0.45));
+}
+.confirm__card {
+  width: min(420px, 100%);
+  padding: 20px 20px 16px;
+  border: 1px solid var(--warn-line, #e8c56a);
+  border-radius: var(--card-radius, 14px);
+  background: var(--card, #fff);
+  box-shadow: var(--overlay-shadow, 0 16px 40px rgba(15, 23, 42, 0.24));
+}
+.confirm__card h2 {
+  margin: 0 0 8px;
+  color: var(--warn, #9a6200);
+  font-size: 1.05rem;
+}
+.confirm__card p {
+  margin: 0 0 16px;
+}
+.confirm__acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

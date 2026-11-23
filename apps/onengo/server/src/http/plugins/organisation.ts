@@ -5,7 +5,9 @@ import { contextOf } from '../context.js';
 import {
   organisationProfileRequest,
   registrationRequest,
+  documentSignatoriesRequest,
   signatoryRequest,
+  type DocumentSignatoriesRequest,
   type OrganisationProfileRequest,
   type RegistrationRequest,
   type SignatoryRequest,
@@ -118,19 +120,34 @@ export async function organisationRoutes(api: FastifyInstance, { deps }: { deps:
     deps.organisation.confirmSetup(contextOf(req), req.params.step),
   );
 
-  api.put<{ Body: SignatoryRequest }>('/api/admin/organisation/signatory', { schema: { body: signatoryRequest } }, async (req) =>
-    deps.organisation.saveSignatory(contextOf(req), req.body),
+  api.post<{ Body: SignatoryRequest }>('/api/admin/organisation/signatories', { schema: { body: signatoryRequest } }, async (req, reply) =>
+    reply.status(201).send(await deps.organisation.addSignatory(contextOf(req), req.body)),
+  );
+  api.put<{ Params: { id: string }; Body: SignatoryRequest }>(
+    '/api/admin/organisation/signatories/:id',
+    { schema: { body: signatoryRequest } },
+    async (req) => deps.organisation.updateSignatory(contextOf(req), req.params.id, req.body),
+  );
+  api.delete<{ Params: { id: string } }>('/api/admin/organisation/signatories/:id', async (req, reply) => {
+    await deps.organisation.removeSignatory(contextOf(req), req.params.id);
+    return reply.status(204).send();
+  });
+  api.get('/api/admin/organisation/document-signatories', async (req) => deps.organisation.documentSignatories(contextOf(req)));
+  api.put<{ Params: { document: string }; Body: DocumentSignatoriesRequest }>(
+    '/api/admin/organisation/documents/:document/signatories',
+    { schema: { body: documentSignatoriesRequest } },
+    async (req) => deps.organisation.setDocumentSignatories(contextOf(req), req.params.document, req.body),
   );
 
   /** The image itself is the request body, as for file uploads. */
   api.register(async (scope) => {
     scope.removeAllContentTypeParsers();
     scope.addContentTypeParser('*', (_req, payload, done) => done(null, payload));
-    scope.put('/api/admin/organisation/signatory/image', async (req) => {
+    scope.put<{ Params: { id: string } }>('/api/admin/organisation/signatories/:id/image', async (req) => {
       const ctx = contextOf(req);
       if (/^multipart\//i.test(req.headers['content-type'] ?? '')) throw validationFailed('Send the image itself as the request body, not a form.');
       const body = (req.body as AsyncIterable<Buffer> | undefined) ?? [];
-      return deps.organisation.setSignatoryImage(ctx, { body, name: 'signature.png' });
+      return deps.organisation.setSignatoryImage(ctx, req.params.id, { body, name: 'signature.png' });
     });
     scope.put('/api/admin/organisation/logo', async (req) => {
       const ctx = contextOf(req);
@@ -140,10 +157,6 @@ export async function organisationRoutes(api: FastifyInstance, { deps }: { deps:
       const body = (req.body as AsyncIterable<Buffer> | undefined) ?? [];
       return deps.organisation.setLogo(ctx, { body, name: 'logo' });
     });
-  });
-  api.delete('/api/admin/organisation/signatory', async (req, reply) => {
-    await deps.organisation.removeSignatory(contextOf(req));
-    return reply.status(204).send();
   });
   api.delete('/api/admin/organisation/logo', async (req, reply) => {
     await deps.organisation.removeLogo(contextOf(req));

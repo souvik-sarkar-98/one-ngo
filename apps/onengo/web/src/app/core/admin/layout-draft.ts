@@ -11,7 +11,8 @@ export interface LayoutDraft {
   listLayout: 'cards' | 'table';
 }
 
-const FIXED = ['home', 'records', 'inbox', 'admin', 'builder', 'guide', 'settings', 'signout'];
+/** Destinations the order always lists. A published order that leaves one out gets it back here, so it can be placed again. */
+const FIXED = ['home', 'records', 'inbox', 'reports', 'money', 'admin', 'builder', 'guide', 'settings', 'signout'];
 
 function pageKeys(defs: RuntimeDefinitions | null): string[] {
   return (defs?.pages ?? []).map((page) => `page:${page.key}`);

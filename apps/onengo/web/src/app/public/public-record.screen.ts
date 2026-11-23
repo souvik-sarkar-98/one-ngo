@@ -8,6 +8,7 @@ import { TranslatePipe } from '../services/i18n';
 import { CfForm } from '../ui/cf-form';
 import { publicControls, type PublicField } from './public-fields';
 import { PUBLIC_STYLES, paintPublic } from './public-look';
+import { Btn } from '@onengo/web-kit';
 
 interface Submission {
   theme: Partial<ThemeTokens> | null;
@@ -25,7 +26,7 @@ interface Submission {
 /** One submission opened with its secret link. Edit and delete render only when the response allows them. */
 @Component({
   selector: 'app-public-record-screen',
-  imports: [CfForm, TranslatePipe],
+  imports: [Btn, CfForm, TranslatePipe],
   styles: PUBLIC_STYLES,
   template: `
     <header class="pub__band">
@@ -41,8 +42,8 @@ interface Submission {
           @if (editing()) {
             <cf-form [fields]="controls()" [values]="values()" [errors]="errors()" (valuesChange)="values.set($event)" />
             <div class="pub__actions">
-              <button type="button" class="app-btn app-btn--primary" [disabled]="busy()" (click)="save()">{{ 'ui.public.save' | t }}</button>
-              <button type="button" class="app-btn" (click)="editing.set(false)">{{ 'ui.common.cancel' | t }}</button>
+              <button appBtn="primary" type="button" [disabled]="busy()" (click)="save()">{{ 'ui.public.save' | t }}</button>
+              <button appBtn type="button" (click)="editing.set(false)">{{ 'ui.common.cancel' | t }}</button>
             </div>
           } @else {
             <dl class="pub__dl">
@@ -53,8 +54,8 @@ interface Submission {
             </dl>
             @if (submission.edit || submission.delete) {
               <div class="pub__actions">
-                @if (submission.edit) { <button type="button" class="app-btn app-btn--primary" (click)="editing.set(true)">{{ 'ui.common.edit' | t }}</button> }
-                @if (submission.delete) { <button type="button" class="app-btn danger" [disabled]="busy()" (click)="remove()">{{ 'ui.public.delete' | t }}</button> }
+                @if (submission.edit) { <button appBtn="primary" type="button" (click)="editing.set(true)">{{ 'ui.common.edit' | t }}</button> }
+                @if (submission.delete) { <button appBtn="danger" type="button" [disabled]="busy()" (click)="remove()">{{ 'ui.public.delete' | t }}</button> }
               </div>
             }
           }

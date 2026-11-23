@@ -15,6 +15,9 @@ import { pg } from '../tx.js';
 /** Base-layer definitions every organisation has without enabling a module (metadata's PLATFORM_MODULE). */
 const PLATFORM_MODULE = 'platform';
 
+/** The organisation setting that lists the shipped definitions turned off, as `kind|key`. */
+const DISABLED_DEFINITIONS_SETTING = 'definitions.disabled';
+
 const appTenant = sql<string>`app_tenant()`;
 
 const ROW = ['kind', 'key', 'version', 'base_version', 'module_key', 'body', 'checksum', 'status'] as const;
@@ -330,6 +333,33 @@ export class PgDefinitionStore implements DefinitionStore {
       .execute();
   }
 
+  async disabledDefinitions(tx: Tx): Promise<{ kind: DefinitionKind; key: string }[]> {
+    const row = await pg(tx).selectFrom('tenant_setting').select('value').where('tenant_id', '=', appTenant).where('key', '=', DISABLED_DEFINITIONS_SETTING).executeTakeFirst();
+    if (!Array.isArray(row?.value)) return [];
+    return (row.value as unknown[]).flatMap((entry) => {
+      if (typeof entry !== 'string') return [];
+      const at = entry.indexOf('|');
+      return at > 0 ? [{ kind: entry.slice(0, at) as DefinitionKind, key: entry.slice(at + 1) }] : [];
+    });
+  }
+
+  async setDefinitionDisabled(tx: Tx, kind: DefinitionKind, key: string, disabled: boolean, actorId: string): Promise<void> {
+    const id = `${kind}|${key}`;
+    const current = (await this.disabledDefinitions(tx)).map((d) => `${d.kind}|${d.key}`);
+    const next = disabled ? [...new Set([...current, id])] : current.filter((d) => d !== id);
+    await pg(tx)
+      .insertInto('tenant_setting')
+      .values({ tenant_id: appTenant, key: DISABLED_DEFINITIONS_SETTING, value: JSON.stringify(next.sort()), updated_by: actorId })
+      .onConflict((oc) =>
+        oc.columns(['tenant_id', 'key']).doUpdateSet((eb) => ({
+          value: eb.ref('excluded.value'),
+          updated_by: eb.ref('excluded.updated_by'),
+          updated_at: sql<Date>`now()`,
+        })),
+      )
+      .execute();
+  }
+
   async referenceFacts(tx: Tx, namedRecipientsSetting: string): Promise<ReferenceFacts> {
     const q = pg(tx);
     const accounts = await q.selectFrom('ledger_account').select('code').where('tenant_id', '=', appTenant).execute();
@@ -357,7 +387,13 @@ export class PgDefinitionStore implements DefinitionStore {
   }
 
   private async connectorRows(tx: Tx): Promise<ConnectorFact[]> {
-    const rows = await pg(tx).selectFrom('connector').select(['key', 'type', 'config']).where('tenant_id', '=', appTenant).where('type', 'in', ['webhook', 'http']).execute();
+    const rows = await pg(tx)
+      .selectFrom('connector')
+      .select(['key', 'type', 'config'])
+      .where('tenant_id', '=', appTenant)
+      .where('type', 'in', ['webhook', 'http'])
+      .where('archived_at', 'is', null)
+      .execute();
     return rows.map((r) => {
       const config = r.config && typeof r.config === 'object' && !Array.isArray(r.config) ? (r.config as Record<string, unknown>) : {};
       return { key: r.key, type: r.type as ConnectorFact['type'], mode: r.type === 'http' && config.mode === 'lookup' ? 'lookup' : 'send' };
@@ -386,6 +422,30 @@ export class PgDefinitionStore implements DefinitionStore {
         .insertInto('ledger_account')
         .values({ tenant_id: appTenant, code: a.code, name: a.name, type: a.type })
         .onConflict((oc) => oc.columns(['tenant_id', 'code']).doNothing())
+        .execute();
+    }
+    for (const m of manifest.setup?.moneyAccounts ?? []) {
+      const ledger = await k
+        .selectFrom('ledger_account as a')
+        .leftJoin('money_account as taken', 'taken.ledger_account_id', 'a.id')
+        .select(['a.id', 'taken.id as taken_id'])
+        .where('a.tenant_id', '=', appTenant)
+        .where('a.code', '=', m.ledgerCode)
+        .where('a.type', '=', 'asset')
+        .executeTakeFirst();
+      if (!ledger || ledger.taken_id) continue;
+      await k
+        .insertInto('money_account')
+        .values({
+          tenant_id: appTenant,
+          key: m.key,
+          name: m.name,
+          kind: m.kind,
+          ledger_account_id: ledger.id,
+          allow_negative: m.kind === 'bank',
+          created_by: `module:${manifest.key}`,
+        })
+        .onConflict((oc) => oc.columns(['tenant_id', 'key']).doNothing())
         .execute();
     }
     for (const s of manifest.setup?.receiptSeries ?? []) {

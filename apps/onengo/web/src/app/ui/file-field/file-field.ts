@@ -6,6 +6,7 @@ import { Files } from '../../services/files';
 import { TranslatePipe } from '../../services/i18n';
 import type { CfFieldDef } from '../cf-types';
 import { AttachedFiles } from './file-list';
+import { Btn } from '@onengo/web-kit';
 
 interface Upload {
   local: string;
@@ -26,26 +27,26 @@ let next = 0;
  */
 @Component({
   selector: 'app-file-field',
-  imports: [AttachedFiles, TranslatePipe],
+  imports: [Btn, AttachedFiles, TranslatePipe],
   styles: `
     :host {
       display: block;
     }
     .file-field__drop {
-      border: 1.5px dashed #94a3b8;
+      border: 1.5px dashed var(--grey-400);
       border-radius: 12px;
       padding: 18px 12px;
       text-align: center;
       font-size: 0.8rem;
       color: #475569;
-      background: #f8fafc;
+      background: var(--th-bg);
     }
     .file-field__drop[data-over='true'] {
       border-color: var(--primary-500, #3b82f6);
       background: var(--primary-50, #eff6ff);
     }
     .file-field__drop[data-invalid='true'] {
-      border-color: #ba1a1a;
+      border-color: var(--error-color);
     }
     .file-field__link {
       border: 0;
@@ -74,7 +75,7 @@ let next = 0;
     .file-field__hint {
       margin: 6px 0 4px;
       font-size: 0.72rem;
-      color: #64748b;
+      color: var(--grey-500);
     }
     .file-field__row {
       display: flex;
@@ -99,15 +100,15 @@ let next = 0;
     }
     .file-field__meta {
       font-size: 0.72rem;
-      color: #64748b;
+      color: var(--grey-500);
     }
     .file-field__meta[data-error='true'] {
-      color: #b91c1c;
+      color: var(--bad);
     }
     .file-field__progress {
       height: 4px;
       border-radius: 2px;
-      background: #e2e8f0;
+      background: var(--line-soft);
       overflow: hidden;
     }
     .file-field__progress i {
@@ -133,9 +134,9 @@ let next = 0;
         <button type="button" class="file-field__link" [id]="fieldId()" (click)="picker.click()">{{ 'ui.fields.files.chooseFiles' | t }}</button>
       </div>
       <div class="file-field__buttons">
-        <button type="button" class="app-btn" (click)="picker.click()">{{ 'ui.fields.files.chooseFiles' | t }}</button>
+        <button appBtn type="button" (click)="picker.click()">{{ 'ui.fields.files.chooseFiles' | t }}</button>
         @if (takesPhotos()) {
-          <button type="button" class="app-btn" (click)="camera.click()">{{ 'ui.fields.files.takePhoto' | t }}</button>
+          <button appBtn type="button" (click)="camera.click()">{{ 'ui.fields.files.takePhoto' | t }}</button>
         }
       </div>
       <input #picker type="file" [accept]="accept()" [multiple]="!!f.multiple" (change)="chosen(picker)" />
@@ -158,7 +159,7 @@ let next = 0;
             {{ u.error ?? (size(u.size) + ' · ' + percent(u) + '%') }}
           </span>
         </div>
-        <button type="button" class="app-btn app-btn--ghost" [attr.aria-label]="'ui.common.remove' | t" (click)="cancel(u)">
+        <button appBtn type="button" [attr.aria-label]="'ui.common.remove' | t" (click)="cancel(u)">
           ✕
         </button>
       </div>

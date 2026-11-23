@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, signal, untracked, afterRenderEffect } from '@angular/core';
-import { Icon, opensInPlace, PageFrame } from '@onengo/web-kit';
+import { Btn, Icon, opensInPlace, PageFrame } from '@onengo/web-kit';
 import { RECORD_TYPE_STARTERS, builderHome, homeRowReadOnly, kindPageCopy, needsRecordType, starterName, type BuilderHomeRow, type CatalogueAction } from '../core/builder/catalogue';
 import { toKey } from '../core/fields/fields';
 import { t } from '../core/i18n/i18n';
@@ -21,7 +21,7 @@ import { CatalogueStore } from './catalogue-store';
  */
 @Component({
   selector: 'app-catalogue-screen',
-  imports: [Icon, TranslatePipe, InfiniteListRow, TableRows, MobileFormSheet, PageBack, PageFrame, CreateButton],
+  imports: [Btn, Icon, TranslatePipe, InfiniteListRow, TableRows, MobileFormSheet, PageBack, PageFrame, CreateButton],
   providers: [CatalogueStore],
   styleUrls: ['./builder.css', '../ui/styles/na-list-dashboard.css'],
   template: `
@@ -34,7 +34,7 @@ import { CatalogueStore } from './catalogue-store';
           <h1>{{ page.titleKey | t }}</h1>
           <span class="builder-spacer"></span>
           @if (store.canPublish() && !store.narrow()) {
-            <button type="button" class="app-btn app-btn--primary" (click)="startKind()">{{ page.createKey | t }}</button>
+            <button appBtn="primary" type="button" (click)="startKind()">{{ page.createKey | t }}</button>
           }
         </header>
         <p class="muted">{{ page.hintKey | t }}</p>
@@ -218,6 +218,7 @@ export class CatalogueScreen {
     }
     if (action === 'revert' && !confirm(t('ui.builder.confirmRevert'))) return;
     if (action === 'deleteDraft' && !confirm(t('ui.builder.confirmDiscard'))) return;
+    if (action === 'disable' && !confirm(t('ui.builder.catalogue.confirmTurnOff', { name: row.title }))) return;
     void this.store.runRowAction(row, action as CatalogueAction);
   }
 

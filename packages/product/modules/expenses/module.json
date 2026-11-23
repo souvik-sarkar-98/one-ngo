@@ -1,0 +1,38 @@
+{
+  "key": "expenses",
+  "version": "1.0.0",
+  "label": "Expenses",
+  "description": "Expense claims with the bill attached. A treasurer approves each claim and records its payment, which posts to the books.",
+  "engine": "0.1.0",
+  "dependsOn": ["donations"],
+  "definitions": [
+    "expenseClaim.recordType.json",
+    "expenseClaim.workflow.json",
+    "expenseClaims.listView.json",
+    "expenseClaimPaid.postingRule.json",
+    "expenseNotApproved.automation.json",
+    "expenseNotApproved.template.json",
+    "expenseRegister.report.json",
+    "spending.recordGroup.json"
+  ],
+  "setup": {
+    "roles": [
+      {
+        "key": "expense-claimant",
+        "label": "Expense claimant",
+        "permissions": ["record:expenseClaim:create", "record:expenseClaim:read", "record:expenseClaim:update", "record:expenseClaim:transition:submit"]
+      },
+      {
+        "key": "expense-approver",
+        "label": "Expense approver",
+        "permissions": ["record:expenseClaim:*", "record:expenseClaim:transition:*", "money:accounts:read", "report:expenseRegister:run"]
+      }
+    ],
+    "accounts": [
+      { "code": "EXP_ADMIN", "name": "Administration expenses", "type": "expense" },
+      { "code": "EXP_PROGRAM", "name": "Programme expenses", "type": "expense" },
+      { "code": "EXP_TRAVEL", "name": "Travel expenses", "type": "expense" },
+      { "code": "EXP_OTHER", "name": "Other expenses", "type": "expense" }
+    ]
+  }
+}

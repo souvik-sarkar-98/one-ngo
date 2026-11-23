@@ -145,3 +145,26 @@ export class QueryApprovals {
     });
   }
 }
+
+/** An administrator's delete of a record, and the recycle bin it goes to: list, restore. */
+export class RecordBin {
+  constructor(private readonly records: Pick<RecordService, 'deleteRecord' | 'restoreRecord' | 'listDeleted'>) {}
+
+  delete(ctx: RequestContext, id: string, expectedVersion: number) {
+    return this.records.deleteRecord(ctx, id, expectedVersion);
+  }
+
+  restore(ctx: RequestContext, id: string, expectedVersion: number) {
+    return this.records.restoreRecord(ctx, id, expectedVersion);
+  }
+
+  /** Counts arrive as text from the address. */
+  list(ctx: RequestContext, q: { type?: string; q?: string; limit?: string; offset?: string }) {
+    return this.records.listDeleted(ctx, {
+      typeKey: q.type,
+      search: q.q,
+      limit: q.limit ? Number(q.limit) : undefined,
+      offset: q.offset ? Number(q.offset) : undefined,
+    });
+  }
+}

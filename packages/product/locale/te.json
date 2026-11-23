@@ -40,6 +40,7 @@
   "ui.common.search": "వెతకండి",
   "ui.common.searching": "వెతుకుతోంది…",
   "ui.common.seeAll": "అన్నీ చూడండి",
+  "ui.common.contactAdministrator": "దీన్ని పూర్తి చేయడం సాధ్యం కాలేదు. మీ నిర్వాహకుడిని సంప్రదించండి.",
   "ui.common.somethingWentWrong": "మా వైపు ఏదో తప్పు జరిగింది. కాసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.",
   "ui.common.sort": "క్రమపరచండి",
   "ui.common.startDate": "ప్రారంభ తేదీ",

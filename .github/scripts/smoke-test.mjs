@@ -1,10 +1,10 @@
 // Health check for a deployed service. Used before a new version receives
-// traffic, after traffic moves, and after a rollback.
+// traffic, and again after traffic moves.
 //
 //   node .github/scripts/smoke-test.mjs <main|console> <base-url>
 //
 // The only request is GET /health, expecting 200 and {"status":"ok"}.
-// Browser checks run afterwards in the Playwright job.
+// Browser checks are a separate, manual workflow (e2e.yml).
 
 const [service, rawBase] = process.argv.slice(2);
 if (!['main', 'console'].includes(service) || !rawBase) {

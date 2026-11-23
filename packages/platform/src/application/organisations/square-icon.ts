@@ -29,7 +29,7 @@ interface Rgba {
  * square, on white, so a wide or tall mark is not cropped into a letter.
  * A logo this process cannot read becomes the shared heart. Windows Chrome
  * still installs a letter instead of this image; that is a known bug
- * (docs/design/ngo-app-ui-design.md, Installable and store app).
+ * (docs/ui-design.md, Installable and store app).
  */
 export function squareInstallIcon(body: Buffer, mime: string, size: InstallIconSize): Buffer {
   const logo = decodeLogo(body, mime);

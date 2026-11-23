@@ -1,0 +1,21 @@
+{
+  "key": "membershipFeePaidReceipt",
+  "recordType": "membershipFee",
+  "whenStatus": "paid",
+  "series": "membership-receipt",
+  "amount": "record.amount",
+  "date": "record.paidOn",
+  "layout": {
+    "title": "Membership fee receipt",
+    "statement": "Received with thanks from {{ record.memberName }} the sum of {{ receipt.amount }} as membership fee.",
+    "thanks": "Thank you for being a member.",
+    "rows": [
+      { "label": "Member name", "field": "memberName" },
+      { "label": "Amount", "field": "amount" },
+      { "label": "Membership fee", "value": "record.number" },
+      { "label": "Payment method", "field": "method" },
+      { "label": "Paid on", "field": "paidOn" },
+      { "label": "Payment reference", "field": "reference" }
+    ]
+  }
+}

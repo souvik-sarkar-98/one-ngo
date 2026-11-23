@@ -1,4 +1,4 @@
-import type { IssuerSnapshot } from '../../domain/organisations/organisation.js';
+import { signatoriesOf, type IssuerSnapshot } from '../../domain/organisations/organisation.js';
 import type { ReceiptContent } from '../../domain/receipts/receipt-content.js';
 import type { Receipt, ReceiptService } from '../../domain/receipts/receipt-service.js';
 import type { TenantContext } from '../../domain/ports/tenant-context.js';
@@ -16,8 +16,8 @@ export interface ReceiptPrint {
   recordType: { key: string; label: string; titleField: string | null };
   /** The issuer's display name. */
   organisation: { name: string };
-  /** `logoUrl` and `signatoryImageUrl` are same-origin addresses that need the person's sign-in. */
-  issuer: IssuerSnapshot & { logoUrl: string | null; signatoryImageUrl: string | null };
+  /** `logoUrl` and `signatoryImageUrls` are same-origin addresses that need the person's sign-in. `signatoryImageUrl` is the first. */
+  issuer: IssuerSnapshot & { logoUrl: string | null; signatoryImageUrl: string | null; signatoryImageUrls: (string | null)[] };
   /** `issued`: as kept when the receipt was issued; `current`: the receipt predates issuer snapshots. */
   issuerSource: 'issued' | 'current';
   /** The public path, when this receipt has a live link. */
@@ -57,6 +57,8 @@ export class ReceiptPrintService {
       };
     });
     const issuer = (kept ?? current)!;
+    const signatures = signatoriesOf(issuer);
+    const signatoryImageUrls = signatures.map((signature) => (signature.file ? signatoryImageUrl(signature.file.fileId, receipt.id) : null));
     return {
       receipt,
       series: series ?? { key: receipt.seriesKey, label: receipt.seriesKey, prefix: '' },
@@ -65,9 +67,11 @@ export class ReceiptPrintService {
       organisation: { name: issuer.displayName },
       issuer: {
         ...issuer,
-        signatory: issuer.signatory ?? null,
+        signatories: signatures,
+        signatory: signatures[0] ?? null,
         logoUrl: issuer.logo ? issuerLogoUrl(issuer.logo.fileId) : null,
-        signatoryImageUrl: issuer.signatory?.file ? signatoryImageUrl(issuer.signatory.file.fileId, receipt.id) : null,
+        signatoryImageUrls,
+        signatoryImageUrl: signatoryImageUrls.find((url) => url) ?? null,
       },
       issuerSource: kept ? 'issued' : 'current',
       publicLink,
@@ -75,14 +79,14 @@ export class ReceiptPrintService {
     };
   }
 
-  /** The signature image a receipt shows, for someone who can read its record; null when it shows none. */
-  async signatureFile(ctx: TenantContext, id: string): Promise<string | null> {
+  /** The signature images a receipt shows, for someone who can read its record. */
+  async signatureFiles(ctx: TenantContext, id: string): Promise<string[]> {
     const receipt = await this.transactions.withTenant(ctx.tenantId, (tx) => this.receipts.get(tx, id));
     if (!receipt?.recordId) throw notFound('Receipt not found.');
     await this.records.get(ctx, receipt.recordId);
     return this.transactions.withTenant(ctx.tenantId, async (tx) => {
       const issuer = (await this.receipts.issuer(tx, receipt.id)) ?? (await this.receipts.currentIssuer(tx, receipt.date));
-      return issuer.signatory?.file?.fileId ?? null;
+      return signatoriesOf(issuer).flatMap((signature) => (signature.file ? [signature.file.fileId] : []));
     });
   }
 }

@@ -1,6 +1,7 @@
 import { AdministrationService } from '../application/administration/administration-service.js';
 import { OrganisationService } from '../application/organisations/organisation-service.js';
 import { PrivacyService } from '../application/privacy/privacy-service.js';
+import { PgConnectorStore } from '../infrastructure/postgres/stores/connector-store.js';
 import { postgresAdministrationStore } from '../infrastructure/postgres/stores/administration-store.js';
 import { postgresOrganisationAdminStore } from '../infrastructure/postgres/stores/organisation-admin-store.js';
 import { postgresOrganisationStore } from '../infrastructure/postgres/stores/organisation-store.js';
@@ -12,14 +13,21 @@ import type { Identity } from './identity.js';
 import type { Base, Cryptography } from './infrastructure.js';
 
 /** An organisation's own administration: limits and usage, its identity, and consent and erasure. */
-export function wireAdministration(base: Base, { definitions }: Definitions, { sensitive }: Cryptography, { apiKeys }: Identity, { files }: Files) {
+export function wireAdministration(base: Base, { definitions }: Definitions, { sensitive }: Cryptography, { apiKeys, identity }: Identity, { files }: Files) {
   const { tm, owner, options } = base;
   return {
     privacy: new PrivacyService(tm, postgresPrivacyStore(), definitions, sensitive, financialRetentionYears(options.retention)),
-    administration: new AdministrationService(tm, postgresAdministrationStore(base.sequences), owner.tenants, definitions, (tenantId) => files.usageOf(tenantId), apiKeys.defaultLimit),
-    organisation: new OrganisationService(tm, postgresOrganisationStore, postgresOrganisationAdminStore, owner.tenants, files, {
-      installationEmail: !!options.defaultEmailTransport,
-    }),
+    administration: new AdministrationService(
+      tm,
+      postgresAdministrationStore(base.sequences),
+      owner.tenants,
+      definitions,
+      (tenantId) => files.usageOf(tenantId),
+      apiKeys.defaultLimit,
+      new PgConnectorStore(),
+      identity,
+    ),
+    organisation: new OrganisationService(tm, postgresOrganisationStore, postgresOrganisationAdminStore, owner.tenants, files, definitions),
   };
 }
 export type Administration = ReturnType<typeof wireAdministration>;

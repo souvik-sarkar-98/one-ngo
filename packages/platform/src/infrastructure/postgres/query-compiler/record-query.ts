@@ -7,7 +7,7 @@ import type { Period, RecordAggregateAst, RecordGroup, RecordPredicate, RecordQu
  * values travel in one jsonb array ($1). Only definition keys (checked by
  * `sqlKey`) and fixed text reach the clauses. Field expressions come from
  * index-expressions so the managed indexes apply. The functions accept only
- * this grammar (migration 016): a new clause shape needs a migration too.
+ * this grammar (004_record_query.sql): a new clause shape needs a migration too.
  */
 export interface CompiledRecordQuery {
   where: string;

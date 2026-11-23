@@ -7,10 +7,10 @@ import { anonymousApi } from '../api.js';
 /** PRIV in the functional test data: `privacy:consent:record`, `privacy:consent:read`, `privacy:erase`. */
 export const privacyOfficer = { email: 'privacy@riverbank.example', name: 'Privacy Officer' } as const;
 
-/** The integration fixture that keeps the dev SMTP messages; `npm run dev` starts it and sets INTEGRATION_FIXTURE_ORIGIN. */
+/** The sandbox mailbox. `npm run dev` starts the sandbox unless `--no-sandbox` is passed. It does not set sandbox URLs. */
 export const fixtureOrigin = process.env.E2E_FIXTURE_URL ?? process.env.INTEGRATION_FIXTURE_ORIGIN ?? 'https://127.0.0.1:8095';
 
-export const noMailbox = `The fixture mailbox at ${fixtureOrigin}/api/log is not reachable, so the invitation link that sets a throwaway member's password cannot be read. Start the app with npm run dev (integration fixture on) or set E2E_FIXTURE_URL.`;
+export const noMailbox = `The fixture mailbox at ${fixtureOrigin}/api/log is not reachable, so the invitation link that sets a throwaway member's password cannot be read. Start the sandbox (npm run dev, without --no-sandbox) or set E2E_FIXTURE_URL.`;
 
 // ------------------------------------------------------------------ responses
 
@@ -118,7 +118,27 @@ export function writeCsv(testInfo: TestInfo, name: string, text: string): string
   return path;
 }
 
+/** Points new uploads at the sandbox S3 stand-in when Settings has not chosen a store yet. */
+export async function ensureFileStore(api: APIRequestContext): Promise<void> {
+  const settings = await body<{ fileStoreConnector: string | null }>(await api.get('/api/admin/settings'), 200, 'read settings');
+  if (settings.fileStoreConnector) return;
+  await body(
+    await api.put('/api/admin/connectors/e2e-files', {
+      data: {
+        kind: 'storage',
+        enabled: true,
+        config: { provider: 's3', bucket: 'e2e-files', region: 'us-east-1', endpoint: fixtureOrigin },
+        secrets: { accessKeyId: 'e2e', secretAccessKey: 'e2e-secret-key' },
+      },
+    }),
+    200,
+    'save the file store',
+  );
+  await body(await api.put('/api/admin/settings', { data: { fileStoreConnector: 'e2e-files' } }), 200, 'choose the file store');
+}
+
 export async function uploadImport(api: APIRequestContext, type: string, fileName: string, text: string): Promise<ImportView> {
+  await ensureFileStore(api);
   return body(
     await api.post(`/api/records/${type}/imports`, {
       headers: { 'content-type': 'text/csv', 'x-file-name': encodeURIComponent(fileName) },
@@ -175,7 +195,7 @@ interface MailSummary {
   subject: string;
 }
 
-/** The fixture's SMTP log, or null when the fixture is not running. */
+/** The fixture mailbox, or null when the fixture is not running. */
 export async function openMailbox(): Promise<APIRequestContext | null> {
   const mail = await playwrightRequest.newContext({ baseURL: fixtureOrigin, ignoreHTTPSErrors: true });
   try {

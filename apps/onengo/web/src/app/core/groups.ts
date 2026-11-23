@@ -14,16 +14,19 @@ export interface GroupCard {
   items: { label: string; to: string; create?: { label: string; to: string } }[];
 }
 
+/** The Home cards: every group except those kept off Home, which show there only once a person pins one of their lists. */
 export function homeGroups(defs: RuntimeDefinitions | null): GroupCard[] {
-  return recordGroups(defs).map((g) => ({
-    key: g.key,
-    label: g.label,
-    items: g.types.map((x) => ({
-      label: plural(x),
-      to: listLink(x.key),
-      ...(x.canCreate ? { create: { label: t('ui.records.new', { type: lowerLabel(x.label) }), to: `${listLink(x.key)}?create=new` } } : {}),
-    })),
-  }));
+  return recordGroups(defs)
+    .filter((g) => g.onHome)
+    .map((g) => ({
+      key: g.key,
+      label: g.label,
+      items: g.types.map((x) => ({
+        label: plural(x),
+        to: listLink(x.key),
+        ...(x.canCreate ? { create: { label: t('ui.records.new', { type: lowerLabel(x.label) }), to: `${listLink(x.key)}?create=new` } } : {}),
+      })),
+    }));
 }
 
 export interface RecordsSection {

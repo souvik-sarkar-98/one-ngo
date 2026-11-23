@@ -1,0 +1,32 @@
+{
+  "key": "membershipFees",
+  "recordType": "membershipFee",
+  "label": "Membership fees",
+  "pageSize": 20,
+  "layout": "table",
+  "columns": ["number", "memberName", "amount", "paidTo", "method", "paidOn", "status"],
+  "compactColumns": ["memberName", "amount", "status"],
+  "chips": [
+    { "id": "outstanding", "label": "Outstanding", "statusIn": ["raised"] },
+    { "id": "closed", "label": "Closed", "statusIn": ["paid", "cancelled"] },
+    { "id": "all", "label": "All" }
+  ],
+  "defaultChip": "outstanding",
+  "filters": ["paidTo", "method", "paidOn"],
+  "row": { "title": "memberName", "subtitle": ["amount", "method"], "meta": "number", "badge": "status" },
+  "detail": {
+    "sections": [
+      { "id": "fee", "label": "Fee", "fields": ["number", "status", "amount", "paidTo", "method", "paidOn", "reference", "notes"] },
+      { "id": "member", "label": "Member", "fields": ["member", "memberName", "memberEmail"] }
+    ]
+  },
+  "create": {
+    "steps": [
+      { "key": "member", "label": "Member", "fields": ["member", "memberName", "memberEmail"] },
+      { "key": "details", "label": "Fee", "fields": ["amount", "notes"] }
+    ],
+    "presets": [{ "param": "member", "field": "member" }],
+    "chips": ["outstanding"]
+  },
+  "edit": { "fields": ["member", "memberName", "memberEmail", "amount", "notes"], "chips": ["outstanding"] }
+}

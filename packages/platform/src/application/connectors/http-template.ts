@@ -6,7 +6,7 @@ export type HttpContentType = 'json' | 'form' | 'text';
 /**
  * http: a request built from templates. `url`, header values and `body` may
  * use placeholders such as {{record.x}}, {{message.to}}, {{secrets.n}} or
- * {{credential.accessToken}}, optionally with an encoder: {{ message.mime | base64url }}.
+ * {{credential.accessToken}}. Organisation mail uses the email connector, not http.
  */
 export interface HttpConfig {
   mode: HttpMode;
@@ -20,9 +20,6 @@ export interface HttpConfig {
   timeoutMs?: number;
   /** Response statuses that count as success; absent means any 2xx. */
   success?: number[];
-  emailSender?: boolean;
-  /** The From address used when `emailSender` is true. */
-  from?: string;
   /** lookup: the record fields the request may use. */
   inputs?: string[];
   /** lookup: field -> JSON path in the response. */
@@ -43,7 +40,15 @@ export interface AllowedPlaceholders {
   secrets?: readonly string[];
   /** Whether {{credential.accessToken}} is available; default true. */
   credential?: boolean;
+  /** Send mode only: which {{message.*}} parts are allowed; default {@link HTTP_SEND_MESSAGE_PARTS}. */
+  messageParts?: readonly string[];
 }
+
+/** Parts of {{message.*}} allowed on a generic http send connector (integrations, not mail). */
+export const HTTP_SEND_MESSAGE_PARTS = ['to', 'subject', 'text', 'title'] as const;
+
+/** Parts of {{message.*}} allowed on an email connector (includes MIME). */
+export const EMAIL_MESSAGE_PARTS = ['to', 'subject', 'text', 'from', 'mime'] as const;
 
 export interface RenderedHttp {
   request: ConnectorRequest;
@@ -65,7 +70,7 @@ export class HttpTemplateError extends Error {
 const MODES: readonly HttpMode[] = ['send', 'lookup'];
 const METHODS: readonly ConnectorRequest['method'][] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 const CONTENT_TYPES: readonly HttpContentType[] = ['json', 'form', 'text'];
-const MESSAGE_PARTS = ['to', 'subject', 'text', 'from', 'mime'] as const;
+const MESSAGE_PART_KEYS = new Set<string>([...HTTP_SEND_MESSAGE_PARTS, ...EMAIL_MESSAGE_PARTS]);
 const PLACEHOLDER = /\{\{([^}]*)\}\}/g;
 const FIELD = /^[A-Za-z_][A-Za-z0-9_]{0,62}$/;
 const SECRET_NAME = /^[A-Za-z][A-Za-z0-9_]{0,40}$/;
@@ -120,8 +125,11 @@ function placeholderAllowed(name: string, allowed: AllowedPlaceholders): boolean
   switch (scope) {
     case 'record':
       return FIELD.test(rest) && (allowed.mode === 'send' || (allowed.inputs ?? []).includes(rest));
-    case 'message':
-      return allowed.mode === 'send' && (MESSAGE_PARTS as readonly string[]).includes(rest);
+    case 'message': {
+      if (allowed.mode !== 'send') return false;
+      const parts = allowed.messageParts ?? HTTP_SEND_MESSAGE_PARTS;
+      return parts.includes(rest);
+    }
     case 'organisation':
       return rest === 'name';
     case 'secrets':
@@ -157,12 +165,14 @@ export function renderHttp(
   binding: HttpBinding,
   secrets: Record<string, string>,
   credential?: { accessToken?: string },
+  messageParts: readonly string[] = config.mode === 'send' ? HTTP_SEND_MESSAGE_PARTS : [],
 ): RenderedHttp {
   const allowed: AllowedPlaceholders = {
     mode: config.mode,
     inputs: config.inputs ?? [],
     secrets: Object.keys(secrets),
     credential: credential?.accessToken !== undefined,
+    messageParts: config.mode === 'send' ? messageParts : undefined,
   };
   const bad = [...new Set(templates(config).flatMap((t) => unknownPlaceholders(t, allowed)))];
   if (bad.length) {
@@ -175,7 +185,12 @@ export function renderHttp(
     const scope = name.slice(0, dot);
     const rest = name.slice(dot + 1);
     if (scope === 'record') return { value: binding.record?.[rest], secret: false };
-    if (scope === 'message') return { value: binding.message?.[rest as (typeof MESSAGE_PARTS)[number]], secret: false };
+    if (scope === 'message') {
+      return {
+        value: MESSAGE_PART_KEYS.has(rest) ? binding.message?.[rest as keyof NonNullable<HttpBinding['message']>] : undefined,
+        secret: false,
+      };
+    }
     if (scope === 'organisation') return { value: binding.organisation?.name, secret: false };
     if (scope === 'secrets') return { value: secrets[rest], secret: true };
     return { value: credential?.accessToken, secret: true };
@@ -220,8 +235,6 @@ export function parseHttpConfig(raw: unknown): HttpConfig | undefined {
   if (typeof raw.credential === 'string') config.credential = raw.credential;
   if (typeof raw.timeoutMs === 'number' && Number.isFinite(raw.timeoutMs)) config.timeoutMs = raw.timeoutMs;
   if (Array.isArray(raw.success) && raw.success.every((s) => Number.isInteger(s))) config.success = raw.success as number[];
-  if (typeof raw.emailSender === 'boolean') config.emailSender = raw.emailSender;
-  if (typeof raw.from === 'string') config.from = raw.from;
   if (stringArray(raw.inputs)) config.inputs = raw.inputs;
   if (stringRecord(raw.responseMap)) config.responseMap = raw.responseMap;
   return config;

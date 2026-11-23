@@ -185,7 +185,7 @@ describe('logo', () => {
 });
 
 describe('setup checklist', () => {
-  it('lists every item, offers the two confirmations, and completes once every required item is done', async () => {
+  it('lists every item and offers the two confirmations, and stays open until outgoing email is set up', async () => {
     const m = memoryOrganisation();
     let rows = setupRows((await m.gateway.setup()).items);
     expect(rows.map((r) => [r.key, r.done, r.required, r.confirm])).toEqual([
@@ -194,7 +194,8 @@ describe('setup checklist', () => {
       ['fiscalYear', true, true, false],
       ['receiptSeries', false, true, true],
       ['operationalRole', true, true, false],
-      ['email', false, false, false],
+      ['email', false, true, false],
+      ['fileStore', false, true, false],
       ['payments', false, false, false],
     ]);
     expect(rows.find((r) => r.key === 'email')!.hint).toBe('No email is sent until an email connector is set up');
@@ -205,6 +206,7 @@ describe('setup checklist', () => {
       receiptSeries: '/builder?section=money&kind=receiptRule',
       operationalRole: '/admin/roles',
       email: '/admin/connectors',
+      fileStore: '/admin/organisation/settings',
       payments: '/admin/connectors',
     });
     expect(rows.every((r) => r.label && r.hint && !r.label.startsWith('ui.'))).toBe(true);
@@ -212,7 +214,8 @@ describe('setup checklist', () => {
     await m.gateway.confirmSetup('identity');
     const done = await m.gateway.confirmSetup('receiptSeries');
     rows = setupRows(done.items);
-    expect(done).toMatchObject({ complete: true, completedAt: '2026-10-26T09:00:00.000Z' });
+    expect(done).toMatchObject({ complete: false, completedAt: null });
+    expect(rows.find((r) => r.key === 'email')).toMatchObject({ done: false, required: true });
     expect(rows.filter((r) => r.confirm)).toEqual([]);
   });
 
@@ -223,28 +226,28 @@ describe('setup checklist', () => {
       row('fiscalYear', 'Financial year', true, true),
       row('receiptSeries', 'Receipt series', true, true),
       row('operationalRole', 'People in roles', false, true),
-      row('email', 'Outgoing email', false, false),
+      row('email', 'Outgoing email', false, true),
       row('payments', 'Online payments', false, false),
     ];
     const progress = setupProgress(rows);
-    expect(progress).toEqual({ done: 3, total: 5, optionalOpen: 2, percent: 60, remaining: ['Registrations', 'People in roles'] });
-    expect(setupStatusText(progress)).toBe('3 of 5 required · 2 optional open');
-    expect(setupDetailText(progress, 'en')).toBe('Registrations and People in roles are still required.');
+    expect(progress).toEqual({ done: 3, total: 6, optionalOpen: 1, percent: 50, remaining: ['Registrations', 'People in roles', 'Outgoing email'] });
+    expect(setupStatusText(progress)).toBe('3 of 6 required · 1 optional open');
+    expect(setupDetailText(progress, 'en')).toBe('Registrations, People in roles and Outgoing email are still required.');
 
     const one = setupProgress(rows.map((item) => (item.key === 'operationalRole' ? { ...item, done: true } : item)));
-    expect(setupDetailText(one, 'en')).toBe('Registrations is still required.');
+    expect(setupDetailText(one, 'en')).toBe('Registrations and Outgoing email are still required.');
   });
 
   it('says setup is complete once every required step is done, and drops the optional count when none are open', () => {
-    const required = ['identity', 'registrations', 'fiscalYear', 'receiptSeries', 'operationalRole'] as const;
-    const openOptional = required.map((key) => row(key, key, true, true)).concat([row('email', 'Outgoing email', false, false), row('payments', 'Online payments', false, false)]);
+    const required = ['identity', 'registrations', 'fiscalYear', 'receiptSeries', 'operationalRole', 'email'] as const;
+    const openOptional = required.map((key) => row(key, key, true, true)).concat([row('payments', 'Online payments', false, false)]);
     const progress = setupProgress(openOptional);
     expect(progress.percent).toBe(100);
-    expect(setupStatusText(progress)).toBe('5 of 5 required · 2 optional open');
+    expect(setupStatusText(progress)).toBe('6 of 6 required · 1 optional open');
     expect(setupDetailText(progress, 'en')).toBe('Setup is complete.');
 
     const finished = setupProgress(openOptional.map((item) => ({ ...item, done: true })));
-    expect(setupStatusText(finished)).toBe('5 of 5 required');
+    expect(setupStatusText(finished)).toBe('6 of 6 required');
     expect(setupDetailText(finished, 'en')).toBe('Setup is complete.');
   });
 });

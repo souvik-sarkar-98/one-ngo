@@ -1,0 +1,23 @@
+{
+  "key": "project",
+  "label": "Project",
+  "pluralLabel": "Projects",
+  "description": "Programmes and projects the organisation runs, with their goals, milestones and events.",
+  "titleField": "name",
+  "numbering": { "sequence": "project", "format": "PRJ/{seq:4}", "reset": "never" },
+  "fields": [
+    { "key": "name", "label": "Project name", "type": "text", "required": true, "maxLength": 200, "searchable": true },
+    { "key": "description", "label": "Description", "type": "longText", "maxLength": 5000 },
+    { "key": "startsOn", "label": "Starts on", "type": "date" },
+    { "key": "endsOn", "label": "Ends on", "type": "date" },
+    { "key": "budget", "label": "Budget", "type": "money", "min": 0 },
+    { "key": "location", "label": "Location", "type": "text", "maxLength": 200, "searchable": true },
+    { "key": "lead", "label": "Project lead", "type": "person" },
+    {
+      "key": "goalCount",
+      "label": "Goals",
+      "type": "number",
+      "rollup": { "recordType": "projectGoal", "reference": "project", "measure": "count" }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "key": "beneficiary",
+  "label": "Beneficiary",
+  "pluralLabel": "Beneficiaries",
+  "description": "People or households the organisation serves. Each one has consent records and case notes.",
+  "titleField": "name",
+  "visibility": "restricted",
+  "numbering": { "sequence": "beneficiary", "format": "BEN/{seq:5}", "reset": "never" },
+  "fields": [
+    { "key": "name", "label": "Name", "type": "text", "required": true, "maxLength": 200, "searchable": true },
+    { "key": "dateOfBirth", "label": "Date of birth", "type": "date", "sensitive": true, "help": "Shown only to people with sensitive access" },
+    { "key": "phone", "label": "Phone", "type": "phone", "searchable": true },
+    { "key": "address", "label": "Address", "type": "longText", "maxLength": 1000 },
+    { "key": "city", "label": "City", "type": "text", "maxLength": 100, "searchable": true },
+    { "key": "householdSize", "label": "People in household", "type": "number", "min": 1 },
+    { "key": "project", "label": "Project", "type": "reference", "referenceType": "project", "help": "The main project this beneficiary is part of" },
+    { "key": "enrolledOn", "label": "Enrolled on", "type": "date", "required": true },
+    { "key": "closedOn", "label": "Closed on", "type": "date", "visibleWhen": "status == 'closed'" },
+    { "key": "closeReason", "label": "Reason for closing", "type": "longText", "maxLength": 1000, "visibleWhen": "status == 'closed'" },
+    { "key": "notes", "label": "Notes", "type": "longText" }
+  ]
+}

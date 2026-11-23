@@ -6,6 +6,7 @@ import { TranslatePipe } from '../../../services/i18n';
 import { EditableTable } from '../../../ui/editable-table';
 import type { TableColumn } from '../../../ui/table-rows';
 import { WorkflowSetStore } from './workflow-set-store';
+import { Btn } from '@onengo/web-kit';
 
 /**
  * A record type's workflows: role, condition and size of each, adding one,
@@ -15,7 +16,7 @@ import { WorkflowSetStore } from './workflow-set-store';
  */
 @Component({
   selector: 'app-workflows-list',
-  imports: [TranslatePipe, EditableTable],
+  imports: [Btn, TranslatePipe, EditableTable],
   styleUrl: './workflow.css',
   template: `
     <h3 class="wf-title">{{ 'ui.builder.workflows.title' | t: { count: store.set().length } }}</h3>
@@ -46,8 +47,8 @@ import { WorkflowSetStore } from './workflow-set-store';
             <option value="parallel">{{ 'ui.builder.schema.enum.parallel' | t }}</option>
           </select>
         </div>
-        <button type="submit" class="primary" [disabled]="store.busy()">{{ 'ui.common.add' | t }}</button>
-        <button type="button" (click)="store.cancelAdding()">{{ 'ui.common.cancel' | t }}</button>
+        <button appBtn="primary" type="submit" [disabled]="store.busy()">{{ 'ui.common.add' | t }}</button>
+        <button appBtn type="button" (click)="store.cancelAdding()">{{ 'ui.common.cancel' | t }}</button>
         @if (store.addError()) { <div class="notice error wf-add__error" role="alert">{{ store.addError() }}</div> }
       </form>
     }

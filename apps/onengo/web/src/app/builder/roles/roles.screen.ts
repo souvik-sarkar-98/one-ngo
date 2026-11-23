@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { PageFrame } from '@onengo/web-kit';
+import { Btn, PageFrame } from '@onengo/web-kit';
 import { roleKey } from '../../core/builder/permission-grid';
 import { t } from '../../core/i18n/i18n';
 import type { RowView } from '../../core/rows';
@@ -14,7 +14,7 @@ import { RolesStore } from './roles-store';
 /** Builder › Roles: every role with its member count; who has a role is managed in Administration. */
 @Component({
   selector: 'app-roles-screen',
-  imports: [TranslatePipe, TableRows, InfiniteListRow, MobileFormSheet, PageBack, PageFrame],
+  imports: [Btn, TranslatePipe, TableRows, InfiniteListRow, MobileFormSheet, PageBack, PageFrame],
   providers: [RolesStore],
   styleUrl: '../builder.css',
   template: `
@@ -24,7 +24,7 @@ import { RolesStore } from './roles-store';
         <h1>{{ 'ui.crumbs.builder.roles' | t }}</h1>
         <span class="builder-spacer"></span>
         @if (store.canEdit()) {
-          <button type="button" class="primary" (click)="startNew()">{{ 'ui.builder.roles.new' | t }}</button>
+          <button appBtn="primary" type="button" (click)="startNew()">{{ 'ui.builder.roles.new' | t }}</button>
         }
       </header>
       <p class="muted">{{ 'ui.builder.roles.intro' | t }}</p>

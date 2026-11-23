@@ -37,6 +37,7 @@ const ADMIN_AREAS: Record<string, string> = {
   theme: 'theme',
   layout: 'layout',
   migration: 'migration',
+  'recycle-bin': 'recordBin',
 };
 const KINDS = new Set<string>(DEFINITION_KINDS);
 
@@ -100,7 +101,8 @@ function inbox(params: Params): Crumb[] {
 }
 
 function settingsCrumb(params: Params): Crumb[] {
-  const panel = params['panel'] === 'language' ? t('ui.crumbs.language') : params['panel'] === 'about' ? t('ui.more.about') : null;
+  const open = params['panel'];
+  const panel = open === 'language' ? t('ui.crumbs.language') : open === 'passkeys' ? t('ui.passkeys.title') : open === 'about' ? t('ui.more.about') : null;
   return directoryTrail({ label: t('ui.nav.settings'), href: panel ? '/settings' : undefined }, null, panel ? [{ label: panel }] : []);
 }
 
@@ -203,6 +205,9 @@ export function trail(path: string, params: Params, defs: RuntimeDefinitions | n
       break;
     case 'reports':
       out = reports(parts, params, named);
+      break;
+    case 'accounts':
+      out = directoryTrail({ label: t('ui.money.title') }, null, []);
       break;
     case 'settings':
       out = settingsCrumb(params);

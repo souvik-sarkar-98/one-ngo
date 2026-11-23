@@ -1,0 +1,36 @@
+{
+  "key": "meeting",
+  "label": "Meeting",
+  "pluralLabel": "Meetings",
+  "description": "Board meetings, general body meetings and the AGM, with the agenda and minutes.",
+  "titleField": "title",
+  "numbering": { "sequence": "meeting", "format": "MTG/{fy}/{seq:4}", "reset": "fiscal_year" },
+  "fields": [
+    { "key": "title", "label": "Title", "type": "text", "required": true, "maxLength": 200, "searchable": true },
+    {
+      "key": "meetingType",
+      "label": "Type",
+      "type": "choice",
+      "required": true,
+      "choices": [
+        { "value": "board", "label": "Board meeting" },
+        { "value": "general", "label": "General body meeting" },
+        { "value": "agm", "label": "Annual general meeting" },
+        { "value": "special", "label": "Special general meeting" }
+      ]
+    },
+    { "key": "scheduledOn", "label": "Scheduled on", "type": "date", "required": true },
+    { "key": "venue", "label": "Venue", "type": "text", "maxLength": 200 },
+    { "key": "agenda", "label": "Agenda", "type": "longText", "maxLength": 5000, "editableWhen": "status == 'planned'" },
+    { "key": "heldOn", "label": "Held on", "type": "date", "visibleWhen": "status == 'held' or status == 'closed'" },
+    { "key": "attendance", "label": "Number present", "type": "number", "min": 0, "visibleWhen": "status == 'held' or status == 'closed'" },
+    {
+      "key": "minutes",
+      "label": "Minutes",
+      "type": "longText",
+      "maxLength": 20000,
+      "visibleWhen": "status == 'held' or status == 'closed'",
+      "editableWhen": "status == 'held'"
+    }
+  ]
+}

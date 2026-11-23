@@ -84,6 +84,7 @@ export class OAuthCredentials {
     demand(ctx.actor, PERMISSION);
     const row = await this.tm.withTenant(ctx.tenantId, (tx) => this.store.connector(tx, key));
     if (!row || row.type !== 'oauth') throw notFound(`OAuth connector '${key}' is not set up.`);
+    if (row.archived_at) throw ruleViolation(`'${key}' is archived. Restore it before connecting it.`);
     const config = parseOauthConfig(row.config);
     if (!config) throw ruleViolation('Finish setting up the connector before connecting it.');
     const state = randomToken(32);

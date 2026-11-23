@@ -11,8 +11,11 @@ const baseline = JSON.parse(readFileSync(join(here, 'baseline/toolkit-1.0.0.json
   usedTokens: string[];
 };
 
-/** Classes of toolkit features this app never used (selection, bulk edit, documents, avatars, links in subtitles). */
-const UNUSED = /select|bulk|row-check|header--static|documents|upload|avatar|subtitle-link|subtitle-sep|rich-html|content$|kv-value list|item-meta|hero|back$|mat-headline|mat-title|cf-form-title|cf-form-description|cf-form-step-title|cf-form-submit|cf-phone|cf-autocomplete|cf-toggle|cf-form-stepper__(custom|actions|back|next)|app-btn-group$|list-dashboard__(upload|state|detail-menu|detail-header)|^cf-field-error$|^mat-mdc-form-field-error$|^list-detail-sheet__(form|summary|state|spinner)|^list-detail-sections__(state|spinner|empty)|^cf-field$/;
+/**
+ * Classes of toolkit features this app never used (selection, bulk edit, documents, avatars, links in subtitles),
+ * and the button modifiers, which the web kit's `Btn` directive now applies (`appBtn="primary"`).
+ */
+const UNUSED = /select|bulk|row-check|header--static|documents|upload|avatar|subtitle-link|subtitle-sep|rich-html|content$|kv-value list|item-meta|hero|back$|mat-headline|mat-title|cf-form-title|cf-form-description|cf-form-step-title|cf-form-submit|cf-phone|cf-autocomplete|cf-toggle|cf-form-stepper__(custom|actions|back|next)|app-btn-group$|^app-btn--(ghost|primary|block)$|list-dashboard__(upload|state|detail-menu|detail-header)|^cf-field-error$|^mat-mdc-form-field-error$|^list-detail-sheet__(form|summary|state|spinner)|^list-detail-sections__(state|spinner|empty)|^cf-field$/;
 
 /** The ported controls, and the record list screen and record panel that compose them. */
 const sources = [

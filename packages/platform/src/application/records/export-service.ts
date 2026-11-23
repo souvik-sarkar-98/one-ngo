@@ -107,7 +107,7 @@ export class ExportService {
     const text = [...(offset === 0 ? [`\uFEFF${this.csv.csvLine(columns.map((c) => c.label))}`] : []), ...(await this.rows(ctx, type, columns, items))].join('');
     const key = (n: number) => `${ctx.tenantId}/export-${jobId}-${n}`;
     const storeRef = state.storeRef ?? (await this.files.stores.forTenant(ctx.tenantId)).ref;
-    const store = this.files.stores.byRef(storeRef);
+    const store = await this.files.stores.byRef(ctx.tenantId, storeRef);
     await store.put(key(parts), Readable.from([Buffer.from(text, 'utf8')]));
     const next = { offset: offset + items.length, parts: parts + 1, storeRef };
     if (items.length === batchSize) return { state: next, progress: next.offset, done: false };

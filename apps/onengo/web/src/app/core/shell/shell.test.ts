@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { isIconName } from '@onengo/platform/icons';
 import { safeNext } from '@onengo/web-kit';
 import { changesApprovals } from '../http/http-shell';
 import { ENGLISH, useMessages } from '../i18n/i18n';
@@ -135,6 +136,16 @@ describe('shell navigation', () => {
     expect(layout.items.find((item) => item.key === 'admin')?.icon).toBe('admin_panel_settings');
     expect(defaultNavIcon('builder')).toBe('build');
     expect(layout.items.find((item) => item.key === 'guide')?.icon).toBe('menu_book');
+  });
+
+  it('opens money accounts at /accounts with a drawn sidebar icon, and keeps it highlighted there', () => {
+    const layout = navigationLayout(me({ money: true }), null, 0);
+    const money = layout.items.find((item) => item.key === 'money');
+    expect(money).toMatchObject({ link: '/accounts', icon: 'accounts' });
+    expect(isIconName(money!.icon)).toBe(true);
+    expect(activeNavItem('accounts', layout.items)).toBe('money');
+    expect(appTitle(shellRoute('accounts'), null, me({ money: true }))).toBe('Accounts');
+    expect(navigationLayout(me(), null, 0).items.some((item) => item.key === 'money')).toBe(false);
   });
 
   it('shows the back arrow away from the destinations and no chrome on sign-in, reset password and print', () => {

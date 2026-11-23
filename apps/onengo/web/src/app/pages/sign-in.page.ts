@@ -5,7 +5,7 @@ import { signInRefusalKey } from '../core/auth/sign-in-notice';
 import { t } from '../core/i18n/i18n';
 import { PRODUCT, browserTitle, type SignInOrganisation } from '../core/organisation/organisation';
 import { ANOTHER_ORGANISATION } from '../core/organisation/sign-in';
-import { safeNext } from '@onengo/web-kit';
+import { Btn, safeNext } from '@onengo/web-kit';
 import { organisationLogo } from '../core/shell/shell';
 import { applyTheme } from '../core/theme';
 import { pointAppleTouchIcon } from '../pwa/install';
@@ -30,7 +30,7 @@ type Mode = 'password' | 'code' | 'forgot' | 'ticket' | 'codeonly';
  */
 @Component({
   selector: 'app-sign-in',
-  imports: [TranslatePipe],
+  imports: [Btn, TranslatePipe],
   providers: [SignInStore],
   styles: `
     :host {
@@ -90,7 +90,7 @@ type Mode = 'password' | 'code' | 'forgot' | 'ticket' | 'codeonly';
     .sso {
       margin: 12px 0 0;
     }
-    .sso .button {
+    .sso .app-btn {
       display: block;
       width: 100%;
     }
@@ -113,7 +113,7 @@ type Mode = 'password' | 'code' | 'forgot' | 'ticket' | 'codeonly';
         <h1>{{ 'ui.auth.orgNotFound' | t }}</h1>
         <div class="card">
           <div class="acts">
-            <button type="button" class="primary" (click)="useAnother()">{{ 'ui.auth.signInWithCode' | t }}</button>
+            <button appBtn="primary" type="button" (click)="useAnother()">{{ 'ui.auth.signInWithCode' | t }}</button>
           </div>
         </div>
       } @else if (mode() === 'codeonly') {
@@ -125,7 +125,7 @@ type Mode = 'password' | 'code' | 'forgot' | 'ticket' | 'codeonly';
             <input id="org" name="org" autocomplete="organization" spellcheck="false" [value]="tenant()" (input)="tenant.set(value($event))" required />
           </div>
           <div class="acts">
-            <button class="primary" type="submit" [disabled]="busy()">{{ 'ui.auth.continue' | t }}</button>
+            <button appBtn="primary" type="submit" [disabled]="busy()">{{ 'ui.auth.continue' | t }}</button>
           </div>
         </form>
         <p class="auth__hint muted">{{ 'ui.auth.codeFormHint' | t }}</p>
@@ -134,8 +134,8 @@ type Mode = 'password' | 'code' | 'forgot' | 'ticket' | 'codeonly';
         <form class="card" (submit)="submit($event)">
           @if (mode() === 'password' || mode() === 'code') {
             <div class="tabs" role="tablist">
-              <button type="button" role="tab" [attr.aria-selected]="mode() === 'password'" [class.active]="mode() === 'password'" (click)="tab($event, 'password')">{{ 'ui.auth.tabPassword' | t }}</button>
-              <button type="button" role="tab" [attr.aria-selected]="mode() === 'code'" [class.active]="mode() === 'code'" (click)="tab($event, 'code')">{{ 'ui.auth.tabCode' | t }}</button>
+              <button type="button" class="sign-in__tab" role="tab" [attr.aria-selected]="mode() === 'password'" [class.active]="mode() === 'password'" (click)="tab($event, 'password')">{{ 'ui.auth.tabPassword' | t }}</button>
+              <button type="button" class="sign-in__tab" role="tab" [attr.aria-selected]="mode() === 'code'" [class.active]="mode() === 'code'" (click)="tab($event, 'code')">{{ 'ui.auth.tabCode' | t }}</button>
             </div>
           }
 
@@ -167,26 +167,26 @@ type Mode = 'password' | 'code' | 'forgot' | 'ticket' | 'codeonly';
           }
 
           <div class="acts">
-            <button class="primary" type="submit" [disabled]="busy()">{{ submitLabel() | t }}</button>
+            <button appBtn="primary" type="submit" [disabled]="busy()">{{ submitLabel() | t }}</button>
           </div>
           @if (mode() === 'password') {
-            <p class="auth__more"><button type="button" class="link-button" (click)="switchMode($event, 'forgot')">{{ 'ui.auth.forgot' | t }}</button></p>
+            <p class="auth__more"><button appBtn="link" type="button" (click)="switchMode($event, 'forgot')">{{ 'ui.auth.forgot' | t }}</button></p>
           } @else if (mode() === 'forgot') {
-            <p class="auth__more"><button type="button" class="link-button" (click)="switchMode($event, 'password')">{{ 'ui.auth.backToPassword' | t }}</button></p>
+            <p class="auth__more"><button appBtn="link" type="button" (click)="switchMode($event, 'password')">{{ 'ui.auth.backToPassword' | t }}</button></p>
           }
         </form>
 
         @if (passkeys() && (mode() === 'password' || mode() === 'code')) {
-          <p class="sso"><button type="button" class="button" [disabled]="busy()" (click)="signInWithPasskey()">{{ 'ui.auth.passkeySignIn' | t }}</button></p>
+          <p class="sso"><button appBtn type="button" [disabled]="busy()" (click)="signInWithPasskey()">{{ 'ui.auth.passkeySignIn' | t }}</button></p>
         }
 
         @if (mode() !== 'ticket') {
           @for (p of providers(); track p.id) {
-            <p class="sso"><a class="button" [href]="providerUrl(p.id)">{{ 'ui.auth.signInWith' | t: { provider: p.label } }}</a></p>
+            <p class="sso"><a appBtn [href]="providerUrl(p.id)">{{ 'ui.auth.signInWith' | t: { provider: p.label } }}</a></p>
           }
         }
         @if (org()) {
-          <p class="auth__more switchorg"><button type="button" class="link-button" (click)="useAnother()">{{ 'ui.auth.useAnother' | t }}</button></p>
+          <p class="auth__more switchorg"><button appBtn="link" type="button" (click)="useAnother()">{{ 'ui.auth.useAnother' | t }}</button></p>
         }
       }
     </div>

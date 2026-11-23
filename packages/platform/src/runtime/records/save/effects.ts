@@ -47,6 +47,7 @@ export async function effects(tx: Tx, s: SaveContext, row: RecordRow): Promise<{
     receipts.push(
       await s.services.receipts.issue(tx, ctx.actor, {
         seriesKey: r.series,
+        ruleKey: r.key,
         date,
         amount,
         recordId: row.id,

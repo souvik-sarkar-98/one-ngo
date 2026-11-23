@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { Icon, PageFrame } from '@onengo/web-kit';
+import { Btn, Icon, PageFrame } from '@onengo/web-kit';
 import { TranslatePipe } from '../../services/i18n';
-import { PRODUCT_NAME } from '../../ui/app-bar';
+import { PRODUCT as PRODUCT_NAME } from '../../core/organisation/organisation';
 import { CfForm } from '../../ui/cf-form';
 import { ScreenHeading } from '../../ui/screen-heading';
 import { OrganisationStore } from './organisation-store';
@@ -10,7 +10,7 @@ import { SettingsStore } from './settings-store';
 /** Identity: the logo beside the display name, then the names and default language. The logo is saved on its own; the names are saved to the organisation. */
 @Component({
   selector: 'app-admin-identity',
-  imports: [CfForm, Icon, PageFrame, ScreenHeading, TranslatePipe],
+  imports: [Btn, CfForm, Icon, PageFrame, ScreenHeading, TranslatePipe],
   providers: [OrganisationStore, SettingsStore],
   styleUrl: '../admin.css',
   styles: `
@@ -25,7 +25,7 @@ import { SettingsStore } from './settings-store';
       padding: 8px 12px;
       border: 1px solid var(--line);
       border-radius: 10px;
-      background: #f8fafc;
+      background: var(--th-bg);
     }
     .org__facts dt {
       margin: 0;
@@ -60,7 +60,7 @@ import { SettingsStore } from './settings-store';
       flex: 0 0 auto;
       object-fit: contain;
       border-radius: 6px;
-      background: #fff;
+      background: var(--card);
     }
     .org__logo--empty {
       display: grid;
@@ -68,7 +68,7 @@ import { SettingsStore } from './settings-store';
       padding: 2px;
       border: 1px dashed rgba(255, 255, 255, 0.7);
       background: rgba(255, 255, 255, 0.16);
-      color: #fff;
+      color: var(--brand-fg);
       font-size: 0.62rem;
       font-weight: 700;
       line-height: 1.1;
@@ -150,7 +150,7 @@ import { SettingsStore } from './settings-store';
       place-items: center;
       border: 1px solid var(--line);
       border-radius: 10px;
-      background: #fff;
+      background: var(--card);
       color: var(--brand);
     }
     .org__drop-mark svg {
@@ -180,14 +180,6 @@ import { SettingsStore } from './settings-store';
     }
     .org__remove {
       margin-bottom: 4px;
-    }
-    .org__signature {
-      max-width: 200px;
-      max-height: 72px;
-      object-fit: contain;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #fff;
     }
     .org__form {
       margin-top: 12px;
@@ -272,7 +264,7 @@ import { SettingsStore } from './settings-store';
           }
           @if (o.logo) {
             <div class="admin__line org__remove">
-              <button type="button" class="app-btn" [disabled]="org.logoBusy()" (click)="org.removeLogo()">{{ 'ui.admin.organisation.removeLogo' | t }}</button>
+              <button appBtn type="button" [disabled]="org.logoBusy()" (click)="org.removeLogo()">{{ 'ui.admin.organisation.removeLogo' | t }}</button>
             </div>
           }
           <div class="org__form">
@@ -280,76 +272,10 @@ import { SettingsStore } from './settings-store';
           </div>
           <div class="admin__line">
             <span class="admin__grow"></span>
-            <button type="button" class="app-btn app-btn--primary" [disabled]="settings.saving()" (click)="settings.save('identity')">
+            <button appBtn="primary" type="button" [disabled]="settings.saving()" (click)="settings.save('identity')">
               {{ (settings.saving() ? 'ui.common.saving' : 'ui.common.save') | t }}
             </button>
           </div>
-        </section>
-        <section class="card" aria-labelledby="org-signatory-title">
-          <h2 id="org-signatory-title">{{ 'ui.admin.organisation.signatoryTitle' | t }}</h2>
-          <p class="org__caption">{{ 'ui.admin.organisation.signatoryHelp' | t }}</p>
-          <div class="field">
-            <label for="org-signatory-name">{{ 'ui.admin.organisation.signatoryName' | t }}</label>
-            <input
-              id="org-signatory-name"
-              [value]="org.signatoryName()"
-              [attr.aria-invalid]="org.signatoryErrors()['name'] ? true : null"
-              [disabled]="org.signatoryBusy()"
-              (input)="org.signatoryName.set(fieldValue($event))" />
-            @if (org.signatoryErrors()['name']) {
-              <div class="org__error" role="alert">{{ org.signatoryErrors()['name'] }}</div>
-            }
-          </div>
-          <div class="field">
-            <label for="org-signatory-designation">{{ 'ui.admin.organisation.signatoryDesignation' | t }}</label>
-            <input
-              id="org-signatory-designation"
-              [value]="org.signatoryDesignation()"
-              [attr.aria-invalid]="org.signatoryErrors()['designation'] ? true : null"
-              [disabled]="org.signatoryBusy()"
-              (input)="org.signatoryDesignation.set(fieldValue($event))" />
-            @if (org.signatoryErrors()['designation']) {
-              <div class="org__error" role="alert">{{ org.signatoryErrors()['designation'] }}</div>
-            }
-          </div>
-          <div class="admin__line">
-            <span class="admin__grow"></span>
-            <button type="button" class="app-btn app-btn--primary" [disabled]="org.signatoryBusy()" (click)="org.saveSignatory()">
-              {{ (org.signatoryBusy() ? 'ui.common.saving' : 'ui.admin.organisation.signatorySave') | t }}
-            </button>
-          </div>
-          <div class="admin__line">
-            @if (org.signature(); as src) {
-              <img class="org__signature" [src]="src" [alt]="'ui.admin.organisation.signatureAlt' | t" />
-            } @else {
-              <span class="muted">{{ 'ui.admin.organisation.noSignature' | t }}</span>
-            }
-            <span class="admin__grow"></span>
-            @if (o.signatory) {
-              <button type="button" class="app-btn" [disabled]="org.signatoryBusy()" (click)="org.removeSignatory()">{{ 'ui.admin.organisation.removeSignatory' | t }}</button>
-            }
-          </div>
-          <label class="org__drop" [attr.data-busy]="org.signatoryBusy()" [attr.data-invalid]="org.signatureError() ? true : null">
-            <input
-              id="org-signature"
-              class="org__file"
-              type="file"
-              accept="image/png"
-              aria-describedby="org-signature-help"
-              [attr.aria-invalid]="org.signatureError() ? true : null"
-              [disabled]="org.signatoryBusy()"
-              (change)="chooseSignature($event)" />
-            <span class="org__drop-mark" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5z" /></svg>
-            </span>
-            <span class="org__drop-copy">
-              <span class="org__drop-title">{{ (o.signatory?.image ? 'ui.admin.organisation.replaceSignature' : 'ui.admin.organisation.uploadSignature') | t }}</span>
-              <span id="org-signature-help" class="org__drop-help">{{ 'ui.admin.organisation.signatureHelp' | t }}</span>
-            </span>
-          </label>
-          @if (org.signatureError()) {
-            <div class="org__error" role="alert">{{ org.signatureError() }}</div>
-          }
         </section>
       }
     </app-page-frame>
@@ -380,12 +306,4 @@ export class IdentityScreen {
     void this.org.chooseLogo(e.dataTransfer?.files?.[0]);
   }
 
-  chooseSignature(e: Event): void {
-    const input = e.target as HTMLInputElement;
-    void this.org.chooseSignature(input.files?.[0]).finally(() => (input.value = ''));
-  }
-
-  fieldValue(e: Event): string {
-    return (e.target as HTMLInputElement).value;
-  }
 }

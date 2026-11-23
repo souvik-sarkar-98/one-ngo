@@ -8,6 +8,7 @@ import { relatedSectionId, type RelatedCreate } from '../core/records/record/rel
 import { canShare } from '../core/records/sharing/sharing';
 import { Api } from '../services/api';
 import { TranslatePipe } from '../services/i18n';
+import { Session } from '../services/session';
 import { CfForm } from '../ui/cf-form';
 import { cfField, type CfFieldDef } from '../ui/cf-types';
 import { dialogCloseLabel } from '../ui/dialog';
@@ -17,6 +18,7 @@ import { RowMenu } from '../ui/row-menu';
 import { ListStore } from './list-store';
 import { RecordStore } from './record-store';
 import { RecordShare } from './share-panel';
+import { Btn } from '@onengo/web-kit';
 
 /**
  * The record panel on ui/panel, one column on every size: a bottom sheet on
@@ -27,7 +29,7 @@ import { RecordShare } from './share-panel';
  */
 @Component({
   selector: 'app-record-panel',
-  imports: [ListDetailSheet, ListCreateSheet, ListCreateStepperSheet, MobileFormSheet, CfForm, RowMenu, RecordShare, TranslatePipe],
+  imports: [Btn, ListDetailSheet, ListCreateSheet, ListCreateStepperSheet, MobileFormSheet, CfForm, RowMenu, RecordShare, TranslatePipe],
   styleUrl: '../ui/styles/na-list-dashboard.css',
   styles: `
     .record-panel__workflows {
@@ -53,16 +55,16 @@ import { RecordShare } from './share-panel';
       border-radius: 999px;
       padding: 4px 8px;
       line-height: 1;
-      background: #f1f5f9;
+      background: var(--surface-sunk);
       color: #475569;
     }
     .record-panel__badge[data-tone='success'] {
-      background: #dcfce7;
-      color: #15803d;
+      background: var(--badge-ok-bg);
+      color: var(--ok);
     }
     .record-panel__badge[data-tone='warning'] {
-      background: #fef3c7;
-      color: #b45309;
+      background: var(--badge-warn-bg);
+      color: var(--warn);
     }
     .record-panel__badge[data-tone='primary'] {
       background: var(--primary-100);
@@ -79,7 +81,7 @@ import { RecordShare } from './share-panel';
       margin-bottom: 12px;
       border: 1px solid rgba(148, 163, 184, 0.18);
       border-radius: 12px;
-      background: #fffaf5;
+      background: var(--notice-warn-bg);
     }
     .record-panel__summary-row {
       display: grid;
@@ -133,7 +135,7 @@ import { RecordShare } from './share-panel';
           (editValuesChange)="setValues($event)"
           (itemSelect)="selectItem($event)">
           @if (recordMenu().length && state.panel.kind === 'view') {
-            <app-row-menu detailHeaderActions [actions]="recordMenu()" (choose)="store.intents.setPanel({ kind: 'share' })" />
+            <app-row-menu detailHeaderActions [actions]="recordMenu()" (choose)="chooseMenu($event)" />
           }
           @if (lines().length) {
             <div detailHero class="record-panel__workflows" role="list" [attr.aria-label]="'ui.records.workflows' | t">
@@ -152,7 +154,7 @@ import { RecordShare } from './share-panel';
                 <a [href]="path">{{ path }}</a>
                 @if (canRevokePublicLink()) {
                   <div class="app-btn-group">
-                    <button type="button" class="app-btn" [disabled]="r.busy" (click)="revokePublicLink()">{{ 'ui.public.revoke' | t }}</button>
+                    <button appBtn type="button" [disabled]="r.busy" (click)="revokePublicLink()">{{ 'ui.public.revoke' | t }}</button>
                   </div>
                 }
               </article>
@@ -164,8 +166,8 @@ import { RecordShare } from './share-panel';
                 <div>{{ approvalSummary(spec, p) }}</div>
                 @if (p.canDecide) {
                   <div class="app-btn-group">
-                    <button type="button" class="app-btn app-btn--primary" [disabled]="r.busy" (click)="rec.session.decide('approve')">{{ 'ui.common.approve' | t }}</button>
-                    <button type="button" class="app-btn" [disabled]="r.busy" (click)="rec.session.decide('reject')">{{ 'ui.common.reject' | t }}</button>
+                    <button appBtn="primary" type="button" [disabled]="r.busy" (click)="rec.session.decide('approve')">{{ 'ui.common.approve' | t }}</button>
+                    <button appBtn type="button" [disabled]="r.busy" (click)="rec.session.decide('reject')">{{ 'ui.common.reject' | t }}</button>
                   </div>
                 }
               </article>
@@ -174,7 +176,7 @@ import { RecordShare } from './share-panel';
           @if (groups().length || configured().length || creates().length) {
             <div detailFooterActions class="list-dashboard__detail-footer-actions">
               @for (c of creates(); track c.id) {
-                <button type="button" class="app-btn app-btn--primary" [disabled]="r.busy" (click)="createRelated(c)">{{ c.label }}</button>
+                <button appBtn="primary" type="button" [disabled]="r.busy" (click)="createRelated(c)">{{ c.label }}</button>
               }
               @for (g of groups(); track g.workflow) {
                 @if (g.label) {
@@ -183,9 +185,7 @@ import { RecordShare } from './share-panel';
                 @for (s of g.steps; track s.key) {
                   <button
                     type="button"
-                    class="app-btn"
-                    [class.app-btn--primary]="s.primary"
-                    [class.app-btn--secondary]="!s.primary"
+                    [appBtn]="s.primary ? 'primary' : ''"
                     [disabled]="!!r.pending || r.busy"
                     (click)="store.intents.setPanel({ kind: 'step', step: s.key })">
                     {{ s.label }}
@@ -193,7 +193,7 @@ import { RecordShare } from './share-panel';
                 }
               }
               @for (a of configured(); track a.key) {
-                <button type="button" class="app-btn app-btn--secondary" [disabled]="r.busy" (click)="start(a)">
+                <button appBtn type="button" [disabled]="r.busy" (click)="start(a)">
                   {{ a.label }}
                 </button>
               }
@@ -204,6 +204,18 @@ import { RecordShare } from './share-panel';
         @if (sharing()) {
           <app-record-share />
         }
+
+        <app-mobile-form-sheet
+          [open]="deleting()"
+          [title]="'ui.records.deleteTitle' | t: { name: r.record ? recordTitle(spec, r.record) : '' }"
+          [error]="deleteError()"
+          [saving]="deleteBusy()"
+          [showDefaultFooter]="false"
+          (dismissed)="cancelDelete()">
+          <p class="record-panel__confirm">{{ 'ui.records.deleteNote' | t }}</p>
+          <button appBtn sheetFooterActions type="button" [disabled]="deleteBusy()" (click)="cancelDelete()">{{ 'ui.common.cancel' | t }}</button>
+          <button appBtn="primary" sheetFooterActions type="button" [disabled]="deleteBusy()" (click)="confirmDelete()">{{ (deleteBusy() ? 'ui.common.submitting' : 'ui.records.delete') | t }}</button>
+        </app-mobile-form-sheet>
 
         @if (step(); as s) {
           <app-list-create-sheet
@@ -251,10 +263,10 @@ import { RecordShare } from './share-panel';
               }
               <cf-form [fields]="formFields()" [values]="r.values" [errors]="r.errors" idPrefix="record-action-form" [columns]="layout().columns" [fullWidth]="layout().fullWidth" (valuesChange)="setValues($event)"></cf-form>
             }
-            <button sheetFooterActions type="button" class="app-btn app-btn--ghost" [disabled]="r.busy" (click)="cancelAction(a)">
+            <button appBtn sheetFooterActions type="button" [disabled]="r.busy" (click)="cancelAction(a)">
               {{ r.confirming && a.form?.fields?.length ? ('ui.common.back' | t) : dialogCloseLabel(a.label, ('ui.common.cancel' | t)) }}
             </button>
-            <button sheetFooterActions type="button" class="app-btn app-btn--primary" [disabled]="r.busy" (click)="rec.session.act(a, models())">
+            <button appBtn="primary" sheetFooterActions type="button" [disabled]="r.busy" (click)="rec.session.act(a, models())">
               {{ r.busy ? ('ui.common.submitting' | t) : a.label }}
             </button>
           </app-mobile-form-sheet>
@@ -340,8 +352,17 @@ export class RecordPanel {
   });
   readonly creates = computed(() => (this.rec.snapshot()?.record ? this.rec.session.relatedCreates() : []));
   /** The panel's ⋮: record-level options that are not steps or actions; in this release, Share. */
-  readonly recordMenu = computed(() => (canShare(this.store.spec()!, this.rec.snapshot()?.record) ? [{ id: 'share', label: t('ui.share.action') }] : []));
-  readonly sharing = computed(() => this.store.state()?.panel.kind === 'share' && this.recordMenu().length > 0);
+  readonly recordMenu = computed(() => [
+    ...(canShare(this.store.spec()!, this.rec.snapshot()?.record) ? [{ id: 'share', label: t('ui.share.action') }] : []),
+    ...(this.canDelete() && this.rec.snapshot()?.record ? [{ id: 'delete', label: t('ui.records.delete') }] : []),
+  ]);
+  readonly sharing = computed(() => this.store.state()?.panel.kind === 'share' && this.recordMenu().some((a) => a.id === 'share'));
+  /** Deleting is an administrator's act (dmin:records); the record goes to the recycle bin and can be restored. */
+  private readonly session = inject(Session);
+  readonly canDelete = computed(() => !!this.session.me()?.capabilities.recordBin);
+  readonly deleting = signal(false);
+  readonly deleteBusy = signal(false);
+  readonly deleteError = signal('');
   /** The fields of whichever form is open: edit, the running step or action, or the create step. */
   readonly models = computed<FieldModel[]>(() => (this.rec.snapshot() ? this.rec.session.fields() : []));
   /** The wide-screen layout of whichever form is open; phones draw one column regardless. */
@@ -387,6 +408,36 @@ export class RecordPanel {
     });
   }
 
+  /** The panel's ⋮: Share opens the share panel, Delete asks first. */
+  chooseMenu(id: string): void {
+    if (id === 'delete') {
+      this.deleteError.set('');
+      this.deleting.set(true);
+    } else this.store.intents.setPanel({ kind: 'share' });
+  }
+
+  cancelDelete(): void {
+    this.deleting.set(false);
+  }
+
+  /** Moves the open record to the recycle bin at the version being shown, then closes the panel and refreshes the list. */
+  async confirmDelete(): Promise<void> {
+    const record = this.rec.snapshot()?.record;
+    if (!record) return;
+    this.deleteBusy.set(true);
+    this.deleteError.set('');
+    try {
+      await this.api.delete(`/api/records/${encodeURIComponent(record.type)}/${encodeURIComponent(record.id)}?version=${record.version}`);
+      this.deleting.set(false);
+      this.store.intents.close();
+      await this.store.intents.controller.reload();
+    } catch (e) {
+      this.deleteError.set((e instanceof Error && e.message) || t('ui.common.somethingWentWrong'));
+    } finally {
+      this.deleteBusy.set(false);
+    }
+  }
+
   async revokePublicLink(): Promise<void> {
     const id = this.rec.snapshot()?.record?.id;
     const type = this.store.spec()?.type.key;
@@ -401,7 +452,7 @@ export class RecordPanel {
       return;
     }
     try {
-      const link = await this.api.get<{ path: string }>(`/api/records/${encodeURIComponent(type)}/${encodeURIComponent(id)}/public-link`);
+      const link = await this.api.get<{ path: string | null }>(`/api/records/${encodeURIComponent(type)}/${encodeURIComponent(id)}/public-link`);
       if (this.rec.snapshot()?.record?.id === id) this.publicLink.set(link.path);
     } catch {
       if (this.rec.snapshot()?.record?.id === id) this.publicLink.set(null);

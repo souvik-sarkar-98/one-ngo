@@ -5,6 +5,7 @@ import { cleanRichText, safeLinkHref } from '../../core/fields/rich-text';
 import { TranslatePipe } from '../../services/i18n';
 import type { CfFieldDef } from '../cf-types';
 import { RichTextView, placeRichText } from './rich-text-view';
+import { Btn } from '@onengo/web-kit';
 
 /** The server's own limit on a rich-text value. */
 const MAX_LENGTH = 50_000;
@@ -28,26 +29,26 @@ function plainToHtml(text: string): string {
  */
 @Component({
   selector: 'app-rich-text-field',
-  imports: [RichTextView, TranslatePipe],
+  imports: [Btn, RichTextView, TranslatePipe],
   styles: `
     :host {
       display: block;
     }
     .rich-text-field {
-      border: 1px solid #79747e;
+      border: 1px solid var(--field-border);
       border-radius: 4px;
       overflow: hidden;
     }
     .rich-text-field[data-invalid='true'] {
-      border-color: #ba1a1a;
+      border-color: var(--error-color);
     }
     .rich-text-field__bar {
       display: flex;
       flex-wrap: wrap;
       gap: 2px;
       padding: 4px;
-      border-bottom: 1px solid #e2e8f0;
-      background: #f8fafc;
+      border-bottom: 1px solid var(--line-soft);
+      background: var(--th-bg);
     }
     .rich-text-field__bar button {
       min-width: 32px;
@@ -74,20 +75,20 @@ function plainToHtml(text: string): string {
       outline: none;
     }
     .rich-text-field__editor[contenteditable='false'] {
-      background: #f8fafc;
+      background: var(--th-bg);
     }
     .rich-text-field__link {
       display: flex;
       gap: 6px;
       padding: 6px;
-      border-bottom: 1px solid #e2e8f0;
+      border-bottom: 1px solid var(--line-soft);
     }
     .rich-text-field__link input {
       flex: 1;
       min-width: 0;
       height: 34px;
       padding: 0 8px;
-      border: 1px solid #cbd5e1;
+      border: 1px solid var(--line-strong);
       border-radius: 4px;
       font: inherit;
       font-size: 0.85rem;
@@ -95,7 +96,7 @@ function plainToHtml(text: string): string {
     .rich-text-field__problem {
       margin-top: 4px;
       font-size: 0.75rem;
-      color: #b91c1c;
+      color: var(--bad);
     }
   `,
   template: `
@@ -103,20 +104,20 @@ function plainToHtml(text: string): string {
     <div class="rich-text-field" [attr.data-invalid]="invalid() || tooLong()">
       @if (!f.readOnly) {
         <div class="rich-text-field__bar" role="toolbar" [attr.aria-label]="f.label" (mousedown)="$event.preventDefault()">
-          <button type="button" [attr.aria-pressed]="active().has('bold')" [attr.aria-label]="'ui.fields.richText.bold' | t" (click)="run('bold', editor)"><b>B</b></button>
-          <button type="button" [attr.aria-pressed]="active().has('italic')" [attr.aria-label]="'ui.fields.richText.italic' | t" (click)="run('italic', editor)"><i>I</i></button>
-          <button type="button" [attr.aria-pressed]="active().has('underline')" [attr.aria-label]="'ui.fields.richText.underline' | t" (click)="run('underline', editor)"><u>U</u></button>
-          <button type="button" [attr.aria-pressed]="active().has('insertUnorderedList')" [attr.aria-label]="'ui.fields.richText.bullets' | t" (click)="run('insertUnorderedList', editor)">•≡</button>
-          <button type="button" [attr.aria-pressed]="active().has('insertOrderedList')" [attr.aria-label]="'ui.fields.richText.numbers' | t" (click)="run('insertOrderedList', editor)">1≡</button>
-          <button type="button" [attr.aria-pressed]="active().has('heading')" [attr.aria-label]="'ui.fields.richText.heading' | t" (click)="run('heading', editor)">H</button>
-          <button type="button" [attr.aria-pressed]="active().has('quote')" [attr.aria-label]="'ui.fields.richText.quote' | t" (click)="run('quote', editor)">❝</button>
-          <button type="button" [attr.aria-label]="'ui.fields.richText.link' | t" (click)="startLink(editor)">🔗</button>
+          <button type="button" class="rich-text-field__tool" [attr.aria-pressed]="active().has('bold')" [attr.aria-label]="'ui.fields.richText.bold' | t" (click)="run('bold', editor)"><b>B</b></button>
+          <button type="button" class="rich-text-field__tool" [attr.aria-pressed]="active().has('italic')" [attr.aria-label]="'ui.fields.richText.italic' | t" (click)="run('italic', editor)"><i>I</i></button>
+          <button type="button" class="rich-text-field__tool" [attr.aria-pressed]="active().has('underline')" [attr.aria-label]="'ui.fields.richText.underline' | t" (click)="run('underline', editor)"><u>U</u></button>
+          <button type="button" class="rich-text-field__tool" [attr.aria-pressed]="active().has('insertUnorderedList')" [attr.aria-label]="'ui.fields.richText.bullets' | t" (click)="run('insertUnorderedList', editor)">•≡</button>
+          <button type="button" class="rich-text-field__tool" [attr.aria-pressed]="active().has('insertOrderedList')" [attr.aria-label]="'ui.fields.richText.numbers' | t" (click)="run('insertOrderedList', editor)">1≡</button>
+          <button type="button" class="rich-text-field__tool" [attr.aria-pressed]="active().has('heading')" [attr.aria-label]="'ui.fields.richText.heading' | t" (click)="run('heading', editor)">H</button>
+          <button type="button" class="rich-text-field__tool" [attr.aria-pressed]="active().has('quote')" [attr.aria-label]="'ui.fields.richText.quote' | t" (click)="run('quote', editor)">❝</button>
+          <button type="button" class="rich-text-field__tool" [attr.aria-label]="'ui.fields.richText.link' | t" (click)="startLink(editor)">🔗</button>
         </div>
         @if (linking()) {
           <div class="rich-text-field__link">
             <input #linkInput type="url" [attr.aria-label]="'ui.fields.richText.link' | t" (keydown.enter)="$event.preventDefault(); addLink(linkInput.value, editor)" />
-            <button type="button" class="app-btn app-btn--primary" (click)="addLink(linkInput.value, editor)">{{ 'ui.common.add' | t }}</button>
-            <button type="button" class="app-btn app-btn--ghost" (click)="linking.set(false)">{{ 'ui.common.cancel' | t }}</button>
+            <button appBtn="primary" type="button" (click)="addLink(linkInput.value, editor)">{{ 'ui.common.add' | t }}</button>
+            <button appBtn type="button" (click)="linking.set(false)">{{ 'ui.common.cancel' | t }}</button>
           </div>
         }
       }

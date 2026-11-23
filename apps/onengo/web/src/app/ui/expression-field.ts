@@ -6,6 +6,7 @@ import { t } from '../core/i18n/i18n';
 import { TranslatePipe } from '../services/i18n';
 import { Autocomplete } from './autocomplete';
 import { MobileFormSheet } from './form-panel';
+import { Btn } from '@onengo/web-kit';
 
 let nextId = 0;
 
@@ -171,7 +172,7 @@ export class ExpressionBox {
  */
 @Component({
   selector: 'app-expression-field',
-  imports: [TranslatePipe, ExpressionBox, MobileFormSheet, Autocomplete],
+  imports: [Btn, TranslatePipe, ExpressionBox, MobileFormSheet, Autocomplete],
   styleUrl: './styles/expression-field.css',
   template: `
     @if (state(); as s) {
@@ -238,7 +239,7 @@ export class ExpressionBox {
                 <p class="expression-panel__note">{{ 'ui.expression.noValuesNeeded' | t }}</p>
               }
             </div>
-            <button type="button" (click)="draft!.tryIt()" [disabled]="d.trying || !d.source.trim()">{{ (d.trying ? 'ui.expression.trying' : 'ui.expression.try') | t }}</button>
+            <button appBtn type="button" (click)="draft!.tryIt()" [disabled]="d.trying || !d.source.trim()">{{ (d.trying ? 'ui.expression.trying' : 'ui.expression.try') | t }}</button>
             @if (d.tried; as r) {
               <div class="expression-panel__result" role="status">
                 @if (r.ok) {

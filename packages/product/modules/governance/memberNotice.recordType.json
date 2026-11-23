@@ -1,0 +1,15 @@
+{
+  "key": "memberNotice",
+  "label": "Notice to member",
+  "pluralLabel": "Notices to members",
+  "description": "A notice emailed to one member. Each notice is kept as a record, so the list is the record of what was sent.",
+  "titleField": "subject",
+  "numbering": { "sequence": "memberNotice", "format": "NTC/{fy}/{seq:5}", "reset": "fiscal_year" },
+  "fields": [
+    { "key": "member", "label": "Member", "type": "reference", "referenceType": "member", "required": true },
+    { "key": "memberName", "label": "Member name", "type": "text", "maxLength": 200, "searchable": true, "copyFrom": { "reference": "member", "field": "name" } },
+    { "key": "email", "label": "Email sent to", "type": "email", "copyFrom": { "reference": "member", "field": "email" } },
+    { "key": "subject", "label": "Subject", "type": "text", "required": true, "maxLength": 200, "searchable": true },
+    { "key": "body", "label": "Message", "type": "longText", "required": true, "maxLength": 10000 }
+  ]
+}

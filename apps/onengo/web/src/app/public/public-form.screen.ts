@@ -9,6 +9,7 @@ import { TranslatePipe } from '../services/i18n';
 import { CfForm } from '../ui/cf-form';
 import { publicControls, type PublicField } from './public-fields';
 import { PUBLIC_STYLES, paintPublic } from './public-look';
+import { Btn } from '@onengo/web-kit';
 
 interface FormView {
   organisation: string;
@@ -25,7 +26,7 @@ interface CataloguePage {
 /** A public create form. No sign-in. A reference field searches that type's catalogue. */
 @Component({
   selector: 'app-public-form-screen',
-  imports: [CfForm, TranslatePipe],
+  imports: [Btn, CfForm, TranslatePipe],
   styles: PUBLIC_STYLES,
   template: `
     <header class="pub__band">
@@ -50,14 +51,14 @@ interface CataloguePage {
                 <input [id]="'ref-' + field.key" [value]="query()" (input)="query.set(text($event))" (change)="search(field)" />
                 <ul class="pub__hits">
                   @for (hit of hits(); track hit.id) {
-                    <li><button type="button" class="app-btn" [attr.aria-pressed]="values()[field.key] === hit.id" (click)="choose(field.key, hit)">{{ hit.text }}</button></li>
+                    <li><button appBtn type="button" [attr.aria-pressed]="values()[field.key] === hit.id" (click)="choose(field.key, hit)">{{ hit.text }}</button></li>
                   }
                 </ul>
               </div>
             }
             <cf-form [fields]="controls()" [values]="values()" [errors]="errors()" (valuesChange)="values.set($event)" />
             <div class="pub__actions">
-              <button type="button" class="app-btn app-btn--primary" [disabled]="busy()" (click)="submit()">{{ 'ui.public.submit' | t }}</button>
+              <button appBtn="primary" type="button" [disabled]="busy()" (click)="submit()">{{ 'ui.public.submit' | t }}</button>
             </div>
             @if (error()) { <p class="notice error" role="alert">{{ error() }}</p> }
           }

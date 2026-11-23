@@ -6,7 +6,7 @@ import { Connectivity } from '../pwa/connectivity';
 import { TranslatePipe } from '../services/i18n';
 import { CfForm, CfFormStepper } from './cf-form';
 import type { CfFieldDef } from './cf-types';
-import { FormProblems } from '@onengo/web-kit';
+import { Btn, FormProblems } from '@onengo/web-kit';
 import { DialogFocus, dialogCloseLabel } from './dialog';
 import { setSheetOpen } from './panel-lock';
 
@@ -25,7 +25,7 @@ export function lockWhileOpen(open: () => boolean): () => void {
 
 @Component({
   selector: 'app-mobile-form-sheet',
-  imports: [TranslatePipe, FormProblems, DialogFocus],
+  imports: [Btn, TranslatePipe, FormProblems, DialogFocus],
   styleUrl: './styles/app-mobile-form-sheet.css',
   template: `
     @if (open()) {
@@ -57,10 +57,10 @@ export function lockWhileOpen(open: () => boolean): () => void {
         <div class="mobile-form-sheet__actions app-btn-group">
           <ng-content select="[sheetFooterActions]"></ng-content>
           @if (showDefaultFooter()) {
-            <button type="button" class="app-btn app-btn--ghost" (click)="dismissed.emit()" [disabled]="saving()">
+            <button appBtn type="button" (click)="dismissed.emit()" [disabled]="saving()">
               {{ closeLabel() }}
             </button>
-            <button type="button" class="app-btn app-btn--primary" (click)="save.emit()" [disabled]="saving() || !connectivity.online()">
+            <button appBtn="primary" type="button" (click)="save.emit()" [disabled]="saving() || !connectivity.online()">
               {{ saving() ? ('ui.common.saving' | t) : saveLabel() }}
             </button>
           }
@@ -135,7 +135,7 @@ export class ListCreateSheet {
 /** The create stepper: one step at a time, Back/Cancel and Next/Create in the footer. */
 @Component({
   selector: 'app-list-create-stepper-sheet',
-  imports: [MobileFormSheet, CfFormStepper, TranslatePipe],
+  imports: [Btn, MobileFormSheet, CfFormStepper, TranslatePipe],
   template: `
     <app-mobile-form-sheet [open]="open()" [title]="title()" [error]="error()" [problems]="problems()" [showDefaultFooter]="false" (dismissed)="dismissed.emit()">
       @if (open()) {
@@ -154,12 +154,12 @@ export class ListCreateSheet {
       }
 
       @if (open()) {
-        <button sheetFooterActions type="button" class="app-btn app-btn--ghost" [disabled]="saving()" (click)="back.emit()">
+        <button appBtn sheetFooterActions type="button" [disabled]="saving()" (click)="back.emit()">
           {{ (stepIndex() === 0 ? 'ui.common.cancel' : 'ui.common.back') | t }}
         </button>
       }
       @if (open()) {
-        <button sheetFooterActions type="button" class="app-btn app-btn--primary" [disabled]="saving() || (stepIndex() === stepCount() - 1 && !connectivity.online())" (click)="next.emit()">
+        <button appBtn="primary" sheetFooterActions type="button" [disabled]="saving() || (stepIndex() === stepCount() - 1 && !connectivity.online())" (click)="next.emit()">
           {{ stepIndex() === stepCount() - 1 ? (saving() ? ('ui.common.submitting' | t) : completeLabel()) : ('ui.common.next' | t) }}
         </button>
       }

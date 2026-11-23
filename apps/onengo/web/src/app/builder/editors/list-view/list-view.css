@@ -25,7 +25,7 @@
 .lv-pills { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; min-height: 2.2rem; }
 .lv-pill {
   display: inline-flex; align-items: center; gap: .25rem; padding: .15rem .35rem .15rem .55rem; border-radius: 999px;
-  border: 1px solid #c6d9e8; background: #eef5fb; color: var(--brand); font-size: .85rem; line-height: 1.6; cursor: grab;
+  border: 1px solid var(--notice-info-border); background: var(--notice-info-bg); color: var(--brand); font-size: .85rem; line-height: 1.6; cursor: grab;
 }
 .lv-pill--drop { box-shadow: -3px 0 0 var(--brand); }
 .lv-pill__grip { color: var(--muted); font-size: .75rem; }

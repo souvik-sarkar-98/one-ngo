@@ -8,17 +8,18 @@ import { afterPasswordSet } from '../core/organisation/sign-in';
 import { ApiError } from '../services/api';
 import { TranslatePipe } from '../services/i18n';
 import { Session } from '../services/session';
+import { Btn } from '@onengo/web-kit';
 
 @Component({
   selector: 'app-reset-password',
-  imports: [RouterLink, TranslatePipe],
+  imports: [Btn, RouterLink, TranslatePipe],
   template: `
     <div class="auth">
       <h1>{{ (invite ? 'ui.reset.inviteTitle' : 'ui.reset.title') | t }}</h1>
       <div class="card">
         @if (done()) {
           <div class="notice ok" role="status">{{ 'ui.reset.done' | t }}</div>
-          <a class="button primary" [routerLink]="signIn">{{ 'ui.reset.goToSignIn' | t }}</a>
+          <a appBtn="primary" [routerLink]="signIn">{{ 'ui.reset.goToSignIn' | t }}</a>
         } @else if (!token) {
           <div class="notice error">{{ 'ui.reset.incomplete' | t }}</div>
         } @else if (expired()) {
@@ -37,7 +38,7 @@ import { Session } from '../services/session';
               <label for="pw2">{{ 'ui.reset.again' | t }}</label>
               <input id="pw2" type="password" autocomplete="new-password" (input)="confirm.set(value($event))" required />
             </div>
-            <button class="primary" type="submit" [disabled]="busy()">{{ 'ui.reset.save' | t }}</button>
+            <button appBtn="primary" type="submit" [disabled]="busy()">{{ 'ui.reset.save' | t }}</button>
           </form>
         }
       </div>

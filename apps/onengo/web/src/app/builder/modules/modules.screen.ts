@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { PageFrame } from '@onengo/web-kit';
+import { Btn, PageFrame } from '@onengo/web-kit';
 import type { ModuleRow } from '../../core/builder/http-access';
 import { t } from '../../core/i18n/i18n';
 import type { DefinitionKind } from '../../core/models';
@@ -12,7 +12,7 @@ import { ModulesStore } from './modules-store';
 /** Builder 19: the ready-made modules, turned on or off, and their updates reviewed against the organisation's changes. */
 @Component({
   selector: 'app-modules-screen',
-  imports: [TranslatePipe, MobileFormSheet, PageBack, PageFrame],
+  imports: [Btn, TranslatePipe, MobileFormSheet, PageBack, PageFrame],
   providers: [ModulesStore],
   styleUrl: '../builder.css',
   template: `
@@ -56,17 +56,19 @@ import { ModulesStore } from './modules-store';
                     @if (m.updateAvailable) { <span class="badge warn">{{ 'ui.builder.modules.available' | t: { version: m.version } }}</span> }
                   </td>
                   <td><span class="badge" [class.ok]="m.enabled">{{ (m.enabled ? 'ui.builder.modules.on' : 'ui.builder.modules.off') | t }}</span></td>
-                  <td class="modules-actions">
-                    @if (m.updateAvailable) {
-                      <button type="button" class="small" [disabled]="store.busy()" (click)="store.openReview(m)">{{ 'ui.builder.modules.review' | t }}</button>
-                    }
-                    @if (store.canChange()) {
-                      @if (m.enabled) {
-                        <button type="button" class="small" [disabled]="store.busy()" (click)="turnOff(m)">{{ 'ui.builder.modules.turnOff' | t }}</button>
-                      } @else {
-                        <button type="button" class="small primary" [disabled]="store.busy()" (click)="store.turnOn(m)">{{ 'ui.builder.modules.turnOn' | t }}</button>
+                  <td>
+                    <div class="modules-actions">
+                      @if (m.updateAvailable) {
+                        <button appBtn size="sm" type="button" [disabled]="store.busy()" (click)="store.openReview(m)">{{ 'ui.builder.modules.review' | t }}</button>
                       }
-                    }
+                      @if (store.canChange()) {
+                        @if (m.enabled) {
+                          <button appBtn size="sm" type="button" [disabled]="store.busy()" (click)="turnOff(m)">{{ 'ui.builder.modules.turnOff' | t }}</button>
+                        } @else {
+                          <button appBtn="primary" size="sm" type="button" [disabled]="store.busy()" (click)="store.turnOn(m)">{{ 'ui.builder.modules.turnOn' | t }}</button>
+                        }
+                      }
+                    </div>
                   </td>
                 </tr>
               }
@@ -110,10 +112,15 @@ import { ModulesStore } from './modules-store';
   `,
   styles: `
     .modules-table { width: 100%; border-collapse: collapse; }
+    .modules-table { table-layout: auto; }
     .modules-table th, .modules-table td { text-align: left; padding: .5rem .65rem; border-bottom: 1px solid var(--line); vertical-align: top; }
-    .modules-table th p { margin: .2rem 0 0; font-weight: 400; }
+    /* The shared table rules put nowrap on every th; the module name and its description must wrap instead. */
+    .modules-table tbody th { white-space: normal; min-width: 14rem; }
+    .modules-table td { white-space: normal; }
+    .modules-table th p { margin: .2rem 0 0; font-weight: 400; white-space: normal; }
     .modules-table td p { margin: 0 0 .2rem; }
-    .modules-actions { display: flex; gap: .4rem; justify-content: flex-end; }
+    .modules-table td .badge.warn { display: inline-block; margin-top: .3rem; white-space: normal; }
+    .modules-actions { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: flex-end; }
   `,
 })
 export class ModulesScreen {

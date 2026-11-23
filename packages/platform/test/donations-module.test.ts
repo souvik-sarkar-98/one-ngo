@@ -69,6 +69,32 @@ describe('Donations module 0.2.3', () => {
     expect(opened.title).toContain('Donation summary');
     expect(opened.html).toContain('Donation summary');
 
+    await w.platform.organisation.addSignatory(w.as(w.ngoA, admin), { name: 'Meera Shah', designation: 'Treasurer' });
+    // No signatory is chosen for reports yet, so a report prints no signature block.
+    const unsigned = await w.platform.reports.preview(w.as(w.ngoA, admin), 'donationSummary', params);
+    expect(unsigned.html).not.toContain('Authorised signatory');
+    expect(unsigned.html).not.toContain('Meera Shah');
+    const listedSignatories = await w.platform.organisation.addSignatory(w.as(w.ngoA, admin), { name: 'Arun Das', designation: 'Secretary' });
+    const ids = listedSignatories.signatories.map((signatory) => signatory.id);
+    await w.platform.organisation.setDocumentSignatories(w.as(w.ngoA, admin), 'report:donationSummary', { signatories: ids });
+    const signedPreview = await w.platform.reports.preview(w.as(w.ngoA, admin), 'donationSummary', params);
+    expect(signedPreview.html).toContain('Meera Shah');
+    expect(signedPreview.html).toContain('Arun Das');
+    const signed = await w.platform.reports.publish(w.as(w.ngoA, admin), 'donationSummary', { params });
+    await w.platform.organisation.setDocumentSignatories(w.as(w.ngoA, admin), 'report:donationSummary', { signatories: [ids.at(-1)!] });
+    const kept = await w.platform.reports.getPublished(w.as(w.ngoA, finance), signed.id);
+    expect(kept.html).toContain('Meera Shah');
+    expect(kept.html).toContain('Arun Das');
+
+    // A report prints only its own set; another report's set does not reach it.
+    await w.platform.organisation.setDocumentSignatories(w.as(w.ngoA, admin), 'report:donationSummary', { signatories: [ids[1]!] });
+    await w.platform.organisation.setDocumentSignatories(w.as(w.ngoA, admin), 'report:donationRegister', { signatories: [ids[0]!] });
+    const typed = await w.platform.reports.preview(w.as(w.ngoA, admin), 'donationSummary', params);
+    expect(typed.html).toContain('Arun Das');
+    expect(typed.html).not.toContain('Meera Shah');
+    await w.platform.organisation.setDocumentSignatories(w.as(w.ngoA, admin), 'report:donationSummary', { signatories: [] });
+    expect((await w.platform.reports.preview(w.as(w.ngoA, admin), 'donationSummary', params)).html).not.toContain('Authorised signatory');
+
     const sheet = await w.platform.reports.publish(w.as(w.ngoA, admin), 'donationRegister', { params });
     expect(sheet.format).toBe('excel');
     expect((await w.platform.reports.getPublished(w.as(w.ngoA, admin), sheet.id)).html).toContain('Donation register');

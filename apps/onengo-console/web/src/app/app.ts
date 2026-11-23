@@ -1,65 +1,42 @@
 import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
-import { initials, Nav, PageFrame, type Crumb, type NavItem } from '@onengo/web-kit';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { AppBar, Breadcrumb, ConfirmDialog, initials, Nav, PageFrame, ShellFrame, Viewport, type Crumb, type NavItem } from '@onengo/web-kit';
 import { filter } from 'rxjs';
 import { OperatorApi } from './services/operator-api';
 
 @Component({
   selector: 'op-root',
   standalone: true,
-  imports: [Nav, PageFrame, RouterLink, RouterOutlet],
-  template: `<div class="console">
-    <header class="appbar">
-      <strong class="brand">NGOOne</strong>
-      <span class="slot">Operator console</span>
-      <span class="sp"></span>
-      @if (api.session()?.authenticated) {
-        <span class="avatar" [attr.title]="api.session()?.display">{{ mark() }}</span>
-      }
-    </header>
-    @if (api.session()?.authenticated && crumbs().length) {
-      <nav class="crumbs" aria-label="Breadcrumb">
-        <ol>
-          @for (crumb of crumbs(); track crumb.label) {
-            <li [attr.aria-current]="crumb.href ? null : 'page'">
-              @if (crumb.href) { <a [routerLink]="crumb.href">{{ crumb.label }}</a> } @else { {{ crumb.label }} }
-            </li>
-          }
-        </ol>
-      </nav>
+  imports: [AppBar, Breadcrumb, ConfirmDialog, Nav, PageFrame, RouterOutlet, ShellFrame],
+  template: `<app-shell-frame [bottom]="viewport.narrow()">
+    <app-bar shellBar product="NGOOne" context="Operator console" [initials]="mark()" [accountLabel]="api.session()?.display ?? 'Account'" />
+    @if (api.session()?.authenticated && destinations().length && !viewport.narrow()) {
+      <app-nav shellRail [items]="destinations()" [active]="active()" position="rail" label="Console" (navigate)="go($event)" (command)="command($event)" />
     }
-    <div class="frame">
-      @if (api.session()?.authenticated && destinations().length) {
-        <aside class="rail-slot">
-          <app-nav [items]="destinations()" [active]="active()" position="rail" label="Console" (navigate)="go($event)" (command)="command($event)" />
-        </aside>
-      }
-      <main>
-        <app-page-frame><router-outlet /></app-page-frame>
-      </main>
-    </div>
-    @if (api.session()?.authenticated && destinations().length) {
-      <div class="bottom-slot">
-        <app-nav [items]="destinations()" [active]="active()" position="bottom" label="Console" (navigate)="go($event)" (command)="command($event)" />
-      </div>
+    @if (api.session()?.authenticated && crumbs().length) {
+      <app-breadcrumb shellAbove [crumbs]="crumbs()" [narrow]="viewport.narrow()" (navigate)="go($event)" />
+    }
+    <app-page-frame><router-outlet /></app-page-frame>
+    @if (api.session()?.authenticated && destinations().length && viewport.narrow()) {
+      <app-nav shellBottom [items]="destinations()" [active]="active()" position="bottom" label="Console" (navigate)="go($event)" (command)="command($event)" />
     }
     @if (confirmSignOut()) {
-      <div class="signout" role="presentation">
-        <div class="signout__card" role="alertdialog" aria-labelledby="signout-title" aria-describedby="signout-text">
-          <h2 id="signout-title">Sign out?</h2>
-          <p id="signout-text">You will be signed out on this device and will need to sign in again.</p>
-          <div class="signout__acts">
-            <button type="button" class="ghost" (click)="cancelSignOut()">Cancel</button>
-            <button type="button" class="danger" [disabled]="signingOut()" (click)="signOut()">Sign out</button>
-          </div>
-        </div>
-      </div>
+      <app-confirm-dialog
+        shellOverlay
+        title="Sign out?"
+        text="You will be signed out on this device and will need to sign in again."
+        confirmLabel="Sign out"
+        [busy]="signingOut()"
+        (confirm)="signOut()"
+        (cancel)="cancelSignOut()" />
     }
-  </div>`,
+  </app-shell-frame>`,
+  styles: `:host { display: block; }`,
 })
 export class App {
   readonly api = inject(OperatorApi);
+  readonly viewport = inject(Viewport);
   readonly confirmSignOut = signal(false);
   readonly signingOut = signal(false);
   readonly active = signal('organisations');

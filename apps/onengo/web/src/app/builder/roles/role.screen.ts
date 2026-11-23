@@ -1,6 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, effect, inject, input, untracked } from '@angular/core';
-import { PageFrame } from '@onengo/web-kit';
+import { Btn, PageFrame } from '@onengo/web-kit';
 import { t } from '../../core/i18n/i18n';
 import { TranslatePipe } from '../../services/i18n';
 import { PageBack } from '../../ui/page-back';
@@ -12,7 +12,7 @@ import { RolesStore } from './roles-store';
  */
 @Component({
   selector: 'app-role-screen',
-  imports: [TranslatePipe, PageBack, PageFrame, NgTemplateOutlet],
+  imports: [Btn, TranslatePipe, PageBack, PageFrame, NgTemplateOutlet],
   providers: [RolesStore],
   styleUrls: ['../builder.css', './roles.css'],
   template: `
@@ -33,9 +33,9 @@ import { RolesStore } from './roles-store';
           </div>
           <span class="builder-spacer"></span>
           <a class="muted" [href]="membersHref()" (click)="$event.preventDefault(); store.openMembers(r.key)">{{ 'ui.builder.roles.membersLink' | t: { count: r.members } }}</a>
-          <button type="button" (click)="store.openRoleView(r.key)">{{ 'ui.builder.roles.whatCanSee' | t: { role: r.label } }}</button>
+          <button appBtn type="button" (click)="store.openRoleView(r.key)">{{ 'ui.builder.roles.whatCanSee' | t: { role: r.label } }}</button>
           @if (store.canEdit()) {
-            <button type="button" class="primary" [disabled]="store.busy() || !store.dirty()" (click)="store.save()">{{ 'ui.common.save' | t }}</button>
+            <button appBtn="primary" type="button" [disabled]="store.busy() || !store.dirty()" (click)="store.save()">{{ 'ui.common.save' | t }}</button>
           }
         </header>
         }
@@ -124,8 +124,8 @@ import { RolesStore } from './roles-store';
           <footer class="builder-foot">
             <span class="muted">{{ (store.dirty() ? 'ui.builder.unsaved' : 'ui.builder.roles.allSaved') | t }}</span>
             <span class="builder-spacer"></span>
-            <button type="button" [disabled]="store.busy() || !store.dirty()" (click)="store.revert()">{{ 'ui.builder.roles.undo' | t }}</button>
-            <button type="button" class="primary" [disabled]="store.busy() || !store.dirty()" (click)="store.save()">{{ 'ui.common.save' | t }}</button>
+            <button appBtn type="button" [disabled]="store.busy() || !store.dirty()" (click)="store.revert()">{{ 'ui.builder.roles.undo' | t }}</button>
+            <button appBtn="primary" type="button" [disabled]="store.busy() || !store.dirty()" (click)="store.save()">{{ 'ui.common.save' | t }}</button>
           </footer>
         }
       }

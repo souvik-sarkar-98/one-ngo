@@ -165,6 +165,14 @@ export class BuilderStore {
     if (await this.draft?.revertToModule()) await this.session.reload();
   }
 
+  async turnOff(): Promise<void> {
+    if (await this.draft?.turnOff()) await this.session.reload();
+  }
+
+  async turnOn(): Promise<void> {
+    if (await this.draft?.turnOn()) await this.session.reload();
+  }
+
   openDefinition(kind: DefinitionKind, key: string): void {
     void this.router.navigate(['/builder', kind, key]);
   }

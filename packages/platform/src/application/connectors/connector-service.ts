@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+import { Readable } from 'node:stream';
 import type { TenantContext } from '../../domain/ports/tenant-context.js';
 import { notFound, ruleViolation, validationFailed, type FieldIssue } from '@onengo/kernel/errors';
 import type { EmailTransport, Logger } from '@onengo/kernel/ports';
@@ -8,13 +10,29 @@ import type { TransactionManager } from '../../domain/ports/transaction.js';
 import type { WebhookRequest } from '../../runtime/automation/run-action.js';
 import type { PhoneChannel, PhoneMessage } from '../notifications/notification-service.js';
 import { normalisePhone } from '../shared/phone.js';
-import { HttpTemplateError, parseHttpConfig, renderHttp, unknownPlaceholders, type HttpBinding, type HttpConfig } from './http-template.js';
+import { openStorageStore, parseStorageConfig, storageSecretNames } from '../../infrastructure/files/storage-connector.js';
+import {
+  emailHttpConfig,
+  oauthHasGmailSend,
+  parseEmailConfig,
+  renderEmailHttp,
+  unknownEmailPlaceholders,
+} from '../../infrastructure/email/email-connector.js';
+import {
+  HTTP_SEND_MESSAGE_PARTS,
+  HttpTemplateError,
+  parseHttpConfig,
+  renderHttp,
+  unknownPlaceholders,
+  type HttpBinding,
+  type HttpConfig,
+} from './http-template.js';
 import { CredentialNeedsReconnect, parseOauthConfig, type OAuthCredentials } from './oauth-credentials.js';
 import { rfc822 } from './rfc822.js';
 import type { ConnectorDeliveryPolicy, ConnectorEvent, ConnectorHttp, ConnectorOutbox, ConnectorRequest, ConnectorResponse, ConnectorSecretBox } from './ports/connector-runtime.js';
 import type { ConnectorRow, ConnectorStore } from './ports/connector-store.js';
 
-export const CONNECTOR_KINDS = ['sms', 'whatsapp', 'webhook', 'http', 'oauth'] as const;
+export const CONNECTOR_KINDS = ['sms', 'whatsapp', 'webhook', 'http', 'oauth', 'storage', 'email'] as const;
 export type ConnectorKind = (typeof CONNECTOR_KINDS)[number];
 
 /**
@@ -43,6 +61,8 @@ export interface ConnectorView {
   key: string;
   kind: ConnectorKind;
   enabled: boolean;
+  /** Archived: switched off, hidden from choices and unusable until restored. Its settings and delivery log are kept. */
+  archived: boolean;
   /** Every secret it needs is set. */
   configured: boolean;
   config: Record<string, unknown>;
@@ -100,6 +120,7 @@ export interface ConnectorSummary {
   key: string;
   kind: ConnectorKind;
   enabled: boolean;
+  archived: boolean;
   configured: boolean;
   /** Labels of the published actions, automations and workflows that send through it. */
   usedBy: string[];
@@ -143,8 +164,8 @@ interface Loaded {
 interface References {
   /** The type of the connector `credential` names, if it exists. */
   credentialType?: string;
-  /** The key of the organisation's enabled email sender, if any. */
-  emailSender?: string;
+  /** Scopes on the oauth connector a Gmail email connector names. */
+  oauthScopes?: unknown;
 }
 
 interface AttemptOptions {
@@ -162,15 +183,26 @@ const HEADER_NAME = /^[A-Za-z0-9-]{1,64}$/;
 const PLACEHOLDER = /\{\{\s*([^}]*?)\s*\}\}/g;
 const SECRET_NAME = /^[A-Za-z][A-Za-z0-9_]{0,40}$/;
 const FIELD = /^[A-Za-z_][A-Za-z0-9_]{0,62}$/;
-const REQUIRED_SECRETS: Record<ConnectorKind, string[]> = { sms: [], whatsapp: ['accessToken'], webhook: ['signingSecret'], http: [], oauth: ['clientSecret'] };
+const REQUIRED_SECRETS: Record<ConnectorKind, string[]> = {
+  sms: [],
+  whatsapp: ['accessToken'],
+  webhook: ['signingSecret'],
+  http: [],
+  oauth: ['clientSecret'],
+  storage: [],
+  email: [],
+};
 const PERMISSION = 'admin:connectors';
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 const LOOKUP_BODY_BYTES = 65_536;
 const REDACTED = '[redacted]';
 
-/** Every required secret is set; an oauth connector also needs the refresh token its connect stored. */
-const isConfigured = (kind: ConnectorKind, secrets: Record<string, string>) =>
-  REQUIRED_SECRETS[kind].every((s) => !!secrets[s]) && (kind !== 'oauth' || !!secrets.refreshToken);
+/** Every required secret is set; an oauth connector also needs the refresh token its connect stored. A storage connector's secrets depend on its provider. */
+const isConfigured = (kind: ConnectorKind, secrets: Record<string, string>, config?: Record<string, unknown>) =>
+  (kind === 'storage' ? storageSecretNames(typeof config?.provider === 'string' ? config.provider : undefined) : REQUIRED_SECRETS[kind]).every((s) => !!secrets[s]) &&
+  (kind !== 'oauth' || !!secrets.refreshToken) &&
+  (kind !== 'storage' || !!parseStorageConfig(config)) &&
+  (kind !== 'email' || !!parseEmailConfig(config));
 
 /** Replaces every secret, as written and as encoded for a URL or JSON string, with a marker. */
 function redactor(secrets: readonly string[]): (text: string) => string {
@@ -211,7 +243,14 @@ function mapResponse(body: string, responseMap: Record<string, string>): LookupR
 
 const isKind = (v: unknown): v is ConnectorKind => (CONNECTOR_KINDS as readonly unknown[]).includes(v);
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+
 const iso = (v: Date | string) => new Date(v).toISOString();
+
+async function readChunks(body: Readable): Promise<Buffer[]> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of body) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  return chunks;
+}
 
 function httpsUrl(value: unknown): boolean {
   if (typeof value !== 'string' || value.length > 2000) return false;
@@ -230,6 +269,23 @@ function sendsThrough(node: unknown, key: string, kind: ConnectorKind): boolean 
   if (node.type === 'connector' && node.connector === key) return true;
   if (kind !== 'webhook' && Array.isArray(node.channels) && node.channels.includes(kind)) return true;
   return Object.values(node).some((v) => sendsThrough(v, key, kind));
+}
+
+/** Whether a definition body names the connector by key: a lookup, a webhook or connector step, or a script's allowed connectors. */
+function namesConnector(node: unknown, key: string): boolean {
+  if (Array.isArray(node)) return node.some((n) => namesConnector(n, key));
+  if (!isObject(node)) return false;
+  if (node.connector === key) return true;
+  if (Array.isArray(node.connectors) && node.connectors.includes(key)) return true;
+  return Object.values(node).some((v) => namesConnector(v, key));
+}
+
+/** "a", "a and b", "a, b and c"; at most three are named. */
+function listOf(items: string[]): string {
+  const shown = items.slice(0, 3);
+  const more = items.length - shown.length;
+  const parts = more > 0 ? [...shown, `${more} more`] : shown;
+  return parts.length < 2 ? (parts[0] ?? '') : `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}`;
 }
 
 function fill(template: string, values: Record<string, string>, encode: (v: string) => string): string {
@@ -271,6 +327,13 @@ export class ConnectorService implements ConnectorCalls {
     return this.view(c);
   }
 
+  /** The connector, or null when none is set up under this key. Not being set up is an ordinary state, not an error. */
+  async find(ctx: TenantContext, key: string): Promise<ConnectorView | null> {
+    demand(ctx.actor, PERMISSION);
+    const c = await this.load(ctx.tenantId, key);
+    return c ? this.view(c) : null;
+  }
+
   /** Every SMS, WhatsApp, webhook, http and oauth connector, with the definitions in `users` that send through it. */
   async list(ctx: TenantContext, users: ConnectorUser[]): Promise<ConnectorSummary[]> {
     demand(ctx.actor, PERMISSION);
@@ -283,7 +346,8 @@ export class ConnectorService implements ConnectorCalls {
           key: r.key,
           kind: r.type,
           enabled: r.enabled,
-          configured: isConfigured(r.type, secrets),
+          archived: !!r.archived_at,
+          configured: isConfigured(r.type, secrets, r.config),
           usedBy: users.filter((u) => sendsThrough(u.body, r.key, r.type)).map((u) => u.label),
           lastDelivery: r.last_status && r.last_at ? { status: r.last_status, at: iso(r.last_at) } : null,
         };
@@ -314,6 +378,7 @@ export class ConnectorService implements ConnectorCalls {
     const body = isObject(input) ? input : {};
     const existing = await this.row(ctx.tenantId, key);
     if (existing && !isKind(existing.type)) throw ruleViolation(`'${key}' is a ${existing.type} connector and is managed elsewhere.`);
+    if (existing?.archived_at) throw ruleViolation(`'${key}' is archived. Restore it before changing it.`);
     const kind = body.kind ?? existing?.type;
     if (!isKind(kind)) throw validationFailed('Choose the kind of connector.', [{ path: '/kind', message: `must be one of ${CONNECTOR_KINDS.join(', ')}` }]);
     if (existing && existing.type !== kind) throw validationFailed('The kind of a connector cannot change.', [{ path: '/kind', message: `is ${existing.type}` }]);
@@ -336,11 +401,17 @@ export class ConnectorService implements ConnectorCalls {
     else issues.push(...this.checkConfig(kind, key, config, secrets, await this.references(ctx.tenantId, kind, config)));
     const enabled = body.enabled === undefined ? (existing?.enabled ?? false) : body.enabled;
     if (typeof enabled !== 'boolean') issues.push({ path: '/enabled', message: 'must be true or false' });
-    const missing = REQUIRED_SECRETS[kind].filter((s) => !secrets[s]);
+    const missing = (kind === 'storage' ? storageSecretNames(typeof config === 'object' && config && 'provider' in config ? String((config as { provider?: unknown }).provider) : undefined) : REQUIRED_SECRETS[kind]).filter((s) => !secrets[s]);
     if (enabled === true) for (const s of missing) issues.push({ path: `/secrets/${s}`, message: 'This secret is needed before the connector can be enabled.' });
     if (issues.length) throw validationFailed('Some connector settings are not valid.', issues);
 
     await this.tm.withTenant(ctx.tenantId, async (tx) => {
+      if (kind === 'storage' && existing?.enabled && enabled === false) {
+        const held = await this.store.storageHeld(tx, key);
+        if (held.files || held.chosen) {
+          throw ruleViolation('This file store still holds files, or Settings uses it. Choose another store and remove its files before switching it off.');
+        }
+      }
       await this.store.save(tx, {
         key,
         type: kind,
@@ -361,6 +432,50 @@ export class ConnectorService implements ConnectorCalls {
   }
 
   /**
+   * Archives a connector: it is switched off, left out of every choice and refuses changes
+   * until restored, but its settings, secrets and delivery log are kept. Refused while a
+   * published definition names it, Settings uses it, or another connector signs in through it,
+   * so nothing that works today stops working. `users` are the published definitions to check.
+   */
+  async archive(ctx: TenantContext, key: string, users: ConnectorUser[]): Promise<ConnectorView> {
+    demand(ctx.actor, PERMISSION);
+    const first = await this.load(ctx.tenantId, key);
+    if (!first) throw notFound(`Connector '${key}' is not set up.`);
+    if (first.row.archived_at) return this.view(first);
+    const named = users.filter((u) => namesConnector(u.body, key)).map((u) => u.label);
+    if (named.length) throw ruleViolation(`'${key}' is still used by ${listOf(named)}. Take it out of those first, or switch it off instead.`);
+    await this.tm.withTenant(ctx.tenantId, async (tx) => {
+      const row = await this.store.lockConnector(tx, key);
+      if (!row || row.archived_at) return;
+      const mail = row.type === 'email' && (await this.store.mailChoice(tx)).connector === key;
+      const storage = row.type === 'storage' ? await this.store.storageHeld(tx, key) : { files: false, chosen: false };
+      if (mail) throw ruleViolation(`Settings send the organisation's email through '${key}'. Choose another email connector first.`);
+      if (storage.chosen) throw ruleViolation(`Settings store new files in '${key}'. Choose another file store first.`);
+      if (storage.files) throw ruleViolation(`'${key}' still holds files. Move or remove them before archiving it.`);
+      const signIns = await this.store.credentialUsers(tx, key);
+      if (signIns.length) throw ruleViolation(`${listOf(signIns.map((k) => `'${k}'`))} sign${signIns.length === 1 ? 's' : ''} in through '${key}'. Change that first.`);
+      await this.store.setArchived(tx, key, true, ctx.actor.id);
+      await this.audit.audit(tx, { actorId: ctx.actor.id, action: 'connector.archived', entity: 'connector', entityId: key, after: { kind: row.type } });
+    });
+    return this.get(ctx, key);
+  }
+
+  /** Lifts an archive. The connector comes back switched off, so nothing starts sending until an administrator switches it on. */
+  async restore(ctx: TenantContext, key: string): Promise<ConnectorView> {
+    demand(ctx.actor, PERMISSION);
+    const first = await this.load(ctx.tenantId, key);
+    if (!first) throw notFound(`Connector '${key}' is not set up.`);
+    if (!first.row.archived_at) return this.view(first);
+    await this.tm.withTenant(ctx.tenantId, async (tx) => {
+      const row = await this.store.lockConnector(tx, key);
+      if (!row?.archived_at) return;
+      await this.store.setArchived(tx, key, false, ctx.actor.id);
+      await this.audit.audit(tx, { actorId: ctx.actor.id, action: 'connector.restored', entity: 'connector', entityId: key, after: { kind: row.type } });
+    });
+    return this.get(ctx, key);
+  }
+
+  /**
    * Sends a test message, signed test event, http request or lookup now and
    * logs it, or renews an oauth connector's access token; never calls a
    * disabled connector.
@@ -369,7 +484,11 @@ export class ConnectorService implements ConnectorCalls {
     demand(ctx.actor, PERMISSION);
     const c = await this.load(ctx.tenantId, key);
     if (!c) throw notFound(`Connector '${key}' is not set up.`);
+    if (c.row.archived_at) throw ruleViolation(`'${key}' is archived. Restore it before testing it.`);
     if (!c.row.enabled || (!c.configured && c.kind !== 'oauth')) throw ruleViolation('Finish setting up and enable the connector before testing it.');
+    const org = await this.organisation(ctx.tenantId);
+    if (c.kind === 'storage') return this.testStorage(ctx.tenantId, c);
+    if (c.kind === 'email') return this.testEmail(ctx, c, org, input ?? {});
     if (c.kind === 'oauth') {
       try {
         await this.oauth.accessToken(ctx.tenantId, key);
@@ -379,7 +498,6 @@ export class ConnectorService implements ConnectorCalls {
         return { ok: false, status: null, error: 'Reconnect needed: connect the credential again.', message: 'Reconnect needed: connect the credential again.' };
       }
     }
-    const org = await this.organisation(ctx.tenantId);
     if (c.kind === 'http') return this.testHttp(ctx, c, org, input ?? {});
     let request: ConnectorRequest;
     if (c.kind === 'webhook') {
@@ -405,6 +523,26 @@ export class ConnectorService implements ConnectorCalls {
     }
   }
 
+  /** Writes a small object, reads it back and deletes it. A failed call is the test result. */
+  private async testStorage(tenantId: string, c: Loaded): Promise<ConnectorTestResult> {
+    const config = parseStorageConfig(c.row.config);
+    if (!config) return { ok: false, status: null, error: 'Finish setting up the connector before testing it.' };
+    const key = `${tenantId}/connector-test-${randomBytes(4).toString('hex')}`;
+    const body = Buffer.from('storage-test');
+    try {
+      const store = openStorageStore(config, c.secrets, {
+        ...(config.provider === 'drive' && config.credential ? { accessToken: () => this.oauth.accessToken(tenantId, config.credential!) } : {}),
+      });
+      await store.put(key, Readable.from([body]), 'text/plain');
+      const read = Buffer.concat(await readChunks(await store.get(key)));
+      await store.delete(key);
+      if (!read.equals(body)) return { ok: false, status: null, error: 'The file store returned different bytes.' };
+      return { ok: true, status: null, message: 'The file store accepted a file.' };
+    } catch (error) {
+      return { ok: false, status: null, error: error instanceof Error ? error.message : 'The file store could not be reached.' };
+    }
+  }
+
   private async testHttp(ctx: TenantContext, c: Loaded, org: { name: string }, input: { to?: unknown; inputs?: unknown }): Promise<ConnectorTestResult> {
     const config = parseHttpConfig(c.row.config);
     if (!config) throw ruleViolation('Finish setting up the connector before testing it.');
@@ -421,15 +559,81 @@ export class ConnectorService implements ConnectorCalls {
     if (input.to !== undefined && (typeof input.to !== 'string' || input.to.length > 320 || /[\r\n]/.test(input.to))) {
       throw validationFailed('Give an address to send the test to.', [{ path: '/to', message: 'must be one line of text' }]);
     }
-    const from = config.from ?? '';
-    const to = typeof input.to === 'string' && input.to ? input.to : from;
-    const result = await this.callHttp(ctx.tenantId, c.row.key, { message: { to, subject: 'Test', text: 'Test', from, mime: '' }, organisation: { name: org.name } }, d);
+    const to = typeof input.to === 'string' && input.to ? input.to : '';
+    const result = await this.callHttp(ctx.tenantId, c.row.key, { message: { to, subject: 'Test', text: 'Test' }, organisation: { name: org.name } }, d);
     return result.ok ? { ok: true, status: result.status } : { ok: false, status: result.status, ...(result.error ? { error: result.error } : {}) };
   }
 
+  private async testEmail(ctx: TenantContext, c: Loaded, org: { name: string }, input: { to?: unknown }): Promise<ConnectorTestResult> {
+    if (!parseEmailConfig(c.row.config)) return { ok: false, status: null, error: 'Finish setting up the connector before testing it.' };
+    const toRaw = input.to;
+    if (typeof toRaw !== 'string' || !toRaw.trim() || toRaw.length > 320 || /[\r\n]/.test(toRaw)) {
+      throw validationFailed('Give an address to send the test to.', [{ path: '/to', message: 'must be one line of text' }]);
+    }
+    const to = toRaw.trim();
+    const from = 'test@example.org';
+  const mime = rfc822({ from, to, subject: 'Test', text: `Test message from ${org.name}.` });
+    try {
+      await this.deliverEmail(ctx.tenantId, c.row.key, from, org.name, { to, subject: 'Test', text: `Test message from ${org.name}.`, mime }, {
+        event: 'connector.test',
+      });
+      return { ok: true, status: null, message: 'The test message was sent.' };
+    } catch (error) {
+      const e = error as Error & { status?: number };
+      return { ok: false, status: e.status ?? null, error: e.message };
+    }
+  }
+
+  /** Sends one RFC 822 message through an email connector and logs the attempt. */
+  private async deliverEmail(
+    tenantId: string,
+    key: string,
+    from: string,
+    organisationName: string,
+    message: { to: string; subject: string; text: string; html?: string; mime: string },
+    delivery: { event: string; eventId?: string | null; recordId?: string | null; final?: boolean } = { event: 'notification.email' },
+  ): Promise<void> {
+    const c = await this.load(tenantId, key);
+    if (!c || c.kind !== 'email' || !c.row.enabled) throw new Error('Not sent: the connector is not enabled.');
+    const emailConfig = parseEmailConfig(c.row.config);
+    if (!emailConfig) throw new Error('Not sent: the connector settings are not valid.');
+    const httpConfig = emailHttpConfig(emailConfig);
+    let rendered: ReturnType<typeof renderEmailHttp>;
+    const d: HttpCallDelivery = {
+      eventId: delivery.eventId ?? null,
+      event: delivery.event,
+      recordId: delivery.recordId ?? null,
+      final: delivery.final ?? true,
+    };
+    try {
+      const credential = httpConfig.credential ? { accessToken: await this.oauth.accessToken(tenantId, httpConfig.credential) } : undefined;
+      rendered = renderEmailHttp(
+        emailConfig,
+        {
+          message: { to: message.to, subject: message.subject, text: message.text, from, mime: message.mime },
+          organisation: { name: organisationName },
+        },
+        c.secrets,
+        credential,
+      );
+    } catch (e) {
+      const known = e instanceof CredentialNeedsReconnect || e instanceof HttpTemplateError;
+      const error = known ? (e as Error).message : 'The request could not be prepared.';
+      if (!known) this.logger.log('WARNING', 'Email connector request could not be prepared', { tenantId, connector: key, error: String(e) });
+      await this.tm.withTenant(tenantId, (tx) =>
+        this.store.recordAttempt(tx, { connectorKey: key, event: d.event, recordId: d.recordId, status: d.final ? 'failed' : 'pending', responseStatus: null, error, eventId: d.eventId }),
+      );
+      throw new Error(error);
+    }
+    const attempt: AttemptOptions = { secrets: rendered.secrets };
+    if (httpConfig.success) attempt.success = httpConfig.success;
+    await this.attempt(tenantId, key, d, rendered.request, attempt);
+  }
+
+  /** The delivery log, newest first. A connector that is not set up has sent nothing, so its log is empty. */
   async deliveries(ctx: TenantContext, key: string, options: { limit?: number; offset?: number } = {}): Promise<Delivery[]> {
     demand(ctx.actor, PERMISSION);
-    if (!(await this.load(ctx.tenantId, key))) throw notFound(`Connector '${key}' is not set up.`);
+    if (!(await this.load(ctx.tenantId, key))) return [];
     const limit = Math.min(Math.max(Math.trunc(options.limit ?? 50) || 50, 1), 200);
     const offset = Math.max(Math.trunc(options.offset ?? 0) || 0, 0);
     const rows = await this.tm.withTenant(ctx.tenantId, (tx) => this.store.deliveries(tx, key, limit, offset));
@@ -594,26 +798,25 @@ export class ConnectorService implements ConnectorCalls {
   }
 
   /**
-   * The organisation's email through its enabled http email sender, if it has
-   * one: each message goes out once as an RFC 822 message, and a failed call
-   * throws so the queued email is retried.
+   * The organisation's email through the email connector named in Settings.
+   * Each message goes out once as an RFC 822 MIME body over HTTPS. A failed call
+   * throws so the queued email is retried. Nothing is sent when no connector is
+   * chosen, or the chosen one is missing or disabled.
    */
   async emailTransport(tenantId: string): Promise<EmailTransport | undefined> {
     const sender = await this.tm.withTenant(tenantId, async (tx) => {
-      const row = await this.store.emailSender(tx);
-      return row && { key: row.key, from: parseHttpConfig(row.config)?.from ?? '', organisation: (await this.store.organisation(tx))?.name ?? '' };
+      const choice = await this.store.mailChoice(tx);
+      if (!choice.connector || !choice.from) return undefined;
+      const row = await this.store.connector(tx, choice.connector);
+      if (!row?.enabled || row.type !== 'email' || !parseEmailConfig(row.config)) return undefined;
+      const organisation = (await this.store.organisation(tx))?.name ?? '';
+      return { key: row.key, from: choice.from, organisation };
     });
     if (!sender) return undefined;
     return {
       send: async ({ to, subject, text, html }) => {
         const mime = rfc822({ from: sender.from, to, subject, text, ...(html ? { html } : {}) });
-        const result = await this.callHttp(
-          tenantId,
-          sender.key,
-          { message: { to, subject, text, ...(html ? { html } : {}), from: sender.from, mime }, organisation: { name: sender.organisation } },
-          { eventId: null, event: 'notification.email', recordId: null, final: true },
-        );
-        if (!result.ok) throw new Error(`email connector '${sender.key}' failed (status ${result.status ?? 'none'})`);
+        await this.deliverEmail(tenantId, sender.key, sender.from, sender.organisation, { to, subject, text, ...(html ? { html } : {}), mime });
       },
     };
   }
@@ -717,13 +920,53 @@ export class ConnectorService implements ConnectorCalls {
     return res!;
   }
 
-  /** What an http config points at: the kind of its credential connector and the organisation's current email sender. */
+  private checkStorage(config: Record<string, unknown>, secrets: Record<string, string>, refs: References): FieldIssue[] {
+    const issues: FieldIssue[] = [];
+    const provider = config.provider;
+    if (provider !== 'gcs' && provider !== 's3' && provider !== 'drive') {
+      issues.push({ path: '/config/provider', message: "must be 'gcs', 's3' or 'drive'" });
+      return issues;
+    }
+    const text = (path: string, value: unknown, max: number, message: string) => {
+      if (typeof value !== 'string' || !value.trim() || value.length > max || /[\r\n]/.test(value)) issues.push({ path, message });
+    };
+    if (provider === 'gcs' || provider === 's3') text('/config/bucket', config.bucket, 222, 'must be the bucket name');
+    if (config.prefix !== undefined) text('/config/prefix', config.prefix, 200, 'must be one line');
+    if (provider === 's3') {
+      text('/config/region', config.region, 32, 'must be the region, such as us-east-1');
+      if (config.endpoint !== undefined && !httpsUrl(config.endpoint)) issues.push({ path: '/config/endpoint', message: 'must be an https:// address' });
+    }
+    if (provider === 'drive') {
+      text('/config/folderId', config.folderId, 128, 'must be the Drive folder id');
+      if (typeof config.credential !== 'string' || refs.credentialType !== 'oauth') {
+        issues.push({ path: '/config/credential', message: 'must be the key of an oauth connector' });
+      }
+    }
+    if (provider === 'gcs' && secrets.serviceAccountKey) {
+      try {
+        const key = JSON.parse(secrets.serviceAccountKey) as { client_email?: unknown; private_key?: unknown };
+        if (typeof key.client_email !== 'string' || typeof key.private_key !== 'string') throw new Error('missing');
+      } catch {
+        issues.push({ path: '/secrets/serviceAccountKey', message: 'must be the JSON key of a service account' });
+      }
+    }
+    if (!parseStorageConfig(config) && !issues.length) issues.push({ path: '/config', message: 'needs a provider and its settings' });
+    return issues;
+  }
+
+  /** What an http, storage or email config points at: the kind of its credential connector. */
   private async references(tenantId: string, kind: ConnectorKind, config: Record<string, unknown>): Promise<References> {
-    if (kind !== 'http') return {};
-    return this.tm.withTenant(tenantId, async (tx) => ({
-      credentialType: typeof config.credential === 'string' && KEY.test(config.credential) ? (await this.store.connector(tx, config.credential))?.type : undefined,
-      emailSender: config.emailSender === true ? (await this.store.emailSender(tx))?.key : undefined,
-    }));
+    if (kind !== 'http' && kind !== 'storage' && kind !== 'email') return {};
+    const cred = config.credential;
+    const credentialKey = typeof cred === 'string' && KEY.test(cred) ? cred : undefined;
+    const credentialType = credentialKey
+      ? await this.tm.withTenant(tenantId, async (tx) => (await this.store.connector(tx, credentialKey))?.type)
+      : undefined;
+  const oauthScopes =
+      kind === 'email' && config.provider === 'gmail' && credentialKey
+        ? await this.tm.withTenant(tenantId, async (tx) => (await this.store.connector(tx, credentialKey))?.config.scopes)
+        : undefined;
+    return { credentialType, oauthScopes };
   }
 
   private checkConfig(kind: ConnectorKind, key: string, config: Record<string, unknown>, secrets: Record<string, string>, refs: References): FieldIssue[] {
@@ -732,8 +975,10 @@ export class ConnectorService implements ConnectorCalls {
       sms: ['url', 'method', 'headers', 'body', 'contentType'],
       whatsapp: ['baseUrl', 'phoneNumberId'],
       webhook: ['url'],
-      http: ['mode', 'method', 'url', 'headers', 'body', 'contentType', 'credential', 'timeoutMs', 'success', 'emailSender', 'from', 'inputs', 'responseMap'],
+      http: ['mode', 'method', 'url', 'headers', 'body', 'contentType', 'credential', 'timeoutMs', 'success', 'inputs', 'responseMap'],
       oauth: ['authorizationUrl', 'tokenUrl', 'clientId', 'scopes'],
+      storage: ['provider', 'bucket', 'region', 'prefix', 'endpoint', 'credential', 'folderId'],
+      email: ['provider', 'credential', 'userId', 'method', 'url', 'headers', 'body', 'contentType', 'timeoutMs', 'success'],
     };
     for (const k of Object.keys(config)) if (!allowed[kind].includes(k)) issues.push({ path: `/config/${k}`, message: 'is not a setting of this kind' });
     if (kind === 'webhook' && !httpsUrl(config.url)) issues.push({ path: '/config/url', message: 'must be an https:// address' });
@@ -771,7 +1016,9 @@ export class ConnectorService implements ConnectorCalls {
         }
       }
     }
-    if (kind === 'http') issues.push(...this.checkHttp(key, config, secrets, refs));
+    if (kind === 'http') issues.push(...this.checkHttp(config, secrets, refs));
+    if (kind === 'storage') issues.push(...this.checkStorage(config, secrets, refs));
+    if (kind === 'email') issues.push(...this.checkEmail(config, secrets, refs));
     if (kind === 'oauth') {
       if (!parseOauthConfig(config)) issues.push({ path: '/config', message: 'needs authorizationUrl, tokenUrl and clientId' });
       if (!httpsUrl(config.authorizationUrl)) issues.push({ path: '/config/authorizationUrl', message: 'must be an https:// address' });
@@ -785,7 +1032,7 @@ export class ConnectorService implements ConnectorCalls {
     return issues;
   }
 
-  private checkHttp(key: string, config: Record<string, unknown>, secrets: Record<string, string>, refs: References): FieldIssue[] {
+  private checkHttp(config: Record<string, unknown>, secrets: Record<string, string>, refs: References): FieldIssue[] {
     const issues: FieldIssue[] = [];
     const mode = config.mode;
     if (mode !== 'send' && mode !== 'lookup') issues.push({ path: '/config/mode', message: "must be 'send' or 'lookup'" });
@@ -819,6 +1066,7 @@ export class ConnectorService implements ConnectorCalls {
       inputs: Array.isArray(inputs) ? inputs.filter((f): f is string => typeof f === 'string') : [],
       secrets: Object.keys(secrets),
       credential: typeof credential === 'string',
+      messageParts: mode === 'send' ? HTTP_SEND_MESSAGE_PARTS : undefined,
     };
     const placeholders = (path: string, text: string) => {
       for (const p of unknownPlaceholders(text, allowed)) {
@@ -858,15 +1106,70 @@ export class ConnectorService implements ConnectorCalls {
     if (success !== undefined && (!Array.isArray(success) || !success.length || !success.every((s) => Number.isInteger(s) && s >= 100 && s <= 599))) {
       issues.push({ path: '/config/success', message: 'must list one or more HTTP status codes' });
     }
-    if (config.emailSender !== undefined && typeof config.emailSender !== 'boolean') issues.push({ path: '/config/emailSender', message: 'must be true or false' });
-    if (config.from !== undefined && (typeof config.from !== 'string' || config.from.length > 320 || /[\r\n]/.test(config.from))) {
-      issues.push({ path: '/config/from', message: 'must be one line of text' });
+    return issues;
+  }
+
+  private checkEmail(config: Record<string, unknown>, secrets: Record<string, string>, refs: References): FieldIssue[] {
+    const issues: FieldIssue[] = [];
+    const provider = config.provider;
+    if (provider !== 'gmail' && provider !== 'http') {
+      issues.push({ path: '/config/provider', message: "must be 'gmail' or 'http'" });
+      return issues;
     }
-    if (config.emailSender === true) {
-      if (mode !== 'send') issues.push({ path: '/config/emailSender', message: 'only a send connector can send email' });
-      if (refs.emailSender && refs.emailSender !== key) issues.push({ path: '/config/emailSender', message: `'${refs.emailSender}' already sends this organisation's email` });
-      if (typeof config.from !== 'string' || !config.from.trim()) issues.push({ path: '/config/from', message: 'is needed when the connector sends email' });
+    if (provider === 'gmail') {
+      if (typeof config.credential !== 'string' || refs.credentialType !== 'oauth') {
+        issues.push({ path: '/config/credential', message: 'must be the key of an oauth connector' });
+      } else if (refs.oauthScopes !== undefined && !oauthHasGmailSend(refs.oauthScopes)) {
+        issues.push({ path: '/config/credential', message: 'the oauth connector must list https://www.googleapis.com/auth/gmail.send' });
+      }
+      if (config.userId !== undefined && (typeof config.userId !== 'string' || !config.userId.trim() || config.userId.length > 320 || /[\r\n/]/.test(config.userId))) {
+        issues.push({ path: '/config/userId', message: "must be a Gmail user id such as 'me', one line" });
+      }
     }
+    if (provider === 'http') {
+      if (!METHODS.includes(config.method as string)) issues.push({ path: '/config/method', message: `must be one of ${METHODS.join(', ')}` });
+      const credential = config.credential;
+      if (credential !== undefined && (typeof credential !== 'string' || refs.credentialType !== 'oauth')) {
+        issues.push({ path: '/config/credential', message: 'must be the key of an oauth connector' });
+      }
+      const cred = typeof credential === 'string';
+      const placeholders = (path: string, text: string) => {
+        for (const p of unknownEmailPlaceholders(text, Object.keys(secrets), cred)) {
+          issues.push({
+            path,
+            message: `unknown placeholder '{{${p}}}'; use {{message.to}}, {{message.subject}}, {{message.text}}, {{message.from}}, {{message.mime}}, {{organisation.name}}, {{secrets.<name>}} or {{credential.accessToken}}`,
+          });
+        }
+      };
+      if (typeof config.url !== 'string' || !httpsUrl(config.url.replace(PLACEHOLDER, 'x'))) issues.push({ path: '/config/url', message: 'must be an https:// address' });
+      else placeholders('/config/url', config.url);
+      if (config.headers !== undefined) {
+        if (!isObject(config.headers) || Object.keys(config.headers).length > 20) issues.push({ path: '/config/headers', message: 'must be at most 20 name: value pairs' });
+        else {
+          for (const [name, value] of Object.entries(config.headers)) {
+            if (!HEADER_NAME.test(name)) issues.push({ path: `/config/headers/${name}`, message: 'is not a valid header name' });
+            else if (typeof value !== 'string' || /[\r\n]/.test(value) || value.length > 2000) issues.push({ path: `/config/headers/${name}`, message: 'must be one line of text' });
+            else placeholders(`/config/headers/${name}`, value);
+          }
+        }
+      }
+      if (config.body !== undefined) {
+        if (typeof config.body !== 'string' || config.body.length > 5000) issues.push({ path: '/config/body', message: 'must be text' });
+        else placeholders('/config/body', config.body);
+      }
+      if (config.contentType !== undefined && !['json', 'form', 'text'].includes(config.contentType as string)) {
+        issues.push({ path: '/config/contentType', message: "must be 'json', 'form' or 'text'" });
+      }
+      const timeout = config.timeoutMs;
+      if (timeout !== undefined && (typeof timeout !== 'number' || !Number.isInteger(timeout) || timeout < 1000 || timeout > 30_000)) {
+        issues.push({ path: '/config/timeoutMs', message: 'must be a whole number of milliseconds from 1000 to 30000' });
+      }
+      const success = config.success;
+      if (success !== undefined && (!Array.isArray(success) || !success.length || !success.every((s) => Number.isInteger(s) && s >= 100 && s <= 599))) {
+        issues.push({ path: '/config/success', message: 'must list one or more HTTP status codes' });
+      }
+    }
+    if (!parseEmailConfig(config) && !issues.length) issues.push({ path: '/config', message: 'needs a provider and its settings' });
     return issues;
   }
 
@@ -875,6 +1178,7 @@ export class ConnectorService implements ConnectorCalls {
       key: c.row.key,
       kind: c.kind,
       enabled: c.row.enabled,
+      archived: !!c.row.archived_at,
       configured: c.configured,
       config: c.row.config,
       secrets: Object.keys(c.secrets).sort(),
@@ -892,7 +1196,7 @@ export class ConnectorService implements ConnectorCalls {
     const row = await this.row(tenantId, key);
     if (!row || !isKind(row.type)) return undefined;
     const secrets = row.secret_enc ? this.decrypt(row.secret_enc) : {};
-    return { row, kind: row.type, secrets, configured: isConfigured(row.type, secrets) };
+    return { row, kind: row.type, secrets, configured: isConfigured(row.type, secrets, row.config) };
   }
 
   private decrypt(value: string): Record<string, string> {

@@ -41,7 +41,7 @@ export async function recordSums(tx: SqlExecutor, q: Pick<CompiledRecordQuery, '
   return Object.fromEntries(keys.map((k, i) => [k, Number(agg?.[`s${i}`] ?? 0)]));
 }
 
-/** Record queries through the dynamic record functions of migration 016. */
+/** Record queries through the dynamic record functions of 004_record_query.sql. */
 export class PgRecordQueries implements RecordQueries {
   ids(tx: Tx, q: RecordQueryAst): Promise<string[]> {
     return recordIds(executorOf(tx), compileRecordQuery(q));

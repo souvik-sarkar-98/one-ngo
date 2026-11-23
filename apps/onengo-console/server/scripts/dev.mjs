@@ -1,6 +1,7 @@
 /**
  * Starts the operator console on port 9090.
- * Pass --port or --fixture-port to use another port. .env PORT stays the API port.
+ * Pass --port to use another port. .env PORT stays the API port.
+ * Operator sign-in comes from OPERATOR_OIDC_* in .env.
  */
 import { spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
@@ -49,15 +50,9 @@ function takePort(argv, flag) {
   return port;
 }
 
-function fill(name, value) {
-  if (!process.env[name]?.trim()) process.env[name] = value;
-}
-
 const argv = process.argv.slice(2);
 const port = takePort(argv, '--port') ?? 9090;
-const fixturePortArg = takePort(argv, '--fixture-port');
-const fixturePort = fixturePortArg ?? 8095;
-if (argv.length) fail(`Unknown option ${argv[0]}. Use --port and --fixture-port.`);
+if (argv.length) fail(`Unknown option ${argv[0]}. Use --port.`);
 
 loadEnv(join(root, '.env'));
 const adminUrl = process.env.DATABASE_URL?.trim();
@@ -73,17 +68,7 @@ if (!process.env.OPERATOR_RUNTIME_URL?.trim()) {
 process.env.PORT = String(port);
 process.env.OPERATOR_PUBLIC_BASE_URL = `http://localhost:${port}`;
 process.env.OPERATOR_LOCAL_WITHOUT_IAP = '1';
-if (fixturePortArg || !process.env.OPERATOR_OIDC_ISSUER?.trim()) {
-  process.env.OPERATOR_OIDC_ISSUER = `https://127.0.0.1:${fixturePort}`;
-}
-fill('OPERATOR_OIDC_CLIENT_ID', 'demo-operator');
-fill('OPERATOR_OIDC_CLIENT_SECRET', 'demo-operator-secret');
-fill('OPERATOR_OIDC_AUDIENCE', process.env.OPERATOR_OIDC_CLIENT_ID);
 process.env.OPERATOR_WEB_ROOT = join(root, 'apps', 'onengo-console', 'web', 'dist', 'operator', 'browser');
-const ca = join(root, '.data', 'service-sandbox', 'tls', 'ca.crt');
-if (existsSync(ca)) process.env.NODE_EXTRA_CA_CERTS = ca;
-delete process.env.OPERATOR_OIDC_MFA_ACR;
-delete process.env.OPERATOR_IAP_AUDIENCE;
 
 const child = spawn(process.execPath, ['--import', 'tsx', 'src/main.ts'], {
   cwd: serverDir,

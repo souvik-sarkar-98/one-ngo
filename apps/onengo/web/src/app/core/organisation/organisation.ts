@@ -41,14 +41,14 @@ export interface Registration {
   notes: string | null;
 }
 
-export type SetupKey = 'identity' | 'registrations' | 'fiscalYear' | 'receiptSeries' | 'operationalRole' | 'email' | 'payments';
+export type SetupKey = 'identity' | 'registrations' | 'fiscalYear' | 'receiptSeries' | 'operationalRole' | 'email' | 'fileStore' | 'payments';
 
 export interface SetupItem {
   key: SetupKey;
   done: boolean;
   /** Optional items are shown but do not hold setup back. */
   required: boolean;
-  /** For `email`: `organisation`, `installation` or `none`. */
+  /** For `email`: `organisation` when its email connector sends mail, otherwise `none`. */
   detail?: string;
 }
 
@@ -69,9 +69,17 @@ export interface OrganisationView {
   timezone: string | null;
   registrations: Registration[];
   logo: { url: string; version: number; updatedAt: string } | null;
-  /** Null when no name, designation or signature image is saved. */
-  signatory: { name: string | null; designation: string | null; image: { url: string; version: number; updatedAt: string } | null } | null;
+  /** Oldest first. */
+  signatories: { id: string; name: string; designation: string; image: { url: string; version: number; updatedAt: string } | null }[];
+  /** The ordered signatories of each document that has any, by document key: `receipt`, `receipt:<rule>` or `report:<report>`. */
+  signatorySets: Record<string, string[]>;
   setup: SetupChecklist;
+}
+
+/** The people who can sign, and the ordered signatories chosen for each document. Readable with the configuration. */
+export interface DocumentSignatories {
+  signatories: { id: string; name: string; designation: string }[];
+  sets: Record<string, string[]>;
 }
 
 /** The shell's display name and logo; the logo address is same-origin and needs the person's sign-in. */
@@ -122,10 +130,15 @@ export interface OrganisationGateway {
   /** The image itself is the request body. */
   setLogo(file: Blob): Promise<OrganisationView>;
   removeLogo(): Promise<void>;
-  saveSignatory(body: { name: string; designation: string }): Promise<OrganisationView>;
+  addSignatory(body: { name: string; designation: string }): Promise<OrganisationView>;
+  updateSignatory(id: string, body: { name: string; designation: string }): Promise<OrganisationView>;
   /** The PNG itself is the request body. */
-  setSignature(file: Blob): Promise<OrganisationView>;
-  removeSignatory(): Promise<void>;
+  setSignature(id: string, file: Blob): Promise<OrganisationView>;
+  removeSignatory(id: string): Promise<void>;
+  /** The roster and every document's set, for the builder's pickers. */
+  documentSignatories(): Promise<DocumentSignatories>;
+  /** Replaces one document's signatories in order; an empty list clears its own set. */
+  saveDocumentSignatories(documentKey: string, signatories: string[]): Promise<DocumentSignatories>;
   setup(): Promise<SetupChecklist>;
   confirmSetup(step: ConfirmableStep): Promise<SetupChecklist>;
   /** A same-origin image that needs the sign-in (the current logo or one a receipt keeps), as bytes. */

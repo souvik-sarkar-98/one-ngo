@@ -1,7 +1,8 @@
 import { NgComponentOutlet } from '@angular/common';
 import { Component, computed, effect, inject, input, untracked } from '@angular/core';
-import { PageFrame } from '@onengo/web-kit';
+import { Btn, PageFrame } from '@onengo/web-kit';
 import { EDITOR_TABS, frameTab, type EditorTab } from '../core/builder/address';
+import { canTurnOff } from '../core/builder/catalogue';
 import { summarySections } from '../core/builder/summary';
 import { formatDate, t } from '../core/i18n/i18n';
 import { DEFINITION_KINDS, type DefinitionKind } from '../core/models';
@@ -11,6 +12,7 @@ import { TranslatePipe } from '../services/i18n';
 import { ChipFilterBar } from '../ui/chip-bar';
 import { MobileFormSheet } from '../ui/form-panel';
 import { ListDetailSections } from '../ui/panel';
+import { NoticeFocus } from '../ui/notice-focus';
 import { PageBack } from '../ui/page-back';
 import { RowMenu } from '../ui/row-menu';
 import { TableRows, type TableColumn } from '../ui/table-rows';
@@ -26,7 +28,7 @@ import { JsonEditor } from './json-editor';
  */
 @Component({
   selector: 'app-editor-frame',
-  imports: [NgComponentOutlet, TranslatePipe, ChipFilterBar, RowMenu, TableRows, MobileFormSheet, ListDetailSections, JsonEditor, PageBack, PageFrame],
+  imports: [Btn, NgComponentOutlet, TranslatePipe, ChipFilterBar, RowMenu, TableRows, MobileFormSheet, ListDetailSections, JsonEditor, NoticeFocus, PageBack, PageFrame],
   providers: [BuilderStore],
   styleUrl: './builder.css',
   template: `
@@ -37,7 +39,7 @@ import { JsonEditor } from './json-editor';
       } @else if (s?.missing) {
         <div class="notice info">
           {{ 'ui.builder.missing' | t }}
-          <button type="button" class="small" (click)="store.backToCatalogue()">{{ 'ui.builder.backToCatalogue' | t }}</button>
+          <button appBtn size="sm" type="button" (click)="store.backToCatalogue()">{{ 'ui.builder.backToCatalogue' | t }}</button>
         </div>
       } @else if (s && !s.loading && s.detail) {
         <header class="builder-head">
@@ -58,24 +60,31 @@ import { JsonEditor } from './json-editor';
           <app-row-menu look="table" [actions]="menu()" (choose)="menuAction($event)" />
         </header>
 
-        @if (s.message) { <div class="notice ok" role="status">{{ s.message }}</div> }
+        @if (s.message) { <div class="notice ok" role="status" appNotice>{{ s.message }}</div> }
         @if (s.error) {
-          <div class="notice error" role="alert">
+          <div class="notice error" role="alert" appNotice appNoticeError>
             {{ s.error }}
             @if (s.saveIssues.length) { <ul>@for (i of s.saveIssues; track $index) { <li><code>{{ i.path }}</code> {{ i.message }}</li> }</ul> }
           </div>
         }
 
-        @if (!store.canEdit()) {
+        @if (s.detail.shipped?.disabled) {
+          <div class="notice info" role="status">
+            {{ 'ui.builder.turnedOffNotice' | t }}
+            @if (store.canPublish()) {
+              <button appBtn="primary" size="sm" type="button" [disabled]="s.busy" (click)="store.turnOn()">{{ 'ui.builder.catalogue.turnOn' | t }}</button>
+            }
+          </div>
+        } @else if (!store.canEdit()) {
           <div class="notice info">{{ (store.narrow() ? 'ui.builder.phoneReadOnly' : 'ui.builder.viewOnly') | t }}</div>
           <app-list-detail-sections [sections]="summary()" />
         } @else {
           @if (s.shipped) { <div class="notice info">{{ 'ui.builder.shippedNotice' | t: { version: s.detail.shipped!.baseVersion } }}</div> }
           <app-chip-filter-bar [chips]="tabs()" [activeId]="tab()" (chipSelect)="selectTab($event)" />
 
-          @if (s.check; as c) {
+          @for (c of s.check ? [s.check] : []; track c) {
             @if (c.errors.length || c.warnings.length) {
-              <div class="notice" [class.error]="c.errors.length" [class.info]="!c.errors.length" role="status">
+              <div class="notice" [class.error]="c.errors.length" [class.info]="!c.errors.length" role="status" appNotice [appNoticeError]="c.errors.length > 0">
                 <strong>{{ 'ui.builder.checkResult' | t: { errors: c.errors.length, warnings: c.warnings.length } }}</strong>
                 <ul>
                   @for (i of c.errors; track $index) { <li><code>{{ i.path }}</code> {{ i.message }}</li> }
@@ -83,7 +92,7 @@ import { JsonEditor } from './json-editor';
                 </ul>
               </div>
             } @else {
-              <div class="notice ok" role="status">{{ 'ui.builder.checkOk' | t }}</div>
+              <div class="notice ok" role="status" appNotice>{{ 'ui.builder.checkOk' | t }}</div>
             }
           }
 
@@ -129,9 +138,9 @@ import { JsonEditor } from './json-editor';
               @if (c.warnings.length) { <span class="badge">{{ 'ui.builder.warningCount' | t: { count: c.warnings.length } }}</span> }
             }
             <span class="builder-spacer"></span>
-            <button type="button" (click)="discard()" [disabled]="s.busy || !s.hasDraft">{{ 'ui.builder.discardDraft' | t }}</button>
-            <button type="button" (click)="store.check()" [disabled]="s.busy || s.checking">{{ (s.checking ? 'ui.builder.checking' : 'ui.builder.check') | t }}</button>
-            <button type="button" class="primary" (click)="store.openPublish()" [disabled]="s.busy || !canPublishNow()">{{ 'ui.builder.publishEllipsis' | t }}</button>
+            <button appBtn type="button" (click)="discard()" [disabled]="s.busy || !s.hasDraft">{{ 'ui.builder.discardDraft' | t }}</button>
+            <button appBtn type="button" (click)="store.check()" [disabled]="s.busy || s.checking">{{ (s.checking ? 'ui.builder.checking' : 'ui.builder.check') | t }}</button>
+            <button appBtn="primary" type="button" (click)="store.openPublish()" [disabled]="s.busy || !canPublishNow()">{{ 'ui.builder.publishEllipsis' | t }}</button>
           </footer>
 
           <app-mobile-form-sheet
@@ -159,12 +168,12 @@ import { JsonEditor } from './json-editor';
               }
             }
             @if (s.summary?.errors?.length) {
-              <button sheetFooterActions type="button" (click)="store.closePublish()">{{ 'ui.common.back' | t }}</button>
+              <button appBtn sheetFooterActions type="button" (click)="store.closePublish()">{{ 'ui.common.back' | t }}</button>
             }
           </app-mobile-form-sheet>
         }
       } @else if (s?.error) {
-        <div class="notice error" role="alert">{{ s?.error }}</div>
+        <div class="notice error" role="alert" appNotice appNoticeError>{{ s?.error }}</div>
       } @else {
         <p class="muted">{{ 'ui.common.loading' | t }}</p>
       }
@@ -212,8 +221,12 @@ export class EditorFrame {
   readonly menu = computed(() => {
     const s = this.store.state();
     const out = [{ id: 'catalogue', label: t('ui.builder.backToCatalogue') }];
+    if (s?.detail?.shipped?.disabled) return out;
     if (s && this.store.canPublish() && !this.store.narrow()) out.push({ id: 'duplicate', label: t('ui.builder.catalogue.duplicate') });
     if (s?.shipped && s.patched && this.store.canPublish()) out.push({ id: 'revert', label: t('ui.builder.revertToModule') });
+    if (s?.shipped && this.store.canPublish() && canTurnOff({ owner: 'base', moduleKey: s.detail?.shipped?.moduleKey ?? null })) {
+      out.push({ id: 'turnOff', label: t('ui.builder.catalogue.turnOff') });
+    }
     if (s?.hasDraft && this.store.canEdit()) out.push({ id: 'discard', label: t('ui.builder.discardDraft') });
     return out;
   });
@@ -256,6 +269,11 @@ export class EditorFrame {
     else if (id === 'duplicate') this.store.duplicate();
     else if (id === 'revert') void this.revert();
     else if (id === 'discard') void this.discard();
+    else if (id === 'turnOff') void this.turnOff();
+  }
+
+  async turnOff(): Promise<void> {
+    if (confirm(t('ui.builder.catalogue.confirmTurnOff', { name: this.store.title() }))) await this.store.turnOff();
   }
 
   async discard(): Promise<void> {

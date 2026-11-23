@@ -1,0 +1,18 @@
+{
+  "key": "projectGoals",
+  "recordType": "projectGoal",
+  "label": "Goals",
+  "pageSize": 20,
+  "layout": "table",
+  "columns": ["number", "title", "project", "target", "achieved", "dueOn"],
+  "compactColumns": ["title", "achieved"],
+  "filters": ["dueOn"],
+  "row": { "title": "title", "subtitle": ["project"], "meta": "achieved" },
+  "detail": {
+    "sections": [
+      { "id": "goal", "label": "Goal", "fields": ["number", "title", "project", "target", "achieved", "dueOn", "notes"] }
+    ]
+  },
+  "create": { "fields": ["title", "project", "target", "achieved", "dueOn", "notes"] },
+  "edit": { "fields": ["title", "project", "target", "achieved", "dueOn", "notes"] }
+}

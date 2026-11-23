@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { PageFrame } from '@onengo/web-kit';
+import { Btn, PageFrame } from '@onengo/web-kit';
 import { lowerLabel } from '../core/i18n/i18n';
 import { permits } from '../core/records/import/import-session';
 import type { FormValues } from '../core/records/record/forms';
@@ -33,7 +33,7 @@ import { RecordStore } from './record-store';
  */
 @Component({
   selector: 'app-record-list-screen',
-  imports: [FilteredListPage, FilteredInfiniteList, ListFilterSheet, RecordPanel, ImportPanel, BulkBar, BulkPanel, RowMenu, CreateButton, ScreenHeading, TranslatePipe, PageFrame],
+  imports: [Btn, FilteredListPage, FilteredInfiniteList, ListFilterSheet, RecordPanel, ImportPanel, BulkBar, BulkPanel, RowMenu, CreateButton, ScreenHeading, TranslatePipe, PageFrame],
   providers: [ListStore, RecordStore, ImportStore, BulkStore],
   styleUrls: ['../ui/styles/na-list-dashboard.css', '../ui/styles/title-action.css'],
   template: `
@@ -41,7 +41,7 @@ import { RecordStore } from './record-store';
       <div class="admin__line admin__line--title">
         <app-screen-heading class="admin__grow" [text]="heading()" />
         @if (store.canCreate() && !store.narrow() && !bulk.showBar()) {
-          <button type="button" class="app-btn app-btn--primary admin__title-action" (click)="store.intents.openCreate()">{{ createLabel() }}</button>
+          <button appBtn="primary" type="button" class="admin__title-action" (click)="store.intents.openCreate()">{{ createLabel() }}</button>
         }
       </div>
       @if (store.spec(); as spec) {

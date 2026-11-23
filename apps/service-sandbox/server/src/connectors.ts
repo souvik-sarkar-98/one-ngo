@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
-import { CONNECTOR, PATHS } from './constants.js';
+import { CONNECTOR, MAIL, PATHS } from './constants.js';
 import { basic, bearer, escapeHtml, header, readForm, readText, redirect, sendHtml, sendJson, type Handler } from './http.js';
 import type { FixtureLog } from './log.js';
 
@@ -17,6 +17,19 @@ const token = () => randomBytes(24).toString('base64url');
 /** The connector settings to save in Administration, each pointing at this fixture. */
 export function connectorSettings(origin: string): Record<string, unknown> {
   return {
+    gmail: {
+      kind: 'email',
+      enabled: true,
+      config: {
+        provider: 'http',
+        method: 'POST',
+        url: `${origin}${PATHS.gmailSend}`,
+        headers: { Authorization: 'Bearer {{secrets.accessToken}}' },
+        body: '{"raw":"{{ message.mime | base64url }}"}',
+        contentType: 'json',
+      },
+      secrets: { accessToken: MAIL.token },
+    },
     sms: {
       kind: 'sms',
       enabled: true,
@@ -49,7 +62,7 @@ export function connectorSettings(origin: string): Record<string, unknown> {
   };
 }
 
-/** Targets for SMS, WhatsApp, webhook, lookup and OAuth connectors. */
+/** Targets for the email sender, SMS, WhatsApp, webhook, lookup and OAuth connectors. */
 export function connectorRoutes(log: FixtureLog): Handler {
   const codes = new Map<string, { redirectUri: string; challenge: string | null; expiresAt: number }>();
   const refreshTokens = new Set<string>();

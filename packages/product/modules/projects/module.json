@@ -1,0 +1,42 @@
+{
+  "key": "projects",
+  "version": "1.0.0",
+  "label": "Projects and events",
+  "description": "Projects with goals and milestones, and events with a venue, a project link and an attendee list.",
+  "engine": "0.1.0",
+  "definitions": [
+    "project.recordType.json",
+    "projectStatus.workflow.json",
+    "projects.listView.json",
+    "projectGoal.recordType.json",
+    "projectGoals.listView.json",
+    "milestone.recordType.json",
+    "milestoneStatus.workflow.json",
+    "milestones.listView.json",
+    "event.recordType.json",
+    "eventStatus.workflow.json",
+    "events.listView.json",
+    "eventAttendee.recordType.json",
+    "eventAttendees.listView.json",
+    "projects.recordGroup.json"
+  ],
+  "setup": {
+    "roles": [
+      {
+        "key": "project-manager",
+        "label": "Project manager",
+        "permissions": [
+          "record:project:*",
+          "record:project:transition:*",
+          "record:projectGoal:*",
+          "record:milestone:*",
+          "record:milestone:transition:*",
+          "record:event:*",
+          "record:event:transition:*",
+          "record:eventAttendee:*",
+          "people:read"
+        ]
+      }
+    ]
+  }
+}

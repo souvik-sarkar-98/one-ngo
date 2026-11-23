@@ -10,7 +10,7 @@ import type { CfFieldDef } from './cf-types';
 import { AttachedFiles } from './file-field/file-list';
 import { DialogFocus } from './dialog';
 import { lockWhileOpen } from './form-panel';
-import { FormProblems } from '@onengo/web-kit';
+import { Btn, FormProblems } from '@onengo/web-kit';
 import { RichTextView } from './rich-text-field/rich-text-view';
 import { SignatureView } from './signature-field/signature-view';
 
@@ -40,7 +40,7 @@ import { SignatureView } from './signature-field/signature-view';
       color: var(--primary-700, #1d4ed8);
     }
     .list-detail-sections__low {
-      color: #b45309;
+      color: var(--warn);
     }
     .list-detail-sections__rich :is(h3, h4) {
       margin: 0.4em 0 0.2em;
@@ -50,7 +50,7 @@ import { SignatureView } from './signature-field/signature-view';
     }
     .list-detail-sections__rich blockquote {
       padding-left: 10px;
-      border-left: 3px solid #cbd5e1;
+      border-left: 3px solid var(--line-strong);
       color: #475569;
     }
     .list-detail-sections__item--selectable {
@@ -186,7 +186,7 @@ export class ListDetailSections {
 
 @Component({
   selector: 'app-list-detail-sheet',
-  imports: [ListDetailSections, CfForm, FormProblems, TranslatePipe, DialogFocus],
+  imports: [Btn, ListDetailSections, CfForm, FormProblems, TranslatePipe, DialogFocus],
   styleUrl: './styles/app-list-detail-sheet.css',
   template: `
     @if (open()) {
@@ -271,7 +271,7 @@ export class ListDetailSections {
           <div class="list-detail-sheet__actions list-detail-sheet__actions--stacked">
             <ng-content select="[detailFooterActions]"></ng-content>
             @if (primaryActionLabel()) {
-              <button type="button" class="app-btn app-btn--primary app-btn--block" (click)="primaryAction.emit()">
+              <button appBtn="primary" block type="button" (click)="primaryAction.emit()">
                 {{ primaryActionLabel() }}
               </button>
             }
@@ -280,10 +280,10 @@ export class ListDetailSections {
 
         @if (mode() === 'edit') {
           <div class="list-detail-sheet__actions app-btn-group">
-            <button type="button" class="app-btn app-btn--ghost" (click)="editCancel.emit()" [disabled]="saving()">
+            <button appBtn type="button" (click)="editCancel.emit()" [disabled]="saving()">
               {{ 'ui.common.cancel' | t }}
             </button>
-            <button type="button" class="app-btn app-btn--primary" (click)="editSave.emit()" [disabled]="saving()">
+            <button appBtn="primary" type="button" (click)="editSave.emit()" [disabled]="saving()">
               {{ (saving() ? 'ui.common.saving' : 'ui.common.save') | t }}
             </button>
           </div>

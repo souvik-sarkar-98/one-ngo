@@ -1,0 +1,12 @@
+{
+  "key": "beneficiaryStatus",
+  "recordType": "beneficiary",
+  "initial": "enrolled",
+  "states": [
+    { "key": "enrolled", "label": "Enrolled" },
+    { "key": "closed", "label": "Closed", "final": true }
+  ],
+  "transitions": [
+    { "key": "close", "label": "Close case", "from": ["enrolled"], "to": "closed", "requiredFields": ["closedOn", "closeReason"] }
+  ]
+}

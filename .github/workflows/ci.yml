@@ -1,20 +1,20 @@
 name: CI
 
-# The test gate. Runs on every pull request and every push to develop and master.
-# A push to develop (or a manual run on develop) that passes the gate deploys
-# stage. A push to master (or a manual run on master) that passes the gate
-# deploys production. A pull request deploys nothing.
+# The test gate. Runs on every pull request, from any branch, and runs every
+# unit and integration test. It deploys nothing.
 #
-# Branch protection should require exactly one check: "CI gate".
+# deploy.yml calls this same workflow again after a merge to develop or main,
+# so the merged commit is tested before anything is deployed.
+#
+# Branch protection on develop and main should require exactly one check:
+# "CI gate".
 
 on:
   pull_request:
-  push:
-    branches: [develop, master]
-  workflow_dispatch:
+  workflow_call:
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -26,7 +26,7 @@ jobs:
   # start the real bundle, check it refuses an unprepared database, and check
   # that two clean builds are identical.
   verify:
-    name: Typecheck, build, test
+    name: Typecheck, build, unit tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services:
@@ -52,6 +52,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Migrations may change schema, never write data (see the script for the allowed rows).
+      - run: node .github/scripts/check-migrations.mjs
       - run: npm run ci
 
   # Known vulnerabilities in production dependencies, high severity and above.
@@ -84,21 +86,3 @@ jobs:
           echo "verify: $VERIFY"
           echo "audit:  $AUDIT"
           test "$VERIFY" = success && test "$AUDIT" = success
-
-  deploy-stage:
-    name: Deploy stage
-    needs: ci-gate
-    if: github.ref == 'refs/heads/develop' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    permissions:
-      contents: read
-      id-token: write
-    uses: ./.github/workflows/cd-stage.yml
-
-  deploy-prod:
-    name: Deploy production
-    needs: ci-gate
-    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    permissions:
-      contents: read
-      id-token: write
-    uses: ./.github/workflows/cd.yml

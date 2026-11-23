@@ -1,0 +1,31 @@
+{
+  "key": "beneficiaries",
+  "recordType": "beneficiary",
+  "label": "Beneficiaries",
+  "pageSize": 20,
+  "layout": "table",
+  "columns": ["number", "name", "city", "project", "enrolledOn", "householdSize", "status"],
+  "compactColumns": ["name", "status"],
+  "chips": [
+    { "id": "enrolled", "label": "Enrolled", "statusIn": ["enrolled"] },
+    { "id": "closed", "label": "Closed", "statusIn": ["closed"] },
+    { "id": "all", "label": "All" }
+  ],
+  "defaultChip": "enrolled",
+  "filters": ["project", "city", "enrolledOn"],
+  "row": { "title": "name", "subtitle": ["city"], "meta": "enrolledOn", "badge": "status" },
+  "detail": {
+    "sections": [
+      {
+        "id": "beneficiary",
+        "label": "Beneficiary",
+        "fields": ["number", "status", "name", "city", "address", "phone", "householdSize", "project", "enrolledOn", "closedOn", "closeReason", "notes"]
+      },
+      { "id": "personal", "label": "Personal details", "permission": "record:beneficiary:sensitive", "fields": ["dateOfBirth"] },
+      { "id": "consents", "label": "Consent", "related": { "recordType": "beneficiaryConsent", "field": "beneficiary" } },
+      { "id": "cases", "label": "Case notes", "related": { "recordType": "caseNote", "field": "beneficiary" } }
+    ]
+  },
+  "create": { "fields": ["name", "dateOfBirth", "phone", "address", "city", "householdSize", "project", "enrolledOn", "notes"] },
+  "edit": { "fields": ["name", "dateOfBirth", "phone", "address", "city", "householdSize", "project", "notes"] }
+}

@@ -53,7 +53,7 @@ beforeAll(async () => {
   w = await createWorld({ autoRunJobs: false, connectorHttp: fakeHttp });
   await completeIdentity(w, w.ngoA);
   const ctx = w.as(w.ngoA);
-  await w.platform.moneyAccounts.open(ctx, { key: 'upi', name: 'SBI current', kind: 'bank', upiId: 'asha.trust@sbi' });
+  await w.platform.moneyAccounts.update(ctx, 'upi', { upiId: 'asha.trust@sbi' });
   await w.platform.connectors.save(ctx, 'crm', { kind: 'webhook', config: { url: 'https://crm.test/hooks' }, secrets: { signingSecret: 'whsec-1' }, enabled: true });
   await w.platform.connectors.save(ctx, 'gateway', {
     kind: 'sms',

@@ -72,6 +72,7 @@ export const ICON_NAMES: readonly string[] = [
   "account_box",
   "account_circle",
   "account_tree",
+  "accounts",
   "ad_units",
   "adb",
   "add",

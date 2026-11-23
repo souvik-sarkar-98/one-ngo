@@ -217,4 +217,5 @@ describe('an operator configures an organisation sign-in from the console', () =
     expect(bodhi.shared[0]!.optIn).toBeNull();
     await expectCode(control.signIn.get(principal, 'nobody'), 'not_found');
   });
+
 });

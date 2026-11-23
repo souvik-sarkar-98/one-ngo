@@ -13,6 +13,6 @@
 .wf-issues { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .35rem; }
 .wf-issue { padding: .4rem .6rem; border-radius: var(--radius); font-size: .9rem; border: 1px solid var(--line); }
 .wf-issue--ok { color: var(--ok, #1e7a46); }
-.wf-issue--warning { background: color-mix(in srgb, #c98a00 10%, var(--card, #fff)); }
-.wf-issue--error { background: color-mix(in srgb, #c0392b 10%, var(--card, #fff)); color: var(--danger, #a61b1b); }
+.wf-issue--warning { background: color-mix(in srgb, var(--warn) 10%, var(--card, #fff)); }
+.wf-issue--error { background: color-mix(in srgb, var(--bad) 10%, var(--card, #fff)); color: var(--danger, #a61b1b); }
 @media (max-width: 900px) { .wf-applies { grid-template-columns: 1fr; } }

@@ -1,0 +1,16 @@
+{
+  "key": "projectGoal",
+  "label": "Goal",
+  "pluralLabel": "Goals",
+  "description": "A measurable goal of a project, with its target and what has been achieved so far.",
+  "titleField": "title",
+  "numbering": { "sequence": "projectGoal", "format": "GOL/{seq:5}", "reset": "never" },
+  "fields": [
+    { "key": "title", "label": "Goal", "type": "text", "required": true, "maxLength": 200, "searchable": true },
+    { "key": "project", "label": "Project", "type": "reference", "referenceType": "project", "required": true },
+    { "key": "target", "label": "Target", "type": "number", "min": 0 },
+    { "key": "achieved", "label": "Achieved", "type": "number", "min": 0 },
+    { "key": "dueOn", "label": "Due on", "type": "date" },
+    { "key": "notes", "label": "Notes", "type": "longText" }
+  ]
+}

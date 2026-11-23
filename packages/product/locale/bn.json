@@ -40,6 +40,7 @@
   "ui.common.search": "খুঁজুন",
   "ui.common.searching": "খোঁজা হচ্ছে…",
   "ui.common.seeAll": "সব দেখুন",
+  "ui.common.contactAdministrator": "এটি সম্পন্ন করা যায়নি। আপনার প্রশাসকের সঙ্গে যোগাযোগ করুন।",
   "ui.common.somethingWentWrong": "আমাদের দিকে কিছু ভুল হয়েছে। একটু পরে আবার চেষ্টা করুন।",
   "ui.common.sort": "সাজান",
   "ui.common.startDate": "শুরুর তারিখ",

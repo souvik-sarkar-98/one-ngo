@@ -3,6 +3,7 @@ import { fileBadge, formatSize, isImage, isPdf, type FileInfo } from '../../core
 import { t } from '../../core/i18n/i18n';
 import { Files } from '../../services/files';
 import { TranslatePipe } from '../../services/i18n';
+import { Btn } from '@onengo/web-kit';
 
 type Loaded = { state: 'loading' } | { state: 'ready'; info: FileInfo } | { state: 'failed'; message: string };
 
@@ -13,7 +14,7 @@ type Loaded = { state: 'loading' } | { state: 'ready'; info: FileInfo } | { stat
  */
 @Component({
   selector: 'app-file-list',
-  imports: [TranslatePipe],
+  imports: [Btn, TranslatePipe],
   styles: `
     :host {
       display: block;
@@ -27,15 +28,15 @@ type Loaded = { state: 'loading' } | { state: 'ready'; info: FileInfo } | { stat
     .file-list__thumb {
       width: 64px;
       height: 64px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid var(--line-soft);
       border-radius: 10px;
       padding: 0;
       overflow: hidden;
       display: grid;
       place-items: center;
       font: 700 0.7rem/1 inherit;
-      color: #b91c1c;
-      background: #fef2f2;
+      color: var(--bad);
+      background: var(--badge-bad-bg);
       cursor: pointer;
     }
     .file-list__thumb img {
@@ -58,7 +59,7 @@ type Loaded = { state: 'loading' } | { state: 'ready'; info: FileInfo } | { stat
       place-items: center;
       font-size: 0.58rem;
       font-weight: 700;
-      background: #f1f5f9;
+      background: var(--surface-sunk);
       color: #475569;
       overflow: hidden;
     }
@@ -91,10 +92,10 @@ type Loaded = { state: 'loading' } | { state: 'ready'; info: FileInfo } | { stat
     }
     .file-list__meta {
       font-size: 0.72rem;
-      color: #64748b;
+      color: var(--grey-500);
     }
     .file-list__meta[data-error='true'] {
-      color: #b91c1c;
+      color: var(--bad);
     }
     .file-list__preview img {
       display: block;
@@ -102,21 +103,21 @@ type Loaded = { state: 'loading' } | { state: 'ready'; info: FileInfo } | { stat
       max-height: 60vh;
       object-fit: contain;
       border-radius: 10px;
-      background: #f8fafc;
+      background: var(--th-bg);
       touch-action: pinch-zoom;
     }
     .file-list__card {
       text-align: center;
       padding: 22px 12px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid var(--line-soft);
       border-radius: 12px;
     }
     .file-list__card .file-list__badge {
       margin: 0 auto 10px;
       width: 48px;
       height: 48px;
-      color: #b91c1c;
-      background: #fef2f2;
+      color: var(--bad);
+      background: var(--badge-bad-bg);
     }
     .file-list__actions {
       display: flex;
@@ -145,11 +146,11 @@ type Loaded = { state: 'loading' } | { state: 'ready'; info: FileInfo } | { stat
           <div class="file-list__meta" data-error="true" role="alert">{{ problem() }}</div>
         }
         <div class="file-list__actions">
-          <button type="button" class="app-btn app-btn--ghost" (click)="closePreview()">{{ 'ui.common.back' | t }}</button>
+          <button appBtn type="button" (click)="closePreview()">{{ 'ui.common.back' | t }}</button>
           @if (isPdf(p)) {
-            <button type="button" class="app-btn" [disabled]="!pdfUrl()" (click)="openPdf()">{{ 'ui.fields.files.open' | t }}</button>
+            <button appBtn type="button" [disabled]="!pdfUrl()" (click)="openPdf()">{{ 'ui.fields.files.open' | t }}</button>
           }
-          <button type="button" class="app-btn app-btn--primary" (click)="download(p.id)">{{ 'ui.fields.files.download' | t }}</button>
+          <button appBtn="primary" type="button" (click)="download(p.id)">{{ 'ui.fields.files.download' | t }}</button>
         </div>
       </div>
     } @else {
@@ -189,9 +190,9 @@ type Loaded = { state: 'loading' } | { state: 'ready'; info: FileInfo } | { stat
             }
           </div>
           @if (removable()) {
-            <button type="button" class="app-btn app-btn--ghost" [attr.aria-label]="'ui.common.remove' | t" (click)="remove.emit(id)">✕</button>
+            <button appBtn type="button" [attr.aria-label]="'ui.common.remove' | t" (click)="remove.emit(id)">✕</button>
           } @else if (info) {
-            <button type="button" class="app-btn app-btn--ghost" (click)="download(id)">{{ 'ui.fields.files.download' | t }}</button>
+            <button appBtn type="button" (click)="download(id)">{{ 'ui.fields.files.download' | t }}</button>
           }
         </div>
       }

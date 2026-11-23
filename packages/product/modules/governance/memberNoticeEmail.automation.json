@@ -1,0 +1,10 @@
+{
+  "key": "memberNoticeEmail",
+  "label": "Email each notice to its member",
+  "recordType": "memberNotice",
+  "trigger": { "event": "created" },
+  "condition": "not isEmpty(record.email)",
+  "actions": [
+    { "type": "notify", "template": "memberNotice", "to": { "email": "record.email" }, "channels": ["email"] }
+  ]
+}

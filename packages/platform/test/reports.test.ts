@@ -24,6 +24,7 @@ const model = (amount: unknown): ReportModel => ({
   generatedAt: '2026-11-05T00:00:00.000Z',
   label: 'Management report',
   title: 'Sample',
+  signatories: [],
 });
 
 describe('document templates', () => {

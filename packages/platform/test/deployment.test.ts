@@ -8,7 +8,7 @@ import { decryptSecret, encryptSecret } from '@onengo/kernel/crypto';
 import type { Database } from '../src/infrastructure/postgres/db.js';
 import { MemoryLogger } from '@onengo/kernel/observability';
 import { migrate } from '../src/infrastructure/postgres/migrate.js';
-import { SERVER_SCHEMA_MINIMUMS } from '../src/infrastructure/postgres/schema-compatibility.js';
+import { SCHEMA_LEVEL, SERVER_SCHEMA_MINIMUMS } from '../src/infrastructure/postgres/schema-compatibility.js';
 import { DefinitionService } from '../src/runtime/definitions/definition-service.js';
 import { createPlatform, MIGRATIONS_DIR } from '../src/platform.js';
 import { createWorld, openTestDatabase, type TestWorld } from './helpers.js';
@@ -48,13 +48,17 @@ describe('process start', () => {
     await expect(start(db)).rejects.toThrow(new RegExp(`schema level 0 is below the minimum ${SERVER_SCHEMA_MINIMUMS.main}.*Run the deploy step`, 'i'));
   });
 
-  it('starts when the only pending migration is above the recorded schema level', async () => {
+  it('refuses a database one migration behind, because the server needs the latest schema level', async () => {
+    // Reconciliation (007) is used by the main server, so its minimum is the latest level and a database behind it is not served.
+    expect(SERVER_SCHEMA_MINIMUMS.main).toBe(SCHEMA_LEVEL);
     const db = await freshDatabase();
     const files = (await readdir(MIGRATIONS_DIR)).filter((f) => f.endsWith('.sql')).sort();
     const older = await mkdtemp(join(tmpdir(), 'ngo-migrations-'));
     cleanups.push(() => rm(older, { recursive: true, force: true }));
     for (const f of files.slice(0, -1)) await copyFile(join(MIGRATIONS_DIR, f), join(older, f));
     await migrate(db, older);
+    await expect(start(db)).rejects.toThrow(new RegExp(`schema level ${SCHEMA_LEVEL - 1} is below the minimum ${SCHEMA_LEVEL}.*Run the deploy step`, 'i'));
+    await migrate(db, MIGRATIONS_DIR);
     await expect(start(db)).resolves.toBeTruthy();
   }, 60_000);
 

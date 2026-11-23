@@ -1,0 +1,40 @@
+{
+  "key": "members",
+  "version": "1.0.0",
+  "label": "Members",
+  "description": "Member profiles with category and contact details, and one-time membership fees. Paid fees post to the books and issue a numbered receipt.",
+  "engine": "0.1.0",
+  "dependsOn": ["donations"],
+  "definitions": [
+    "member.recordType.json",
+    "memberStatus.workflow.json",
+    "members.listView.json",
+    "membershipFee.recordType.json",
+    "membershipFee.workflow.json",
+    "membershipFees.listView.json",
+    "membershipFeePaid.postingRule.json",
+    "membershipFeePaidReceipt.receiptRule.json",
+    "memberRegister.report.json",
+    "membershipFeeRegister.report.json",
+    "membership.recordGroup.json"
+  ],
+  "setup": {
+    "roles": [
+      {
+        "key": "membership-manager",
+        "label": "Membership manager",
+        "permissions": [
+          "record:member:*",
+          "record:member:transition:*",
+          "record:membershipFee:*",
+          "record:membershipFee:transition:*",
+          "people:read",
+          "report:memberRegister:run",
+          "report:membershipFeeRegister:run"
+        ]
+      }
+    ],
+    "accounts": [{ "code": "MEM_FEES", "name": "Membership fees", "type": "income" }],
+    "receiptSeries": [{ "key": "membership-receipt", "prefix": "MEM", "label": "Membership fee receipt", "reset": "fiscal_year" }]
+  }
+}

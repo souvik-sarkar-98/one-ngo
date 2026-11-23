@@ -111,3 +111,32 @@ describe('sign-in', () => {
     await expectCode(w.platform.identity.upsertRole(ctx, { key: 'boss', label: 'Boss', permissions: ['*'] }), 'forbidden');
   });
 });
+
+describe('email when the organisation has no email connector', () => {
+  let bare: TestWorld;
+  beforeAll(async () => {
+    bare = await createWorld({ mail: false });
+    await bare.platform.identity.addMember(bare.as(bare.ngoA), { email: 'priya@example.org', displayName: 'Priya', roles: ['finance'] });
+  });
+  afterAll(() => bare.close());
+
+  it('asks the person to contact an administrator and does not say why', async () => {
+    const code = await expectCode(bare.platform.identity.requestEmailCode({ tenantKey: 'asha', email: 'priya@example.org' }), 'rule_violation');
+    expect(code).toMatchObject({ message: 'This could not be completed. Contact your administrator.', textKey: 'ui.common.contactAdministrator' });
+    expect(code.message).not.toMatch(/e-?mail|smtp|connector|configur/i);
+    const unknown = await expectCode(bare.platform.identity.requestEmailCode({ tenantKey: 'asha', email: 'nobody@example.org' }), 'rule_violation');
+    expect(unknown.message).toBe(code.message);
+    await expect(bare.platform.identity.requestEmailCode({ tenantKey: 'missing-org', email: 'priya@example.org' })).resolves.toBeUndefined();
+
+    const reset = await expectCode(bare.platform.identity.requestPasswordReset({ tenantKey: 'asha', email: 'nobody@example.org' }), 'rule_violation');
+    expect(reset.message).toBe(code.message);
+    const invited = await bare.platform.identity.addMember(bare.as(bare.ngoA), { email: 'new@example.org', displayName: 'New', roles: [] });
+    const invite = await expectCode(bare.platform.identity.inviteMember(bare.as(bare.ngoA), invited), 'rule_violation');
+    expect(invite.message).toBe(code.message);
+
+    const { record } = await bare.platform.records.create(bare.as(bare.ngoA), 'donation', { donorName: 'Asha', donorEmail: 'donor@example.org', amount: 10 });
+    const reminder = await expectCode(bare.platform.actions.run(bare.as(bare.ngoA), 'donation', record.id, 'sendReminder', {}), 'rule_violation');
+    expect(reminder.message).toBe(code.message);
+    expect(bare.mail.sent).toHaveLength(0);
+  });
+});

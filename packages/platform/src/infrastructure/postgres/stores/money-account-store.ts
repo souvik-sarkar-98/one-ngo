@@ -59,13 +59,17 @@ const toAccount = (r: AccountRow): MoneyAccount => ({
 export const pgMoneyAccountStore: MoneyAccountStore = {
   async open(tx, actorId, account, audit) {
     const k = pg(tx);
-    const ledger = await k
-      .insertInto('ledger_account')
-      .values({ tenant_id: TENANT, code: account.ledgerCode, name: account.name, type: 'asset' })
-      .onConflict((oc) => oc.columns(['tenant_id', 'code']).doNothing())
-      .returning('id')
-      .executeTakeFirst();
-    if (!ledger) return false;
+    let ledgerId = account.ledgerAccountId;
+    if (!ledgerId) {
+      const ledger = await k
+        .insertInto('ledger_account')
+        .values({ tenant_id: TENANT, code: account.ledgerCode, name: account.name, type: 'asset' })
+        .onConflict((oc) => oc.columns(['tenant_id', 'code']).doNothing())
+        .returning('id')
+        .executeTakeFirst();
+      if (!ledger) return false;
+      ledgerId = ledger.id;
+    }
     await k
       .insertInto('money_account')
       .values({
@@ -73,7 +77,7 @@ export const pgMoneyAccountStore: MoneyAccountStore = {
         key: account.key,
         name: account.name,
         kind: account.kind,
-        ledger_account_id: ledger.id,
+        ledger_account_id: ledgerId,
         holder_user_id: account.holderUserId,
         custodian: account.custodian,
         upi_id: account.upiId,
@@ -82,6 +86,36 @@ export const pgMoneyAccountStore: MoneyAccountStore = {
       })
       .execute();
     await writeAudit(executorOf(tx), { actorId, action: 'money_account.opened', entity: 'money_account', entityId: account.key, after: audit });
+    return true;
+  },
+
+  async ledgerAccount(tx, code) {
+    const row = await pg(tx)
+      .selectFrom('ledger_account as a')
+      .leftJoin('money_account as m', 'm.ledger_account_id', 'a.id')
+      .select(['a.id', 'a.type', 'a.active', 'm.id as money_id'])
+      .where('a.tenant_id', '=', TENANT)
+      .where('a.code', '=', code)
+      .executeTakeFirst();
+    return row ? { id: row.id, type: row.type, active: row.active, linked: row.money_id !== null } : undefined;
+  },
+
+  async update(tx, actorId, key, change, audit) {
+    const set: Record<string, unknown> = {};
+    if (change.name !== undefined) set['name'] = change.name;
+    if (change.custodian !== undefined) set['custodian'] = change.custodian;
+    if (change.upiId !== undefined) set['upi_id'] = change.upiId;
+    if (change.allowNegative !== undefined) set['allow_negative'] = change.allowNegative;
+    const row = await pg(tx)
+      .updateTable('money_account')
+      .set(set)
+      .where('tenant_id', '=', TENANT)
+      .where('key', '=', key)
+      .where('status', '=', 'active')
+      .returning('id')
+      .executeTakeFirst();
+    if (!row) return false;
+    await writeAudit(executorOf(tx), { actorId, action: 'money_account.updated', entity: 'money_account', entityId: key, after: audit });
     return true;
   },
 

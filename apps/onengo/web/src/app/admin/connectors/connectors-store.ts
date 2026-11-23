@@ -25,10 +25,22 @@ export class ConnectorsStore extends AdminBase {
   });
   readonly rows = computed(() => {
     this.i18n.locale();
+    this.state();
     const now = new Date();
-    return this.state()
-      .items.filter((c) => this.matches(c.key, kindLabel(c.kind), ...c.usedBy))
+    return this.list
+      .shown()
+      .filter((c) => this.matches(c.key, kindLabel(c.kind), ...c.usedBy))
       .map((c) => connectorRow(c, now));
+  });
+  /** In use, and archived: connectors kept aside, with how many. */
+  readonly chips = computed(() => {
+    this.i18n.locale();
+    const items = this.state().items;
+    const archived = items.filter((c) => c.archived).length;
+    return [
+      { id: 'active', label: t('ui.people.chip', { label: t('ui.admin.connectors.chip.active'), count: items.length - archived }) },
+      { id: 'archived', label: t('ui.people.chip', { label: t('ui.admin.connectors.chip.archived'), count: archived }) },
+    ];
   });
   readonly newFields = computed<CfFieldDef[]>(() => {
     this.i18n.locale();
@@ -51,6 +63,10 @@ export class ConnectorsStore extends AdminBase {
 
   retry(): void {
     void this.list.load();
+  }
+
+  setChip(chip: string): void {
+    this.list.setChip(chip);
   }
 
   open(key: string): void {
@@ -83,6 +99,8 @@ export class ConnectorStore extends AdminBase {
   readonly connector = new ConnectorSession(this.gateway, this.key, this.nav);
   readonly state = signal<ConnectorSnapshot>(this.connector.state.value);
   readonly result = signal<string | null>(null);
+  /** The archive confirmation is open. */
+  readonly archiving = signal(false);
   readonly fields = computed(() => {
     this.state();
     this.i18n.locale();
@@ -155,6 +173,29 @@ export class ConnectorStore extends AdminBase {
 
   async test(): Promise<void> {
     await this.connector.test();
+  }
+
+  /** Switch off or on, keeping every other setting. */
+  async setEnabled(on: boolean): Promise<void> {
+    this.show(await this.connector.setEnabled(on));
+  }
+
+  askArchive(): void {
+    this.archiving.set(true);
+  }
+
+  cancelArchive(): void {
+    this.archiving.set(false);
+  }
+
+  /** Archives once the panel confirms. A refusal (it is still used) is shown in place of the panel. */
+  async archive(): Promise<void> {
+    this.archiving.set(false);
+    this.show(await this.connector.archive());
+  }
+
+  async restore(): Promise<void> {
+    this.show(await this.connector.restore());
   }
 
   /** Connect or Reconnect: the provider's sign-in page, which comes back here with ?connected=1 or ?error=. */

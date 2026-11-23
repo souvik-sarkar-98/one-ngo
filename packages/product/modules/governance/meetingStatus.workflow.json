@@ -1,0 +1,14 @@
+{
+  "key": "meetingStatus",
+  "recordType": "meeting",
+  "initial": "planned",
+  "states": [
+    { "key": "planned", "label": "Planned" },
+    { "key": "held", "label": "Held" },
+    { "key": "closed", "label": "Closed", "final": true }
+  ],
+  "transitions": [
+    { "key": "markHeld", "label": "Record as held", "from": ["planned"], "to": "held", "requiredFields": ["heldOn"] },
+    { "key": "close", "label": "Close with minutes", "from": ["held"], "to": "closed", "requiredFields": ["minutes"] }
+  ]
+}

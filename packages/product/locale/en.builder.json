@@ -179,6 +179,7 @@
 
   "ui.builder.catalogue.all": "All",
   "ui.builder.catalogue.chip": "{label} {count}",
+  "ui.builder.catalogue.confirmTurnOff": "Turn off \"{name}\"? It stops being available to everyone in the organisation. Records stay, and you can turn it on again.",
   "ui.builder.catalogue.copyName": "Copy of {name}",
   "ui.builder.catalogue.deleteDraft": "Delete draft",
   "ui.builder.catalogue.duplicate": "Duplicate",
@@ -199,6 +200,9 @@
   "ui.builder.catalogue.searchPlaceholder": "Search by name or key…",
   "ui.builder.catalogue.startFrom": "Start from {name}",
   "ui.builder.catalogue.state": "State",
+  "ui.builder.catalogue.turnedOff": "Turned off",
+  "ui.builder.catalogue.turnOff": "Turn off",
+  "ui.builder.catalogue.turnOn": "Turn on",
   "ui.builder.catalogue.stateFilter.draft": "Has a draft",
   "ui.builder.catalogue.stateFilter.published": "Published",
 
@@ -273,6 +277,9 @@
   "ui.builder.revertToModule": "Revert to module version",
   "ui.builder.saveFailed": "The draft could not be saved.",
   "ui.builder.saving": "Saving…",
+  "ui.builder.turnedOff": "Turned off.",
+  "ui.builder.turnedOffNotice": "This came with a module and is turned off for the organisation. Turn it on to use or change it.",
+  "ui.builder.turnedOn": "Turned on.",
   "ui.builder.unsaved": "Unsaved changes",
   "ui.builder.viewOnly": "You can look at this definition; changing it needs permission to publish.",
 
@@ -280,6 +287,21 @@
   "ui.builder.warningCount.other": "{count} warnings",
 
   "ui.builder.whatChanges": "What changes for people",
+
+  "ui.builder.signatories.title": "Signatories",
+  "ui.builder.signatories.reportHelp": "Only these signatories print on this report, in this order. A report with none prints no signature.",
+  "ui.builder.signatories.receiptHelp": "These signatories print on receipts this rule issues, in this order. Choose at least one: this rule cannot issue a receipt without a signatory.",
+  "ui.builder.signatories.noPeople": "No one can sign yet. Add people on the Signatories screen first.",
+  "ui.builder.signatories.openScreen": "Open Signatories",
+  "ui.builder.signatories.none": "No signatories chosen, so no signature prints.",
+  "ui.builder.signatories.noneReceipt": "No signatory chosen, so this rule cannot issue a receipt yet.",
+  "ui.builder.signatories.add": "Add a signatory",
+  "ui.builder.signatories.limit": "Up to four signatories.",
+  "ui.builder.signatories.earlier": "Earlier",
+  "ui.builder.signatories.later": "Later",
+  "ui.builder.signatories.remove": "Remove",
+  "ui.builder.signatories.save": "Save signatories",
+  "ui.builder.signatories.saved": "Signatories saved.",
 
   "ui.builder.generic.general": "General",
   "ui.builder.generic.loadFailed": "The rules for this kind of definition could not be loaded. You can still edit it on the JSON tab.",

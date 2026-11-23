@@ -1,14 +1,16 @@
 import type { JSONSchemaType } from 'ajv';
 import { schemaOf } from './schema.js';
 
-type ConnectorKind = 'sms' | 'whatsapp' | 'webhook' | 'http' | 'oauth';
-const kind = { type: 'string', enum: ['sms', 'whatsapp', 'webhook', 'http', 'oauth'] } as const;
+type ConnectorKind = 'sms' | 'whatsapp' | 'webhook' | 'http' | 'oauth' | 'storage' | 'email';
+const kind = { type: 'string', enum: ['sms', 'whatsapp', 'webhook', 'http', 'oauth', 'storage', 'email'] } as const;
 
 /** A connector's settings. Secrets are listed by name only; their values never leave the server. */
 export interface ConnectorView {
   key: string;
   kind: ConnectorKind;
   enabled: boolean;
+  /** Archived connectors are switched off, hidden from choices and kept until restored. */
+  archived: boolean;
   configured: boolean;
   config: Record<string, unknown>;
   secrets: string[];
@@ -19,12 +21,13 @@ export interface ConnectorView {
 
 export const connectorResponse: JSONSchemaType<ConnectorView> = {
   type: 'object',
-  required: ['key', 'kind', 'enabled', 'configured', 'config', 'secrets', 'oauth', 'updatedBy', 'updatedAt'],
+  required: ['key', 'kind', 'enabled', 'archived', 'configured', 'config', 'secrets', 'oauth', 'updatedBy', 'updatedAt'],
   additionalProperties: false,
   properties: {
     key: { type: 'string' },
     kind,
     enabled: { type: 'boolean' },
+    archived: { type: 'boolean' },
     configured: { type: 'boolean' },
     config: { type: 'object', required: [], additionalProperties: true },
     secrets: { type: 'array', items: { type: 'string' } },
@@ -46,6 +49,21 @@ export const connectorResponse: JSONSchemaType<ConnectorView> = {
     updatedAt: { type: 'string' },
   },
 };
+
+/** The answer to looking a connector up by key: `connector` is null when none is set up under that key, which is not an error. */
+export interface ConnectorLookup {
+  connector: ConnectorView | null;
+}
+
+export const connectorLookupResponse: JSONSchemaType<ConnectorLookup> = {
+  type: 'object',
+  required: ['connector'],
+  additionalProperties: false,
+  properties: {
+    // `nullable` rather than `anyOf`, so the response serializer still strips any property the schema does not name.
+    connector: { ...connectorResponse, nullable: true },
+  },
+} as JSONSchemaType<ConnectorLookup>;
 
 /** A test send or call: `to` is the SMS, WhatsApp or email recipient; `inputs` fills an http lookup's placeholders. */
 export interface ConnectorTestRequest {
@@ -82,6 +100,7 @@ export interface ConnectorSummary {
   key: string;
   kind: ConnectorKind;
   enabled: boolean;
+  archived: boolean;
   configured: boolean;
   usedBy: string[];
   lastDelivery: { status: 'pending' | 'sent' | 'failed'; at: string } | null;
@@ -91,12 +110,13 @@ export const connectorListResponse: JSONSchemaType<ConnectorSummary[]> = {
   type: 'array',
   items: {
     type: 'object',
-    required: ['key', 'kind', 'enabled', 'configured', 'usedBy', 'lastDelivery'],
+    required: ['key', 'kind', 'enabled', 'archived', 'configured', 'usedBy', 'lastDelivery'],
     additionalProperties: false,
     properties: {
       key: { type: 'string' },
       kind,
       enabled: { type: 'boolean' },
+      archived: { type: 'boolean' },
       configured: { type: 'boolean' },
       usedBy: { type: 'array', items: { type: 'string' } },
       lastDelivery: {

@@ -176,7 +176,7 @@ export class CatalogueStore {
     if (item) void this.router.navigate(['/builder', item.kind, item.key], tab ? { queryParams: { tab } } : {});
   }
 
-  /** The row menu. Reverting and deleting a draft are confirmed by the screen first. */
+  /** The row menu. Reverting, deleting a draft and turning a definition off are confirmed by the screen first. */
   async runRowAction(row: RowView, action: CatalogueAction): Promise<void> {
     const item = this.items().find((i) => rowId(i) === row.id);
     if (!item) return;
@@ -185,6 +185,8 @@ export class CatalogueStore {
     if (action === 'duplicate') return this.startNew({ kind: item.kind, copyOf: item });
     await this.act(async () => {
       if (action === 'deleteDraft') await this.gateway.discard(item.kind, item.key);
+      if (action === 'disable') await this.gateway.disable(item.kind, item.key);
+      if (action === 'enable') await this.gateway.enable(item.kind, item.key);
       if (action === 'revert') {
         const patch = (await this.gateway.detail(item.kind, item.key)).shipped?.patch;
         if (patch && JSON.stringify(patch) !== '{}') await this.gateway.savePatch(item.kind, item.key, {});

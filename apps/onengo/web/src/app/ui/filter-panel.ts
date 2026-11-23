@@ -6,10 +6,11 @@ import { CfForm } from './cf-form';
 import type { CfFieldDef } from './cf-types';
 import { DialogFocus } from './dialog';
 import { lockWhileOpen } from './form-panel';
+import { Btn } from '@onengo/web-kit';
 
 @Component({
   selector: 'app-list-filter-sheet',
-  imports: [CfForm, TranslatePipe, DialogFocus],
+  imports: [Btn, CfForm, TranslatePipe, DialogFocus],
   styleUrl: './styles/app-list-filter-sheet.css',
   template: `
     @if (open()) {
@@ -33,8 +34,8 @@ import { lockWhileOpen } from './form-panel';
         </div>
 
         <div class="list-filter-sheet__actions app-btn-group">
-          <button type="button" class="app-btn app-btn--ghost" (click)="onReset()">{{ 'ui.common.reset' | t }}</button>
-          <button type="button" class="app-btn app-btn--primary" (click)="applied.emit(draft())">{{ 'ui.common.apply' | t }}</button>
+          <button appBtn type="button" (click)="onReset()">{{ 'ui.common.reset' | t }}</button>
+          <button appBtn="primary" type="button" (click)="applied.emit(draft())">{{ 'ui.common.apply' | t }}</button>
         </div>
       </div>
     }

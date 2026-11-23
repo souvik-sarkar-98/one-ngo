@@ -1,0 +1,14 @@
+{
+  "key": "projectStatus",
+  "recordType": "project",
+  "initial": "planning",
+  "states": [
+    { "key": "planning", "label": "Planning" },
+    { "key": "active", "label": "Active" },
+    { "key": "completed", "label": "Completed", "final": true }
+  ],
+  "transitions": [
+    { "key": "start", "label": "Start project", "from": ["planning"], "to": "active" },
+    { "key": "complete", "label": "Mark completed", "from": ["active"], "to": "completed", "requiredFields": ["endsOn"] }
+  ]
+}

@@ -63,7 +63,7 @@ describe('permission catalogue', () => {
     const res = await call('GET', '/api/admin/permission-catalogue');
     expect(res.statusCode).toBe(200);
     const { groups, entries } = res.json() as { groups: CatalogueGroup[]; entries: CatalogueEntry[] };
-    expect(groups.map((g) => g.key)).toEqual(['record:donation', 'record:donor', 'money', 'setup']);
+    expect(groups.map((g) => g.key)).toEqual(['record:donation', 'record:donor', 'money', 'setup', 'reports']);
     expect(groups.find((g) => g.key === 'record:donation')!.kind).toBe('recordType');
     const of = (group: string) => entries.filter((e) => e.group === group).map((e) => e.permission);
 

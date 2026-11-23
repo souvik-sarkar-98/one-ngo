@@ -1,12 +1,27 @@
 import { sql } from 'kysely';
+import type { IssuerSignatory } from '../../../domain/organisations/organisation.js';
 import type { IssuerSource } from '../../../domain/receipts/ports/receipt-store.js';
 import { pg } from '../tx.js';
 
 const APP_TENANT = sql<string>`app_tenant()`;
 
-/** The organisation's identity as it stands now, for a receipt issued on `onDate`. */
+/** The ordered signatories a receipt prints: the set chosen for its rule. A receipt with no rule, or a rule with none chosen, has none. */
+async function signatoriesFor(k: ReturnType<typeof pg>, ruleKey: string | undefined) {
+  if (!ruleKey) return [];
+  return k
+    .selectFrom('organisation_signatory as s')
+    .innerJoin('organisation_signatory_use as u', 'u.signatory_id', 's.id')
+    .select(['s.name', 's.designation', 's.file_id', 's.version'])
+    .where('s.tenant_id', '=', APP_TENANT)
+    .where('u.tenant_id', '=', APP_TENANT)
+    .where('u.document_key', '=', `receipt:${ruleKey}`)
+    .orderBy('u.position')
+    .execute();
+}
+
+/** The organisation's identity as it stands now, for a receipt issued on `onDate` by `ruleKey`. */
 export const pgIssuerSource: IssuerSource = {
-  async snapshot(tx, onDate) {
+  async snapshot(tx, onDate, ruleKey) {
     const k = pg(tx);
     const tenant = await k.selectFrom('tenant').select(['name', 'legal_name']).where('id', '=', APP_TENANT).executeTakeFirstOrThrow();
     const p = await k.selectFrom('organisation_profile').selectAll().where('tenant_id', '=', APP_TENANT).executeTakeFirst();
@@ -21,10 +36,12 @@ export const pgIssuerSource: IssuerSource = {
       .orderBy('number')
       .execute();
     const logo = await k.selectFrom('tenant_asset').select(['file_id', 'version']).where('tenant_id', '=', APP_TENANT).where('kind', '=', 'logo').executeTakeFirst();
-    const signature = await k.selectFrom('tenant_asset').select(['file_id', 'version']).where('tenant_id', '=', APP_TENANT).where('kind', '=', 'signatory').executeTakeFirst();
-    const signatoryName = p?.signatory_name ?? null;
-    const signatoryDesignation = p?.signatory_designation ?? null;
-    const signatoryFile = signature ? { fileId: signature.file_id, version: signature.version } : null;
+    const assigned = await signatoriesFor(k, ruleKey);
+    const signatories: IssuerSignatory[] = assigned.map((row) => ({
+      name: row.name,
+      designation: row.designation,
+      file: row.file_id ? { fileId: row.file_id, version: row.version } : null,
+    }));
     return {
       displayName: tenant.name,
       legalName: tenant.legal_name,
@@ -35,7 +52,8 @@ export const pgIssuerSource: IssuerSource = {
           : null,
       registrations: registrations.map((r) => ({ type: r.type, number: r.number, issuingAuthority: r.issuing_authority })),
       logo: logo ? { fileId: logo.file_id, version: logo.version } : null,
-      signatory: signatoryName || signatoryDesignation || signatoryFile ? { name: signatoryName, designation: signatoryDesignation, file: signatoryFile } : null,
+      signatories,
+      signatory: signatories[0] ?? null,
     };
   },
 };

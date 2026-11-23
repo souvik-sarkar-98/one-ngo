@@ -15,6 +15,10 @@ export const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 export const LOGO_MAX_BYTES = 1024 * 1024;
 /** A signature image is a PNG, the same limit as a signature field. */
 export const SIGNATORY_MAX_BYTES = 200 * 1024;
+/** How many signatories one receipt or report prints. */
+export const SIGNATORIES_PER_DOCUMENT = 4;
+/** How many signatories one organisation keeps. */
+export const SIGNATORIES_PER_ORGANISATION = 20;
 
 export interface OrganisationContact {
   email: string | null;
@@ -75,8 +79,59 @@ export interface IssuerSnapshot {
   /** Registrations in force on the receipt date. */
   registrations: { type: string; number: string; issuingAuthority: string | null }[];
   logo: { fileId: string; version: number } | null;
-  /** Absent on receipts issued before signatories were kept. */
+  /** The ordered set printed on this receipt. Absent on receipts issued before several signatories were kept. */
+  signatories?: IssuerSignatory[];
+  /** The first of `signatories`, or the single signatory kept before several were. */
   signatory?: IssuerSignatory | null;
+}
+
+const SIGNATORY_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The signatures a receipt shows: the stored set, or the single signatory older receipts kept. */
+export function signatoriesOf(issuer: { signatories?: IssuerSignatory[] | null; signatory?: IssuerSignatory | null }): IssuerSignatory[] {
+  const listed = (issuer.signatories ?? []).filter(shownSignatory);
+  if (listed.length) return listed;
+  return issuer.signatory && shownSignatory(issuer.signatory) ? [issuer.signatory] : [];
+}
+
+function shownSignatory(signatory: IssuerSignatory): boolean {
+  return !!(signatory.name || signatory.designation || signatory.file);
+}
+
+/**
+ * A document that takes a signatory set: `receipt:<rule>`, one receipt rule, or
+ * `report:<report>`. Each prints only its own set; there is no shared default.
+ */
+export const SIGNATORY_DOCUMENT = /^(?:receipt|report):[a-z][a-zA-Z0-9_-]{0,62}$/;
+
+/** The ordered signatories of one document, `{ signatories: [ids] }`. An empty list clears the document's own set. */
+export function parseDocumentSignatories(value: unknown, issues: FieldIssue[]): string[] | null {
+  if (!knownKeys(value, '', ['signatories'], issues)) return null;
+  return idList(value.signatories, 'signatories', issues);
+}
+
+function idList(value: unknown, path: string, issues: FieldIssue[]): string[] | null {
+  if (!Array.isArray(value)) {
+    issues.push({ path, message: 'Choose the signatories in order.' });
+    return null;
+  }
+  if (value.length > SIGNATORIES_PER_DOCUMENT) {
+    issues.push({ path, message: 'A document shows at most four signatories.' });
+    return null;
+  }
+  const ids: string[] = [];
+  for (const item of value) {
+    if (typeof item !== 'string' || !SIGNATORY_ID.test(item)) {
+      issues.push({ path, message: 'Choose a signatory that exists.' });
+      return null;
+    }
+    if (ids.includes(item)) {
+      issues.push({ path, message: 'A signatory is listed once.' });
+      return null;
+    }
+    ids.push(item);
+  }
+  return ids;
 }
 
 /** Name and designation, both required. */

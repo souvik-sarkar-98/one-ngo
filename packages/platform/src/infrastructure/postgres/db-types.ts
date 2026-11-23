@@ -113,7 +113,41 @@ export interface AutomationState {
   tenant_id: string;
 }
 
+export interface BankReconciliation {
+  as_of: Timestamp;
+  book_balance: Numeric;
+  id: Generated<string>;
+  money_account_id: string;
+  note: string | null;
+  outstanding_book: Numeric;
+  signed_off_at: Generated<Timestamp>;
+  signed_off_by: string;
+  statement_balance: Numeric;
+  tenant_id: string;
+}
+
+export interface BankStatementLine {
+  amount: Numeric;
+  description: string;
+  fingerprint: string;
+  id: Generated<string>;
+  imported_at: Generated<Timestamp>;
+  imported_by: string | null;
+  journal_line_id: string | null;
+  line_date: Timestamp;
+  money_account_id: string;
+  note: string | null;
+  reference: string | null;
+  resolved_at: Timestamp | null;
+  resolved_by: string | null;
+  seq: Generated<Int8>;
+  status: Generated<string>;
+  tenant_id: string;
+}
+
 export interface Connector {
+  archived_at: Timestamp | null;
+  archived_by: string | null;
   config: Generated<ColumnType<Json, string, string>>;
   enabled: Generated<boolean>;
   key: string;
@@ -523,8 +557,6 @@ export interface OrganisationProfile {
   receipts_reviewed_by: string | null;
   setup_completed_at: Timestamp | null;
   setup_completed_by: string | null;
-  signatory_designation: string | null;
-  signatory_name: string | null;
   state: string | null;
   tenant_id: string;
   timezone: string | null;
@@ -546,6 +578,26 @@ export interface OrganisationRegistration {
   type: string;
   updated_at: Generated<Timestamp>;
   updated_by: string | null;
+}
+
+export interface OrganisationSignatory {
+  created_at: Generated<Timestamp>;
+  created_by: string;
+  designation: string;
+  file_id: string | null;
+  id: Generated<string>;
+  name: string;
+  tenant_id: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+  version: Generated<number>;
+}
+
+export interface OrganisationSignatoryUse {
+  document_key: string;
+  position: number;
+  signatory_id: string;
+  tenant_id: string;
 }
 
 export interface OutboxEvent {
@@ -683,6 +735,13 @@ export interface PublishedReport {
   title: string;
 }
 
+export interface PublishedReportSignatory {
+  file_id: string;
+  position: number;
+  published_report_id: string;
+  tenant_id: string;
+}
+
 export interface RateLimit {
   hits: Generated<number>;
   key: string;
@@ -739,6 +798,13 @@ export interface ReceiptSeries {
   label: string;
   prefix: string;
   reset: Generated<string>;
+  tenant_id: string;
+}
+
+export interface ReceiptSignatoryFile {
+  file_id: string;
+  position: number;
+  receipt_id: string;
   tenant_id: string;
 }
 
@@ -887,6 +953,14 @@ export interface TenantAsset {
   version: Generated<number>;
 }
 
+export interface TenantAuthEmailTemplate {
+  purpose: string;
+  template_key: string;
+  tenant_id: string;
+  updated_at: Generated<Timestamp>;
+  updated_by: string | null;
+}
+
 export interface TenantAuthPolicy {
   email_code_enabled: Generated<boolean>;
   minimum_assurance: Generated<string>;
@@ -973,6 +1047,8 @@ export interface DB {
   auth_throttle: AuthThrottle;
   automation_run: AutomationRun;
   automation_state: AutomationState;
+  bank_reconciliation: BankReconciliation;
+  bank_statement_line: BankStatementLine;
   connector: Connector;
   connector_delivery: ConnectorDelivery;
   connector_oauth_state: ConnectorOauthState;
@@ -1006,6 +1082,8 @@ export interface DB {
   organisation_onboarding: OrganisationOnboarding;
   organisation_profile: OrganisationProfile;
   organisation_registration: OrganisationRegistration;
+  organisation_signatory: OrganisationSignatory;
+  organisation_signatory_use: OrganisationSignatoryUse;
   outbox_event: OutboxEvent;
   passkey_challenge: PasskeyChallenge;
   passkey_credential: PasskeyCredential;
@@ -1015,12 +1093,14 @@ export interface DB {
   platform_audit: PlatformAudit;
   public_form_link: PublicFormLink;
   published_report: PublishedReport;
+  published_report_signatory: PublishedReportSignatory;
   rate_limit: RateLimit;
   receipt: Receipt;
   receipt_content: ReceiptContent;
   receipt_issuer: ReceiptIssuer;
   receipt_link: ReceiptLink;
   receipt_series: ReceiptSeries;
+  receipt_signatory_file: ReceiptSignatoryFile;
   record: Record;
   record_import: RecordImport;
   record_link: RecordLink;
@@ -1033,6 +1113,7 @@ export interface DB {
   sequence_counter: SequenceCounter;
   tenant: Tenant;
   tenant_asset: TenantAsset;
+  tenant_auth_email_template: TenantAuthEmailTemplate;
   tenant_auth_policy: TenantAuthPolicy;
   tenant_auth_provider: TenantAuthProvider;
   tenant_bind_key: TenantBindKey;

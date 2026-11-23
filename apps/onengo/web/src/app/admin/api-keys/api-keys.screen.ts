@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { PageFrame } from '@onengo/web-kit';
+import { Btn, PageFrame } from '@onengo/web-kit';
 import { TranslatePipe } from '../../services/i18n';
 import { CfForm } from '../../ui/cf-form';
 import { CreateButton } from '../../ui/create-button';
@@ -13,7 +13,7 @@ import { ApiKeysStore } from './api-keys-store';
 /** API keys: list with role and last use, create with the secret shown once, revoke confirmed in the panel, and the API documentation. */
 @Component({
   selector: 'app-admin-api-keys',
-  imports: [FilteredListPage, FilteredInfiniteList, MobileFormSheet, CfForm, CreateButton, RowMenu, ScreenHeading, TranslatePipe, PageFrame],
+  imports: [Btn, FilteredListPage, FilteredInfiniteList, MobileFormSheet, CfForm, CreateButton, RowMenu, ScreenHeading, TranslatePipe, PageFrame],
   providers: [ApiKeysStore],
   styleUrls: ['../../ui/styles/na-list-dashboard.css', '../admin.css'],
   template: `
@@ -21,7 +21,7 @@ import { ApiKeysStore } from './api-keys-store';
       <div class="admin__line admin__line--title">
         <app-screen-heading class="admin__grow" [text]="'ui.crumbs.admin.apiKeys' | t" />
         @if (!store.narrow()) {
-          <button type="button" class="app-btn app-btn--primary admin__title-action" (click)="store.keys.openCreate()">{{ 'ui.crumbs.newApiKey' | t }}</button>
+          <button appBtn="primary" type="button" class="admin__title-action" (click)="store.keys.openCreate()">{{ 'ui.crumbs.newApiKey' | t }}</button>
         }
       </div>
       @let s = store.state();
@@ -83,13 +83,13 @@ import { ApiKeysStore } from './api-keys-store';
             }
           </span>
           <div class="admin__secret">{{ c.token }}</div>
-          <button type="button" class="app-btn" (click)="store.copy()">{{ (store.copied() ? 'ui.admin.keys.copied' : 'ui.admin.keys.copy') | t }}</button>
+          <button appBtn type="button" (click)="store.copy()">{{ (store.copied() ? 'ui.admin.keys.copied' : 'ui.admin.keys.copy') | t }}</button>
           @if (c.feed) {
             <p class="muted">{{ 'ui.admin.keys.call' | t }} <code>GET /api/data/{{ store.organisationCode() }}/{{ c.feed }}</code></p>
           }
           <p class="muted">{{ 'ui.admin.keys.header' | t }} <code>Authorization: ApiKey &lt;id&gt;.&lt;secret&gt;</code></p>
         }
-        <button sheetFooterActions type="button" class="app-btn app-btn--primary" (click)="store.keys.dismissSecret()">{{ 'ui.admin.keys.done' | t }}</button>
+        <button appBtn="primary" sheetFooterActions type="button" (click)="store.keys.dismissSecret()">{{ 'ui.admin.keys.done' | t }}</button>
       </app-mobile-form-sheet>
 
       <app-mobile-form-sheet

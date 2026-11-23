@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { PageFrame } from '@onengo/web-kit';
+import { Btn, PageFrame } from '@onengo/web-kit';
 import { TranslatePipe } from '../../services/i18n';
 import { CfForm } from '../../ui/cf-form';
 import { FilteredInfiniteList } from '../../ui/filtered-infinite-list';
@@ -14,7 +14,7 @@ import { ConnectorStore } from './connectors-store';
  */
 @Component({
   selector: 'app-admin-connector',
-  imports: [FilteredInfiniteList, MobileFormSheet, CfForm, ScreenHeading, TranslatePipe, PageFrame],
+  imports: [Btn, FilteredInfiniteList, MobileFormSheet, CfForm, ScreenHeading, TranslatePipe, PageFrame],
   providers: [ConnectorStore],
   styleUrls: ['../../ui/styles/na-list-dashboard.css', '../admin.css'],
   template: `
@@ -43,7 +43,7 @@ import { ConnectorStore } from './connectors-store';
             <div class="admin__line">
               <span class="badge" [class.ok]="!!s.view?.oauth?.connected">{{ store.oauthState() }}</span>
               <span class="admin__grow"></span>
-              <button type="button" class="app-btn" [disabled]="s.isNew || s.saving" (click)="store.connect()">{{ (s.view?.oauth?.connected ? 'ui.admin.connectors.reconnect' : 'ui.admin.connectors.connect') | t }}</button>
+              <button appBtn type="button" [disabled]="s.isNew || s.saving" (click)="store.connect()">{{ (s.view?.oauth?.connected ? 'ui.admin.connectors.reconnect' : 'ui.admin.connectors.connect') | t }}</button>
             </div>
             @if (s.isNew) {
               <span class="help">{{ 'ui.admin.connectors.connectAfterSave' | t }}</span>
@@ -63,17 +63,20 @@ import { ConnectorStore } from './connectors-store';
               }
             </div>
           }
+          @if (s.view?.archived) {
+            <div class="notice info" role="status">{{ 'ui.admin.connectors.archivedNote' | t }}</div>
+          }
           <cf-form [fields]="store.fields()" [values]="s.values" [errors]="s.errors" idPrefix="connector" (valuesChange)="store.connector.setValues($event)" />
           @for (secret of s.secrets; track secret.name) {
             <div class="field">
               <label [attr.for]="'secret-' + secret.name">{{ secret.label }}</label>
               @if (secret.editing) {
-                <input [id]="'secret-' + secret.name" type="password" autocomplete="new-password" [value]="secret.value" (input)="store.connector.typeSecret(secret.name, $any($event.target).value)" />
+                <input [id]="'secret-' + secret.name" type="password" [disabled]="!!s.view?.archived" autocomplete="new-password" [value]="secret.value" (input)="store.connector.typeSecret(secret.name, $any($event.target).value)" />
               } @else {
                 <div class="admin__line">
                   <span class="badge ok">{{ 'ui.admin.connectors.set' | t }}</span>
                   <span class="admin__grow"></span>
-                  <button type="button" class="app-btn" (click)="store.connector.editSecret(secret.name)">{{ 'ui.admin.connectors.replace' | t }}</button>
+                  <button appBtn type="button" [disabled]="!!s.view?.archived" (click)="store.connector.editSecret(secret.name)">{{ 'ui.admin.connectors.replace' | t }}</button>
                 </div>
               }
               @if (!secret.set && !secret.value) {
@@ -84,12 +87,12 @@ import { ConnectorStore } from './connectors-store';
               }
             </div>
           }
-          @if (s.kind === 'http') {
+          @if (s.kind === 'http' || (s.kind === 'email' && s.values['provider'] === 'http')) {
             <div class="field">
               <label for="connector-new-secret">{{ 'ui.admin.connectors.secretNameLabel' | t }}</label>
               <div class="admin__line">
                 <input id="connector-new-secret" class="admin__grow" [value]="s.newSecret" (input)="store.connector.setNewSecret($any($event.target).value)" (keydown.enter)="store.connector.addSecret()" />
-                <button type="button" class="app-btn" (click)="store.connector.addSecret()">{{ 'ui.admin.connectors.addSecret' | t }}</button>
+                <button appBtn type="button" (click)="store.connector.addSecret()">{{ 'ui.admin.connectors.addSecret' | t }}</button>
               </div>
               <span class="help">{{ 'ui.admin.connectors.h.secrets' | t }}</span>
               @if (s.errors['newSecret']; as e) {
@@ -107,14 +110,8 @@ import { ConnectorStore } from './connectors-store';
             @switch (store.testMode()) {
               @case ('phone') {
                 <div class="field">
-                  <label for="connector-test-to">{{ 'ui.admin.connectors.testTo' | t }}</label>
-                  <input id="connector-test-to" type="tel" [value]="s.testTo" (input)="store.connector.setTestTo($any($event.target).value)" />
-                </div>
-              }
-              @case ('email') {
-                <div class="field">
-                  <label for="connector-test-email">{{ 'ui.admin.connectors.testToEmail' | t }}</label>
-                  <input id="connector-test-email" type="email" [value]="s.testTo" (input)="store.connector.setTestTo($any($event.target).value)" />
+                  <label for="connector-test-to">{{ (s.view?.kind === 'email' ? 'ui.admin.connectors.testToEmail' : 'ui.admin.connectors.testTo') | t }}</label>
+                  <input id="connector-test-to" [attr.type]="s.view?.kind === 'email' ? 'email' : 'tel'" [value]="s.testTo" (input)="store.connector.setTestTo($any($event.target).value)" />
                 </div>
               }
               @case ('sample') {
@@ -133,11 +130,22 @@ import { ConnectorStore } from './connectors-store';
           }
           <div class="admin__line">
             @if (!s.isNew) {
-              <button type="button" class="app-btn" [disabled]="s.saving" (click)="store.test()">{{ (store.testMode() === 'lookup' ? 'ui.admin.connectors.lookUp' : 'ui.admin.connectors.test') | t }}</button>
+              <button appBtn type="button" [disabled]="s.saving || !!s.view?.archived" (click)="store.test()">{{ (store.testMode() === 'lookup' ? 'ui.admin.connectors.lookUp' : 'ui.admin.connectors.test') | t }}</button>
+            }
+            @if (!s.isNew && s.view; as v) {
+              @if (v.archived) {
+                <button appBtn type="button" [disabled]="s.saving" (click)="store.restore()">{{ 'ui.admin.connectors.restore' | t }}</button>
+              } @else {
+                <button appBtn type="button" [disabled]="s.saving" (click)="store.setEnabled(!v.enabled)">{{ (v.enabled ? 'ui.admin.connectors.switchOff' : 'ui.admin.connectors.switchOn') | t }}</button>
+                <button appBtn type="button" [disabled]="s.saving" (click)="store.askArchive()">{{ 'ui.admin.connectors.archive' | t }}</button>
+              }
             }
             <span class="admin__grow"></span>
-            <button type="button" class="app-btn app-btn--primary" [disabled]="s.saving" (click)="store.save()">{{ (s.saving ? 'ui.common.saving' : 'ui.common.save') | t }}</button>
+            <button appBtn="primary" type="button" [disabled]="s.saving || !!s.view?.archived" (click)="store.save()">{{ (s.saving ? 'ui.common.saving' : 'ui.common.save') | t }}</button>
           </div>
+          @if (!s.isNew && s.view && !s.view.archived) {
+            <span class="help">{{ 'ui.admin.connectors.archiveHelp' | t }}</span>
+          }
           @if (s.testResult; as r) {
             <div class="notice" [class.ok]="r.ok" [class.error]="!r.ok" role="status">{{ r.message }}</div>
             @if (r.values) {
@@ -171,6 +179,15 @@ import { ConnectorStore } from './connectors-store';
       }
 
       <app-mobile-form-sheet
+        [open]="store.archiving()"
+        [title]="'ui.admin.connectors.archiveTitle' | t: { name: store.key }"
+        [saveLabel]="'ui.admin.connectors.archive' | t"
+        (dismissed)="store.cancelArchive()"
+        (save)="store.archive()">
+        <p>{{ 'ui.admin.connectors.archiveNote' | t }}</p>
+      </app-mobile-form-sheet>
+
+      <app-mobile-form-sheet
         [open]="!!store.openDelivery()"
         [title]="'ui.admin.connectors.del.result' | t"
         [showDefaultFooter]="false"
@@ -186,9 +203,9 @@ import { ConnectorStore } from './connectors-store';
             <div class="admin__problem">{{ d.error }}</div>
           }
         }
-        <button sheetFooterActions type="button" class="app-btn" (click)="store.connector.closeResult()">{{ 'ui.common.close' | t }}</button>
+        <button appBtn sheetFooterActions type="button" (click)="store.connector.closeResult()">{{ 'ui.common.close' | t }}</button>
         @if (store.openDelivery()?.status !== 'sent') {
-          <button sheetFooterActions type="button" class="app-btn app-btn--primary" (click)="store.retry(store.openDelivery()!.id)">{{ 'ui.admin.connectors.retry' | t }}</button>
+          <button appBtn="primary" sheetFooterActions type="button" (click)="store.retry(store.openDelivery()!.id)">{{ 'ui.admin.connectors.retry' | t }}</button>
         }
       </app-mobile-form-sheet>
     </app-page-frame>

@@ -7,7 +7,7 @@ import { can } from '../../domain/permissions.js';
 import type { TenantContext } from '../../domain/ports/tenant-context.js';
 import { actionPermission } from '../../runtime/definitions/action-permissions.js';
 import type { TransactionManager, Tx } from '../../domain/ports/transaction.js';
-import type { IssuerSignatory, IssuerSnapshot, OrganisationAddress, OrganisationContact } from '../../domain/organisations/organisation.js';
+import { signatoriesOf, type IssuerSnapshot, type OrganisationAddress, type OrganisationContact } from '../../domain/organisations/organisation.js';
 import type { ReceiptContent } from '../../domain/receipts/receipt-content.js';
 import type { Receipt, ReceiptService } from '../../domain/receipts/receipt-service.js';
 import type { ReceiptLinkStore } from '../../domain/receipts/ports/receipt-link-store.js';
@@ -41,6 +41,8 @@ export interface PublicReceipt {
     registrations: { type: string; number: string; issuingAuthority: string | null }[];
   };
   signatory: { name: string | null; designation: string | null } | null;
+  /** Every signature on the receipt, in print order. `signatory` is the first. */
+  signatories: { name: string | null; designation: string | null; hasImage: boolean }[];
   hasLogo: boolean;
   hasSignature: boolean;
   /** Wording kept when the receipt was issued. Null when the receipt predates layouts. */
@@ -121,7 +123,12 @@ export class ReceiptLinkService {
       const lines = opened.content
         ? { donor: null, recordTypeLabel: '', recordNumber: null, fields: [] }
         : await this.lines(tx, opened.receipt.recordId, found.tenantId);
-      const signatory = publicSignatory(opened.issuer.signatory);
+      const signatures = signatoriesOf(opened.issuer).map((signature) => ({
+        name: signature.name,
+        designation: signature.designation,
+        hasImage: !!signature.file,
+      }));
+      const signatory = signatures[0] ? { name: signatures[0].name, designation: signatures[0].designation } : null;
       return {
         number: opened.receipt.number,
         date: opened.receipt.date,
@@ -140,21 +147,23 @@ export class ReceiptLinkService {
           registrations: opened.issuer.registrations,
         },
         signatory,
+        signatories: signatures,
         hasLogo: !!opened.issuer.logo,
-        hasSignature: !!opened.issuer.signatory?.file,
+        hasSignature: signatures.some((signature) => signature.hasImage),
       };
     });
   }
 
-  async image(token: string, kind: 'logo' | 'signature'): Promise<StoredReceiptImage> {
+  async image(token: string, kind: 'logo' | 'signature', at = 0): Promise<StoredReceiptImage> {
     const found = await this.find(token);
     return this.transactions.withTenant(found.tenantId, async (tx) => {
       const opened = await this.open(tx, found.receiptId);
-      const fileId = kind === 'logo' ? opened.issuer.logo?.fileId : opened.issuer.signatory?.file?.fileId;
+      const signatures = signatoriesOf(opened.issuer);
+      const fileId = kind === 'logo' ? opened.issuer.logo?.fileId : signatures[at]?.file?.fileId;
       if (!fileId) throw notFound(MISSING);
       const row = await this.store.file(tx, fileId);
       if (!row) throw notFound(MISSING);
-      return { file: { name: row.name, mime: row.mime, size: row.size }, body: await this.files.read({ storage_key: row.storageKey, store_ref: row.storeRef }) };
+      return { file: { name: row.name, mime: row.mime, size: row.size }, body: await this.files.read(found.tenantId, { storage_key: row.storageKey, store_ref: row.storeRef }) };
     });
   }
 
@@ -247,10 +256,4 @@ function shownField(field: ReceiptField, value: unknown): { value: string; kind:
   }
   if (typeof value === 'string' || typeof value === 'number') return { value: String(value), kind: 'text' };
   return null;
-}
-
-function publicSignatory(signatory: IssuerSignatory | null | undefined): { name: string | null; designation: string | null } | null {
-  if (!signatory) return null;
-  if (!signatory.name && !signatory.designation && !signatory.file) return null;
-  return { name: signatory.name, designation: signatory.designation };
 }

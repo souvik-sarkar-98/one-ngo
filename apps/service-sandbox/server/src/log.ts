@@ -1,4 +1,4 @@
-export type LogArea = 'oidc' | 'payments' | 'storage' | 'smtp' | 'connectors' | 'pwned' | 'fixture';
+export type LogArea = 'oidc' | 'payments' | 'storage' | 'mail' | 'connectors' | 'pwned' | 'fixture';
 
 export interface LogEntry {
   id: number;

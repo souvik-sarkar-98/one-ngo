@@ -1,0 +1,18 @@
+{
+  "key": "assetLifecycle",
+  "recordType": "asset",
+  "initial": "active",
+  "states": [
+    { "key": "active", "label": "In use" },
+    { "key": "disposed", "label": "Disposed", "final": true }
+  ],
+  "transitions": [
+    {
+      "key": "dispose",
+      "label": "Record disposal",
+      "from": ["active"],
+      "to": "disposed",
+      "requiredFields": ["disposedOn", "disposalNote"]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "key": "eventStatus",
+  "recordType": "event",
+  "initial": "planned",
+  "states": [
+    { "key": "planned", "label": "Planned" },
+    { "key": "held", "label": "Held", "final": true },
+    { "key": "cancelled", "label": "Cancelled", "final": true }
+  ],
+  "transitions": [
+    { "key": "markHeld", "label": "Record as held", "from": ["planned"], "to": "held" },
+    { "key": "cancel", "label": "Cancel event", "from": ["planned"], "to": "cancelled" }
+  ]
+}

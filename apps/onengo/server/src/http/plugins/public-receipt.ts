@@ -40,7 +40,10 @@ export async function publicReceiptRoutes(
   app.get<{ Params: { token: string } }>('/api/public/receipts/:token/logo', async (req, reply) =>
     uniform(req, reply, async () => sendImage(reply, await deps.image(req.params.token, 'logo'), 'logo')),
   );
-  app.get<{ Params: { token: string } }>('/api/public/receipts/:token/signature', async (req, reply) =>
-    uniform(req, reply, async () => sendImage(reply, await deps.image(req.params.token, 'signature'), 'signature')),
+  app.get<{ Params: { token: string }; Querystring: { at?: string } }>('/api/public/receipts/:token/signature', async (req, reply) =>
+    uniform(req, reply, async () => {
+      const at = req.query.at === undefined || req.query.at === '' ? 0 : Number(req.query.at);
+      return sendImage(reply, await deps.image(req.params.token, 'signature', at), 'signature');
+    }),
   );
 }

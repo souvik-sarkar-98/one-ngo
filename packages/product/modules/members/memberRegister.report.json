@@ -1,0 +1,32 @@
+{
+  "key": "memberRegister",
+  "label": "Member register",
+  "datasets": [
+    {
+      "key": "members",
+      "label": "Members",
+      "source": "query",
+      "recordType": "member",
+      "statusIn": ["active", "inactive"],
+      "sort": { "field": "joinedOn", "dir": "asc" },
+      "fields": ["name", "category", "email", "phone", "city", "joinedOn"]
+    }
+  ],
+  "outputs": {
+    "excel": {
+      "sheets": [
+        {
+          "dataset": "members",
+          "columns": [
+            { "field": "name", "header": "Name", "format": "text" },
+            { "field": "category", "header": "Category", "format": "text" },
+            { "field": "email", "header": "Email", "format": "text" },
+            { "field": "phone", "header": "Phone", "format": "text" },
+            { "field": "city", "header": "City", "format": "text" },
+            { "field": "joinedOn", "header": "Joined on", "format": "date" }
+          ]
+        }
+      ]
+    }
+  }
+}

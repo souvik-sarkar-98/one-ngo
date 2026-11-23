@@ -1,5 +1,6 @@
-import type { ApiKey, AuditEntry, ConnectorSummary, Delivery, JobRow, RoleSummary } from '../core/admin/admin';
+import type { ApiKey, AuditEntry, ConnectorSummary, DeletedRecord, Delivery, JobRow, RoleSummary } from '../core/admin/admin';
 import { deliveryLabel, kindLabel, summaryState } from '../core/admin/connectors';
+import { binName } from '../core/admin/recycle-bin';
 import { currentTranslator, formatDate, formatNumber, t } from '../core/i18n/i18n';
 import { noticeTime } from '../core/inbox/rows';
 import type { PersonItem, RoleOption } from '../core/people/people';
@@ -260,5 +261,35 @@ export function auditRow(e: AuditEntry, typeLabel: (key: string) => string, now:
     badge: { label: area, tone: 'primary' },
     cells: [cell('when', t('ui.admin.audit.col.when'), when), cell('who', t('ui.admin.audit.col.who'), who), cell('what', t('ui.admin.audit.col.what'), what), cell('area', t('ui.admin.audit.col.area'), area)],
     actions: [],
+  };
+}
+
+// ---------------------------------------------------------- recycle bin
+
+export const binColumns = (): AdminColumn[] => [
+  col('record', t('ui.admin.bin.col.record')),
+  col('type', t('ui.admin.bin.col.type')),
+  col('deletedBy', t('ui.admin.bin.col.deletedBy')),
+  col('deletedAt', t('ui.admin.bin.col.deletedAt')),
+];
+
+/** A deleted record, with Restore. */
+export function binRow(r: DeletedRecord, now: Date): RowView {
+  const name = binName(r);
+  const by = r.deletedByName ?? t('ui.admin.audit.someone');
+  const when = noticeTime(r.deletedAt, now);
+  return {
+    id: r.id,
+    title: name,
+    subtitle: [r.typeLabel, r.number && r.number !== name ? r.number : ''].filter(Boolean).join(' · '),
+    lines: [`${t('ui.admin.bin.col.deletedBy')}: ${by}`],
+    meta: when,
+    cells: [
+      cell('record', t('ui.admin.bin.col.record'), name),
+      cell('type', t('ui.admin.bin.col.type'), r.typeLabel),
+      cell('deletedBy', t('ui.admin.bin.col.deletedBy'), by),
+      cell('deletedAt', t('ui.admin.bin.col.deletedAt'), when),
+    ],
+    actions: [{ id: 'restore', label: t('ui.admin.bin.restore') }],
   };
 }

@@ -135,6 +135,13 @@ describe('record groups', () => {
     ]);
   });
 
+  it('carry the off-Home setting only when a group is kept off Home', () => {
+    expect(resolveRecordGroups([{ key: 'assets', label: 'Assets', onHome: false, recordTypes: ['a'] }], ['a'])).toEqual([
+      { key: 'assets', label: 'Assets', onHome: false, recordTypes: ['a'] },
+    ]);
+    expect(resolveRecordGroups([{ key: 'on', label: 'On', onHome: true, recordTypes: ['a'] }], ['a'])).toEqual([{ key: 'on', label: 'On', recordTypes: ['a'] }]);
+  });
+
   it('are served per person in the runtime definitions', async () => {
     await publish('recordGroup', { key: 'giving', label: 'Giving', order: 1, recordTypes: ['gift', 'sponsor'] });
     const app = buildServer(w.platform, { devAuth: true });

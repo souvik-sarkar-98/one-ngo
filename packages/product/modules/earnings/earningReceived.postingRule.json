@@ -1,0 +1,15 @@
+{
+  "key": "earningReceived",
+  "recordType": "earning",
+  "whenStatus": "received",
+  "date": "record.receivedOn",
+  "memo": "'Earning ' + record.number + ' ' + record.title",
+  "lines": [
+    { "side": "debit", "accountExpr": "record.receivedIn", "amount": "record.amount" },
+    {
+      "side": "credit",
+      "accountExpr": "record.category == 'interest' ? 'EARN_INTEREST' : record.category == 'sales' ? 'EARN_SALES' : record.category == 'fees' ? 'EARN_FEES' : 'EARN_OTHER'",
+      "amount": "record.amount"
+    }
+  ]
+}

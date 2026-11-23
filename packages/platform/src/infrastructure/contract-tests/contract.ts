@@ -13,7 +13,7 @@ import { defineTransactionContract } from './transactions.contract.js';
 
 /**
  * The provider-neutral database contract (section 11 of
- * docs/architecture/ngo-backend-enhancement-plan.md). Every supported provider
+ * docs/plans/ngo-backend-enhancement-plan.md). Every supported provider
  * runs it in full; a provider migration is not released until it passes.
  */
 export function defineProviderContract(provider: ProviderUnderTest): void {

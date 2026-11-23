@@ -1,0 +1,15 @@
+{
+  "key": "expenseClaimPaid",
+  "recordType": "expenseClaim",
+  "whenStatus": "paid",
+  "date": "record.paidOn",
+  "memo": "'Expense ' + record.number + ' ' + record.title",
+  "lines": [
+    {
+      "side": "debit",
+      "accountExpr": "record.category == 'travel' ? 'EXP_TRAVEL' : record.category == 'programme' ? 'EXP_PROGRAM' : record.category == 'admin' ? 'EXP_ADMIN' : 'EXP_OTHER'",
+      "amount": "record.amount"
+    },
+    { "side": "credit", "accountExpr": "record.paidFrom", "amount": "record.amount" }
+  ]
+}

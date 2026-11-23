@@ -3,6 +3,8 @@ import type { RecordGroupDef } from './types.js';
 export interface ResolvedRecordGroup {
   key: string;
   label: string;
+  /** Only set when the group is kept off Home. */
+  onHome?: false;
   recordTypes: string[];
 }
 
@@ -19,7 +21,7 @@ export function resolveRecordGroups(groups: RecordGroupDef[], readable: string[]
   for (const g of sorted) {
     const recordTypes = g.recordTypes.filter((t) => allowed.has(t) && !placed.has(t));
     recordTypes.forEach((t) => placed.add(t));
-    if (recordTypes.length) out.push({ key: g.key, label: g.label, recordTypes });
+    if (recordTypes.length) out.push({ key: g.key, label: g.label, ...(g.onHome === false ? { onHome: false as const } : {}), recordTypes });
   }
   const other = readable.filter((t) => !placed.has(t));
   if (other.length) out.push({ key: 'other', label: 'Other', recordTypes: other });

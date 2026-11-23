@@ -1,0 +1,6 @@
+{
+  "key": "memberNotice",
+  "label": "Notice to a member",
+  "subject": "{{ record.subject }}",
+  "body": "Dear {{ record.memberName }},\n\n{{ record.body }}"
+}

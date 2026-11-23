@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { addRecordItem, removeRecordItem, reorderItems, setItemIcon, startingLayout, toPublished } from './layout-draft';
-import { DEFAULT_COLOURS } from '../builder/contrast';
-import { colourPicker, themeBody, themeDraft, themeIssues, themeNeedsConfirm, themeProblems } from './theme-form';
+import { DEFAULT_COLOURS, draftPairs } from '../builder/contrast';
+import {
+  colourPicker,
+  fieldContrastBadge,
+  suggestForPair,
+  themeBody,
+  themeDraft,
+  themeIssues,
+  themeNeedsConfirm,
+  themeProblems,
+  themeValuesEqual,
+} from './theme-form';
 import type { Me, RuntimeDefinitions } from '../models';
 
 const me = { capabilities: { peopleDirectory: true, configure: true } } as Me;
@@ -33,6 +43,18 @@ describe('theme form', () => {
     expect(draft.radius).toBe('8px');
     expect(themeProblems({ ...draft, brand: 'green' })).toContain('brand');
     expect(themeProblems({ ...draft, brand: '' })).toContain('brand');
+  });
+
+  it('tracks dirty drafts, contrast guidance, and suggestions', () => {
+    const published = themeDraft({ brand: '#112233' });
+    const edited = { ...published, muted: '#c0c8d0' };
+    expect(themeValuesEqual(published, edited)).toBe(false);
+    const badge = fieldContrastBadge('muted', edited);
+    expect(badge?.level).not.toBe('AA');
+    const pair = draftPairs(edited).find((p) => p.id === 'mutedOnSurface');
+    const fix = pair ? suggestForPair(pair) : null;
+    expect(fix?.field).toBe('muted');
+    expect(fix?.ratio).toBeGreaterThanOrEqual(4.5);
   });
 });
 
@@ -75,6 +97,7 @@ describe('layout draft', () => {
     expect(published.items.indexOf('records')).toBeLessThan(published.items.indexOf('record:donation'));
     expect(published.items.indexOf('record:donation')).toBeLessThan(published.items.indexOf('settings'));
     expect(published.items).toContain('inbox');
+    expect(published.items).toContain('money');
     expect(published.icons).toEqual({ 'record:donation': 'bell' });
     expect(published.listLayout).toBe('cards');
 

@@ -409,6 +409,33 @@ export class DraftSession {
     });
   }
 
+  /** Turns a module definition off for the organisation, dropping unpublished changes. Refused while something still uses it. */
+  async turnOff(): Promise<boolean> {
+    return this.switchModuleDefinition(false);
+  }
+
+  /** Turns a module definition that was turned off back on. */
+  async turnOn(): Promise<boolean> {
+    return this.switchModuleDefinition(true);
+  }
+
+  private async switchModuleDefinition(on: boolean): Promise<boolean> {
+    if (!this.snap.shipped) return false;
+    if (this.timer !== null) this.timers.clear(this.timer);
+    this.timer = null;
+    while (this.saving) await this.saving;
+    this.savedRevision = this.revision;
+    return this.run(async () => {
+      if (on) await this.gateway.enable(this.kind, this.key);
+      else {
+        await this.gateway.disable(this.kind, this.key);
+        this.local.remove(this.localId);
+      }
+      await this.reload();
+      return t(on ? 'ui.builder.turnedOn' : 'ui.builder.turnedOff');
+    });
+  }
+
   private async reload(): Promise<void> {
     const detail = await this.gateway.detail(this.kind, this.key);
     const local = detail.shipped ? this.local.read(this.localId) : null;

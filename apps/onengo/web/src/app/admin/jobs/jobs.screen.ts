@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { PageFrame } from '@onengo/web-kit';
+import { Btn, PageFrame } from '@onengo/web-kit';
 import { TranslatePipe } from '../../services/i18n';
 import { FilteredInfiniteList } from '../../ui/filtered-infinite-list';
 import { MobileFormSheet } from '../../ui/form-panel';
@@ -11,7 +11,7 @@ import { JobsStore } from './jobs-store';
 /** Background jobs: imports, bulk operations and rebuilds from everyone, with progress, failed items and Cancel. */
 @Component({
   selector: 'app-admin-jobs',
-  imports: [FilteredListPage, FilteredInfiniteList, MobileFormSheet, RowMenu, ScreenHeading, TranslatePipe, PageFrame],
+  imports: [Btn, FilteredListPage, FilteredInfiniteList, MobileFormSheet, RowMenu, ScreenHeading, TranslatePipe, PageFrame],
   providers: [JobsStore],
   styleUrls: ['../../ui/styles/na-list-dashboard.css', '../admin.css'],
   template: `
@@ -82,12 +82,12 @@ import { JobsStore } from './jobs-store';
             <p class="muted">{{ 'ui.admin.jobs.noFailed' | t }}</p>
           }
           @if (p.failed.length) {
-            <button type="button" class="app-btn" (click)="store.download()">{{ 'ui.imports.downloadFailed' | t }}</button>
+            <button appBtn type="button" (click)="store.download()">{{ 'ui.imports.downloadFailed' | t }}</button>
           }
         }
-        <button sheetFooterActions type="button" class="app-btn" (click)="store.jobs.close()">{{ 'ui.common.close' | t }}</button>
+        <button appBtn sheetFooterActions type="button" (click)="store.jobs.close()">{{ 'ui.common.close' | t }}</button>
         @if (store.running()) {
-          <button sheetFooterActions type="button" class="app-btn danger" [disabled]="p.busy" (click)="store.cancelOpen()">{{ 'ui.admin.jobs.cancel' | t }}</button>
+          <button appBtn="danger" sheetFooterActions type="button" [disabled]="p.busy" (click)="store.cancelOpen()">{{ 'ui.admin.jobs.cancel' | t }}</button>
         }
       </app-mobile-form-sheet>
     </app-page-frame>

@@ -154,6 +154,7 @@ export function originLabel(item: CatalogueItem): string {
 }
 
 export function stateLabel(item: CatalogueItem): string {
+  if (item.disabled) return t('ui.builder.catalogue.turnedOff');
   const parts: string[] = [];
   if (item.publishedVersion) parts.push(t('ui.common.version', { version: item.publishedVersion }));
   if (item.draftVersion) parts.push(t('ui.builder.draftVersion', { version: item.draftVersion }));
@@ -204,17 +205,29 @@ export function filterCatalogue(items: CatalogueItem[], a: CatalogueAddress): Ca
   return [...kept].sort((x, y) => dir * cmp(x, y));
 }
 
-export type CatalogueAction = 'open' | 'history' | 'duplicate' | 'revert' | 'deleteDraft';
+export type CatalogueAction = 'open' | 'history' | 'duplicate' | 'revert' | 'deleteDraft' | 'disable' | 'enable';
 
-/** The row menu: duplicating needs something to copy; reverting is for module definitions; only drafts can be deleted. */
+/** The base layer's own definitions are part of the app; only a module's definitions can be turned off. */
+const PLATFORM_MODULE = 'platform';
+
+/** Whether this is a definition a module brought, which the organisation may turn off. */
+export const canTurnOff = (item: Pick<CatalogueItem, 'owner' | 'moduleKey'>): boolean => item.owner === 'base' && !!item.moduleKey && item.moduleKey !== PLATFORM_MODULE;
+
+/**
+ * The row menu: duplicating needs something to copy; reverting is for module definitions; only drafts can be deleted.
+ * A definition from a module can be turned off, and a turned-off one only turned on again.
+ */
 export function rowActions(item: CatalogueItem, canPublish: boolean): { id: CatalogueAction; label: string }[] {
-  const out: { id: CatalogueAction; label: string }[] = [
-    { id: 'open', label: t('ui.builder.catalogue.open') },
-    { id: 'history', label: t('ui.builder.history') },
-  ];
+  const out: { id: CatalogueAction; label: string }[] = [{ id: 'open', label: t('ui.builder.catalogue.open') }];
+  if (item.disabled) {
+    if (canPublish) out.push({ id: 'enable', label: t('ui.builder.catalogue.turnOn') });
+    return out;
+  }
+  out.push({ id: 'history', label: t('ui.builder.history') });
   if (!canPublish) return out;
   out.push({ id: 'duplicate', label: t('ui.builder.catalogue.duplicate') });
   if (item.owner === 'base') out.push({ id: 'revert', label: t('ui.builder.revertToModule') });
+  if (canTurnOff(item)) out.push({ id: 'disable', label: t('ui.builder.catalogue.turnOff') });
   if (item.draftVersion && item.owner !== 'base') out.push({ id: 'deleteDraft', label: t('ui.builder.catalogue.deleteDraft') });
   return out;
 }
@@ -229,7 +242,7 @@ export function catalogueRow(item: CatalogueItem, canPublish: boolean): RowView 
     title: labelOf(item),
     subtitle: `${kindName(item.kind)} · ${item.key}`,
     meta: originLabel(item),
-    ...(state && { badge: { label: state, tone: item.draftVersion ? 'warning' : 'success' } }),
+    ...(state && { badge: { label: state, tone: item.disabled ? 'neutral' : item.draftVersion ? 'warning' : 'success' } }),
     cells: [
       { key: 'label', label: t('ui.builder.name'), value: labelOf(item) },
       { key: 'kind', label: t('ui.builder.kindLabel'), value: kindName(item.kind) },

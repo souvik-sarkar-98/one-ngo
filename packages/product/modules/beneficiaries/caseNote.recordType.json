@@ -1,0 +1,14 @@
+{
+  "key": "caseNote",
+  "label": "Case note",
+  "pluralLabel": "Case notes",
+  "description": "Notes on work with a beneficiary, with the date of the next follow-up.",
+  "titleField": "subject",
+  "fields": [
+    { "key": "subject", "label": "Subject", "type": "text", "required": true, "maxLength": 200, "searchable": true },
+    { "key": "beneficiary", "label": "Beneficiary", "type": "reference", "referenceType": "beneficiary", "required": true },
+    { "key": "noteDate", "label": "Date of note", "type": "date", "required": true },
+    { "key": "note", "label": "Note", "type": "longText", "required": true, "maxLength": 5000 },
+    { "key": "followUpOn", "label": "Follow up on", "type": "date", "help": "The date to follow up" }
+  ]
+}

@@ -1,10 +1,11 @@
--- 002_identity: people, membership, roles, sign-in, per-organisation sign-in
--- policy, API keys, the inbox and Home pins, and access-version invalidation.
+-- 002_identity: people, membership, roles, sign-in and its per-organisation policy,
+-- passkeys, sign-in email templates, API keys and data feeds, the inbox and Home
+-- pins, and access-version invalidation.
 --
 -- Identity is global (a person can belong to several NGOs); membership and roles
 -- are per tenant. app_user, refresh_token, auth_throttle, email_code,
--- password_token, oidc_login, connector_oauth_state and user_identity are only
--- reachable through the owner role, never as app_runtime.
+-- password_token, oidc_login, user_identity, passkey_credential and
+-- passkey_challenge are only reachable through the owner role, never as app_runtime.
 
 -- Accounts ---------------------------------------------------------------------
 -- totp_pending_secret_enc: setting up two-step again keeps the enrolled
@@ -181,7 +182,8 @@ create table tenant_auth_policy (
   minimum_assurance text not null default 'aal1'
     check (minimum_assurance in ('aal1', 'aal2', 'aal3')),
   updated_at timestamptz not null default now(),
-  updated_by text
+  updated_by text,
+  passkey_enabled boolean not null default false
 );
 
 create table tenant_auth_provider (
@@ -192,6 +194,8 @@ create table tenant_auth_provider (
     check (assurance in ('aal1', 'aal2', 'aal3')),
   updated_at timestamptz not null default now(),
   updated_by text,
+  allowed_domains text[] not null default '{}'
+    check (cardinality(allowed_domains) <= 50),
   primary key (tenant_id, provider_id)
 );
 
@@ -202,12 +206,19 @@ create table api_key (
   tenant_id uuid not null references tenant(id),
   name text not null,
   secret_hash text not null,
-  role_key text not null,
+  role_key text,
   created_by text not null,
   created_at timestamptz not null default now(),
   last_used_at timestamptz,
   revoked_at timestamptz,
-  foreign key (tenant_id, role_key) references role(tenant_id, key)
+  feed_key text,
+  foreign key (tenant_id, role_key) references role(tenant_id, key),
+  constraint api_key_one_subject check (
+    (role_key is not null and feed_key is null) or (role_key is null and feed_key is not null)
+  ),
+  constraint api_key_feed_key_shape check (
+    feed_key is null or feed_key ~ '^[a-z][a-zA-Z0-9_-]{0,62}$'
+  )
 );
 create unique index api_key_name on api_key (tenant_id, lower(name)) where revoked_at is null;
 
@@ -239,9 +250,64 @@ create table notification (
   read_at timestamptz,
   sent_at timestamptz,
   created_at timestamptz not null default now(),
-  link text check (link like '/%' and link not like '//%')
+  link text check (link like '/%' and link not like '//%'),
+  html text
 );
 create index notification_inbox on notification (tenant_id, user_id, created_at desc) where channel = 'inApp';
+
+-- Passkeys: WebAuthn platform passkeys as a sign-in method. A passkey is stored as
+-- its public key and signature counter only; the device keeps the private key and
+-- checks the person's fingerprint, face or PIN itself. No biometric data reaches the
+-- database. Credentials and ceremony challenges belong to people, not organisations,
+-- so like app_user they are reachable only through the owner role.
+-- Registered device credentials. One person may keep several (a phone and a laptop).
+create table passkey_credential (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references app_user(id),
+  credential_id text not null unique,
+  public_key bytea not null,
+  counter bigint not null default 0 check (counter >= 0),
+  transports text[] not null default '{}',
+  device_type text not null default 'singleDevice'
+    check (device_type in ('singleDevice', 'multiDevice')),
+  backed_up boolean not null default false,
+  name text not null check (char_length(name) between 1 and 60),
+  created_at timestamptz not null default now(),
+  last_used_at timestamptz,
+  revoked_at timestamptz
+);
+create index passkey_credential_user on passkey_credential (user_id) where revoked_at is null;
+
+-- One-time challenges for registration and sign-in. Each is consumed by a single
+-- ceremony and expires quickly; the organisation it was issued for is recorded.
+create table passkey_challenge (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null references tenant(id),
+  purpose text not null check (purpose in ('register', 'assert')),
+  user_id uuid references app_user(id),
+  challenge text not null,
+  expires_at timestamptz not null,
+  used_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index passkey_challenge_expiry on passkey_challenge (expires_at) where used_at is null;
+
+-- An organisation may send its sign-in code, password reset and invitation emails
+-- from one of its published message templates. A purpose without a row keeps the
+-- default wording.
+create table tenant_auth_email_template (
+  tenant_id uuid not null references tenant(id),
+  purpose text not null check (purpose in ('sign_in_code', 'password_reset', 'invite')),
+  template_key text not null check (template_key ~ '^[a-z][a-zA-Z0-9_-]{0,62}$'),
+  updated_at timestamptz not null default now(),
+  updated_by text,
+  primary key (tenant_id, purpose)
+);
+
+alter table tenant_auth_email_template enable row level security;
+create policy tenant_isolation on tenant_auth_email_template
+  using (tenant_id = (select app_tenant())) with check (tenant_id = (select app_tenant()));
+grant select, insert, update, delete on tenant_auth_email_template to app_runtime;
 
 -- Access version ---------------------------------------------------------------------
 -- Bumped on every change to who may do what (roles, role assignments, membership
@@ -268,7 +334,7 @@ create trigger tenant_member_access_version after insert or delete or update of 
   for each row execute function app_bump_access_version();
 create trigger app_user_access_version after update of status on app_user
   for each row execute function app_bump_access_version();
-create trigger api_key_access_version after update of revoked_at, role_key or delete on api_key
+create trigger api_key_access_version after update of revoked_at, role_key, feed_key or delete on api_key
   for each row execute function app_bump_access_version();
 
 -- The person's name as the current organisation knows them, for reads that do

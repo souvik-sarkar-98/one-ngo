@@ -1,10 +1,11 @@
--- 001_core: database roles, tenant binding, organisations, definitions, records,
--- events, jobs, files and integrations.
+-- 001_core: the product's database in one file. Roles and grants, tenant binding,
+-- organisations and their settings, definitions, records, files, audit, events,
+-- jobs, imports, integrations, public form links, published reports and the data
+-- migration.
 --
--- Baseline of the pre-release migration chain. It holds the final form of every
--- object and no upgrade steps, so it can only run on an empty database. Files
--- 001-005 are the product; 006 is the operator control plane and is only
--- needed by an installation that onboards organisations for other people.
+-- Written as the final form of every object, so the file runs once on an empty
+-- database. Files 002-005 build on it. 006 is the operator control plane, which
+-- only a hosted edition that onboards organisations for other people needs.
 
 -- Roles ----------------------------------------------------------------------
 -- app_runtime is the role every tenant transaction switches to, so row-level
@@ -350,6 +351,7 @@ create table record (
 );
 create index record_tenant_type on record (tenant_id, type_key, created_at desc);
 create unique index record_number on record (tenant_id, type_key, number) where number is not null;
+create index record_recycle_bin on record (tenant_id, deleted_at desc, id) where deleted_at is not null;
 
 do $$
 begin
@@ -418,7 +420,9 @@ create table file_object (
   field_key text,
   created_by text not null,
   created_at timestamptz not null default now(),
-  deleted_at timestamptz
+  deleted_at timestamptz,
+  store_ref text not null default 'platform'
+    check (store_ref ~ '^[a-z][a-z0-9:_-]{0,62}$')
 );
 create index file_object_record on file_object (tenant_id, record_id) where deleted_at is null;
 create index file_object_unlinked on file_object (created_at) where record_id is null and deleted_at is null;
@@ -613,12 +617,14 @@ create index idempotency_key_age on idempotency_key (created_at);
 create table connector (
   tenant_id uuid not null references tenant(id),
   key text not null,
-  type text not null check (type in ('smtp', 'razorpay', 'cashfree', 'webhook', 'oidc', 'sms', 'whatsapp', 'http', 'oauth')),
+  type text not null check (type in ('smtp', 'razorpay', 'cashfree', 'webhook', 'oidc', 'sms', 'whatsapp', 'http', 'oauth', 'storage', 'email')),
   config jsonb not null default '{}'::jsonb,
   secret_enc text,
   enabled boolean not null default true,
   updated_by text,
   updated_at timestamptz not null default now(),
+  archived_at timestamptz,
+  archived_by text,
   primary key (tenant_id, key)
 );
 
@@ -640,6 +646,116 @@ create table connector_delivery (
 );
 create index connector_delivery_log on connector_delivery (tenant_id, connector_key, created_at desc);
 create unique index connector_delivery_event on connector_delivery (outbox_event_id);
+
+-- Public form links: one secret link per record a visitor submitted. The raw token
+-- is encrypted. Lookup uses the hash, so a database read does not open the record.
+-- Named apart from record_link, which already stores references between records.
+create table public_form_link (
+  record_id uuid primary key references record(id),
+  tenant_id uuid not null references tenant(id),
+  token_hash text not null unique,
+  token_enc text not null,
+  created_by text not null,
+  created_at timestamptz not null default now(),
+  revoked_at timestamptz,
+  revoked_by text,
+  check ((revoked_at is null and revoked_by is null) or (revoked_at is not null and revoked_by is not null))
+);
+
+alter table public_form_link enable row level security;
+create policy tenant_isolation on public_form_link
+  using (tenant_id = (select app_tenant())) with check (tenant_id = (select app_tenant()));
+
+grant select, insert, update on public_form_link to app_runtime;
+
+-- Published reports: a reviewed report kept so chosen roles can open it. It keeps
+-- the data and layout the page and the workbook are built from, not the rendered file.
+create table published_report (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null references tenant(id),
+  report_key text not null,
+  title text not null,
+  params jsonb not null default '{}',
+  audience text[] not null default '{}',
+  created_by text not null,
+  created_at timestamptz not null default now(),
+  format text not null default 'pdf',
+  model jsonb not null,
+  constraint published_report_format check (format in ('pdf', 'excel'))
+);
+
+create index published_report_tenant on published_report (tenant_id, created_at desc);
+
+alter table published_report enable row level security;
+create policy published_report_tenant on published_report
+  using (tenant_id = (select app_tenant()))
+  with check (tenant_id = (select app_tenant()));
+
+grant select, insert on published_report to app_runtime;
+
+-- Data migration: CSV files from another system, mapped onto record types and run
+-- in order. A profile holds the files, each file's targets and the books figures
+-- applied after the run. migration_key remembers which record each old id became,
+-- so a second run updates instead of adding, and a later file can refer to a record
+-- by old id.
+create table migration_profile (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null references tenant(id),
+  name text not null check (length(name) between 1 and 120),
+  status text not null default 'draft' check (status in ('draft', 'checked', 'running', 'done', 'failed')),
+  books jsonb not null default '{}'::jsonb,
+  books_applied_at timestamptz,
+  books_result jsonb,
+  check_result jsonb,
+  job_id uuid references job(id),
+  created_by text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index migration_profile_tenant on migration_profile (tenant_id, created_at desc);
+
+create table migration_source (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null references tenant(id),
+  profile_id uuid not null references migration_profile(id) on delete cascade,
+  file_id uuid not null references file_object(id),
+  file_name text not null,
+  columns jsonb not null default '[]'::jsonb,
+  row_count integer not null default 0,
+  position integer not null,
+  mapping jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (profile_id, file_name)
+);
+create index migration_source_profile on migration_source (tenant_id, profile_id, position);
+create index migration_source_file on migration_source (file_id);
+
+create table migration_key (
+  tenant_id uuid not null references tenant(id),
+  type_key text not null,
+  old_id text not null check (length(old_id) between 1 and 200),
+  record_id uuid not null references record(id) on delete cascade,
+  profile_id uuid references migration_profile(id) on delete set null,
+  created_at timestamptz not null default now(),
+  primary key (tenant_id, type_key, old_id)
+);
+create index migration_key_record on migration_key (record_id);
+
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['migration_profile', 'migration_source', 'migration_key'] loop
+    execute format('alter table %I enable row level security', t);
+    execute format(
+      'create policy tenant_isolation on %I using (tenant_id = (select app_tenant())) with check (tenant_id = (select app_tenant()))', t);
+  end loop;
+end
+$$;
+
+grant select, insert, update on migration_profile, migration_source, migration_key to app_runtime;
+grant delete on migration_source to app_runtime;
 
 -- Row-level security -------------------------------------------------------------------------
 -- Policies bind app_runtime, the role every tenant transaction switches to. RLS is

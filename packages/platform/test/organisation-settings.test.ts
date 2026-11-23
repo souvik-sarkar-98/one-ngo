@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { OrganisationView } from '../src/application/organisations/organisation-service.js';
+import { signatoriesOf } from '../src/domain/organisations/organisation.js';
 import { buildServer } from '@onengo/server/http/server.js';
 import type { Actor } from '../src/infrastructure/postgres/db.js';
 import { admin, clerk, completeIdentity, createWorld, expectCode, today, type TestWorld } from './helpers.js';
@@ -223,7 +224,7 @@ describe('receipt issuer snapshot', () => {
 });
 
 describe('setup checklist', () => {
-  it('lists what is left, and completes once the administrator confirms identity and receipts', async () => {
+  it('lists what is left, and completes once identity, receipts and an email connector are in place', async () => {
     const start = (await call('GET', '/api/admin/organisation/setup')).json() as { complete: boolean; items: { key: string; done: boolean; required: boolean; detail?: string }[] };
     expect(start.complete).toBe(false);
     expect(Object.fromEntries(start.items.map((i) => [i.key, i.done]))).toEqual({
@@ -232,31 +233,122 @@ describe('setup checklist', () => {
       fiscalYear: true,
       receiptSeries: false,
       operationalRole: false,
-      email: true,
+      email: false,
+      fileStore: false,
       payments: false,
     });
-    expect(start.items.find((i) => i.key === 'email')).toMatchObject({ required: false, detail: 'installation' });
+    expect(start.items.find((i) => i.key === 'email')).toMatchObject({ required: true, detail: 'none' });
     await call('POST', '/api/admin/organisation/registrations', { type: '80g', number: 'NEW-80G-1' });
     await call('POST', '/api/admin/people', { email: 'fin@asha.org', displayName: 'Fin', roles: ['finance'] });
     expect((await call('POST', '/api/admin/organisation/setup/identity/confirm', {}, clerk)).statusCode).toBe(403);
     expect((await call('POST', '/api/admin/organisation/setup/payments/confirm', {})).statusCode).toBe(404);
     await call('POST', '/api/admin/organisation/setup/identity/confirm', {});
-    const done = (await call('POST', '/api/admin/organisation/setup/receiptSeries/confirm', {})).json() as { complete: boolean; completedAt: string | null };
-    expect(done.complete).toBe(true);
-    expect(done.completedAt).toEqual(expect.any(String));
+    const waiting = (await call('POST', '/api/admin/organisation/setup/receiptSeries/confirm', {})).json() as { complete: boolean; completedAt: string | null };
+    expect(waiting.complete).toBe(false);
+    expect(waiting.completedAt).toBeNull();
+    const emailConfig = { provider: 'http', method: 'POST', url: 'https://mail.example.org/send', body: '{}' };
+    await w.platform.db.withTenant(w.ngoA, async (tx) => {
+      await tx.query(`insert into connector (tenant_id, key, type, config, enabled) values (app_tenant(), 'mailer', 'email', $1, true)`, [JSON.stringify(emailConfig)]);
+      await tx.query(`insert into tenant_setting (tenant_id, key, value) values (app_tenant(), 'mail.connector', '"mailer"')`);
+      await tx.query(`insert into tenant_setting (tenant_id, key, value) values (app_tenant(), 'mail.from', '"office@asha.test"')`);
+    });
+    const still = (await call('GET', '/api/admin/organisation/setup')).json() as { complete: boolean };
+    expect(still.complete).toBe(false);
+    await w.platform.db.withTenant(w.ngoA, async (tx) => {
+      await tx.query(`insert into connector (tenant_id, key, type, config, enabled) values (app_tenant(), 'files', 'storage', $1, true)`, [
+        JSON.stringify({ provider: 'gcs', bucket: 'asha-files' }),
+      ]);
+      await tx.query(`insert into tenant_setting (tenant_id, key, value) values (app_tenant(), 'files.storeConnector', '"files"')`);
+    });
+    const done = (await call('GET', '/api/admin/organisation/setup')).json() as {
+      complete: boolean;
+      completedAt: string | null;
+      items: { key: string; done: boolean; required: boolean; detail?: string }[];
+    };
+    expect(done).toMatchObject({ complete: true, completedAt: expect.any(String) });
+    expect(done.items.find((i) => i.key === 'email')).toMatchObject({ required: true, done: true, detail: 'organisation' });
+    expect(done.items.find((i) => i.key === 'fileStore')).toMatchObject({ required: true, done: true });
+    await w.platform.db.asSystem((tx) => tx.query(`delete from tenant_setting where key = 'files.storeConnector' and tenant_id = $1`, [w.ngoA]));
   });
 
-  it("counts an enabled http email sender as the organisation's own email", async () => {
+  it('counts only a chosen enabled email connector, not an SMTP connector, as outgoing email', async () => {
     const email = async () =>
-      ((await call('GET', '/api/admin/organisation/setup', undefined, admin, w.ngoB)).json() as { items: { key: string; detail?: string }[] }).items.find((i) => i.key === 'email');
-    expect(await email()).toMatchObject({ detail: 'installation' });
-    const config = { mode: 'send', method: 'POST', url: 'https://mail.example.org/send', emailSender: true };
+      ((await call('GET', '/api/admin/organisation/setup', undefined, admin, w.ngoB)).json() as { items: { key: string; required: boolean; done: boolean; detail?: string }[] }).items.find(
+        (i) => i.key === 'email',
+      );
+    expect(await email()).toMatchObject({ required: true, done: false, detail: 'none' });
     await w.platform.db.withTenant(w.ngoB, (tx) =>
-      tx.query(`insert into connector (tenant_id, key, type, config, enabled) values (app_tenant(), 'mailer', 'http', $1, true)`, [JSON.stringify(config)]),
+      tx.query(`insert into connector (tenant_id, key, type, config, enabled) values (app_tenant(), 'legacy-smtp', 'smtp', $1, true)`, [
+        JSON.stringify({ host: 'smtp.example.org', port: 587, secure: false, user: 'mail', from: 'office@bodhi.test' }),
+      ]),
     );
-    expect(await email()).toMatchObject({ detail: 'organisation' });
-    await w.platform.db.withTenant(w.ngoB, (tx) => tx.query(`update connector set config = $1 where key = 'mailer'`, [JSON.stringify({ ...config, emailSender: false })]));
-    expect(await email()).toMatchObject({ detail: 'installation' });
+    expect(await email()).toMatchObject({ required: true, done: false, detail: 'none' });
+    const emailConfig = { provider: 'http', method: 'POST', url: 'https://mail.example.org/send', body: '{}' };
+    await w.platform.db.withTenant(w.ngoB, async (tx) => {
+      await tx.query(`insert into connector (tenant_id, key, type, config, enabled) values (app_tenant(), 'mailer', 'email', $1, true)`, [JSON.stringify(emailConfig)]);
+      await tx.query(`insert into tenant_setting (tenant_id, key, value) values (app_tenant(), 'mail.connector', '"mailer"')`);
+      await tx.query(`insert into tenant_setting (tenant_id, key, value) values (app_tenant(), 'mail.from', '"office@bodhi.test"')`);
+    });
+    expect(await email()).toMatchObject({ required: true, done: true, detail: 'organisation' });
+    await w.platform.db.withTenant(w.ngoB, (tx) => tx.query(`update connector set enabled = false where key = 'mailer'`));
+    expect(await email()).toMatchObject({ required: true, done: false, detail: 'none' });
+  });
+});
+
+describe('mail connector setting', () => {
+  const emailBody = { provider: 'http' as const, method: 'POST' as const, url: 'https://mail.example.org/send', body: '{}' };
+
+  it('returns the chosen email connector in settings', async () => {
+    const body = (await call('GET', '/api/admin/settings')).json() as { mailConnector: string | null; mailFrom: string | null; mailConnectors: { key: string }[] };
+    expect(body.mailConnector).toBe('mailer');
+    expect(body.mailFrom).toBe('office@asha.test');
+    expect(body.mailConnectors.map((c) => c.key)).toContain('mailer');
+    expect(await w.platform.connectors.emailTransport(w.ngoA)).toEqual({ send: expect.any(Function) });
+  });
+
+  it('rejects a lookup connector, an http send connector, an unknown connector and a missing From address', async () => {
+    await w.platform.connectors.save(w.as(w.ngoA), 'pin-lookup', {
+      kind: 'http',
+      enabled: true,
+      config: { mode: 'lookup', method: 'GET', url: 'https://pin.example.org/q', inputs: ['pin'], responseMap: { city: 'city' } },
+    });
+    const lookup = await call('PUT', '/api/admin/settings', { mailConnector: 'pin-lookup', mailFrom: 'office@asha.test' });
+    expect(lookup.statusCode).toBe(422);
+    expect(lookup.json().issues[0].path).toBe('mailConnector');
+    await w.platform.connectors.save(w.as(w.ngoA), 'hook-out', {
+      kind: 'http',
+      enabled: true,
+      config: { mode: 'send', method: 'POST', url: 'https://hooks.example.org/in' },
+    });
+    const httpSend = await call('PUT', '/api/admin/settings', { mailConnector: 'hook-out', mailFrom: 'office@asha.test' });
+    expect(httpSend.statusCode).toBe(422);
+    const missing = await call('PUT', '/api/admin/settings', { mailConnector: 'no-such', mailFrom: 'office@asha.test' });
+    expect(missing.statusCode).toBe(422);
+    expect(missing.json().issues[0].path).toBe('mailConnector');
+    const noFrom = await call('PUT', '/api/admin/settings', { mailConnector: 'mailer', mailFrom: '  ' });
+    expect(noFrom.statusCode).toBe(422);
+    expect(noFrom.json().issues[0].path).toBe('mailFrom');
+    expect(((await call('GET', '/api/admin/settings')).json() as { mailConnector: string }).mailConnector).toBe('mailer');
+  });
+
+  it('saves another email connector and clears the choice without falling back', async () => {
+    await w.platform.connectors.save(w.as(w.ngoA), 'desk', { kind: 'email', enabled: true, config: emailBody });
+    const saved = await call('PUT', '/api/admin/settings', { mailConnector: 'desk', mailFrom: 'desk@asha.test' });
+    expect(saved.statusCode, saved.body).toBe(200);
+    expect(saved.json()).toMatchObject({ mailConnector: 'desk', mailFrom: 'desk@asha.test' });
+    await w.platform.connectors.save(w.as(w.ngoA), 'desk', { enabled: false });
+    expect(await w.platform.connectors.emailTransport(w.ngoA)).toBeUndefined();
+    const parked = (await call('GET', '/api/admin/settings')).json() as { mailConnector: string | null; mailConnectors: { key: string }[] };
+    expect(parked.mailConnector).toBe('desk');
+    expect(parked.mailConnectors.map((c) => c.key)).toContain('desk');
+    await w.platform.connectors.save(w.as(w.ngoA), 'desk', { enabled: true });
+    expect(await w.platform.connectors.emailTransport(w.ngoA)).toEqual({ send: expect.any(Function) });
+    const cleared = await call('PUT', '/api/admin/settings', { mailConnector: null, mailFrom: null });
+    expect(cleared.statusCode, cleared.body).toBe(200);
+    expect(cleared.json()).toMatchObject({ mailConnector: null, mailFrom: null });
+    expect(await w.platform.connectors.emailTransport(w.ngoA)).toBeUndefined();
+    const setup = (await call('GET', '/api/admin/organisation/setup')).json() as { items: { key: string; done: boolean }[] };
+    expect(setup.items.find((i) => i.key === 'email')!.done).toBe(false);
   });
 });
 
@@ -377,27 +469,42 @@ describe('isolation of organisation data', () => {
 });
 
 describe('authorised signatory and public receipt link', () => {
-  const signatoryOf = (body: OrganisationView) => body.signatory;
+  const firstSignatory = (body: OrganisationView) => body.signatories[0];
+  /** The set the donation receipt rule prints, and a receipt issued by that rule. */
+  const RULE = 'donationPaidReceipt';
+  const ruleSet = `/api/admin/organisation/documents/${encodeURIComponent(`receipt:${RULE}`)}/signatories`;
+  const issueByRule = (recordId: string, amount: number) =>
+    w.platform.db.withTenant(w.ngoA, (tx) => w.platform.receipts.issue(asTx(tx), admin, { seriesKey: 'donation-receipt', ruleKey: RULE, date: today(), amount, recordId }));
+
+  it('reads a receipt that kept one signatory before several were stored', () => {
+    const older = { name: 'Meera Shah', designation: 'Treasurer', file: { fileId: 'file-1', version: 1 } };
+    expect(signatoriesOf({ signatory: older })).toEqual([older]);
+    expect(signatoriesOf({ signatories: [older, { name: 'Arun Das', designation: 'Secretary', file: null }], signatory: older })).toHaveLength(2);
+  });
 
   it('saves the name and designation, and keeps them off the sign-in page', async () => {
-    expect((await call('PUT', '/api/admin/organisation/signatory', { name: ' ', designation: 'Treasurer' })).statusCode).toBe(422);
-    expect((await call('PUT', '/api/admin/organisation/signatory', { name: 'Meera Shah', designation: 'Treasurer' }, clerk)).statusCode).toBe(403);
-    const saved = await call('PUT', '/api/admin/organisation/signatory', { name: '  Meera   Shah ', designation: 'Treasurer' });
-    expect(saved.statusCode, saved.body).toBe(200);
-    expect(signatoryOf(saved.json() as OrganisationView)).toMatchObject({ name: 'Meera Shah', designation: 'Treasurer', image: null });
+    expect((await call('POST', '/api/admin/organisation/signatories', { name: ' ', designation: 'Treasurer' })).statusCode).toBe(422);
+    expect((await call('POST', '/api/admin/organisation/signatories', { name: 'Meera Shah', designation: 'Treasurer' }, clerk)).statusCode).toBe(403);
+    const saved = await call('POST', '/api/admin/organisation/signatories', { name: '  Meera   Shah ', designation: 'Treasurer' });
+    expect(saved.statusCode, saved.body).toBe(201);
+    const body = saved.json() as OrganisationView;
+    expect(firstSignatory(body)).toMatchObject({ name: 'Meera Shah', designation: 'Treasurer', image: null });
+    // A new signatory is on no document until one chooses them.
+    expect(body.signatorySets).toEqual({});
     const branding = (await anonymous('/api/auth/organisations/asha')).json() as Record<string, unknown>;
     expect(Object.keys(branding).sort()).toEqual(['code', 'displayName', 'logoUrl', 'providers', 'theme']);
     expect(JSON.stringify(branding)).not.toMatch(/Meera|Treasurer/);
   });
 
   it('stores a PNG signature and refuses anything else', async () => {
+    const id = ((await call('GET', '/api/admin/organisation')).json() as OrganisationView).signatories[0]!.id;
     const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(16)]);
-    expect((await call('PUT', '/api/admin/organisation/signatory/image', jpeg)).statusCode).toBe(422);
-    expect((await call('PUT', '/api/admin/organisation/signatory/image', Buffer.concat([png(6), Buffer.alloc(200 * 1024)]))).statusCode).toBe(422);
-    expect((await call('PUT', '/api/admin/organisation/signatory/image', png(7), clerk)).statusCode).toBe(403);
-    const res = await call('PUT', '/api/admin/organisation/signatory/image', png(7));
+    expect((await call('PUT', `/api/admin/organisation/signatories/${id}/image`, jpeg)).statusCode).toBe(422);
+    expect((await call('PUT', `/api/admin/organisation/signatories/${id}/image`, Buffer.concat([png(6), Buffer.alloc(200 * 1024)]))).statusCode).toBe(422);
+    expect((await call('PUT', `/api/admin/organisation/signatories/${id}/image`, png(7), clerk)).statusCode).toBe(403);
+    const res = await call('PUT', `/api/admin/organisation/signatories/${id}/image`, png(7));
     expect(res.statusCode, res.body).toBe(200);
-    const image = signatoryOf(res.json() as OrganisationView)!.image!;
+    const image = firstSignatory(res.json() as OrganisationView)!.image!;
     expect(image.url).toMatch(/^\/api\/organisation\/signatories\/[0-9a-f-]+\?v=1$/);
     const fileId = image.url.split('/').pop()!.split('?')[0]!;
     expect((await call('GET', `/api/organisation/signatories/${fileId}`, undefined, member)).statusCode).toBe(403);
@@ -411,23 +518,25 @@ describe('authorised signatory and public receipt link', () => {
 
   it('keeps the signatory a receipt was issued with, and opens only that receipt from its public link', async () => {
     const { record } = await w.platform.records.create(w.as(w.ngoA), 'donation', { donorName: 'Public Donor', amount: 80 });
-    const receipt = await w.platform.db.withTenant(w.ngoA, (tx) =>
-      w.platform.receipts.issue(asTx(tx), admin, { seriesKey: 'donation-receipt', date: today(), amount: 80, recordId: record.id }),
-    );
+    const meera = ((await call('GET', '/api/admin/organisation')).json() as OrganisationView).signatories[0]!.id;
+    expect((await call('PUT', ruleSet, { signatories: [meera] })).statusCode).toBe(200);
+    const receipt = await issueByRule(record.id, 80);
     const issued = await w.platform.printView.receipt(w.as(w.ngoA), receipt.id);
+    expect(issued.issuer.signatories).toEqual([expect.objectContaining({ name: 'Meera Shah', designation: 'Treasurer' })]);
     expect(issued.issuer.signatory).toMatchObject({ name: 'Meera Shah', designation: 'Treasurer' });
     expect(issued.publicLink).toBeNull();
     const firstFile = issued.issuer.signatory!.file!.fileId;
+    const signatoryId = ((await call('GET', '/api/admin/organisation')).json() as OrganisationView).signatories[0]!.id;
 
-    await call('PUT', '/api/admin/organisation/signatory', { name: 'Later Name', designation: 'Secretary' });
-    await call('PUT', '/api/admin/organisation/signatory/image', png(8));
+    await call('PUT', `/api/admin/organisation/signatories/${signatoryId}`, { name: 'Later Name', designation: 'Secretary' });
+    await call('PUT', `/api/admin/organisation/signatories/${signatoryId}/image`, png(8));
     const reprint = await w.platform.printView.receipt(w.as(w.ngoA), receipt.id);
     expect(reprint.issuer).toEqual(issued.issuer);
     expect(issued.issuer.signatoryImageUrl).toBe(`/api/organisation/signatories/${firstFile}?receipt=${receipt.id}`);
     expect((await call('GET', issued.issuer.signatoryImageUrl!, undefined, clerk)).rawPayload.equals(png(7))).toBe(true);
     expect((await call('GET', issued.issuer.signatoryImageUrl!, undefined, member)).statusCode).toBe(403);
     const current = (await call('GET', '/api/admin/organisation')).json() as OrganisationView;
-    const currentFile = current.signatory!.image!.url.split('/').pop()!.split('?')[0]!;
+    const currentFile = current.signatories[0]!.image!.url.split('/').pop()!.split('?')[0]!;
     expect((await call('GET', `/api/organisation/signatories/${currentFile}?receipt=${receipt.id}`, undefined, clerk)).statusCode).toBe(404);
 
     const reader: Actor = { id: 'reader-1', roles: ['viewer'], permissions: ['record:donation:read'] };
@@ -448,7 +557,7 @@ describe('authorised signatory and public receipt link', () => {
     const pub = await anonymous(`/api/public/receipts/${token}`);
     expect(pub.statusCode).toBe(200);
     const body = pub.json() as Record<string, unknown>;
-    expect(Object.keys(body).sort()).toEqual(['amount', 'content', 'date', 'donor', 'fields', 'hasLogo', 'hasSignature', 'issuer', 'issuerSource', 'number', 'recordNumber', 'recordTypeLabel', 'signatory', 'status', 'title', 'voidReason']);
+    expect(Object.keys(body).sort()).toEqual(['amount', 'content', 'date', 'donor', 'fields', 'hasLogo', 'hasSignature', 'issuer', 'issuerSource', 'number', 'recordNumber', 'recordTypeLabel', 'signatories', 'signatory', 'status', 'title', 'voidReason']);
     expect(body['content']).toBeNull();
     expect(body).toMatchObject({
       title: 'Donation acknowledgement',
@@ -459,6 +568,7 @@ describe('authorised signatory and public receipt link', () => {
       hasLogo: true,
       hasSignature: true,
       signatory: { name: 'Meera Shah', designation: 'Treasurer' },
+      signatories: [{ name: 'Meera Shah', designation: 'Treasurer', hasImage: true }],
     });
     const labels = (body['fields'] as { label: string }[]).map((f) => f.label);
     expect(labels).not.toContain('Donor');
@@ -502,6 +612,61 @@ describe('authorised signatory and public receipt link', () => {
     expect(kept[0]).toEqual({ deleted: false });
     const other = await w.platform.db.withTenant(w.ngoB, (tx) => tx.query(`select * from receipt_link`));
     expect(other).toEqual([]);
+  });
+
+  it('prints every signatory in the receipt set, and refuses a fifth or removing one still shown', async () => {
+    const current = (await call('GET', '/api/admin/organisation')).json() as OrganisationView;
+    const first = current.signatories[0]!.id;
+    const added = await call('POST', '/api/admin/organisation/signatories', { name: 'Arun Das', designation: 'Secretary' });
+    const second = (added.json() as OrganisationView).signatories.at(-1)!.id;
+    const more: string[] = [];
+    for (const name of ['Nia', 'Dev', 'Leela']) {
+      const created = await call('POST', '/api/admin/organisation/signatories', { name, designation: 'Trustee' });
+      more.push((created.json() as OrganisationView).signatories.at(-1)!.id);
+    }
+    expect((await call('PUT', ruleSet, { signatories: [first, second, ...more] })).statusCode).toBe(422);
+    expect((await call('PUT', `/api/admin/organisation/documents/${encodeURIComponent('Not A Document')}/signatories`, { signatories: [first] })).statusCode).toBe(422);
+    // Neither receipts nor reports share a set: only a named receipt rule or report takes one.
+    expect((await call('PUT', '/api/admin/organisation/documents/report/signatories', { signatories: [first] })).statusCode).toBe(422);
+    expect((await call('PUT', '/api/admin/organisation/documents/receipt/signatories', { signatories: [first] })).statusCode).toBe(422);
+    expect((await call('PUT', ruleSet, { signatories: [second, first] })).statusCode).toBe(200);
+    expect((await call('DELETE', `/api/admin/organisation/signatories/${first}`)).statusCode).toBe(409);
+
+    const { record } = await w.platform.records.create(w.as(w.ngoA), 'donation', { donorName: 'Two Signatures', amount: 20 });
+    const receipt = await issueByRule(record.id, 20);
+    const issued = await w.platform.printView.receipt(w.as(w.ngoA), receipt.id);
+    expect(issued.issuer.signatories?.map((signatory) => signatory.name)).toEqual(['Arun Das', 'Later Name']);
+    expect(issued.issuer.signatoryImageUrls?.filter(Boolean)).toHaveLength(1);
+    await call('PUT', ruleSet, { signatories: [second] });
+    const reprint = await w.platform.printView.receipt(w.as(w.ngoA), receipt.id);
+    expect(reprint.issuer.signatories).toEqual(issued.issuer.signatories);
+    expect((await call('DELETE', `/api/admin/organisation/signatories/${more[0]}`)).statusCode).toBe(204);
+  });
+
+  it('refuses a receipt from a rule with no signatory, and a replacement prints what it replaces printed', async () => {
+    const add = async (name: string) => ((await call('POST', '/api/admin/organisation/signatories', { name, designation: 'Trustee' })).json() as OrganisationView).signatories.at(-1)!.id;
+    const ruleOne = await add('Omar Rais');
+    const ruleTwo = await add('Ruth Kaul');
+    expect((await call('PUT', `/api/admin/organisation/documents/${encodeURIComponent('receipt:noSuchRule')}/signatories`, { signatories: [ruleOne] })).statusCode).toBe(404);
+    expect((await call('PUT', ruleSet, { signatories: [ruleOne] }, member)).statusCode).toBe(403);
+
+    // With none chosen the rule issues nothing, and says why; no number is used up.
+    expect((await call('PUT', ruleSet, { signatories: [] })).statusCode).toBe(200);
+    const { record } = await w.platform.records.create(w.as(w.ngoA), 'donation', { donorName: 'Rule Signatures', amount: 40 });
+    const refused = await expectCode(issueByRule(record.id, 40), 'rule_violation');
+    expect((refused as { textKey?: string }).textKey).toBe('ui.records.receiptSignatoryMissing');
+    expect(await w.platform.db.withTenant(w.ngoA, (tx) => w.platform.receipts.forRecord(asTx(tx), record.id))).toEqual([]);
+
+    expect((await call('PUT', ruleSet, { signatories: [ruleOne] })).statusCode).toBe(200);
+    const byRule = await issueByRule(record.id, 40);
+    const names = async (id: string) => (await w.platform.printView.receipt(w.as(w.ngoA), id)).issuer.signatories?.map((signatory) => signatory.name);
+    expect(await names(byRule.id)).toEqual(['Omar Rais']);
+
+    // Changing the rule's set leaves the issued receipt as it was; its replacement prints what it printed.
+    await call('PUT', ruleSet, { signatories: [ruleTwo] });
+    expect(await names(byRule.id)).toEqual(['Omar Rais']);
+    const replaced = await w.platform.db.withTenant(w.ngoA, (tx) => w.platform.receipts.replace(asTx(tx), admin, byRule.id, 'Entered twice', { amount: 40 }));
+    expect(await names(replaced.replacement.id)).toEqual(['Omar Rais']);
   });
 
   it('shares the organisation lookup limit', async () => {

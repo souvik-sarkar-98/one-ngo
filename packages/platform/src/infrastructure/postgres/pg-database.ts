@@ -79,7 +79,7 @@ export class PgDatabase implements Database {
   /** Tenant transactions; the owner pool unless a runtime login is configured. */
   private readonly runtimePool: pg.Pool;
   private readonly target: { connectionString: string; schema?: string };
-  /** Presented to app_bind_tenant; only its hash is stored, by the owner (migration 026). */
+  /** Presented to app_bind_tenant; only its hash is stored, by the owner (001_core.sql). */
   private readonly bindKey = randomBytes(32).toString('hex');
   private bindKeyRegistered: Promise<void> | undefined;
 

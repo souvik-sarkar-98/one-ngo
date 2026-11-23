@@ -40,6 +40,7 @@
   "ui.common.search": "தேடு",
   "ui.common.searching": "தேடுகிறது…",
   "ui.common.seeAll": "அனைத்தையும் காட்டு",
+  "ui.common.contactAdministrator": "இதை முடிக்க முடியவில்லை. உங்கள் நிர்வாகியைத் தொடர்பு கொள்ளுங்கள்.",
   "ui.common.somethingWentWrong": "எங்கள் பக்கத்தில் ஏதோ தவறு ஏற்பட்டது. சிறிது நேரத்தில் மீண்டும் முயலுங்கள்.",
   "ui.common.sort": "வரிசைப்படுத்து",
   "ui.common.startDate": "தொடக்க தேதி",

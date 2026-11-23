@@ -4,7 +4,7 @@ import type { Tx } from '../../../domain/ports/transaction.js';
 import type { ModuleManifest } from '../../../runtime/definitions/types.js';
 import type { UploadInput } from '../../files/file-service.js';
 import type { RoleInput } from '../../identity/identity-service.js';
-import type { OrganisationBranding, OrganisationProfileInput, OrganisationView, SetupChecklist, SignInIdentity, StoredLogo } from '../organisation-service.js';
+import type { DocumentSignatories, OrganisationBranding, OrganisationProfileInput, OrganisationView, SetupChecklist, SignInIdentity, StoredLogo } from '../organisation-service.js';
 
 /** What the organisation routes ask of the organisation's own profile, logo and sign-in page. */
 
@@ -22,15 +22,18 @@ export interface OrganisationProfile {
   confirmSetup(ctx: TenantContext, step: string): Promise<SetupChecklist>;
   setLogo(ctx: TenantContext, upload: Pick<UploadInput, 'body' | 'name'>): Promise<OrganisationView>;
   removeLogo(ctx: TenantContext): Promise<void>;
-  saveSignatory(ctx: TenantContext, input: unknown): Promise<OrganisationView>;
-  setSignatoryImage(ctx: TenantContext, upload: Pick<UploadInput, 'body' | 'name'>): Promise<OrganisationView>;
-  removeSignatory(ctx: TenantContext): Promise<void>;
+  addSignatory(ctx: TenantContext, input: unknown): Promise<OrganisationView>;
+  updateSignatory(ctx: TenantContext, id: string, input: unknown): Promise<OrganisationView>;
+  setSignatoryImage(ctx: TenantContext, id: string, upload: Pick<UploadInput, 'body' | 'name'>): Promise<OrganisationView>;
+  removeSignatory(ctx: TenantContext, id: string): Promise<void>;
+  documentSignatories(ctx: TenantContext): Promise<DocumentSignatories>;
+  setDocumentSignatories(ctx: TenantContext, documentKey: string, input: unknown): Promise<DocumentSignatories>;
   keptSignatory(ctx: TenantContext, fileId: string, shownOnReadableReceipt?: boolean): Promise<StoredLogo>;
 }
 
 /** The signature image a receipt shows, once the person is known to be allowed to read its record. */
 export interface ReceiptSignatures {
-  signatureFile(ctx: TenantContext, receiptId: string): Promise<string | null>;
+  signatureFiles(ctx: TenantContext, receiptId: string): Promise<string[]>;
 }
 
 /** An active organisation's logo, found by its code. */

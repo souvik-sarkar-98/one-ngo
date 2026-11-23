@@ -1,4 +1,5 @@
 import { Component, computed, input, output } from '@angular/core';
+import { Btn } from '@onengo/web-kit';
 import { t } from '../core/i18n/i18n';
 import type { RowView } from '../core/rows';
 import { withDefaults } from './labels';
@@ -25,7 +26,7 @@ const LABELS = () => ({ actions: t('ui.common.actions'), more: t('ui.common.more
  */
 @Component({
   selector: 'app-table-rows',
-  imports: [RowMenu],
+  imports: [Btn, RowMenu],
   styleUrl: './styles/table-rows.css',
   styles: `
     .table-rows__buttons {
@@ -109,9 +110,7 @@ const LABELS = () => ({ actions: t('ui.common.actions'), more: t('ui.common.more
                     @for (a of r.actions; track a.id) {
                       <button
                         type="button"
-                        class="app-btn"
-                        [class.app-btn--primary]="a.tone === 'primary'"
-                        [class.danger]="a.tone === 'danger'"
+                        [appBtn]="a.tone === 'primary' ? 'primary' : a.tone === 'danger' ? 'danger' : ''"
                         [disabled]="actionsDisabled()"
                         (click)="$event.stopPropagation(); rowAction.emit({ row: r, action: a.id })">
                         {{ a.label }}

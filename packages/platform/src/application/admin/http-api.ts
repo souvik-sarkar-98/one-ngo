@@ -59,12 +59,20 @@ export class ConnectorOverview {
   ) {}
 
   async list(ctx: RequestContext) {
+    return this.connectors.list(ctx, await this.users(ctx));
+  }
+
+  /** Archives a connector; refused while a published definition, Settings or another connector uses it. */
+  async archive(ctx: RequestContext, key: string) {
+    return this.connectors.archive(ctx, key, await this.users(ctx));
+  }
+
+  private async users(ctx: RequestContext) {
     const kinds = ['action', 'automation', 'workflow', 'script', 'recordType'] as const;
-    const users = (await Promise.all(kinds.map((k) => this.definitions.list(ctx.tenantId, k)))).flat().map((d) => {
+    return (await Promise.all(kinds.map((k) => this.definitions.list(ctx.tenantId, k)))).flat().map((d) => {
       const body = d.body as unknown as { key: string; label?: string };
       return { label: body.label ?? body.key, body };
     });
-    return this.connectors.list(ctx, users);
   }
 }
 

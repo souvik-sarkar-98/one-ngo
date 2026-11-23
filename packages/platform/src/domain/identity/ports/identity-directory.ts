@@ -52,6 +52,7 @@ export interface SystemIdentity {
 
 export interface AccountRow {
   id: string;
+  display_name: string;
   email: string;
   password_hash: string | null;
   totp_secret_enc: string | null;
@@ -93,8 +94,16 @@ export interface PasswordTokenInput {
   evidence?: AuthenticationEvidence;
 }
 
+/** The system emails an organisation may send from one of its message templates. */
+export const EMAIL_PURPOSES = ['sign_in_code', 'password_reset', 'invite'] as const;
+export type EmailPurpose = (typeof EMAIL_PURPOSES)[number];
+
 /** One-time sign-in credentials (emailed codes, reset and invitation links, two-step tickets) and failed-attempt throttling. */
 export interface SignInStore {
+  /** The organisation's chosen template key per purpose; a purpose without one keeps the default wording. */
+  emailTemplates(tenantId: string): Promise<Partial<Record<EmailPurpose, string>>>;
+  /** Replaces every choice of the organisation at once; a purpose left out keeps the default wording. */
+  saveEmailTemplates(tenantId: string, templates: Partial<Record<EmailPurpose, string>>, updatedBy: string): Promise<void>;
   addEmailCode(email: string, tenantId: string, codeHash: string, ttlMinutes: number): Promise<void>;
   /** Uses the newest live code for the address when it has this hash; a wrong code counts an attempt, and five end it. */
   useEmailCode(email: string, tenantId: string, codeHash: string): Promise<boolean>;

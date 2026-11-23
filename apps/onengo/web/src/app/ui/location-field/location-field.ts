@@ -15,6 +15,7 @@ import {
 import type { FormValue } from '../../core/records/record/forms';
 import { TranslatePipe } from '../../services/i18n';
 import type { CfFieldDef } from '../cf-types';
+import { Btn } from '@onengo/web-kit';
 
 /**
  * A location field: "Use my location" (the browser's Geolocation, with its
@@ -24,7 +25,7 @@ import type { CfFieldDef } from '../cf-types';
  */
 @Component({
   selector: 'app-location-field',
-  imports: [TranslatePipe],
+  imports: [Btn, TranslatePipe],
   styles: `
     :host {
       display: block;
@@ -34,11 +35,11 @@ import type { CfFieldDef } from '../cf-types';
       flex-direction: column;
       gap: 8px;
       padding: 12px;
-      border: 1px solid #cbd5e1;
+      border: 1px solid var(--line-strong);
       border-radius: 10px;
     }
     .location-field__box[data-invalid='true'] {
-      border-color: #ba1a1a;
+      border-color: var(--error-color);
     }
     .location-field__row {
       display: flex;
@@ -59,12 +60,12 @@ import type { CfFieldDef } from '../cf-types';
       padding: 3px 8px;
       font-size: 0.68rem;
       font-weight: 700;
-      background: #dcfce7;
-      color: #15803d;
+      background: var(--badge-ok-bg);
+      color: var(--ok);
     }
     .location-field__badge[data-low='true'] {
-      background: #fef3c7;
-      color: #b45309;
+      background: var(--badge-warn-bg);
+      color: var(--warn);
     }
     .location-field__link {
       border: 0;
@@ -76,11 +77,11 @@ import type { CfFieldDef } from '../cf-types';
       cursor: pointer;
     }
     .location-field__muted {
-      color: #64748b;
+      color: var(--grey-500);
       font-size: 0.75rem;
     }
     .location-field__problem {
-      color: #b91c1c;
+      color: var(--bad);
       font-size: 0.75rem;
     }
     .location-field__inputs {
@@ -98,13 +99,13 @@ import type { CfFieldDef } from '../cf-types';
     .location-field__input input {
       height: 40px;
       padding: 0 10px;
-      border: 1px solid #79747e;
+      border: 1px solid var(--field-border);
       border-radius: 4px;
       font: inherit;
       font-size: 0.875rem;
     }
     .location-field__input input[aria-invalid='true'] {
-      border-color: #ba1a1a;
+      border-color: var(--error-color);
     }
   `,
   template: `
@@ -160,7 +161,7 @@ import type { CfFieldDef } from '../cf-types';
           }
         </div>
       } @else {
-        <button type="button" class="app-btn" [id]="fieldId()" [disabled]="locating()" (click)="locate()" style="align-self: flex-start">
+        <button appBtn type="button" [id]="fieldId()" [disabled]="locating()" (click)="locate()" style="align-self: flex-start">
           ◎ {{ 'ui.fields.location.useMine' | t }}
         </button>
         @if (canType()) {

@@ -7,6 +7,7 @@ import { Autocomplete } from './autocomplete';
 import { CfForm } from './cf-form';
 import type { CfFieldDef } from './cf-types';
 import { MobileFormSheet } from './form-panel';
+import { Btn } from '@onengo/web-kit';
 
 let nextId = 0;
 
@@ -25,21 +26,21 @@ export interface ShareRow {
  */
 @Component({
   selector: 'app-share-panel',
-  imports: [MobileFormSheet, Autocomplete, CfForm, TranslatePipe],
+  imports: [Btn, MobileFormSheet, Autocomplete, CfForm, TranslatePipe],
   styles: `
     .share-panel__note {
       margin: 0 0 12px;
       font-size: 0.8rem;
     }
     .share-panel__note--problem {
-      color: #b91c1c;
+      color: var(--bad);
     }
     .share-panel__note--done {
-      color: #15803d;
+      color: var(--ok);
     }
     .share-panel__note--warning {
       margin: -4px 0 12px;
-      color: #b45309;
+      color: var(--warn);
     }
     .share-panel__head {
       margin-bottom: 4px;
@@ -94,13 +95,13 @@ export interface ShareRow {
       border: 0;
       border-radius: 50%;
       background: transparent;
-      color: #49454f;
+      color: var(--grey-600);
       font: inherit;
       cursor: pointer;
     }
     .share-panel__remove:hover,
     .share-panel__remove:focus-visible {
-      background: #eef3f8;
+      background: var(--badge-bg);
     }
     .share-panel__field {
       margin-bottom: 12px;
@@ -176,8 +177,8 @@ export interface ShareRow {
       <div class="share-panel__field">
         <span class="share-panel__label" [id]="accessId">{{ 'ui.share.access' | t }}</span>
         <div class="share-panel__switch" role="radiogroup" [attr.aria-labelledby]="accessId">
-          <button type="button" role="radio" [attr.aria-checked]="access() === 'read'" (click)="accessChange.emit('read')">{{ 'ui.share.canView' | t }}</button>
-          <button type="button" role="radio" [attr.aria-checked]="access() === 'edit'" (click)="accessChange.emit('edit')">{{ 'ui.share.canEdit' | t }}</button>
+          <button type="button" class="share-panel__option" role="radio" [attr.aria-checked]="access() === 'read'" (click)="accessChange.emit('read')">{{ 'ui.share.canView' | t }}</button>
+          <button type="button" class="share-panel__option" role="radio" [attr.aria-checked]="access() === 'edit'" (click)="accessChange.emit('edit')">{{ 'ui.share.canEdit' | t }}</button>
         </div>
         @if (errors()['access']; as e) {
           <div class="cf-field-error" role="alert">{{ e }}</div>
@@ -190,8 +191,8 @@ export interface ShareRow {
 
       <cf-form [fields]="endFields()" [values]="endValues()" [errors]="endErrors()" idPrefix="share" (valuesChange)="setEnd($event)"></cf-form>
 
-      <button sheetFooterActions type="button" class="app-btn app-btn--ghost" (click)="dismissed.emit()">{{ 'ui.common.close' | t }}</button>
-      <button sheetFooterActions type="button" class="app-btn app-btn--primary" [disabled]="busy()" (click)="submit.emit()">
+      <button appBtn sheetFooterActions type="button" (click)="dismissed.emit()">{{ 'ui.common.close' | t }}</button>
+      <button appBtn="primary" sheetFooterActions type="button" [disabled]="busy()" (click)="submit.emit()">
         {{ (busy() ? 'ui.common.submitting' : 'ui.share.submit') | t }}
       </button>
     </app-mobile-form-sheet>

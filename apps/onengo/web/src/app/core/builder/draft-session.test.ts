@@ -281,6 +281,43 @@ describe('DraftSession: discard, restore, revert', () => {
     expect(s.snapshot.body?.['label']).toBe((await g.builder.detail('recordType', 'donation')).shipped?.base['label']);
   });
 
+  it('turns a module definition off and on again, keeping the organisation\'s changes', async () => {
+    const g = memoryGateway();
+    await g.builder.savePatch('recordType', 'donation', { label: 'Gift' });
+    // The workflow uses the record type, so the workflow goes first.
+    const flow = open(g, 'workflow', 'donation');
+    await flow.s.load();
+    expect(await flow.s.turnOff()).toBe(true);
+    expect(flow.s.snapshot).toMatchObject({ message: 'Turned off.', body: null });
+    expect(flow.s.snapshot.detail?.shipped?.disabled).toBe(true);
+    expect((await g.builder.catalogue()).find((i) => i.kind === 'workflow' && i.key === 'donation')).toMatchObject({ disabled: true, publishedVersion: null });
+
+    const { s } = open(g, 'recordType', 'donation');
+    await s.load();
+    expect(await s.turnOff()).toBe(true);
+    await expect(g.builder.savePatch('recordType', 'donation', { label: 'Other' })).rejects.toMatchObject({ code: 'definition_invalid' });
+    expect(await s.turnOn()).toBe(true);
+    expect(s.snapshot).toMatchObject({ message: 'Turned on.', patched: true });
+    expect(s.snapshot.detail?.shipped?.disabled).toBe(false);
+    expect(s.snapshot.body?.['label']).toBe('Gift');
+  });
+
+  it('keeps a module definition on when something published still uses it', async () => {
+    const g = memoryGateway();
+    const { s } = open(g, 'recordType', 'donation');
+    await s.load();
+    expect(await s.turnOff()).toBe(false);
+    expect(s.snapshot.error).toContain('still in use');
+    expect(s.snapshot.detail?.shipped?.disabled).toBe(false);
+  });
+
+  it('does not turn off an organisation\'s own definition', async () => {
+    const g = await tenantDefinition();
+    const { s } = open(g, 'recordType', 'volunteer');
+    await s.load();
+    expect(await s.turnOff()).toBe(false);
+  });
+
   it('does not revert an organisation\'s own definition', async () => {
     const g = await tenantDefinition();
     const { s } = open(g, 'recordType', 'volunteer');

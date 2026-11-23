@@ -31,13 +31,13 @@ const NOTHING: SuggestionSource = { search: async () => [] };
       border: 0;
       border-radius: 50%;
       background: transparent;
-      color: #49454f;
+      color: var(--grey-600);
       font: inherit;
       cursor: pointer;
     }
     .record-picker__clear:hover,
     .record-picker__clear:focus-visible {
-      background: #eef3f8;
+      background: var(--badge-bg);
     }
   `,
   template: `

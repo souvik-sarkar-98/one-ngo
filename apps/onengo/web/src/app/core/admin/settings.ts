@@ -31,7 +31,36 @@ export function settingsValues(s: OrganisationSettings): FormValues {
     apiRequestsPerMinute: String(s.apiRequestsPerMinute),
     corsOrigins: (s.corsOrigins ?? []).join('\n'),
     financialYearStartMonth: String(s.financialYearStartMonth),
+    mailConnector: s.mailConnector ?? '',
+    mailFrom: s.mailFrom ?? '',
+    fileStoreConnector: s.fileStoreConnector ?? '',
   };
+}
+
+/** The sign-in email choices as the form holds them: a template key, or '' for the default wording. */
+export function emailTemplateValues(s: OrganisationSettings): FormValues {
+  return {
+    signInCodeTemplate: s.emailTemplates.sign_in_code ?? '',
+    passwordResetTemplate: s.emailTemplates.password_reset ?? '',
+    inviteTemplate: s.emailTemplates.invite ?? '',
+  };
+}
+
+/** What Save sends from Sign-in emails: all three choices, when one changed. An empty choice is the default wording. */
+export function emailTemplatesChange(s: OrganisationSettings, v: FormValues): { change: SettingsChange } {
+  const pick = (key: string): string | null => String(v[key] ?? '').trim() || null;
+  const templates = { sign_in_code: pick('signInCodeTemplate'), password_reset: pick('passwordResetTemplate'), invite: pick('inviteTemplate') };
+  const same = (Object.keys(templates) as (keyof typeof templates)[]).every((k) => templates[k] === s.emailTemplates[k]);
+  return same ? { change: {} } : { change: { emailTemplates: templates } };
+}
+
+/** What Save sends from Mail: the connector and its From address, or neither. */
+export function mailChange(v: FormValues): { change: SettingsChange } | { errors: Record<string, string> } {
+  const connector = String(v['mailConnector'] ?? '').trim();
+  const from = String(v['mailFrom'] ?? '').trim();
+  if (!connector) return { change: { mailConnector: null, mailFrom: null } };
+  if (!from || from.length > 320) return { errors: { mailFrom: t('ui.records.required', { field: t('ui.admin.settings.mailFrom') }) } };
+  return { change: { mailConnector: connector, mailFrom: from } };
 }
 
 /** January to December in the app language, as options keyed 1 to 12. */
@@ -71,6 +100,8 @@ export function settingsChange(s: OrganisationSettings, v: FormValues): { change
   else if (origins.list.join('\n') !== (s.corsOrigins ?? []).join('\n')) change.corsOrigins = origins.list;
   const month = Number(v['financialYearStartMonth'] ?? s.financialYearStartMonth);
   if (!s.financialYearFixed && Number.isInteger(month) && month >= 1 && month <= 12 && month !== s.financialYearStartMonth) change.financialYearStartMonth = month;
+  const store = String(v['fileStoreConnector'] ?? '').trim();
+  if (store && store !== (s.fileStoreConnector ?? '')) change.fileStoreConnector = store;
   return Object.keys(errors).length ? { errors } : { change };
 }
 

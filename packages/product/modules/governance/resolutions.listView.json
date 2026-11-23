@@ -1,0 +1,28 @@
+{
+  "key": "resolutions",
+  "recordType": "resolution",
+  "label": "Resolutions",
+  "pageSize": 20,
+  "layout": "table",
+  "columns": ["number", "title", "meeting", "votesFor", "votesAgainst", "passedOn", "status"],
+  "compactColumns": ["title", "status"],
+  "chips": [
+    { "id": "for_vote", "label": "For vote", "statusIn": ["proposed"] },
+    { "id": "passed", "label": "Passed", "statusIn": ["passed"] },
+    { "id": "all", "label": "All" }
+  ],
+  "defaultChip": "for_vote",
+  "filters": ["passedOn"],
+  "row": { "title": "title", "subtitle": ["meeting"], "meta": "passedOn", "badge": "status" },
+  "detail": {
+    "sections": [
+      {
+        "id": "resolution",
+        "label": "Resolution",
+        "fields": ["number", "status", "title", "meeting", "text", "votesFor", "votesAgainst", "passedOn", "notes"]
+      }
+    ]
+  },
+  "create": { "fields": ["title", "meeting", "text", "notes"] },
+  "edit": { "fields": ["title", "meeting", "text", "votesFor", "votesAgainst", "notes"] }
+}

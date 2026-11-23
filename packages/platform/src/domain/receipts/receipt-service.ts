@@ -3,7 +3,7 @@ import { notFound, ruleViolation, validationFailed } from '@onengo/kernel/errors
 import type { Tx } from '../ports/transaction.js';
 import { fiscalYearKey, numberingPeriod } from '../ledger/fiscal-year.js';
 import { paiseToDecimal, toPaise } from '../money.js';
-import type { IssuerSnapshot } from '../organisations/organisation.js';
+import { signatoriesOf, type IssuerSignatory, type IssuerSnapshot } from '../organisations/organisation.js';
 import type { ReceiptContent } from './receipt-content.js';
 import type { IssuerSource, Receipt, ReceiptSeries, ReceiptStore } from './ports/receipt-store.js';
 
@@ -21,6 +21,10 @@ export interface IssuedReceiptFacts {
 
 export interface IssueReceiptInput {
   seriesKey: string;
+  /** The receipt rule issuing it. Its own signatories print, and it cannot issue a receipt until it has chosen some. */
+  ruleKey?: string;
+  /** Signatories to print as given, such as a replacement keeping its voided receipt's. Omitted, the rule's current set prints. */
+  signatories?: IssuerSignatory[];
   date: string;
   amount: number | string;
   recordId?: string | null;
@@ -46,6 +50,13 @@ const IDENTITY_INCOMPLETE_KEY = 'ui.records.receiptIdentityIncomplete';
 const identityComplete = (issuer: IssuerSnapshot) => !!issuer.legalName?.trim() && !!issuer.address;
 
 /**
+ * A receipt rule prints the signatories chosen for it and nothing else, so a
+ * receipt it would issue is refused until at least one is chosen.
+ */
+const SIGNATORY_MISSING = 'Choose who signs receipts from this rule in Builder → Receipt rules → Signatories before issuing a receipt.';
+const SIGNATORY_MISSING_KEY = 'ui.records.receiptSignatoryMissing';
+
+/**
  * Numbered receipts. Numbers are gap-free per series and period, are never
  * reused, and survive voiding. A replacement gets a new number linked to the
  * voided receipt.
@@ -61,8 +72,14 @@ export class ReceiptService {
     if (paise <= 0) throw ruleViolation('Receipt amount must be more than zero.');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) throw validationFailed('Receipt date must be an ISO date.');
 
-    const issuer = await this.issuers.snapshot(tx, input.date);
+    const issuer = await this.issuers.snapshot(tx, input.date, input.ruleKey);
+    if (input.signatories) {
+      issuer.signatories = input.signatories;
+      issuer.signatory = input.signatories[0] ?? null;
+    }
     if (!identityComplete(issuer)) throw ruleViolation(IDENTITY_INCOMPLETE, IDENTITY_INCOMPLETE_KEY);
+    // Signatories given outright, as a replacement keeps its voided receipt's, are not the rule's to choose.
+    if (input.ruleKey && !input.signatories && !signatoriesOf(issuer).length) throw ruleViolation(SIGNATORY_MISSING, SIGNATORY_MISSING_KEY);
 
     const series = await this.store.series(tx, input.seriesKey);
     if (!series) throw ruleViolation(`Receipt series '${input.seriesKey}' does not exist.`);
@@ -130,6 +147,7 @@ export class ReceiptService {
   ): Promise<{ voided: Receipt; replacement: Receipt }> {
     const voided = await this.void(tx, actor, receiptId, reason);
     const kept = await this.store.content(tx, voided.id);
+    const previous = await this.store.issuer(tx, voided.id);
     const replacement = await this.issue(
       tx,
       actor,
@@ -139,6 +157,8 @@ export class ReceiptService {
         amount: changes.amount ?? voided.amount,
         recordId: voided.recordId,
         content: kept ?? null,
+        // The replacement prints the signatories the voided receipt printed, not the current ones.
+        signatories: previous ? signatoriesOf(previous) : undefined,
       },
       voided.id,
     );

@@ -22,7 +22,7 @@ import {
 import { expiryProblems, isClosed, OPEN_BLOCKS, parseBlockStatus, readPlanStatus, type Entry as PlanEntry } from './plan-status.js';
 
 /**
- * The final layer table (section 10.1 of docs/architecture/ngo-backend-enhancement-plan.md), read from
+ * The final layer table (section 10.1 of docs/plans/ngo-backend-enhancement-plan.md), read from
  * the TypeScript syntax tree by test/layer-graph.ts:
  *
  *   http -> application; application -> runtime, domain; runtime -> domain; domain -> domain;

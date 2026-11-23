@@ -28,6 +28,8 @@ export interface PublishedReportInsert {
   format: PublishedFormat;
   model: PublishedSnapshot;
   createdBy: string;
+  /** Signature files kept with the report, in print order. */
+  signatoryFiles?: { fileId: string; position: number }[];
 }
 
 export interface PublishedReportRow {

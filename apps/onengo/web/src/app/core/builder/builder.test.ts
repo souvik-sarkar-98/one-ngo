@@ -140,12 +140,25 @@ describe('Builder catalogue', () => {
     const row = catalogueRow(ITEMS[1]!, true);
     expect(row).toMatchObject({ id: 'recordType/donation', title: 'Donation', meta: 'Module · donations', badge: { label: 'v4', tone: 'success' } });
     expect(row.cells.map((c) => c.value)).toEqual(['Donation', 'Record type', 'donation', 'Module · donations', 'v4']);
-    expect(row.actions.map((a) => a.id)).toEqual(['open', 'history', 'duplicate', 'revert']);
+    expect(row.actions.map((a) => a.id)).toEqual(['open', 'history', 'duplicate', 'revert', 'disable']);
     const draft = catalogueRow(ITEMS[2]!, true);
     expect(draft.badge).toEqual({ label: 'Draft v1', tone: 'warning' });
     expect(draft.actions.map((a) => a.id)).toEqual(['open', 'history', 'duplicate', 'deleteDraft']);
     expect(rowActions(ITEMS[2]!, false).map((a) => a.id)).toEqual(['open', 'history']);
     expect(catalogueRow(ITEMS[0]!, true).title).toBe('donation');
+  });
+
+  it('lets a module definition be turned off, and a turned-off one only be turned on', () => {
+    const ids = (i: CatalogueItem, canPublish = true) => rowActions(i, canPublish).map((a) => a.id);
+    expect(ids(ITEMS[1]!)).toContain('disable');
+    expect(ids(ITEMS[1]!, false)).not.toContain('disable');
+    expect(ids(ITEMS[2]!)).not.toContain('disable');
+    expect(ids(item('theme', 'organisation', { owner: 'base', moduleKey: 'platform', publishedVersion: 1 }))).not.toContain('disable');
+
+    const off = item('recordType', 'donation', { label: 'Donation', owner: 'base', moduleKey: 'donations', publishedVersion: null, disabled: true });
+    expect(ids(off)).toEqual(['open', 'enable']);
+    expect(ids(off, false)).toEqual(['open']);
+    expect(catalogueRow(off, true).badge).toEqual({ label: 'Turned off', tone: 'neutral' });
   });
 
   it('starts new definitions from the kind\'s starter or a ready-made record type', () => {

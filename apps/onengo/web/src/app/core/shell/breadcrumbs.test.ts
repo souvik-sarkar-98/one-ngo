@@ -115,6 +115,7 @@ describe('breadcrumb trail', () => {
     expect(at('/more')).toEqual([]);
     expect(at('/settings')).toEqual([{ label: 'Settings' }]);
     expect(labels('/settings?panel=about')).toEqual(['Settings', 'About this app']);
+    expect(labels('/settings?panel=passkeys')).toEqual(['Settings', 'Passkeys']);
     expect(at('/settings?panel=language')[0]?.href).toBe('/settings');
     expect(at('/guide')).toEqual([{ label: 'User guide' }]);
   });

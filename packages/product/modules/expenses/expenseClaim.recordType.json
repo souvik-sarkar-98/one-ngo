@@ -1,0 +1,49 @@
+{
+  "key": "expenseClaim",
+  "label": "Expense claim",
+  "pluralLabel": "Expense claims",
+  "description": "Money a person paid for the organisation, claimed with the bill. Once approved and paid, the claim posts to the books.",
+  "titleField": "title",
+  "visibility": "restricted",
+  "numbering": { "sequence": "expenseClaim", "format": "EXP/{fy}/{seq:5}", "reset": "fiscal_year" },
+  "fields": [
+    { "key": "title", "label": "Purpose", "type": "text", "required": true, "maxLength": 200, "searchable": true, "editableWhen": "status == 'draft'" },
+    {
+      "key": "category",
+      "label": "Category",
+      "type": "choice",
+      "required": true,
+      "editableWhen": "status == 'draft'",
+      "choices": [
+        { "value": "admin", "label": "Administration" },
+        { "value": "programme", "label": "Programme" },
+        { "value": "travel", "label": "Travel" },
+        { "value": "other", "label": "Other" }
+      ]
+    },
+    { "key": "amount", "label": "Amount", "type": "money", "required": true, "min": 1, "editableWhen": "status == 'draft'" },
+    { "key": "claimedOn", "label": "Spent on", "type": "date", "required": true, "editableWhen": "status == 'draft'" },
+    {
+      "key": "billFile",
+      "label": "Bill",
+      "type": "file",
+      "accept": ["image", "pdf"],
+      "maxSizeMb": 5,
+      "editableWhen": "status == 'draft'",
+      "help": "Attach the bill or receipt. Needed before the claim is submitted."
+    },
+    { "key": "notes", "label": "Notes", "type": "longText", "help": "Required when a claim is not approved, to say why" },
+    {
+      "key": "paidFrom",
+      "label": "Paid from",
+      "type": "choice",
+      "visibleWhen": "status == 'approved' or status == 'paid'",
+      "choices": [
+        { "value": "BANK", "label": "Bank account" },
+        { "value": "CASH", "label": "Cash in hand" }
+      ]
+    },
+    { "key": "paidOn", "label": "Paid on", "type": "date", "visibleWhen": "status == 'approved' or status == 'paid'" },
+    { "key": "reference", "label": "Payment reference", "type": "text", "maxLength": 100, "visibleWhen": "status == 'approved' or status == 'paid'" }
+  ]
+}

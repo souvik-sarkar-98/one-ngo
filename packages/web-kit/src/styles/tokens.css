@@ -1,0 +1,133 @@
+/*
+ * The look of every OneNGO web app, as tokens. The member app, the operator console and the guide all
+ * import this file, so a colour, radius or control size is changed in one place.
+ *
+ * An organisation theme (the member app only) changes the look by setting a token at run time, for
+ * example `:root { --field-height: 44px; --card-radius: 8px; }`. Nothing else in the apps should hold a
+ * literal colour, radius or control size: read a token, or add one here.
+ */
+:root {
+  /* Theme colours (set by the organisation theme). */
+  --fg: #1d2733;
+  --muted: #5b6878;
+  --line: #d8dee6;
+  --bg: #f5f7fa;
+  --card: #fff;
+  --brand: #1f5f8b;
+  --brand-fg: #fff;
+  --ok: #1d7a46;
+  --warn: #9a6200;
+  --bad: #b3261e;
+  --bad-fg: #fff;
+  --radius: 6px;
+
+  /* Text. */
+  --font: 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Devanagari', Helvetica, Arial, sans-serif;
+  --font-mono: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  /* The root is 16px so rem sizes read as drawn in the wireframe; running text is 14px. */
+  --font-size: 16px;
+  --body-size: 14px;
+  --line-height: normal;
+  --label-color: #374151;
+  --label-size: .8rem;
+  --help-color: #64748b;
+  --help-size: .72rem;
+  --error-color: #ba1a1a;
+  --title-size: 1.15rem;
+
+  /* Surfaces: cards (single items), panels (grouped lists and tables). */
+  --card-border: rgba(148, 163, 184, .25);
+  --card-radius: 14px;
+  --card-padding: 12px;
+  --card-shadow: 0 1px 2px #0f172a0a;
+  --panel-border: rgba(148, 163, 184, .22);
+  --panel-radius: 16px;
+  --panel-shadow: 0 1px 2px #0f172a0d, 0 4px 14px #0f172a12;
+  --divider: rgba(148, 163, 184, .2);
+  --overlay: rgba(15, 23, 42, .45);
+  --overlay-shadow: 0 16px 40px rgba(15, 23, 42, .24);
+
+  /* Form controls. */
+  --field-height: 40px;
+  --field-height-compact: 32px;
+  --field-padding: 12px;
+  --field-radius: 4px;
+  --field-border: #79747e;
+  --field-bg: #fff;
+  --field-size: .85rem;
+  --field-placeholder: #8a8590;
+  --field-readonly-bg: #f2f2f4;
+  --field-readonly-fg: #6b6870;
+  --field-readonly-border: #c9c6cf;
+  --focus-ring: 2px solid var(--brand);
+
+  /* Buttons. */
+  --button-size: 13px;
+  --button-padding: .45rem .8rem;
+  --button-radius: var(--radius);
+  --button-border: var(--line);
+  --button-bg: var(--card);
+  --button-fg: var(--fg);
+
+  /* Tables. */
+  --th-bg: #f8fafc;
+  --th-fg: #64748b;
+  --th-size: .64rem;
+  --td-size: .76rem;
+  --row-line: rgba(148, 163, 184, .18);
+  --row-hover: color-mix(in srgb, var(--brand) 5%, #fff);
+  --table-line: rgba(148, 163, 184, .32);
+
+  /* The search box. */
+  --search-border: rgba(148, 163, 184, .35);
+  --search-radius: 12px;
+  --search-height: 38px;
+
+  /* Badges and notices. */
+  --badge-bg: #e8edf3;
+  --badge-fg: var(--muted);
+  --badge-size: .56rem;
+  --badge-ok-bg: #e3f4ea;
+  --badge-warn-bg: #fdf1dc;
+  --badge-bad-bg: #fdf0ef;
+  --notice-radius: 12px;
+  --notice-error-bg: #fdf0ef;
+  --notice-error-border: #efc4c1;
+  --notice-ok-bg: #eef9f2;
+  --notice-ok-border: #bfe3cd;
+  --notice-warn-bg: #fff8e6;
+  --notice-warn-border: #f0d9b5;
+  --notice-info-bg: #eef5fb;
+  --notice-info-border: #c6d9e8;
+
+  /* Brand tints: the wireframe's 6%, 12% and 25% of the brand on white. */
+  --brand-tint: color-mix(in srgb, var(--brand) 6%, #fff);
+  --brand-tint-strong: color-mix(in srgb, var(--brand) 12%, #fff);
+  --brand-tint-line: color-mix(in srgb, var(--brand) 25%, #fff);
+
+  /* The text and line greys the shell uses. */
+  --grey-400: #94a3b8;
+  --grey-500: #64748b;
+  --ink: #0f172a;
+  --grey-600: #475569;
+  --grey-700: #334155;
+  --surface-sunk: #f1f5f9;
+  --line-soft: #e2e8f0;
+  --line-strong: #cbd5e1;
+  --required-color: #f97316;
+  --caption-color: #6a7683;
+
+  /* The app bar, breadcrumb and navigation. */
+  --bar-height: 56px;
+  --bar-on-brand: rgba(255, 255, 255, .2);
+  --bar-on-brand-line: rgba(255, 255, 255, .35);
+  --warn-line: #e8c56a;
+
+  /* The content column and the shell's breakpoint (760px; media queries cannot read a token). */
+  --content-max: 1100px;
+}
+
+/* Phone touch targets are at least 44px. */
+@media (max-width: 759.98px) {
+  :root { --field-height: 44px; }
+}

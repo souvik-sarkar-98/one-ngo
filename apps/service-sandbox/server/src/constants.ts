@@ -1,9 +1,8 @@
 import { createHash } from 'node:crypto';
 
-/** The fixture's fixed addresses and demo credentials. one-ngo's fixture-hosts.ts names the same origin. */
+/** The sandbox's fixed addresses and demo credentials. Point one-ngo here with the settings in .env. */
 export const HOST = '127.0.0.1';
 export const HTTPS_PORT = 8095;
-export const SMTP_PORT = 2525;
 export const ORIGIN = `https://${HOST}:${HTTPS_PORT}`;
 
 export const RAZORPAY = { keyId: 'rzp_test_demo', keySecret: 'demo-key-secret', webhookSecret: 'demo-webhook-secret' } as const;
@@ -16,7 +15,8 @@ export const OPERATOR = { clientId: 'demo-operator', clientSecret: 'demo-operato
 export function demoSubject(email: string): string {
   return `demo-${createHash('sha256').update(email.trim().toLowerCase()).digest('hex').slice(0, 20)}`;
 }
-export const SMTP = { user: 'demo', password: 'demo', from: 'demo@localhost' } as const;
+/** The Gmail-style email sender. Mail arrives only after this connector is saved; there is no SMTP listener. */
+export const MAIL = { token: 'demo-mail-token', from: 'demo@localhost' } as const;
 
 /** Connector targets. */
 export const CONNECTOR = {
@@ -44,6 +44,8 @@ export const PATHS = {
   cashfreeOrders: '/pg/orders',
   metadataToken: '/token',
   pwnedRange: '/range/',
+  /** Gmail `users.messages.send`. Any user id on this path is accepted; the connector uses `me`. */
+  gmailSend: '/gmail/v1/users/me/messages/send',
   sms: '/sms',
   whatsapp: '/whatsapp',
   hooksIn: '/hooks/in',

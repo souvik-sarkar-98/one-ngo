@@ -1,6 +1,7 @@
 import { Component, ElementRef, effect, input, output, signal, viewChild } from '@angular/core';
 import { sanitiseEmailHtml } from '@onengo/platform/browser';
 import { TranslatePipe } from '../../../services/i18n';
+import { Btn } from '@onengo/web-kit';
 
 const LINK = /^(https?:|mailto:)/i;
 const IMAGE = /^https:\/\//i;
@@ -10,34 +11,34 @@ const TABLE = '<table><tr><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td>
 /** Visual email editor. Design edits the layout; HTML keeps the source, including pasted tables. */
 @Component({
   selector: 'app-html-editor',
-  imports: [TranslatePipe],
+  imports: [Btn, TranslatePipe],
   styleUrl: './html-editor.css',
   template: `
     <div class="field">
       <div class="html-ed__head">
         <span class="gen-label" [id]="fieldId() + '-label'">{{ label() }}</span>
         <div class="html-ed__modes" role="group" [attr.aria-label]="'ui.builder.html.toolbar' | t">
-          <button type="button" [attr.aria-pressed]="mode() === 'design'" (click)="mode.set('design')">{{ 'ui.builder.html.design' | t }}</button>
-          <button type="button" [attr.aria-pressed]="mode() === 'html'" (click)="mode.set('html')">{{ 'ui.builder.html.source' | t }}</button>
+          <button appBtn type="button" [attr.aria-pressed]="mode() === 'design'" (click)="mode.set('design')">{{ 'ui.builder.html.design' | t }}</button>
+          <button appBtn type="button" [attr.aria-pressed]="mode() === 'html'" (click)="mode.set('html')">{{ 'ui.builder.html.source' | t }}</button>
         </div>
       </div>
       <div class="html-ed__bar" role="toolbar" [attr.aria-label]="'ui.builder.html.toolbar' | t">
-        <button type="button" [disabled]="mode() !== 'design'" (mousedown)="keep($event)" (click)="block('p')">{{ 'ui.builder.html.paragraph' | t }}</button>
-        <button type="button" [disabled]="mode() !== 'design'" (mousedown)="keep($event)" (click)="block('h2')">{{ 'ui.builder.html.heading' | t }}</button>
-        <button type="button" [disabled]="mode() !== 'design'" [attr.aria-pressed]="bold()" (mousedown)="keep($event)" (click)="run('bold')">{{ 'ui.builder.html.bold' | t }}</button>
-        <button type="button" [disabled]="mode() !== 'design'" [attr.aria-pressed]="italic()" (mousedown)="keep($event)" (click)="run('italic')">{{ 'ui.builder.html.italic' | t }}</button>
-        <button type="button" [disabled]="mode() !== 'design'" [attr.aria-pressed]="underline()" (mousedown)="keep($event)" (click)="run('underline')">{{ 'ui.builder.html.underline' | t }}</button>
-        <button type="button" [disabled]="mode() !== 'design'" (mousedown)="keep($event)" (click)="run('insertUnorderedList')">{{ 'ui.builder.html.bullets' | t }}</button>
-        <button type="button" [disabled]="mode() !== 'design'" (mousedown)="keep($event)" (click)="run('insertOrderedList')">{{ 'ui.builder.html.numbers' | t }}</button>
-        <button type="button" [disabled]="mode() !== 'design'" (mousedown)="keep($event)" (click)="askFor('link')">{{ 'ui.builder.html.link' | t }}</button>
-        <button type="button" [disabled]="mode() !== 'design'" (mousedown)="keep($event)" (click)="askFor('image')">{{ 'ui.builder.html.image' | t }}</button>
-        <button type="button" [disabled]="mode() !== 'design'" (mousedown)="keep($event)" (click)="insertTable()">{{ 'ui.builder.html.table' | t }}</button>
+        <button appBtn type="button" [disabled]="mode() !== 'design'" (mousedown)="keep($event)" (click)="block('p')">{{ 'ui.builder.html.paragraph' | t }}</button>
+        <button appBtn type="button" [disabled]="mode() !== 'design'" (mousedown)="keep($event)" (click)="block('h2')">{{ 'ui.builder.html.heading' | t }}</button>
+        <button appBtn type="button" [disabled]="mode() !== 'design'" [attr.aria-pressed]="bold()" (mousedown)="keep($event)" (click)="run('bold')">{{ 'ui.builder.html.bold' | t }}</button>
+        <button appBtn type="button" [disabled]="mode() !== 'design'" [attr.aria-pressed]="italic()" (mousedown)="keep($event)" (click)="run('italic')">{{ 'ui.builder.html.italic' | t }}</button>
+        <button appBtn type="button" [disabled]="mode() !== 'design'" [attr.aria-pressed]="underline()" (mousedown)="keep($event)" (click)="run('underline')">{{ 'ui.builder.html.underline' | t }}</button>
+        <button appBtn type="button" [disabled]="mode() !== 'design'" (mousedown)="keep($event)" (click)="run('insertUnorderedList')">{{ 'ui.builder.html.bullets' | t }}</button>
+        <button appBtn type="button" [disabled]="mode() !== 'design'" (mousedown)="keep($event)" (click)="run('insertOrderedList')">{{ 'ui.builder.html.numbers' | t }}</button>
+        <button appBtn type="button" [disabled]="mode() !== 'design'" (mousedown)="keep($event)" (click)="askFor('link')">{{ 'ui.builder.html.link' | t }}</button>
+        <button appBtn type="button" [disabled]="mode() !== 'design'" (mousedown)="keep($event)" (click)="askFor('image')">{{ 'ui.builder.html.image' | t }}</button>
+        <button appBtn type="button" [disabled]="mode() !== 'design'" (mousedown)="keep($event)" (click)="insertTable()">{{ 'ui.builder.html.table' | t }}</button>
       </div>
       @if (ask(); as kind) {
         <div class="html-ed__ask">
           <label [for]="fieldId() + '-url'">{{ (kind === 'link' ? 'ui.builder.html.linkUrl' : 'ui.builder.html.imageUrl') | t }}</label>
           <input [id]="fieldId() + '-url'" [value]="url()" spellcheck="false" (input)="url.set($any($event.target).value)" (keydown.enter)="applyAsk($event)" />
-          <button type="button" (click)="applyAsk()">{{ 'ui.builder.html.apply' | t }}</button>
+          <button appBtn type="button" (click)="applyAsk()">{{ 'ui.builder.html.apply' | t }}</button>
           @if (urlError(); as key) { <div class="error" role="alert">{{ key | t }}</div> }
         </div>
       }

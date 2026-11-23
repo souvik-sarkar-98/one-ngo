@@ -4,8 +4,7 @@ import type { TenantContext } from '../../src/infrastructure/postgres/db.js';
 import { createWorld, expectCode, type TestWorld } from '../helpers.js';
 
 /**
- * Probes for the S4 security review (docs/reports/s4-review-2026-10-26.md).
- * Each test asserts the SAFE behaviour; `it.fails` marks a finding the current code still has.
+ * Probes for the S4 security review (architecture section 9.1). Each test asserts the SAFE behaviour.
  */
 let w: TestWorld;
 const password = 'a long enough password';

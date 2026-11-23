@@ -1,6 +1,7 @@
 import { Component, DestroyRef, inject, isDevMode, signal } from '@angular/core';
 import { provideServiceWorker, SwUpdate } from '@angular/service-worker';
 import { TranslatePipe } from '../services/i18n';
+import { Btn } from '@onengo/web-kit';
 
 /**
  * The worker client for the update prompt, for the shell's route. In a route's
@@ -11,7 +12,7 @@ export const provideUpdates = () => provideServiceWorker('ngsw-worker.js', { ena
 /** "A new version is ready — Reload", once the service worker has the new version in place. */
 @Component({
   selector: 'app-update-prompt',
-  imports: [TranslatePipe],
+  imports: [Btn, TranslatePipe],
   styles: `
     .update-prompt {
       position: fixed;
@@ -26,7 +27,7 @@ export const provideUpdates = () => provideServiceWorker('ngsw-worker.js', { ena
       padding: 0.6rem 0.6rem 0.6rem 1rem;
       border-radius: var(--radius);
       background: var(--fg);
-      color: #fff;
+      color: var(--brand-fg);
       box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
     }
     :host-context(.shell--bottom) .update-prompt {
@@ -35,7 +36,7 @@ export const provideUpdates = () => provideServiceWorker('ngsw-worker.js', { ena
     .update-prompt button {
       border: 0;
       background: transparent;
-      color: #9fd0f3;
+      color: color-mix(in srgb, var(--brand) 35%, #fff);
       font-weight: 600;
     }
   `,
@@ -43,7 +44,7 @@ export const provideUpdates = () => provideServiceWorker('ngsw-worker.js', { ena
     @if (ready()) {
       <div class="update-prompt" role="status">
         <span>{{ 'ui.pwa.updateReady' | t }}</span>
-        <button type="button" (click)="reload()">{{ 'ui.pwa.reload' | t }}</button>
+        <button appBtn type="button" (click)="reload()">{{ 'ui.pwa.reload' | t }}</button>
       </div>
     }
   `,

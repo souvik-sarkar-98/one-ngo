@@ -10,7 +10,7 @@ const invalidKey = 'This API key is not valid.';
 const reusedKey = 'This Idempotency-Key was already used for a different request. Use a new key.';
 const connectorKey = 'e2eReceiver';
 const receiverEnv =
-  'The receiver serves the integration fixture certificate: set E2E_FIXTURE_TLS_DIR to the fixture tls folder whose ca.crt the API trusts through NODE_EXTRA_CA_CERTS, and run the API with 127.0.0.1 in CONNECTOR_ALLOWED_HOSTS (npm run dev does both).';
+  'The receiver serves the sandbox certificate. Set E2E_FIXTURE_TLS_DIR to the sandbox tls folder, set NODE_EXTRA_CA_CERTS to that ca.crt, and put 127.0.0.1 in CONNECTOR_ALLOWED_HOSTS. .env is the only place those are set.';
 
 interface CreatedKey {
   id: string;

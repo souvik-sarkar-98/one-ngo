@@ -24,6 +24,7 @@ import type { BulkService } from './application/records/bulk-service.js';
 import type { ExportService } from './application/records/export-service.js';
 import type { ImportService } from './application/records/import-service.js';
 import type { RecordSharing } from './application/records/record-sharing.js';
+import type { BankReconciliationService } from './domain/accounts/bank-reconciliation-service.js';
 import type { MoneyAccountService } from './domain/accounts/money-account-service.js';
 import type { PasswordSettings } from './composition/identity.js';
 import type { LedgerService } from './domain/ledger/ledger-service.js';
@@ -63,6 +64,7 @@ import { wireMigration } from './composition/migration.js';
 import type { MigrationService } from './application/migration/migration-service.js';
 import { ReportProviders } from './application/reports/model.js';
 import { ReportService } from './application/reports/report-service.js';
+import { postgresOrganisationAdminStore } from './infrastructure/postgres/stores/organisation-admin-store.js';
 import { PgPublishedReportStore } from './infrastructure/postgres/stores/published-report-store.js';
 import { wireJobs } from './composition/jobs.js';
 import { wireMessaging } from './composition/messaging.js';
@@ -131,6 +133,7 @@ export interface Platform extends Scheduler {
   connectors: ConnectorService;
   automations: AutomationEngine;
   moneyAccounts: MoneyAccountService;
+  bankReconciliation: BankReconciliationService;
   payments: PaymentService;
   actions: ActionService;
   /** Custom reports: their data model, and the JSON a published file is rebuilt from. */
@@ -161,7 +164,10 @@ export interface PlatformOptions {
   /** Keys used before `encryptionKey`; sensitive record values and stored secrets under them still decrypt until re-encrypted. */
   previousEncryptionKeys?: Buffer[];
   definitionCacheCheckMs?: number;
-  /** Used when an NGO has no SMTP connector of its own. */
+  /**
+   * Stand-in mail transport used only when the organisation has no email connector.
+   * The OneNGO and operator servers do not set this, and there is no SMTP fallback.
+   */
   defaultEmailTransport?: EmailTransport;
   paymentProviders?: PaymentProvider[];
   logger?: Logger;
@@ -186,8 +192,13 @@ export interface PlatformOptions {
   localeCatalogues?: Record<string, unknown>;
   /** Replaces outbound HTTP for SMS, WhatsApp and webhook connectors (tests). */
   connectorHttp?: ConnectorHttp;
-  /** Where uploaded files are kept (Cloud Storage when hosted); local disk under `.data/files` when not given. */
+  /**
+   * A store tests inject, served as `platform` when the organisation has not chosen a storage connector.
+   * The OneNGO server does not set this. Uploads then wait until Settings names a storage connector.
+   */
   fileStore?: FileStore;
+  /** Replaces outbound HTTP for storage connectors (tests). */
+  storageFetch?: typeof fetch;
   /** Upload size limit and the default storage quota per organisation. */
   files?: FileLimits;
   /** Rows a CSV export streams at once; larger exports become a job. Default 50,000. */
@@ -220,11 +231,11 @@ export async function createPlatform(db: Database, options: PlatformOptions): Pr
   const identity = wireIdentity(base, defs, crypto, messaging, recs);
   const payments = wirePayments(base, defs, crypto, recs, finance);
   const jobs = wireJobs(base, defs, recs, messaging, identity);
-  const files = wireFiles(base, defs, recs, jobs);
+  const files = wireFiles(base, defs, recs, jobs, messaging.oauthCredentials, crypto.secretKeys);
   const migration = wireMigration(base, defs, recs, finance, jobs, files);
   const admin = wireAdministration(base, defs, crypto, identity, files);
   const ops = wireOperations(base, defs, recs, finance, messaging, payments, jobs, files, crypto, admin, identity.apiKeys);
-  const reports = new ReportService(base.tm, defs.definitions, recs.records, recs.aggregates, files.files, jobs.jobs, base.audit, base.sandbox, defs.organisationName, new ReportProviders(), new PgPublishedReportStore());
+  const reports = new ReportService(base.tm, defs.definitions, recs.records, recs.aggregates, files.files, jobs.jobs, base.audit, base.sandbox, defs.organisationName, new ReportProviders(), new PgPublishedReportStore(), postgresOrganisationAdminStore);
   registerOutboxHandlers(base, defs, recs, messaging, jobs, ops);
   const scheduler = wireScheduler(base, defs, recs, files, jobs, ops);
   const http = httpDeps(base, defs, recs, finance, messaging, identity, payments, jobs, files, ops, admin, scheduler, reports, migration);
@@ -253,6 +264,7 @@ export async function createPlatform(db: Database, options: PlatformOptions): Pr
     connectors: messaging.connectors,
     automations: ops.automations,
     moneyAccounts: payments.moneyAccounts,
+    bankReconciliation: payments.bankReconciliation,
     payments: payments.payments,
     actions: ops.actions,
     reports,

@@ -1,0 +1,1 @@
+{ "key": "projects", "label": "Projects and events", "order": 80, "recordTypes": ["project", "projectGoal", "milestone", "event", "eventAttendee"] }

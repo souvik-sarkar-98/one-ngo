@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { OperatorApi } from '../services/operator-api';
+import { Btn } from '@onengo/web-kit';
 
 const REFUSED: Record<string, string> = {
   unknown: 'This login is not an operator on this console. Copy the provider and subject below for the person who manages operators.',
@@ -10,17 +11,18 @@ const REFUSED: Record<string, string> = {
 };
 
 @Component({
+  imports: [Btn],
   standalone: true,
   template: `<section class="card"><h1>Sign in</h1>
     <p>Two-factor authentication is required. The account must already be an operator on this console.</p>
-    @if (notice(); as text) { <p class="note bad">{{ text }}</p> }
+    @if (notice(); as text) { <p class="notice error">{{ text }}</p> }
     @if (issuer || subject) {
       <div class="kv">
         <div><b>Provider</b><code>{{ issuer }}</code></div>
         <div><b>Subject</b><code>{{ subject }}</code></div>
       </div>
     }
-    <button type="button" (click)="signIn()">Continue</button>
+    <button appBtn="primary" type="button" (click)="signIn()">Continue</button>
   </section>`,
 })
 export class SignInPage {

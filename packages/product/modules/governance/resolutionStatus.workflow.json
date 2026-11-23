@@ -1,0 +1,31 @@
+{
+  "key": "resolutionStatus",
+  "recordType": "resolution",
+  "initial": "draft",
+  "states": [
+    { "key": "draft", "label": "Draft" },
+    { "key": "proposed", "label": "Proposed" },
+    { "key": "passed", "label": "Passed", "final": true },
+    { "key": "rejected", "label": "Not passed", "final": true }
+  ],
+  "transitions": [
+    { "key": "propose", "label": "Propose for vote", "from": ["draft"], "to": "proposed", "requiredFields": ["meeting"] },
+    {
+      "key": "pass",
+      "label": "Pass resolution",
+      "from": ["proposed"],
+      "to": "passed",
+      "requiredFields": ["votesFor", "votesAgainst", "passedOn"],
+      "guard": "coalesce(record.votesFor, 0) > coalesce(record.votesAgainst, 0)",
+      "guardMessage": "A resolution passes only when more votes are for it than against.",
+      "approval": { "roles": ["office-bearer"], "count": 2 }
+    },
+    {
+      "key": "reject",
+      "label": "Record as not passed",
+      "from": ["proposed"],
+      "to": "rejected",
+      "requiredFields": ["votesFor", "votesAgainst"]
+    }
+  ]
+}

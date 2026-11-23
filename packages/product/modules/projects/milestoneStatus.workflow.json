@@ -1,0 +1,12 @@
+{
+  "key": "milestoneStatus",
+  "recordType": "milestone",
+  "initial": "open",
+  "states": [
+    { "key": "open", "label": "Open" },
+    { "key": "done", "label": "Done", "final": true }
+  ],
+  "transitions": [
+    { "key": "markDone", "label": "Mark done", "from": ["open"], "to": "done", "requiredFields": ["doneOn"] }
+  ]
+}

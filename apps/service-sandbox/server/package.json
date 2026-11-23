@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Local-only stand-ins for Razorpay, Cashfree, Google sign-in, Cloud Storage, SMTP, connector targets and the breached-password service. Test use only.",
+  "description": "Local-only stand-ins for Razorpay, Cashfree, Google sign-in, Cloud Storage, a Gmail-style email sender, connector targets and the breached-password service. Test use only.",
   "scripts": {
     "start": "tsx src/main.ts",
     "dev": "tsx src/main.ts",

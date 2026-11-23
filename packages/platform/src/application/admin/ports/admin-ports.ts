@@ -74,7 +74,11 @@ export interface ApiKeyAdmin {
 export interface ConnectorAdmin {
   retry(ctx: TenantContext, key: string, deliveryId: string): Promise<void>;
   get(ctx: TenantContext, key: string): Promise<ConnectorView>;
+  /** Like `get`, but null instead of a not-found error when no connector is set up under the key. */
+  find(ctx: TenantContext, key: string): Promise<ConnectorView | null>;
   save(ctx: TenantContext, key: string, input: SaveConnectorInput): Promise<ConnectorView>;
+  /** Lifts an archive; the connector comes back switched off. */
+  restore(ctx: TenantContext, key: string): Promise<ConnectorView>;
   test(ctx: TenantContext, key: string, input?: { to?: unknown; inputs?: unknown }): Promise<ConnectorTestResult>;
   deliveries(ctx: TenantContext, key: string, options?: { limit?: number; offset?: number }): Promise<Delivery[]>;
 }
@@ -82,6 +86,8 @@ export interface ConnectorAdmin {
 /** Every connector with the definitions that send through it. */
 export interface ConnectorCatalogue {
   list(ctx: TenantContext, users: ConnectorUser[]): Promise<ConnectorSummary[]>;
+  /** Archives a connector unless one of the definitions in `users`, Settings or another connector still uses it. */
+  archive(ctx: TenantContext, key: string, users: ConnectorUser[]): Promise<ConnectorView>;
 }
 
 /** The published definitions of one kind. */

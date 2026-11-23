@@ -273,6 +273,42 @@ describe('erasing a member', () => {
   });
 });
 
+describe('erasure reaches the side tables (S4-9)', () => {
+  it('clears a stored API response and a queued event that carry the erased person, and leaves the others alone', async () => {
+    const ctx = w.as(w.ngoA);
+    const { record } = await w.platform.records.create(ctx, 'donor', { name: 'Side Table Person', email: 'side.table@example.org' });
+    const other = await w.platform.records.create(ctx, 'donor', { name: 'Unrelated Donor' });
+    const response = (r: { id: string }, name: string) => JSON.stringify({ id: r.id, data: { name } });
+    await w.platform.db.asSystem(async (tx) => {
+      await tx.query(
+        `insert into idempotency_key (tenant_id, actor_id, key, request_hash, status_code, response) values ($1, 'a', 'k-erased', 'h', 201, $2::jsonb), ($1, 'a', 'k-kept', 'h', 201, $3::jsonb)`,
+        [w.ngoA, response(record, 'Side Table Person'), response(other.record, 'Unrelated Donor')],
+      );
+      await tx.query(
+        `insert into outbox_event (tenant_id, type, payload) values ($1, 'test.side', $2::jsonb), ($1, 'test.side', $3::jsonb)`,
+        [w.ngoA, JSON.stringify({ recordId: record.id, email: 'side.table@example.org' }), JSON.stringify({ recordId: other.record.id })],
+      );
+    });
+
+    const result = await w.platform.privacy.erase(w.as(w.ngoA, eraser), { subjectKind: 'record', subjectId: record.id });
+    // The events include the ones the donor's own creation queued.
+    expect(result.summary.sideData).toMatchObject({ apiResponses: 1, events: expect.any(Number) });
+    expect(result.summary.sideData!.events).toBeGreaterThanOrEqual(1);
+
+    const keys = await w.platform.db.asSystem((tx) => tx.query<{ key: string; response: unknown }>(`select key, response from idempotency_key where tenant_id = $1 and key like 'k-%' order by key`, [w.ngoA]));
+    expect(keys.map((k) => [k.key, JSON.stringify(k.response)])).toEqual([
+      ['k-erased', expect.stringMatching(/^\{"erased": ?"[0-9a-f-]{36}"\}$/)],
+      ['k-kept', expect.stringContaining('Unrelated Donor')],
+    ]);
+    const events = await w.platform.db.asSystem((tx) => tx.query<{ payload: unknown; status: string }>(`select payload, status from outbox_event where tenant_id = $1 and type = 'test.side' order by status`, [w.ngoA]));
+    expect(events.map((e) => [JSON.stringify(e.payload).includes('side.table'), e.status])).toEqual([
+      [false, 'failed'],
+      [false, 'pending'],
+    ]);
+    expect(JSON.stringify(events.find((e) => e.status === 'pending')!.payload)).toContain(other.record.id);
+  });
+});
+
 describe('financial retention', () => {
   it('defaults to eight years, pending counsel confirmation, and is configurable', () => {
     expect(FINANCIAL_RETENTION_YEARS_DEFAULT).toBe(8);

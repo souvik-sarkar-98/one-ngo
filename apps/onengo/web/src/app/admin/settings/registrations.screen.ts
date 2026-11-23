@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { PageFrame } from '@onengo/web-kit';
+import { Btn, PageFrame } from '@onengo/web-kit';
 import { TranslatePipe } from '../../services/i18n';
 import { CfForm } from '../../ui/cf-form';
 import { ScreenHeading } from '../../ui/screen-heading';
@@ -8,7 +8,7 @@ import { OrganisationStore } from './organisation-store';
 /** Registrations: the certificates the organisation holds, each kept on its own row in the organisation registrations. */
 @Component({
   selector: 'app-admin-registrations',
-  imports: [CfForm, PageFrame, ScreenHeading, TranslatePipe],
+  imports: [Btn, CfForm, PageFrame, ScreenHeading, TranslatePipe],
   providers: [OrganisationStore],
   styleUrl: '../admin.css',
   styles: `
@@ -34,7 +34,7 @@ import { OrganisationStore } from './organisation-store';
           <div class="admin__line">
             <h2 id="org-registrations-title" class="admin__grow">{{ 'ui.admin.organisation.registrationsTitle' | t }}</h2>
             @if (store.editing() === null) {
-              <button type="button" class="app-btn" (click)="store.editRegistration('new')">{{ 'ui.admin.organisation.addRegistration' | t }}</button>
+              <button appBtn type="button" (click)="store.editRegistration('new')">{{ 'ui.admin.organisation.addRegistration' | t }}</button>
             }
           </div>
           @if (!store.registrations().length) {
@@ -50,12 +50,11 @@ import { OrganisationStore } from './organisation-store';
                         <span class="muted">{{ r.dates }}</span>
                       }
                     </span>
-                    <button type="button" class="app-btn" [attr.aria-label]="'ui.admin.organisation.editRegistration' | t: { name: r.line }" (click)="store.editRegistration(r.id)">
+                    <button appBtn type="button" [attr.aria-label]="'ui.admin.organisation.editRegistration' | t: { name: r.line }" (click)="store.editRegistration(r.id)">
                       {{ 'ui.common.edit' | t }}
                     </button>
-                    <button
+                    <button appBtn
                       type="button"
-                      class="app-btn"
                       [attr.aria-label]="(store.removing() === r.id ? 'ui.admin.organisation.confirmRemove' : 'ui.admin.organisation.removeRegistration') | t: { name: r.line }"
                       (click)="store.removeRegistration(r.id)">
                       {{ (store.removing() === r.id ? 'ui.admin.organisation.confirmRemoveShort' : 'ui.common.remove') | t }}
@@ -71,8 +70,8 @@ import { OrganisationStore } from './organisation-store';
               <cf-form [fields]="store.registrationFields()" [values]="store.registration()" [errors]="store.registrationErrors()" idPrefix="org-registration" [columns]="2" [fullWidth]="['notes']" (valuesChange)="store.registration.set($event)" />
               <div class="admin__line">
                 <span class="admin__grow"></span>
-                <button type="button" class="app-btn" (click)="store.cancelRegistration()">{{ 'ui.common.cancel' | t }}</button>
-                <button type="button" class="app-btn app-btn--primary" [disabled]="store.savingRegistration()" (click)="store.saveRegistration()">
+                <button appBtn type="button" (click)="store.cancelRegistration()">{{ 'ui.common.cancel' | t }}</button>
+                <button appBtn="primary" type="button" [disabled]="store.savingRegistration()" (click)="store.saveRegistration()">
                   {{ (store.savingRegistration() ? 'ui.common.saving' : 'ui.common.save') | t }}
                 </button>
               </div>

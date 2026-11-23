@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import {
   PATHS, connectorHttpFromEnvironment, createLogger, createOperatorRuntime, encryptionKeysFromEnvironment,
-  installationOidcSummaryFromEnvironment, openOperatorDatabase, smtpFromEnvironment,
+  installationOidcSummaryFromEnvironment, openOperatorDatabase,
 } from '@onengo/platform/operator';
 import { buildOperatorServer } from './http/server.js';
 import { localWithoutIap, OperatorProvider } from './operators/provider.js';
@@ -35,7 +35,6 @@ const runtime = await createOperatorRuntime(db, {
   tokenSecret: required('OPERATOR_INTERNAL_TOKEN_SECRET'),
   ...encryptionKeysFromEnvironment(process.env, required),
   logger, publicBaseUrl, paths: PATHS, connectorHttp,
-  defaultEmailTransport: smtpFromEnvironment(process.env, required),
 }, {
   sharedProviders: installationOidcSummaryFromEnvironment(process.env),
   http: connectorHttp,

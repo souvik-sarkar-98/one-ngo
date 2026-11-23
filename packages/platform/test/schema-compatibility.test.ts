@@ -17,12 +17,12 @@ const status = (over: Partial<SchemaCompatibility> = {}): SchemaCompatibility =>
 
 describe('schema compatibility', () => {
   it('publishes explicit levels and per-server minimums', () => {
-    expect(SCHEMA_LEVEL).toBe(19);
-    expect(SERVER_SCHEMA_MINIMUMS).toEqual({ main: 5, operator: 6 });
+    expect(SCHEMA_LEVEL).toBe(7);
+    expect(SERVER_SCHEMA_MINIMUMS).toEqual({ main: 7, operator: 6 });
   });
 
   it('refuses a schema below the server minimum', () => {
-    expect(() => assertSchemaCompatibility('main', status({ level: 4 }))).toThrow(/below the minimum 5/);
+    expect(() => assertSchemaCompatibility('main', status({ level: 6 }))).toThrow(/below the minimum 7/);
     expect(() => assertSchemaCompatibility('operator', status({ level: 5 }))).toThrow(/below the minimum 6/);
   });
 

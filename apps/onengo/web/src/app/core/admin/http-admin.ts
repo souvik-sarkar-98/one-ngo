@@ -1,4 +1,4 @@
-import { contracted, type ApiKeyView, type CreateApiKeyRequest, type CreatedApiKey, type RoleMembersRequest, type SettingsRequest } from '../contracts';
+import { contracted, type ApiKeyView, type CreateApiKeyRequest, type CreatedApiKey, type DeletedPage, type RestoredRecord, type RestoreRecordRequest, type RoleMembersRequest, type SettingsRequest } from '../contracts';
 import type { HttpLike } from '../http/http';
 import type { PersonItem } from '../people/people';
 import type { AdminGateway, AuditEntry, ConnectorSummary, ConnectorView, Delivery, JobItem, JobRow, OrganisationLayout, OrganisationSettings, Paged, PublishedLayout, RoleMembersPage, RoleSummary, SaveConnector } from './admin';
@@ -22,8 +22,11 @@ export const API_DOCUMENTATION = '/api/openapi.json';
 export interface AdminRoutes {
   'POST /api/admin/roles/:key/members': { body: RoleMembersRequest; answer: void };
   'GET /api/admin/connectors': { answer: ConnectorSummary[] };
-  'GET /api/admin/connectors/:key': { answer: ConnectorView };
+  'GET /api/admin/connectors/:key': { answer: { connector: ConnectorView | null } };
   'PUT /api/admin/connectors/:key': { body: SaveConnector; answer: ConnectorView };
+  'POST /api/admin/connectors/:key/archive': { answer: ConnectorView };
+  'POST /api/admin/connectors/:key/restore': { answer: ConnectorView };
+  'POST /api/admin/recycle-bin/:id/restore': { body: RestoreRecordRequest; answer: RestoredRecord };
   'GET /api/admin/api-keys': { answer: ApiKeyView[] };
   'GET /api/admin/api-keys/feeds': { answer: { key: string; label: string }[] };
   'POST /api/admin/api-keys': { body: CreateApiKeyRequest; answer: CreatedApiKey };
@@ -43,8 +46,10 @@ export function httpAdmin(http: HttpLike): AdminGateway {
     },
     removeRoleMember: (key, userId) => http.delete<void>(`${role(key)}/${enc(userId)}`),
     connectors: () => send('GET /api/admin/connectors'),
-    connector: (key) => send('GET /api/admin/connectors/:key', { key }),
+    connector: async (key) => (await send('GET /api/admin/connectors/:key', { key })).connector,
     saveConnector: (key, body) => send('PUT /api/admin/connectors/:key', { key }, body),
+    archiveConnector: (key) => send('POST /api/admin/connectors/:key/archive', { key }),
+    restoreConnector: (key) => send('POST /api/admin/connectors/:key/restore', { key }),
     testConnector: (key, input) => http.post(`${connector(key)}/test`, input ?? {}),
     startOauth: (key) => http.post<{ url: string }>(`${connector(key)}/oauth/start`),
     deliveries: (key) => http.get<Delivery[]>(`${connector(key)}/deliveries?limit=100`),
@@ -58,6 +63,8 @@ export function httpAdmin(http: HttpLike): AdminGateway {
     failedItems: async (id) => (await http.get<{ items: JobItem[] }>(`/api/jobs/${enc(id)}/items?status=failed`)).items,
     cancelJob: (id) => http.post<JobRow>(`/api/jobs/${enc(id)}/cancel`),
     audit: (q) => http.get<Paged<AuditEntry>>(`/api/admin/audit?${qs({ ...q })}`),
+    deletedRecords: (q) => http.get<DeletedPage>(`/api/admin/recycle-bin?${qs({ ...q })}`),
+    restoreRecord: (id, version) => send('POST /api/admin/recycle-bin/:id/restore', { id }, { expectedVersion: version }),
     settings: () => http.get<OrganisationSettings>('/api/admin/settings'),
     saveSettings: (change) => send('PUT /api/admin/settings', change),
     saveTheme: (body) => http.put<ThemeTokens>('/api/admin/theme', body),

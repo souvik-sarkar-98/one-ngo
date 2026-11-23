@@ -6,16 +6,14 @@ import {
   createLogger,
   databaseFailureFields,
   encryptionKeysFromEnvironment,
-  fileStoreFromEnvironment,
   installationOidcFromEnvironment,
   openServerDatabase,
   paymentProvidersFromEnvironment,
-  smtpFromEnvironment,
+  pwnedPasswordsApiBaseFromEnvironment,
   watchMemory,
   createPlatform,
   PATHS,
 } from '@onengo/platform/main';
-//import { installFixtureHostsIfConfigured } from './fixture-hosts.js';
 import { trustProxyFromEnv } from './http/client-address.js';
 import { buildServer } from './http/server.js';
 import { shutdownOnSignals } from './http/lifecycle.js';
@@ -51,11 +49,6 @@ function corsOrigins(value: string | undefined): string[] {
   return origins;
 }
 
-// Only the API dev script sets INTEGRATION_FIXTURE_ORIGIN; deployments keep the real Cloud Storage and breached-password hosts.
-// installFixtureHostsIfConfigured();
-
-const smtp = smtpFromEnvironment(process.env, required);
-
 const logger = createLogger();
 process.on('unhandledRejection', (reason) => logger.log('CRITICAL', 'Unhandled promise rejection', {}, reason));
 
@@ -68,7 +61,6 @@ const db = await openServerDatabase(process.env).catch((error: unknown) => {
 const platform = await createPlatform(db, {
   tokenSecret: required('TOKEN_SECRET'),
   ...encryptionKeysFromEnvironment(process.env, required),
-  defaultEmailTransport: smtp,
   connectorHttp: connectorHttpFromEnvironment(process.env),
   logger,
   memoryAlertMb,
@@ -77,6 +69,7 @@ const platform = await createPlatform(db, {
   passwords: {
     breachCheck: process.env.BREACHED_PASSWORD_CHECK === 'off' ? 'off' : 'online',
     commonPasswordsFile: process.env.COMMON_PASSWORDS_FILE,
+    apiBase: pwnedPasswordsApiBaseFromEnvironment(process.env),
   },
   oidcProviders: installationOidcFromEnvironment(process.env),
   retention: {
@@ -84,7 +77,6 @@ const platform = await createPlatform(db, {
     // Pending counsel confirmation; unset uses FINANCIAL_RETENTION_YEARS_DEFAULT (8).
     financialRetentionYears: process.env.FINANCIAL_RETENTION_YEARS ? Number(process.env.FINANCIAL_RETENTION_YEARS) : undefined,
   },
-  fileStore: fileStoreFromEnvironment(process.env, PATHS.localFiles),
   paymentProviders: paymentProvidersFromEnvironment(process.env),
   files: {
     maxUploadMb: process.env.FILE_MAX_UPLOAD_MB ? Number(process.env.FILE_MAX_UPLOAD_MB) : undefined,

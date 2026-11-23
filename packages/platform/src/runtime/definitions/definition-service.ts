@@ -10,7 +10,7 @@ import type { TransactionManager, Tx } from '../../domain/ports/transaction.js';
 import { ORGANISATION_THEME } from './appearance.js';
 import { checkCrossReferences, checkWarnings, type DefinitionLookup } from './cross-refs.js';
 import { applyExtensionPatch, makePatch } from './merge.js';
-import type { ConnectorFact, DefinitionRow, DefinitionStore, ModuleState } from './ports/definition-store.js';
+import type { CatalogueRow, ConnectorFact, DefinitionRow, DefinitionStore, ModuleState } from './ports/definition-store.js';
 import type { SchemaRegistry } from './schema-registry.js';
 import { adminOnlyParts, isFinanceScript, SCRIPT_ADMIN_PERMISSION } from './script-inputs.js';
 import { isPrimary, workflowsOf } from './workflows.js';
@@ -41,6 +41,8 @@ export interface CatalogueItem {
   draftVersion: number | null;
   owner: 'base' | 'tenant';
   moduleKey: string | null;
+  /** A shipped definition the organisation turned off: not published, and kept here so it can be turned on again. */
+  disabled: boolean;
 }
 
 export interface DefinitionServiceOptions {
@@ -238,18 +240,31 @@ export class DefinitionService {
   /** Everything the builder lists: published definitions and open drafts, with their origin. */
   async catalogue(ctx: TenantContext): Promise<CatalogueItem[]> {
     demand(ctx.actor, 'config:read');
-    const rows = await this.tm.withTenant(ctx.tenantId, (tx) => this.store.catalogue(tx));
+    const { rows, off } = await this.tm.withTenant(ctx.tenantId, async (tx) => {
+      const rows = await this.store.catalogue(tx);
+      const off: CatalogueRow[] = [];
+      for (const d of await this.store.disabledDefinitions(tx)) {
+        const base = await this.store.base(tx, d.kind, d.key);
+        if (!base || !(await this.store.moduleEnabled(tx, base.module_key))) continue;
+        const label = (base.body as { label?: unknown }).label;
+        off.push({ kind: d.kind, key: d.key, version: base.version, status: 'disabled', base_version: base.version, module_key: base.module_key, label: typeof label === 'string' ? label : null });
+      }
+      return { rows, off };
+    });
     const byKey = new Map<string, CatalogueItem>();
     const out: CatalogueItem[] = [];
-    for (const r of rows) {
+    for (const r of [...rows, ...off]) {
       const k = id(r.kind, r.key);
       let item = byKey.get(k);
       if (!item) {
-        item = { kind: r.kind, key: r.key, publishedVersion: null, draftVersion: null, owner: 'tenant', moduleKey: r.module_key, label: r.label };
+        item = { kind: r.kind, key: r.key, publishedVersion: null, draftVersion: null, owner: 'tenant', moduleKey: r.module_key, label: r.label, disabled: false };
         byKey.set(k, item);
         out.push(item);
       }
-      if (r.status === 'published') {
+      if (r.status === 'disabled') {
+        item.owner = 'base';
+        item.disabled = true;
+      } else if (r.status === 'published') {
         item.publishedVersion = r.version;
         item.owner = r.base_version === null ? 'tenant' : 'base';
         item.label = r.label ?? item.label;
@@ -275,13 +290,13 @@ export class DefinitionService {
     ctx: TenantContext,
     kind: K,
     key: string,
-  ): Promise<{ baseVersion: number; base: DefinitionBodies[K]; patch: unknown | null } | undefined> {
+  ): Promise<{ baseVersion: number; base: DefinitionBodies[K]; patch: unknown | null; disabled: boolean; moduleKey: string | null } | undefined> {
     demand(ctx.actor, 'config:read');
     return this.tm.withTenant(ctx.tenantId, async (tx) => {
       const base = await this.store.base(tx, kind, key);
       if (!base) return undefined;
       const p = await this.store.patch(tx, kind, key);
-      return { baseVersion: base.version, base: base.body as DefinitionBodies[K], patch: p?.patch ?? null };
+      return { baseVersion: base.version, base: base.body as DefinitionBodies[K], patch: p?.patch ?? null, disabled: await this.isDisabled(tx, kind, key), moduleKey: base.module_key };
     });
   }
 
@@ -408,6 +423,7 @@ export class DefinitionService {
       let patch: unknown;
       if (base) {
         await this.assertModuleEnabled(tx, base.module_key);
+        await this.assertNotDisabled(tx, kind, key);
         patch = makePatch(base.body, old.body) ?? {};
         body = applyExtensionPatch(base.body, patch);
         this.assertSchema(kind, body as DefinitionBodies[K]);
@@ -439,6 +455,14 @@ export class DefinitionService {
     if (!(await this.store.moduleEnabled(tx, moduleKey))) throw definitionInvalid(`Enable module '${moduleKey}' before changing its definitions.`);
   }
 
+  private async isDisabled(tx: Tx, kind: DefinitionKind, key: string): Promise<boolean> {
+    return (await this.store.disabledDefinitions(tx)).some((d) => d.kind === kind && d.key === key);
+  }
+
+  private async assertNotDisabled(tx: Tx, kind: DefinitionKind, key: string): Promise<void> {
+    if (await this.isDisabled(tx, kind, key)) throw definitionInvalid(`The ${kind} '${key}' is turned off. Turn it on before changing it.`);
+  }
+
   async setExtensionPatch<K extends DefinitionKind>(
     ctx: TenantContext,
     kind: K,
@@ -450,6 +474,7 @@ export class DefinitionService {
       const base = await this.store.base(tx, kind, key);
       if (!base) throw notFound(`${kind} '${key}' is not a shipped definition.`);
       await this.assertModuleEnabled(tx, base.module_key);
+      await this.assertNotDisabled(tx, kind, key);
       const merged = applyExtensionPatch(base.body, patch) as DefinitionBodies[K];
       if ((merged as { key: string }).key !== key) throw definitionInvalid('A patch cannot change the definition key.');
       this.assertSchema(kind, merged);
@@ -464,6 +489,51 @@ export class DefinitionService {
         entityId: key,
         after: { version: published.version, baseVersion: base.version, patch },
       });
+      return published as PublishedDefinition<K>;
+    });
+    this.snapshots.delete(ctx.tenantId);
+    return result;
+  }
+
+  /**
+   * Turns off a definition that came with a module: it stops being published for
+   * the organisation. Its patch stays, module updates do not publish it again,
+   * and turning it on brings it back. Callers check beforehand that nothing
+   * else published still uses it.
+   */
+  async disableDefinition(ctx: TenantContext, kind: DefinitionKind, key: string): Promise<void> {
+    demand(ctx.actor, requiredPermission(kind));
+    await this.tm.withTenant(ctx.tenantId, async (tx) => {
+      const base = await this.store.base(tx, kind, key);
+      if (!base) throw notFound(`${kind} '${key}' is not a shipped definition.`);
+      if (base.module_key === PLATFORM_MODULE) throw definitionInvalid(`The ${kind} '${key}' is part of the app and cannot be turned off.`);
+      await this.assertModuleEnabled(tx, base.module_key);
+      if (await this.isDisabled(tx, kind, key)) throw definitionInvalid(`The ${kind} '${key}' is already turned off.`);
+      await this.store.supersede(tx, kind, key);
+      await this.store.setDefinitionDisabled(tx, kind, key, true, ctx.actor.id);
+      await this.store.bumpConfigVersion(tx);
+      await this.audit.audit(tx, { actorId: ctx.actor.id, action: 'definition.disabled', entity: `definition:${kind}`, entityId: key, after: { baseVersion: base.version, module: base.module_key } });
+    });
+    this.snapshots.delete(ctx.tenantId);
+  }
+
+  /** Turns a definition that came with a module back on, as the module ships it with the organisation's patch. */
+  async enableDefinition<K extends DefinitionKind>(ctx: TenantContext, kind: K, key: string): Promise<PublishedDefinition<K>> {
+    demand(ctx.actor, requiredPermission(kind));
+    const result = await this.tm.withTenant(ctx.tenantId, async (tx) => {
+      const base = await this.store.base(tx, kind, key);
+      if (!base) throw notFound(`${kind} '${key}' is not a shipped definition.`);
+      await this.assertModuleEnabled(tx, base.module_key);
+      if (!(await this.isDisabled(tx, kind, key))) throw definitionInvalid(`The ${kind} '${key}' is not turned off.`);
+      const patch = await this.store.patch(tx, kind, key);
+      const body = (patch ? applyExtensionPatch(base.body, patch.patch) : base.body) as DefinitionBodies[K];
+      this.assertSchema(kind, body);
+      const lookup = await this.lookup(tx, [{ kind, body }]);
+      this.assertCrossRefs(kind, body, lookup);
+      const published = await this.insertPublished(tx, ctx.actor.id, kind, key, body, base.version, base.module_key);
+      await this.store.setDefinitionDisabled(tx, kind, key, false, ctx.actor.id);
+      await this.store.bumpConfigVersion(tx);
+      await this.audit.audit(tx, { actorId: ctx.actor.id, action: 'definition.enabled', entity: `definition:${kind}`, entityId: key, after: { version: published.version, baseVersion: base.version } });
       return published as PublishedDefinition<K>;
     });
     this.snapshots.delete(ctx.tenantId);
@@ -522,7 +592,8 @@ export class DefinitionService {
     const result = await this.tm.withTenant(ctx.tenantId, async (tx) => {
       await this.store.installModule(tx, manifest);
 
-      const bases = await this.store.moduleBases(tx, manifest.key);
+      const off = new Set((await this.store.disabledDefinitions(tx)).map((d) => id(d.kind, d.key)));
+      const bases = (await this.store.moduleBases(tx, manifest.key)).filter((b) => !off.has(id(b.kind, b.key)));
       const patches = new Map((await this.store.patches(tx)).map((p) => [id(p.kind, p.key), p.patch]));
       const effective = bases.map((b) => {
         const patch = patches.get(id(b.kind, b.key));
@@ -604,6 +675,7 @@ export class DefinitionService {
       current: await this.store.moduleDefinitions(tx, moduleKey),
       bases: await this.store.moduleBaseVersions(tx, moduleKey),
       patches: await this.store.patches(tx),
+      disabled: await this.store.disabledDefinitions(tx),
     }));
   }
 

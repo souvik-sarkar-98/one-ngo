@@ -183,19 +183,23 @@ export type BreachFetch = (
 export interface PwnedPasswordsOptions {
   timeoutMs?: number;
   fetch?: BreachFetch;
+  /** Replaces `https://api.pwnedpasswords.com`. Unset keeps Have I Been Pwned. */
+  apiBase?: string;
 }
+const PWNED_API = 'https://api.pwnedpasswords.com';
 export function pwnedPasswords(options: PwnedPasswordsOptions = {}): PasswordBreachSource {
   const request: BreachFetch = options.fetch ?? (async (url, init) => {
     const response = await fetch(url, init);
     return { status: response.status, text: () => response.text() };
   });
+  const api = options.apiBase?.replace(/\/$/, '') || PWNED_API;
   return {
     async breachCount(password) {
       const hash = createHash('sha1').update(password).digest('hex').toUpperCase();
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 2000);
       try {
-        const response = await request(`https://api.pwnedpasswords.com/range/${hash.slice(0, 5)}`, {
+        const response = await request(`${api}/range/${hash.slice(0, 5)}`, {
           headers: { 'Add-Padding': 'true', 'User-Agent': 'ngo-platform-password-check' },
           signal: controller.signal,
         });

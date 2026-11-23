@@ -4,25 +4,11 @@ import { ROOT } from './layer-graph.js';
 
 /**
  * These files record the layout before the move into packages and apps, so they
- * name paths that no longer exist. Current docs and READMEs must cite paths
- * that are on disk.
+ * name paths that no longer exist. Everything under `docs/archive/` is kept for
+ * history only. Current docs and READMEs must cite paths that are on disk.
  */
-const HISTORY = new Set([
-  'docs/ONE_NGO_VERSION_2_ENHANCEMENT.md',
-  'docs/architecture/relocation-map.md',
-  'docs/architecture/ngo-backend-building-blocks.md',
-  'docs/architecture/ngo-backend-enhancement-plan.md',
-  'docs/architecture/ngo-management-platform.md',
-  'docs/architecture/ngo-script-effects-design.md',
-  'docs/plans/ngo-backend-building-blocks.md',
-  'docs/plans/ngo-backend-enhancement-plan.md',
-  'docs/plans/ngo-kysely-migration-plan.md',
-  'docs/plans/ngo-release-1-build-blocks.md',
-  'docs/reports/release-sizes-2026-10-24.md',
-  'docs/reports/release-validation-2026-10-24.md',
-  'docs/reports/release-validation-2026-10-25.md',
-  'docs/reports/s4-review-2026-10-26.md',
-]);
+const HISTORY = new Set(['docs/plans/ngo-backend-enhancement-plan.md']);
+const HISTORY_DIRS = ['docs/archive/'];
 
 const PATH_IN_BACKTICKS = /`((?:apps|packages|src|product|docs|test|web|scripts)\/[^`\n]+)`/g;
 
@@ -57,7 +43,7 @@ export function missingDocPaths(root = join(ROOT, '..', '..')): string[] {
   const missing: string[] = [];
   for (const abs of markdownFiles(root)) {
     const rel = abs.slice(root.length + 1).replaceAll('\\', '/');
-    if (HISTORY.has(rel)) continue;
+    if (HISTORY.has(rel) || HISTORY_DIRS.some((dir) => rel.startsWith(dir))) continue;
     const markdown = readFileSync(abs, 'utf8');
     for (const path of citedPaths(markdown)) {
       if (!existsSync(join(root, path))) missing.push(`${rel}: ${path}`);

@@ -1,6 +1,6 @@
 /**
  * What a database provider can do, published by its driver (section 11.3 of
- * docs/architecture/ngo-backend-enhancement-plan.md). A profile may change how
+ * docs/plans/ngo-backend-enhancement-plan.md). A profile may change how
  * a provider meets a rule, never whether it does: tenancy, receipt and ledger
  * rules hold on every provider.
  */

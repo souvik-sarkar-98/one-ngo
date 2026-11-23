@@ -1,6 +1,6 @@
 import type { Params } from '../address';
 import { memoryPeople } from '../people/testing';
-import type { AdminGateway, ApiKey, AuditEntry, ConnectorView, Delivery, JobRow, OrganisationSettings, RoleSummary } from './admin';
+import type { AdminGateway, ApiKey, AuditEntry, ConnectorView, DeletedRecord, Delivery, JobRow, OrganisationSettings, RoleSummary } from './admin';
 
 const fail = (code: string, message: string) => Object.assign(new Error(message), { code, issues: [] as { path: string; message: string }[] });
 
@@ -15,7 +15,11 @@ export function memoryAdmin() {
     { key: 'viewer', label: 'Viewer', requireTwoStep: false },
   ];
   const keys: ApiKey[] = [{ id: 'k1', name: 'Website form', role: 'finance', feed: null, createdBy: 'u-asha', createdAt: '2026-09-02T00:00:00.000Z', lastUsedAt: null, revokedAt: null }];
-  const connectors: ConnectorView[] = [{ key: 'crm', kind: 'webhook', enabled: true, configured: true, config: { url: 'https://crm.test/in' }, secrets: ['signingSecret'], oauth: null, updatedBy: 'u-asha', updatedAt: '2026-10-01T00:00:00.000Z' }];
+  const connectors: ConnectorView[] = [{ key: 'crm', kind: 'webhook', enabled: true, archived: false, configured: true, config: { url: 'https://crm.test/in' }, secrets: ['signingSecret'], oauth: null, updatedBy: 'u-asha', updatedAt: '2026-10-01T00:00:00.000Z' }];
+  const bin: DeletedRecord[] = [
+    { id: 'r-kabir', type: 'donation', typeLabel: 'Donation', number: 'DON/2026/00004', title: 'Kabir', version: 3, deletedAt: '2026-10-24T09:30:00.000Z', deletedBy: 'u-asha', deletedByName: 'Asha Shetty' },
+    { id: 'r-meera', type: 'donor', typeLabel: 'Donor', number: 'DNR/00009', title: 'Meera', version: 2, deletedAt: '2026-10-23T16:10:00.000Z', deletedBy: 'u-asha', deletedByName: 'Asha Shetty' },
+  ];
   const deliveries: Delivery[] = [
     { id: 'd1', event: 'action.tellCrm', recordId: 'r1', status: 'failed', attempts: 5, responseStatus: 500, error: 'down', createdAt: '2026-10-24T09:00:00.000Z', lastAttemptAt: null },
     { id: 'd2', event: 'action.tellCrm', recordId: 'r2', status: 'sent', attempts: 1, responseStatus: 200, error: null, createdAt: '2026-10-24T10:00:00.000Z', lastAttemptAt: null },
@@ -35,7 +39,7 @@ export function memoryAdmin() {
     area: i % 2 ? 'people' : 'records',
     recordType: i % 2 ? null : 'donation',
   }));
-  let settings: OrganisationSettings = { name: 'Demo Foundation', legalName: 'Demo Foundation Trust', defaultLanguage: 'en', languages: ['en', 'hi'], storage: { usedBytes: 412 * 1024 ** 2, quotaBytes: 1024 ** 3 }, apiRequestsPerMinute: 120, corsOrigins: [], financialYearStartMonth: 4, financialYearFixed: false };
+  let settings: OrganisationSettings = { name: 'Demo Foundation', legalName: 'Demo Foundation Trust', defaultLanguage: 'en', languages: ['en', 'hi'], storage: { usedBytes: 412 * 1024 ** 2, quotaBytes: 1024 ** 3 }, apiRequestsPerMinute: 120, corsOrigins: [], financialYearStartMonth: 4, financialYearFixed: false, mailConnector: null, mailFrom: null, mailConnectors: [], fileStoreConnector: null, fileStoreConnectors: [], emailTemplates: { sign_in_code: null, password_reset: null, invite: null }, emailTemplateOptions: [{ key: 'welcome', label: 'Welcome message' }] };
 
   const gateway: AdminGateway = {
     async roles() {
@@ -62,24 +66,38 @@ export function memoryAdmin() {
       await people.gateway.removeFromRole(role, id);
     },
     async connectors() {
-      return connectors.map((c) => ({ key: c.key, kind: c.kind, enabled: c.enabled, configured: c.configured, usedBy: ['Tell the CRM'], lastDelivery: { status: 'sent' as const, at: deliveries[1]!.createdAt } }));
+      return connectors.map((c) => ({ key: c.key, kind: c.kind, enabled: c.enabled, archived: c.archived, configured: c.configured, usedBy: c.key === 'crm' ? ['Tell the CRM'] : [], lastDelivery: { status: 'sent' as const, at: deliveries[1]!.createdAt } }));
     },
     async connector(key) {
       log('connector', key);
-      const c = connectors.find((x) => x.key === key);
-      if (!c) throw fail('not_found', `Connector '${key}' is not set up.`);
-      return c;
+      return connectors.find((x) => x.key === key) ?? null;
     },
     async saveConnector(key, body) {
       log('saveConnector', key, body);
       const existing = connectors.find((x) => x.key === key);
       const secrets = [...new Set([...(existing?.secrets ?? []), ...Object.keys(body.secrets ?? {})])].sort();
+      if (existing?.archived) throw fail('rule_violation', `'${key}' is archived. Restore it before changing it.`);
       const kind = existing?.kind ?? body.kind!;
       const oauth = kind === 'oauth' ? { connected: secrets.includes('refreshToken'), expiresAt: null } : null;
-      const next: ConnectorView = { key, kind, enabled: !!body.enabled, configured: secrets.includes('signingSecret'), config: body.config ?? {}, secrets, oauth, updatedBy: 'u-asha', updatedAt: '2026-10-24T00:00:00.000Z' };
+      const next: ConnectorView = { key, kind, enabled: !!body.enabled, archived: false, configured: secrets.includes('signingSecret'), config: body.config ?? {}, secrets, oauth, updatedBy: 'u-asha', updatedAt: '2026-10-24T00:00:00.000Z' };
       if (existing) Object.assign(existing, next);
       else connectors.push(next);
       return next;
+    },
+    async archiveConnector(key) {
+      log('archiveConnector', key);
+      const c = connectors.find((x) => x.key === key);
+      if (!c) throw fail('not_found', `Connector '${key}' is not set up.`);
+      if (key === 'crm') throw fail('rule_violation', `'${key}' is still used by Tell the CRM. Stop using it there first.`);
+      Object.assign(c, { archived: true, enabled: false });
+      return { ...c };
+    },
+    async restoreConnector(key) {
+      log('restoreConnector', key);
+      const c = connectors.find((x) => x.key === key);
+      if (!c) throw fail('not_found', `Connector '${key}' is not set up.`);
+      Object.assign(c, { archived: false, enabled: false });
+      return { ...c };
     },
     async testConnector(key, input) {
       log('testConnector', key, input);
@@ -143,6 +161,21 @@ export function memoryAdmin() {
       const all = audit.filter((e) => (!q.person || e.actorId === q.person) && (!q.area || e.area === q.area) && (!q.recordType || e.recordType === q.recordType));
       return { items: all.slice(q.offset, q.offset + q.limit), total: all.length };
     },
+    async deletedRecords(q) {
+      log('deletedRecords', q);
+      const text = q.q?.toLowerCase();
+      const all = bin.filter((r) => (!q.type || r.type === q.type) && (!text || `${r.number} ${r.title}`.toLowerCase().includes(text)));
+      return { items: all.slice(q.offset, q.offset + q.limit).map((r) => ({ ...r })), total: all.length };
+    },
+    async restoreRecord(id, version) {
+      log('restoreRecord', id, version);
+      const at = bin.findIndex((r) => r.id === id);
+      if (at < 0) throw fail('not_found', 'Deleted record not found.');
+      const r = bin[at]!;
+      if (r.version !== version) throw fail('conflict', 'This record was changed by someone else. Reload it and try again.');
+      bin.splice(at, 1);
+      return { id: r.id, type: r.type, number: r.number, version: r.version + 1 };
+    },
     async settings() {
       return settings;
     },
@@ -167,6 +200,12 @@ export function memoryAdmin() {
         ...(change.corsOrigins !== undefined && { corsOrigins: change.corsOrigins }),
         ...(change.financialYearStartMonth && { financialYearStartMonth: change.financialYearStartMonth }),
         ...(change.storageQuotaBytes !== undefined && { storage: { ...settings.storage, quotaBytes: change.storageQuotaBytes } }),
+        ...(change.mailConnector !== undefined && { mailConnector: change.mailConnector }),
+        ...(change.mailFrom !== undefined && { mailFrom: change.mailFrom }),
+        ...(change.fileStoreConnector !== undefined && { fileStoreConnector: change.fileStoreConnector }),
+        ...(change.emailTemplates && {
+          emailTemplates: { sign_in_code: change.emailTemplates.sign_in_code ?? null, password_reset: change.emailTemplates.password_reset ?? null, invite: change.emailTemplates.invite ?? null },
+        }),
       };
       return settings;
     },

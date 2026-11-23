@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { PageFrame } from '@onengo/web-kit';
+import { Btn, PageFrame } from '@onengo/web-kit';
 import { RoleScreen as BuilderRoleScreen } from '../../builder/roles/role.screen';
 import { TranslatePipe } from '../../services/i18n';
 import { Autocomplete } from '../../ui/autocomplete';
@@ -13,7 +13,7 @@ import { RoleStore } from './roles-store';
 /** A role (`/admin/roles/:key`): who holds it, and what it allows on the Permissions tab. */
 @Component({
   selector: 'app-admin-role',
-  imports: [FilteredListPage, FilteredInfiniteList, MobileFormSheet, Autocomplete, CreateButton, ScreenHeading, TranslatePipe, PageFrame, BuilderRoleScreen],
+  imports: [Btn, FilteredListPage, FilteredInfiniteList, MobileFormSheet, Autocomplete, CreateButton, ScreenHeading, TranslatePipe, PageFrame, BuilderRoleScreen],
   providers: [RoleStore],
   styleUrls: ['../../ui/styles/na-list-dashboard.css', '../admin.css'],
   template: `
@@ -21,7 +21,7 @@ import { RoleStore } from './roles-store';
       <div class="admin__line admin__line--title">
         <app-screen-heading class="admin__grow" [text]="store.label()" />
         @if (store.tab() === 'members' && !store.narrow()) {
-          <button type="button" class="app-btn app-btn--primary admin__title-action" (click)="store.openAdd()">{{ 'ui.crumbs.addPeople' | t }}</button>
+          <button appBtn="primary" type="button" class="admin__title-action" (click)="store.openAdd()">{{ 'ui.crumbs.addPeople' | t }}</button>
         }
       </div>
       @if (store.canPermissions()) {
@@ -79,7 +79,7 @@ import { RoleStore } from './roles-store';
           @for (p of s.picked; track p.id) {
             <li class="admin__row">
               <span class="admin__label">{{ p.label }}<span class="muted">{{ p.hint }}</span></span>
-              <button type="button" class="app-btn" (click)="store.unpick(p.id)">{{ 'ui.common.remove' | t }}</button>
+              <button appBtn type="button" (click)="store.unpick(p.id)">{{ 'ui.common.remove' | t }}</button>
             </li>
           }
         </ul>

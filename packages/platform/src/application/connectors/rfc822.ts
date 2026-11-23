@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-/** An RFC 822 message for an http email sender to deliver (for example Gmail's raw message). HTML is a second part; without it the message stays plain text. */
+/** An RFC 822 message built for the email connector (for example Gmail's raw message). HTML is a second part; without it the message stays plain text. */
 export function rfc822(message: { from: string; to: string; subject: string; text: string; html?: string }): string {
   const headers = [
     `From: ${address(message.from)}`,

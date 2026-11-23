@@ -1,0 +1,42 @@
+{
+  "key": "member",
+  "label": "Member",
+  "pluralLabel": "Members",
+  "description": "Members of the organisation, with their category, contact details and membership fees.",
+  "titleField": "name",
+  "numbering": { "sequence": "member", "format": "MBR/{seq:5}", "reset": "never" },
+  "fields": [
+    { "key": "name", "label": "Full name", "type": "text", "required": true, "maxLength": 200, "searchable": true },
+    {
+      "key": "category",
+      "label": "Category",
+      "type": "choice",
+      "required": true,
+      "choices": [
+        { "value": "ordinary", "label": "Ordinary" },
+        { "value": "associate", "label": "Associate" },
+        { "value": "life", "label": "Life" },
+        { "value": "honorary", "label": "Honorary" }
+      ]
+    },
+    { "key": "joinedOn", "label": "Joined on", "type": "date", "required": true },
+    { "key": "login", "label": "Sign-in", "type": "person", "help": "Link the member to their sign-in, if they have one" },
+    { "key": "email", "label": "Email", "type": "email", "searchable": true },
+    { "key": "phone", "label": "Phone", "type": "phone", "searchable": true },
+    { "key": "address", "label": "Address", "type": "longText", "maxLength": 1000 },
+    { "key": "city", "label": "City", "type": "text", "maxLength": 100 },
+    {
+      "key": "feesPaid",
+      "label": "Membership fees paid",
+      "type": "number",
+      "rollup": { "recordType": "membershipFee", "reference": "member", "measure": "count", "where": "status == 'paid'" }
+    },
+    {
+      "key": "feesTotal",
+      "label": "Total fees paid",
+      "type": "money",
+      "rollup": { "recordType": "membershipFee", "reference": "member", "measure": "sum", "field": "amount", "where": "status == 'paid'" }
+    },
+    { "key": "notes", "label": "Notes", "type": "longText" }
+  ]
+}

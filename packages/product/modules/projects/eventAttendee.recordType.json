@@ -1,0 +1,15 @@
+{
+  "key": "eventAttendee",
+  "label": "Attendee",
+  "pluralLabel": "Attendees",
+  "description": "A person on the list for an event, with whether they came.",
+  "titleField": "name",
+  "numbering": { "sequence": "eventAttendee", "format": "ATT/{seq:5}", "reset": "never" },
+  "fields": [
+    { "key": "name", "label": "Name", "type": "text", "required": true, "maxLength": 200, "searchable": true },
+    { "key": "event", "label": "Event", "type": "reference", "referenceType": "event", "required": true },
+    { "key": "email", "label": "Email", "type": "email", "searchable": true },
+    { "key": "phone", "label": "Phone", "type": "phone", "searchable": true },
+    { "key": "attended", "label": "Attended", "type": "boolean", "help": "Tick when the person came to the event" }
+  ]
+}

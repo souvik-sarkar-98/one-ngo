@@ -5,6 +5,7 @@ import type { RowView, Tone } from '../../../core/rows';
 import { TranslatePipe } from '../../../services/i18n';
 import { EditableTable } from '../../../ui/editable-table';
 import type { TableColumn } from '../../../ui/table-rows';
+import { Btn } from '@onengo/web-kit';
 
 const PAGE = 100;
 const TONES: Record<TranslationRow['origin'], Tone> = { organisation: 'primary', app: 'neutral', missing: 'warning' };
@@ -18,7 +19,7 @@ export const areaName = (area: TranslationArea): string => (area === 'ui' ? t('u
  */
 @Component({
   selector: 'app-translations-grid',
-  imports: [TranslatePipe, EditableTable],
+  imports: [Btn, TranslatePipe, EditableTable],
   styleUrl: './translations.css',
   template: `
     <div class="tr-tools">
@@ -41,7 +42,7 @@ export const areaName = (area: TranslationArea): string => (area === 'ui' ? t('u
       <div class="notice info" role="status">
         ⚠ {{ 'ui.builder.translations.stale' | t: { count: stale().length } }}
         <ul class="tr-stale">@for (p of stale(); track p) { <li><code>{{ p }}</code></li> }</ul>
-        @if (editable()) { <button type="button" class="small" (click)="removeStale.emit()">{{ 'ui.builder.translations.removeStale' | t }}</button> }
+        @if (editable()) { <button appBtn size="sm" type="button" (click)="removeStale.emit()">{{ 'ui.builder.translations.removeStale' | t }}</button> }
       </div>
     }
 

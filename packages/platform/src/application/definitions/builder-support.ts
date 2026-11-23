@@ -771,6 +771,28 @@ export class BuilderSupport {
     return { key, enabled: false, ...result };
   }
 
+  /** Turns off one definition that came with a module, unless another published definition still uses it. */
+  async disableDefinition(ctx: TenantContext, kind: DefinitionKind, key: string) {
+    demand(ctx.actor, kind === 'script' ? 'config:script:publish' : 'config:publish');
+    const others = (await this.published(ctx.tenantId)).filter((d) => !(d.kind === kind && d.key === key));
+    const issues: FieldIssue[] = findUsages(others, { kind, key })
+      .filter((u) => u.kind !== 'translation')
+      .map((u) => ({ path: `${u.kind}:${u.key}${u.path}`, message: `the ${KIND_NOUN[u.kind]} '${u.label ?? u.key}' uses the ${KIND_NOUN[kind]} '${key}' (${u.what})` }));
+    if (issues.length) {
+      const shown = issues.slice(0, 3).map((i) => i.message).join('; ');
+      const more = issues.length > 3 ? `; and ${issues.length - 3} more` : '';
+      throw definitionInvalid(`Cannot turn off the ${KIND_NOUN[kind]} '${key}' while it is in use: ${shown}${more}. Change or remove those first.`, issues);
+    }
+    await this.p.definitions.disableDefinition(ctx, kind, key);
+    return { kind, key, disabled: true };
+  }
+
+  /** Turns a definition that came with a module back on. */
+  async enableDefinition(ctx: TenantContext, kind: DefinitionKind, key: string) {
+    const published = await this.p.definitions.enableDefinition(ctx, kind, key);
+    return { kind, key, disabled: false, version: published.version };
+  }
+
   /**
    * What updating to the shipped version would change, and the organisation's
    * own changes that would no longer apply or would no longer pass the checks.
@@ -790,6 +812,8 @@ export class BuilderSupport {
     const conflicts: { kind: DefinitionKind; key: string; path: string; message: string }[] = [];
     const effective: { kind: DefinitionKind; body: DefinitionBodies[DefinitionKind] }[] = [];
     for (const d of pkg.definitions) {
+      // A definition the organisation turned off is not published by an update, so there is nothing to review.
+      if (state.disabled.some((o) => o.kind === d.kind && o.key === d.body.key)) continue;
       const before = oldBase(d.kind, d.body.key) as DefinitionBodies[DefinitionKind] | undefined;
       const patch = patchOf(d.kind, d.body.key);
       const status = before === undefined ? 'new' : checksum(before) === checksum(d.body) ? 'unchanged' : 'changed';

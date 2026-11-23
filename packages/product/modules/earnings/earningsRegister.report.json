@@ -1,0 +1,37 @@
+{
+  "key": "earningsRegister",
+  "label": "Earnings register",
+  "parameters": [
+    { "key": "from", "label": "From", "type": "date", "required": true },
+    { "key": "to", "label": "To", "type": "date", "required": true }
+  ],
+  "datasets": [
+    {
+      "key": "earnings",
+      "label": "Received earnings",
+      "source": "query",
+      "recordType": "earning",
+      "statusIn": ["received"],
+      "filters": { "receivedOn": { "from": "params.from", "to": "params.to" } },
+      "sort": { "field": "receivedOn", "dir": "asc" },
+      "fields": ["title", "category", "source", "amount", "receivedOn", "receivedIn"]
+    }
+  ],
+  "outputs": {
+    "excel": {
+      "sheets": [
+        {
+          "dataset": "earnings",
+          "columns": [
+            { "field": "title", "header": "Description", "format": "text" },
+            { "field": "category", "header": "Category", "format": "text" },
+            { "field": "source", "header": "Received from", "format": "text" },
+            { "field": "amount", "header": "Amount", "format": "money", "total": true },
+            { "field": "receivedOn", "header": "Received on", "format": "date" },
+            { "field": "receivedIn", "header": "Received in", "format": "text" }
+          ]
+        }
+      ]
+    }
+  }
+}

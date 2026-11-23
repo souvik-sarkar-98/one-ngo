@@ -23,8 +23,8 @@ export class PrintStore {
   readonly page = signal<ReceiptPage | null>(null);
   /** The issuer's logo as a data URL; the receipt prints without it when it cannot load. */
   readonly logo = signal<string | null>(null);
-  /** The kept signature as a data URL. */
-  readonly signature = signal<string | null>(null);
+  /** The kept signatures as data URLs, in print order. A missing image is null. */
+  readonly signatures = signal<(string | null)[]>([]);
   /** The public path, when this receipt has a live link. */
   readonly link = signal<string | null>(null);
   readonly linkBusy = signal(false);
@@ -36,7 +36,7 @@ export class PrintStore {
     this.loading.set(true);
     this.error.set('');
     this.logo.set(null);
-    this.signature.set(null);
+    this.signatures.set([]);
     this.link.set(null);
     this.receiptId = receiptId;
     try {
@@ -46,7 +46,8 @@ export class PrintStore {
       this.link.set(p.publicLink ?? null);
       this.title.setTitle(browserTitle(page.number));
       if (page.issuer.logoUrl) this.logo.set(await this.organisation.image(page.issuer.logoUrl).catch(() => null));
-      if (p.issuer?.signatoryImageUrl) this.signature.set(await this.organisation.image(p.issuer.signatoryImageUrl).catch(() => null));
+      const urls = p.issuer?.signatoryImageUrls ?? (p.issuer?.signatoryImageUrl ? [p.issuer.signatoryImageUrl] : []);
+      this.signatures.set(await Promise.all(urls.map((url) => (url ? this.organisation.image(url).catch(() => null) : Promise.resolve(null)))));
     } catch (e) {
       this.page.set(null);
       this.error.set(asGatewayError(e, t('ui.print.loadFailed')).message);

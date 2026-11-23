@@ -1,0 +1,11 @@
+{
+  "key": "membershipFeePaid",
+  "recordType": "membershipFee",
+  "whenStatus": "paid",
+  "date": "record.paidOn",
+  "memo": "'Membership fee ' + record.number + ' from ' + record.memberName",
+  "lines": [
+    { "side": "debit", "accountExpr": "record.paidTo", "amount": "record.amount" },
+    { "side": "credit", "account": "MEM_FEES", "amount": "record.amount" }
+  ]
+}

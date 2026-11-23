@@ -1,5 +1,5 @@
--- 003_ledger_money: double-entry ledger, numbered receipts, money accounts,
--- transfers and payments.
+-- 003_ledger_money: double-entry ledger, numbered receipts with their issuer,
+-- wording, signatures and public link, money accounts, transfers and payments.
 --
 -- Money is numeric(14, 2). Journals must balance (a deferred constraint trigger,
 -- checked at commit); posted journals and issued receipts are immutable; closed
@@ -211,9 +211,11 @@ create table receipt_issuer (
   tenant_id uuid not null references tenant(id),
   issuer jsonb not null,
   logo_file_id uuid references file_object(id),
-  captured_at timestamptz not null default now()
+  captured_at timestamptz not null default now(),
+  signatory_file_id uuid references file_object(id)
 );
 create index receipt_issuer_logo on receipt_issuer (logo_file_id) where logo_file_id is not null;
+create index receipt_issuer_signatory on receipt_issuer (signatory_file_id) where signatory_file_id is not null;
 
 create function receipt_issuer_is_immutable() returns trigger language plpgsql as $$
 begin
@@ -222,6 +224,48 @@ end
 $$;
 create trigger receipt_issuer_immutable before update or delete on receipt_issuer
   for each row execute function receipt_issuer_is_immutable();
+
+-- The raw token is encrypted. Lookup uses the hash, so a database read does not open the receipt.
+create table receipt_link (
+  receipt_id uuid primary key references receipt(id),
+  tenant_id uuid not null references tenant(id),
+  token_hash text not null unique,
+  token_enc text not null,
+  created_by text not null,
+  created_at timestamptz not null default now(),
+  revoked_at timestamptz,
+  revoked_by text,
+  check ((revoked_at is null and revoked_by is null) or (revoked_at is not null and revoked_by is not null))
+);
+
+alter table receipt_link enable row level security;
+create policy tenant_isolation on receipt_link
+  using (tenant_id = (select app_tenant())) with check (tenant_id = (select app_tenant()));
+
+grant select, insert, update on receipt_link to app_runtime;
+
+-- The wording of a receipt, resolved when it was issued. A later edit to the receipt
+-- rule must not rewrite an issued receipt.
+create table receipt_content (
+  receipt_id uuid primary key references receipt(id),
+  tenant_id uuid not null references tenant(id),
+  content jsonb not null,
+  captured_at timestamptz not null default now()
+);
+
+alter table receipt_content enable row level security;
+create policy tenant_isolation on receipt_content
+  using (tenant_id = (select app_tenant())) with check (tenant_id = (select app_tenant()));
+
+grant select, insert on receipt_content to app_runtime;
+
+create function receipt_content_is_immutable() returns trigger language plpgsql as $$
+begin
+  raise exception 'a receipt''s wording cannot be changed' using errcode = 'P0001';
+end
+$$;
+create trigger receipt_content_immutable before update or delete on receipt_content
+  for each row execute function receipt_content_is_immutable();
 
 -- Money accounts, transfers, payments ------------------------------------------------
 

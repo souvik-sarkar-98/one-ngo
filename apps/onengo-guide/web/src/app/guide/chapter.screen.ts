@@ -26,7 +26,7 @@ import { Stage } from './stage';
         <ol class="steps">
           @for (item of chapter().steps; track $index; let index = $index) {
             <li>
-              <button type="button" [attr.aria-current]="index === stepIndex() ? 'step' : null" (click)="show(index)">
+              <button type="button" class="step" [attr.aria-current]="index === stepIndex() ? 'step' : null" (click)="show(index)">
                 <span>Step {{ index + 1 }}</span>{{ item.title }}
               </button>
             </li>
@@ -35,8 +35,8 @@ import { Stage } from './stage';
 
         <div class="player" [class.mobile]="layout() === 'mobile'">
           <div class="mode" role="group" aria-label="This screen">
-            <button type="button" [attr.aria-pressed]="layout() === 'web'" (click)="choose('web')">Web</button>
-            <button type="button" [attr.aria-pressed]="layout() === 'mobile'" (click)="choose('mobile')">Mobile</button>
+            <button type="button" class="mode-option" [attr.aria-pressed]="layout() === 'web'" (click)="choose('web')">Web</button>
+            <button type="button" class="mode-option" [attr.aria-pressed]="layout() === 'mobile'" (click)="choose('mobile')">Mobile</button>
           </div>
 
           <div class="stage-row">
@@ -69,7 +69,7 @@ import { Stage } from './stage';
     .back svg, .arrow svg { width: 22px; height: 22px; fill: currentColor; }
     .title { margin: 6px 0 12px; font-size: 22px; }
     .wait { color: var(--muted); }
-    a:focus-visible, button:focus-visible { outline: 3px solid #f3be26; outline-offset: 2px; }
+    a:focus-visible, button:focus-visible { outline: 3px solid var(--hit); outline-offset: 2px; }
     .steps { list-style: none; display: flex; gap: 8px; overflow-x: auto; margin: 0 0 12px; padding: 0 0 2px; }
     .steps li { flex: 1 1 0; min-width: 120px; display: flex; }
     .steps button { width: 100%; min-height: 44px; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); font: inherit; text-align: left; cursor: pointer; color: var(--fg); }
@@ -79,7 +79,7 @@ import { Stage } from './stage';
     .player.mobile { align-items: center; }
     .mode { align-self: flex-end; display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--card); }
     .player.mobile .mode { align-self: center; }
-    .mode button { min-height: 36px; padding: 6px 14px; border: 0; background: transparent; color: var(--fg); font: inherit; cursor: pointer; }
+    .mode button { min-height: 36px; border-radius: 0; padding: 6px 14px; border: 0; background: transparent; color: var(--fg); font: inherit; cursor: pointer; }
     .mode button[aria-pressed="true"] { background: var(--brand); color: var(--brand-fg); }
     .stage-row { display: flex; align-items: center; gap: 12px; width: 100%; }
     .stage { flex: 1; min-width: 0; overflow-x: auto; }

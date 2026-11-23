@@ -30,6 +30,9 @@ const remembered: CanActivateFn = (route) => {
 
 const administers: CanActivateFn = () => (hasAdministration(inject(Session).me()?.capabilities) ? true : refused());
 
+/** Money accounts need `money:accounts:read`; opening one is checked again on the screen and by the server. */
+const seesMoney: CanActivateFn = () => (inject(Session).me()?.capabilities.money ? true : refused());
+
 /**
  * An emailed link carries the language it was written in, so the page it opens
  * is in that language before the person has a session. Only the shipped text is
@@ -89,6 +92,8 @@ const inShell: Routes = [
   { path: 'inbox', loadComponent: () => import('./inbox/inbox.screen').then((m) => m.InboxScreen) },
   { path: 'reports', loadComponent: () => import('./reports/reports.screen').then((m) => m.ReportsScreen) },
   { path: 'reports/:key', loadComponent: () => import('./reports/report.screen').then((m) => m.ReportScreen) },
+  { path: 'accounts', canActivate: [seesMoney], loadComponent: () => import('./money/money.screen').then((m) => m.MoneyScreen) },
+  { path: 'money', redirectTo: '/accounts' },
   { path: 'more', redirectTo: '/' },
   { path: 'people', redirectTo: '/' },
   { path: 'settings', loadChildren: () => import('./more/more.routes').then((m) => m.SETTINGS_ROUTES) },

@@ -5,13 +5,14 @@ import type { GatewayError } from '../../../core/records/gateway/gateway';
 import { TranslatePipe } from '../../../services/i18n';
 import { PreviewRecord, type ChosenRecord } from './preview-record';
 import { PreviewStore } from './preview-store';
+import { Btn } from '@onengo/web-kit';
 
 type Body = Record<string, unknown>;
 
 /** The balance check: the journal lines the draft rule would post for a chosen record, worked out without posting. */
 @Component({
   selector: 'app-posting-preview',
-  imports: [TranslatePipe, PreviewRecord],
+  imports: [Btn, TranslatePipe, PreviewRecord],
   styleUrl: './preview.css',
   template: `
     <section class="pv" aria-labelledby="posting-try-title">
@@ -20,7 +21,7 @@ type Body = Record<string, unknown>;
         <app-preview-record [fixedType]="recordType()" (changed)="chosen.set($event)" />
       }
       <div class="pv__row">
-        <button type="button" class="small" [disabled]="running() || !recordType()" (click)="run()">{{ 'ui.builder.posting.check' | t }}</button>
+        <button appBtn size="sm" type="button" [disabled]="running() || !recordType()" (click)="run()">{{ 'ui.builder.posting.check' | t }}</button>
       </div>
       @if (error(); as e) {
         <div class="pv__bad" role="alert">

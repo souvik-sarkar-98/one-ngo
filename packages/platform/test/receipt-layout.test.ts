@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import type { DefinitionBodies, DefinitionKind } from '../src/runtime/definitions/types.js';
 import type { ReceiptRuleDef } from '../src/shared/definitions/types.js';
 import { asTx } from '../src/infrastructure/postgres/tx.js';
-import { admin, createWorld, expectCode, today, type TestWorld } from './helpers.js';
+import { admin, completeIdentity, createWorld, expectCode, today, type TestWorld } from './helpers.js';
 
 const worlds: TestWorld[] = [];
 afterAll(() => Promise.all(worlds.map((w) => w.close())));
@@ -60,6 +60,7 @@ describe('receipt layouts', () => {
     const w = await createWorld();
     worlds.push(w);
     const ctx = w.as(w.ngoA);
+    await completeIdentity(w, w.ngoA);
     await w.platform.organisation.addRegistration(ctx, { type: '80g', number: 'AAATD1234F' });
     const { record } = await w.platform.records.create(ctx, 'donation', { donorName: 'Asha', amount: 1500 });
     await w.platform.records.transition(ctx, record.id, 'markPaid', { expectedVersion: 1, data: { method: 'cash', paidOn: today() } });

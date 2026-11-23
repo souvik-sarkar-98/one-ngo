@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { Btn } from '@onengo/web-kit';
 import { GUIDE } from './catalogue';
 import { RECORD_CHAPTERS, GuideCatalogue } from './catalogue-store';
 import type { GuideChapter, GuideSection } from './model';
@@ -47,7 +48,7 @@ function matches(text: string | undefined, query: string): boolean {
  */
 @Component({
   selector: 'guide-home',
-  imports: [RouterLink],
+  imports: [Btn, RouterLink],
   template: `
     <section class="home">
       <h1>{{ organisation() }}</h1>
@@ -77,7 +78,7 @@ function matches(text: string | undefined, query: string): boolean {
             <p class="kicker">Start here</p>
             <h2>{{ row.title }}</h2>
             <p>{{ row.detail }}</p>
-            <a class="btn" [routerLink]="['/', row.sectionId, row.chapterId]">Start</a>
+            <a appBtn="primary" [routerLink]="['/', row.sectionId, row.chapterId]">Start</a>
           </section>
         }
 
@@ -105,12 +106,11 @@ function matches(text: string | undefined, query: string): boolean {
     .finder { position: relative; display: block; margin: 0 0 16px; }
     .finder svg { position: absolute; left: 12px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); fill: var(--muted); pointer-events: none; }
     .finder input { width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: 12px; padding: 0 14px 0 38px; font: inherit; color: var(--fg); background: var(--card); }
-    .finder input:focus, a:focus-visible, .btn:focus-visible { outline: 3px solid #f3be26; outline-offset: 2px; }
+    .finder input:focus, a:focus-visible, .app-btn:focus-visible { outline: 3px solid var(--hit); outline-offset: 2px; }
     .start { margin: 0 0 20px; padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--brand) 25%, #fff); border-radius: 14px; background: color-mix(in srgb, var(--brand) 6%, #fff); }
     .kicker { margin: 0; color: var(--brand); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
     .start h2 { margin: 2px 0 4px; font-size: 18px; }
     .start p { margin: 0 0 12px; color: var(--muted); line-height: 1.45; }
-    .btn { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 16px; border-radius: 999px; background: var(--brand); color: var(--brand-fg); font-weight: 700; text-decoration: none; }
     .group { margin: 0 0 18px; }
     .group h2 { margin: 0 0 8px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--brand); }
     .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }

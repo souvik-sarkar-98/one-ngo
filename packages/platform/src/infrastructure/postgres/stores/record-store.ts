@@ -1,12 +1,16 @@
-import { sql } from 'kysely';
+import { sql, type SelectQueryBuilder } from 'kysely';
+import type { DB } from '../db-types.js';
 import { enqueueEvent, writeAudit, type AuditInput } from './audit-store.js';
 import { fieldExpr, typePredicate } from '../query-compiler/index-expressions.js';
 import type { Tx } from '../../../domain/ports/transaction.js';
 import type { PostgresSequenceStore } from './sequence-store.js';
 import type {
   ApprovalRequestInput,
+  DeletedQuery,
+  DeletedRecordRow,
   LedgerBalances,
   NewRecord,
+  RecordLinks,
   RecordChanges,
   RecordRow,
   RecordStore,
@@ -34,6 +38,17 @@ export const RECORD_COLUMNS = [
 
 const TENANT = sql<string>`app_tenant()`;
 const anyUuid = (ids: string[]) => sql<string>`any(${ids}::uuid[])`;
+
+/** Narrows a `record` query to this tenant's deleted records of one type, matching the search text on the number or searchable text. */
+function deletedWhere<QB extends SelectQueryBuilder<DB, 'record', object>>(qb: QB, query: Pick<DeletedQuery, 'typeKey' | 'search'>): QB {
+  const text = query.search?.trim();
+  const like = text ? `%${text.replace(/[\\%_]/g, '\\$&')}%` : undefined;
+  return qb
+    .where('tenant_id', '=', TENANT)
+    .where('deleted_at', 'is not', null)
+    .$if(!!query.typeKey, (q) => q.where('type_key', '=', query.typeKey!))
+    .$if(!!like, (q) => q.where(sql<boolean>`(number ilike ${like} or search_text ilike ${like})`)) as QB;
+}
 
 export class PgRecordStore implements RecordStore {
   constructor(private readonly sequences: PostgresSequenceStore) {}
@@ -138,6 +153,74 @@ export class PgRecordStore implements RecordStore {
       .returning(RECORD_COLUMNS)
       .$castTo<RecordRow>()
       .executeTakeFirst();
+  }
+
+  getDeleted(tx: Tx, id: string): Promise<DeletedRecordRow | undefined> {
+    return pg(tx)
+      .selectFrom('record')
+      .select([...RECORD_COLUMNS, 'deleted_at', 'updated_by'])
+      .where('tenant_id', '=', TENANT)
+      .where('id', '=', id)
+      .where('deleted_at', 'is not', null)
+      .$castTo<DeletedRecordRow>()
+      .executeTakeFirst();
+  }
+
+  deletedPage(tx: Tx, query: DeletedQuery): Promise<DeletedRecordRow[]> {
+    return deletedWhere(pg(tx).selectFrom('record').select([...RECORD_COLUMNS, 'deleted_at', 'updated_by']), query)
+      .orderBy('deleted_at', 'desc')
+      .orderBy('id')
+      .limit(query.limit)
+      .offset(query.offset)
+      .$castTo<DeletedRecordRow>()
+      .execute();
+  }
+
+  async countDeleted(tx: Tx, query: Pick<DeletedQuery, 'typeKey' | 'search'>): Promise<number> {
+    const row = await deletedWhere(pg(tx).selectFrom('record').select(sql<number>`count(*)::int`.as('n')), query).executeTakeFirstOrThrow();
+    return row.n;
+  }
+
+  undelete(tx: Tx, id: string, expectedVersion: number, actorId: string): Promise<RecordRow | undefined> {
+    return pg(tx)
+      .updateTable('record')
+      .set((eb) => ({
+        deleted_at: null,
+        version: eb('version', '+', 1),
+        updated_by: actorId,
+        updated_at: sql<Date>`now()`,
+      }))
+      .where('tenant_id', '=', TENANT)
+      .where('id', '=', id)
+      .where('version', '=', expectedVersion)
+      .where('deleted_at', 'is not', null)
+      .returning(RECORD_COLUMNS)
+      .$castTo<RecordRow>()
+      .executeTakeFirst();
+  }
+
+  async linksOf(tx: Tx, id: string): Promise<RecordLinks> {
+    const k = pg(tx);
+    const one = sql<number>`1`.as('one');
+    const [entry, receipt, payment, approval] = await Promise.all([
+      k.selectFrom('journal_entry').select(one).where('tenant_id', '=', TENANT).where('source_record_id', '=', id).limit(1).executeTakeFirst(),
+      k.selectFrom('receipt').select(one).where('tenant_id', '=', TENANT).where('record_id', '=', id).limit(1).executeTakeFirst(),
+      k.selectFrom('payment_intent').select(one).where('tenant_id', '=', TENANT).where('record_id', '=', id).limit(1).executeTakeFirst(),
+      this.hasPendingApproval(tx, id),
+    ]);
+    return { journalEntries: !!entry, receipts: !!receipt, payments: !!payment, pendingApproval: approval };
+  }
+
+  async countLinked(tx: Tx, typeKey: string, field: string, value: string): Promise<number> {
+    const row = await pg(tx)
+      .selectFrom('record')
+      .select(sql<number>`count(*)::int`.as('n'))
+      .where('tenant_id', '=', TENANT)
+      .where('type_key', '=', typeKey)
+      .where('deleted_at', 'is', null)
+      .where(sql<string>`data->>${field}`, '=', value)
+      .executeTakeFirstOrThrow();
+    return row.n;
   }
 
   async setRollup(tx: Tx, typeKey: string, id: string, fieldKey: string, value: number): Promise<void> {

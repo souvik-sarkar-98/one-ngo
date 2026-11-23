@@ -1,5 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
-import { PageFrame } from '@onengo/web-kit';
+import { Btn, PageFrame } from '@onengo/web-kit';
 import { t } from '../core/i18n/i18n';
 import type { CfFieldDef } from '../ui/cf-types';
 import { TranslatePipe } from '../services/i18n';
@@ -19,7 +19,7 @@ import { InboxStore } from './inbox-store';
  */
 @Component({
   selector: 'app-inbox-screen',
-  imports: [FilteredListPage, FilteredInfiniteList, ListFilterSheet, MobileFormSheet, ScreenHeading, TranslatePipe, PageFrame],
+  imports: [Btn, FilteredListPage, FilteredInfiniteList, ListFilterSheet, MobileFormSheet, ScreenHeading, TranslatePipe, PageFrame],
   providers: [InboxStore],
   styleUrl: '../ui/styles/na-list-dashboard.css',
   styles: `
@@ -99,7 +99,7 @@ import { InboxStore } from './inbox-store';
               (retry)="store.retryNotifications()"
               (rowClick)="store.openNotification($event.id)">
               <div listActions class="inbox__actions">
-                <button type="button" class="app-btn" [disabled]="!store.hasUnread()" (click)="store.markAllRead()">{{ 'ui.inbox.markAllRead' | t }}</button>
+                <button appBtn type="button" [disabled]="!store.hasUnread()" (click)="store.markAllRead()">{{ 'ui.inbox.markAllRead' | t }}</button>
               </div>
             </app-filtered-infinite-list>
           } @else {

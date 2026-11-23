@@ -5,7 +5,10 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { InfrastructureError } from '../errors/index.js';
 import type { FileStore, FileStoreResolver } from '../ports/index.js';
+import { storageKey } from './key.js';
 export type { FileStore, FileStoreResolver } from '../ports/index.js';
+export { DriveFileStore, type DriveFileStoreOptions } from './drive.js';
+export { S3FileStore, s3Authorization, s3SigningKey, type S3FileStoreOptions, type S3SignedRequest } from './s3.js';
 
 /** The installation's one store, used by every organisation. */
 export const PLATFORM_STORE = 'platform';
@@ -15,18 +18,13 @@ export function singleStoreResolver(store: FileStore): FileStoreResolver {
   const platform = { ref: PLATFORM_STORE, store };
   return {
     forTenant: async () => platform,
-    byRef(ref) {
+    async byRef(_tenantId, ref) {
       if (ref !== PLATFORM_STORE) throw new Error(`No file store is configured for '${ref}'.`);
       return store;
     },
   };
 }
 
-const KEY = /^[A-Za-z0-9_-]+(\/[A-Za-z0-9_-]+)*$/;
-const checkKey = (key: string) => {
-  if (!KEY.test(key)) throw new Error(`Invalid storage key '${key}'.`);
-  return key;
-};
 const missing = () => new InfrastructureError('not_found', 'File not found.');
 
 export class LocalFileStore implements FileStore {
@@ -49,7 +47,7 @@ export class LocalFileStore implements FileStore {
     return createReadStream(path);
   }
   delete(key: string): Promise<void> { return rm(this.path(key), { force: true }); }
-  private path(key: string) { return join(this.root, ...checkKey(key).split('/')); }
+  private path(key: string) { return join(this.root, ...storageKey(key).split('/')); }
 }
 
 export interface GcsClient {
@@ -62,7 +60,7 @@ export class GcsFileStore implements FileStore {
   put(key: string, body: Readable, contentType = 'application/octet-stream') { return this.client.upload(this.object(key), body, contentType); }
   async get(key: string) { return (await this.client.download(this.object(key))) ?? Promise.reject(missing()); }
   delete(key: string) { return this.client.remove(this.object(key)); }
-  private object(key: string) { return `${this.prefix}${checkKey(key)}`; }
+  private object(key: string) { return `${this.prefix}${storageKey(key)}`; }
 }
 export interface GcsJsonClientOptions {
   bucket: string;

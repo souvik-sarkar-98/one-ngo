@@ -14,11 +14,12 @@ import { InfiniteListRow } from './card-rows';
 import { ListFilterToolbar } from './list-toolbar';
 import { LongPress } from './long-press';
 import { TableRows, type TableColumn } from './table-rows';
+import { Btn } from '@onengo/web-kit';
 
 /** Chips, search, pills, and the card or table rows with infinite scrolling, inside the list toolkit's panel. */
 @Component({
   selector: 'app-filtered-infinite-list',
-  imports: [ChipFilterBar, ListFilterToolbar, AppliedFilterPills, InfiniteListRow, TableRows, InfiniteScrollDirective, LongPress, NgTemplateOutlet, TranslatePipe],
+  imports: [Btn, ChipFilterBar, ListFilterToolbar, AppliedFilterPills, InfiniteListRow, TableRows, InfiniteScrollDirective, LongPress, NgTemplateOutlet, TranslatePipe],
   styleUrl: './styles/app-filtered-infinite-list.css',
   template: `
     <div class="filtered-infinite-list">
@@ -111,9 +112,7 @@ import { TableRows, type TableColumn } from './table-rows';
                   @for (a of item.actions; track a.id) {
                     <button
                       type="button"
-                      class="app-btn"
-                      [class.app-btn--primary]="a.tone === 'primary'"
-                      [class.danger]="a.tone === 'danger'"
+                      [appBtn]="a.tone === 'primary' ? 'primary' : a.tone === 'danger' ? 'danger' : ''"
                       [disabled]="actionsDisabled()"
                       (click)="rowAction.emit({ row: item, action: a.id })">
                       {{ a.label }}
@@ -132,7 +131,7 @@ import { TableRows, type TableColumn } from './table-rows';
         @if (error()) {
           <div class="filtered-infinite-list__state filtered-infinite-list__state--inline" role="alert">
             <span>{{ error() }}</span>
-            <button type="button" class="app-btn app-btn--primary" (click)="retry.emit()">{{ 'ui.common.retry' | t }}</button>
+            <button appBtn="primary" type="button" (click)="retry.emit()">{{ 'ui.common.retry' | t }}</button>
           </div>
         }
 
@@ -149,7 +148,7 @@ import { TableRows, type TableColumn } from './table-rows';
 
         @if (hasMore() && !loadingMore() && !error() && items().length) {
           <div appInfiniteScroll (visible)="loadMore.emit()" class="filtered-infinite-list__sentinel" aria-hidden="true"></div>
-          <button type="button" class="filtered-infinite-list__load-more app-btn" (click)="loadMore.emit()">{{ 'ui.common.loadMore' | t }}</button>
+          <button appBtn type="button" class="filtered-infinite-list__load-more" (click)="loadMore.emit()">{{ 'ui.common.loadMore' | t }}</button>
         }
 
         @if (!hasMore() && !loading() && items().length) {

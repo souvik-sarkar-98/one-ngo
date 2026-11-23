@@ -1,3 +1,4 @@
+import type { JSONSchemaType } from 'ajv';
 import { schemaOf } from './schema.js';
 
 /**
@@ -213,3 +214,79 @@ export const bulkRequest = schemaOf<BulkRequest>({
     },
   },
 });
+
+/** Restoring a deleted record: the version it was deleted at; another version answers 409. */
+export interface RestoreRecordRequest {
+  expectedVersion: number;
+}
+
+export const restoreRecordRequest = schemaOf<RestoreRecordRequest>({
+  type: 'object',
+  required: ['expectedVersion'],
+  additionalProperties: false,
+  properties: { expectedVersion: { type: 'integer' } },
+});
+
+/** What a restore answers: the record that is live again. */
+export interface RestoredRecord {
+  id: string;
+  type: string;
+  number: string | null;
+  version: number;
+}
+
+/** A deleted record as the recycle bin lists it. */
+export interface DeletedRecord {
+  id: string;
+  type: string;
+  typeLabel: string;
+  number: string | null;
+  title: string | null;
+  version: number;
+  deletedAt: string;
+  deletedBy: string | null;
+  deletedByName: string | null;
+}
+
+/** One page of the recycle bin. */
+export interface DeletedPage {
+  items: DeletedRecord[];
+  total: number;
+}
+
+const nullableText = { anyOf: [{ type: 'string' }, { type: 'null', nullable: true }] } as const;
+
+export const restoredRecordResponse: JSONSchemaType<RestoredRecord> = {
+  type: 'object',
+  required: ['id', 'type', 'number', 'version'],
+  additionalProperties: false,
+  properties: { id: text, type: text, number: nullableText, version: { type: 'integer' } },
+};
+
+export const deletedPageResponse: JSONSchemaType<DeletedPage> = {
+  type: 'object',
+  required: ['items', 'total'],
+  additionalProperties: false,
+  properties: {
+    total: { type: 'integer' },
+    items: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['id', 'type', 'typeLabel', 'number', 'title', 'version', 'deletedAt', 'deletedBy', 'deletedByName'],
+        additionalProperties: false,
+        properties: {
+          id: text,
+          type: text,
+          typeLabel: text,
+          number: nullableText,
+          title: nullableText,
+          version: { type: 'integer' },
+          deletedAt: text,
+          deletedBy: nullableText,
+          deletedByName: nullableText,
+        },
+      },
+    },
+  },
+};

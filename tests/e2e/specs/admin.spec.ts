@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { accounts } from '../src/accounts.js';
 import { label } from '../src/catalogue.js';
 import { knownDefect } from '../src/shell.js';
+import { ensureFileStore } from '../src/journeys/data.js';
 import { signIn } from '../src/sign-in.js';
 
 const areas = {
@@ -75,7 +76,7 @@ test('MT-ADM-05 the financial year start month stays fixed once a year is open',
   await signIn(page, accounts.admin.email, accounts.admin.name);
   await page.goto('/admin/organisation/settings');
   await expect(page.getByText(label('ui.admin.settings.fyStartFixed'))).toBeVisible();
-  await expect(page.getByLabel(label('ui.admin.settings.fyStart'))).toBeDisabled();
+  await expect(page.getByLabel(label('ui.admin.settings.fyStart'))).toHaveCount(0);
 });
 
 test('MT-ADM-06 the receipt series row can be reviewed', async ({ page }) => {
@@ -125,6 +126,7 @@ test('MT-SET-02 a website must start with https://', async ({ page }) => {
 
 test('MT-SET-03 a logo accepts PNG, JPEG and WebP up to 1 MB, and refuses other types and larger files', async ({ page }) => {
   await signIn(page, accounts.admin.email, accounts.admin.name);
+  await ensureFileStore(page.request);
   await page.goto('/admin/organisation/identity');
   const input = page.locator('input[type="file"]').first();
 
@@ -156,11 +158,13 @@ test('MT-SET-04 storage shows the quota, and the API limit and default language 
   const original = await limit.inputValue();
   try {
     await limit.fill('30');
-    await page.getByRole('button', { name: label('ui.common.save'), exact: true }).click();
+    const api = page.locator('section').filter({ has: page.getByRole('heading', { name: label('ui.admin.settings.apiTitle'), exact: true }) });
+    await api.getByRole('button', { name: label('ui.common.save'), exact: true }).click();
     await expect(page.getByText(label('ui.admin.settings.saved'))).toBeVisible();
   } finally {
     await limit.fill(original || '60');
-    await page.getByRole('button', { name: label('ui.common.save'), exact: true }).click();
+    const api = page.locator('section').filter({ has: page.getByRole('heading', { name: label('ui.admin.settings.apiTitle'), exact: true }) });
+    await api.getByRole('button', { name: label('ui.common.save'), exact: true }).click();
   }
 
   await page.goto('/admin/organisation/identity');

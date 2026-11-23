@@ -83,12 +83,17 @@ export async function createWorld(
     autoRunJobs?: boolean;
     localeCatalogues?: Record<string, unknown>;
     connectorHttp?: ConnectorHttp;
-    fileStore?: FileStore;
+    /** `null` leaves the organisation with no store, as the product server does. */
+    fileStore?: FileStore | null;
+    /** Replaces outbound HTTP for storage connectors. */
+    storageFetch?: typeof fetch;
     files?: FileLimits;
     exportInlineRows?: number;
     bulkInlineRecords?: number;
     bulkMaxRecords?: number;
     memoryAlertMb?: number;
+    /** When false, no stand-in mail transport is installed, as on the product servers. */
+    mail?: boolean;
     /** Set when a test starts a second platform that must accept this one's tokens. */
     tokenSecret?: string;
     /** Set when a test starts a second platform that must read this one's sensitive values. */
@@ -96,14 +101,14 @@ export async function createWorld(
   } = {},
 ): Promise<TestWorld> {
   const { db, dispose } = await openTestDatabase();
-  const filesDir = options.fileStore ? null : mkdtempSync(join(tmpdir(), 'ngo-files-'));
+  const filesDir = options.fileStore !== undefined ? null : mkdtempSync(join(tmpdir(), 'ngo-files-'));
   const mail = new MemoryTransport();
   const deployed = await prepareDeployment(db, { shippedModules: options.donations === false ? [] : DEFAULT_SHIPPED_MODULES });
   const platform = await createPlatform(db, {
     definitionCacheCheckMs: 0,
     tokenSecret: options.tokenSecret ?? randomBytes(32).toString('hex'),
     encryptionKey: options.encryptionKey ?? randomBytes(32),
-    defaultEmailTransport: mail,
+    defaultEmailTransport: options.mail === false ? undefined : mail,
     paymentProviders: options.paymentProviders,
     logger: options.logger ?? new MemoryLogger(),
     publicBaseUrl: 'https://ngo.test',
@@ -112,7 +117,8 @@ export async function createWorld(
     autoRunJobs: options.autoRunJobs,
     localeCatalogues: options.localeCatalogues,
     connectorHttp: options.connectorHttp ?? refuseConnectorHttp,
-    fileStore: options.fileStore ?? new LocalFileStore(filesDir!),
+    fileStore: options.fileStore === undefined ? new LocalFileStore(filesDir!) : (options.fileStore ?? undefined),
+    storageFetch: options.storageFetch,
     files: options.files,
     exportInlineRows: options.exportInlineRows,
     bulkInlineRecords: options.bulkInlineRecords,
@@ -139,8 +145,9 @@ export async function createWorld(
 }
 
 /**
- * Gives a tenant the identity a receipt needs: a legal name and a registered
- * address. Receipts are refused until both are set, as they are printed on one.
+ * Gives a tenant what a receipt needs: a legal name and a registered address,
+ * which are printed on it, and a signatory for each of its receipt rules, since
+ * a rule with none issues no receipts. Receipts are refused until all are set.
  */
 export async function completeIdentity(w: TestWorld, tenantId: string, legalName = 'Asha Foundation Trust'): Promise<void> {
   const ctx = w.as(tenantId);
@@ -148,6 +155,17 @@ export async function completeIdentity(w: TestWorld, tenantId: string, legalName
   await w.platform.organisation.saveProfile(ctx, {
     address: { line1: '14 River Road', city: 'Pune', state: 'MH', postalCode: '411001', country: 'IN' },
   });
+  await chooseReceiptSignatory(w, tenantId);
+}
+
+/** Adds a signatory and chooses them for every receipt rule the tenant has; nothing is added when it has no receipt rules. */
+export async function chooseReceiptSignatory(w: TestWorld, tenantId: string, name = 'Meera Shah', designation = 'Treasurer'): Promise<string | undefined> {
+  const rules = await w.platform.definitions.list(tenantId, 'receiptRule');
+  if (!rules.length) return undefined;
+  const ctx = w.as(tenantId);
+  const id = (await w.platform.organisation.addSignatory(ctx, { name, designation })).signatories.at(-1)!.id;
+  for (const rule of rules) await w.platform.organisation.setDocumentSignatories(ctx, `receipt:${rule.key}`, { signatories: [id] });
+  return id;
 }
 
 export function currentFiscalYear(date = new Date()): string {

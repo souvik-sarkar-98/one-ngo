@@ -14,13 +14,25 @@ import {
   confirmPaymentRequest,
   createPaymentRequest,
   openAccountRequest,
+  reconciliationSignOffRequest,
+  statementBookRequest,
+  statementIgnoreRequest,
+  statementImportRequest,
+  statementMatchLineRequest,
   statementMatchRequest,
   transferRequest,
+  updateAccountRequest,
   type ConfirmPaymentRequest,
   type CreatePaymentRequest,
   type OpenAccountRequest,
+  type ReconciliationSignOffRequest,
+  type StatementBookRequest,
+  type StatementIgnoreRequest,
+  type StatementImportRequest,
+  type StatementMatchLineRequest,
   type StatementMatchRequest,
   type TransferRequest,
+  type UpdateAccountRequest,
 } from '@onengo/platform/contracts';
 
 declare module 'fastify' {
@@ -51,6 +63,41 @@ export async function paymentRoutes(api: FastifyInstance, { deps }: { deps: Paym
   api.post<{ Body: OpenAccountRequest }>('/api/money/accounts', { schema: { body: openAccountRequest } }, async (req, reply) =>
     reply.status(201).send(await deps.moneyAccounts.open(contextOf(req), req.body)),
   );
+  api.patch<{ Params: { key: string }; Body: UpdateAccountRequest }>('/api/money/accounts/:key', { schema: { body: updateAccountRequest } }, async (req) =>
+    deps.moneyAccounts.update(contextOf(req), req.params.key, req.body),
+  );
+
+  // Reconciliation: the bank's statement for one money account, paired with the books.
+  const bank = deps.bankReconciliation;
+  type Account = { Params: { key: string } };
+  type Line = { Params: { key: string; lineId: string } };
+  api.get<Account & { Querystring: { status?: string } }>('/api/money/accounts/:key/statement', async (req) =>
+    bank.statement(contextOf(req), req.params.key, req.query.status),
+  );
+  api.post<Account & { Body: StatementImportRequest }>('/api/money/accounts/:key/statement', { schema: { body: statementImportRequest } }, async (req, reply) =>
+    reply.status(201).send(await bank.importStatement(contextOf(req), req.params.key, req.body.lines)),
+  );
+  api.post<Account>('/api/money/accounts/:key/statement/auto-match', async (req) => bank.autoMatchAccount(contextOf(req), req.params.key));
+  api.post<Line & { Body: StatementMatchLineRequest }>('/api/money/accounts/:key/statement/:lineId/match', { schema: { body: statementMatchLineRequest } }, async (req) =>
+    bank.match(contextOf(req), req.params.key, req.params.lineId, req.body.journalLineId),
+  );
+  api.post<Line & { Body: StatementIgnoreRequest }>('/api/money/accounts/:key/statement/:lineId/ignore', { schema: { body: statementIgnoreRequest } }, async (req) =>
+    bank.ignore(contextOf(req), req.params.key, req.params.lineId, req.body.note),
+  );
+  api.post<Line & { Body: StatementBookRequest }>('/api/money/accounts/:key/statement/:lineId/book', { schema: { body: statementBookRequest } }, async (req) =>
+    bank.book(contextOf(req), req.params.key, req.params.lineId, req.body),
+  );
+  api.post<Line>('/api/money/accounts/:key/statement/:lineId/reopen', async (req) => bank.reopen(contextOf(req), req.params.key, req.params.lineId));
+  api.get<Account & { Querystring: { asOf?: string; statementBalance?: string } }>('/api/money/accounts/:key/reconciliation', async (req) =>
+    bank.report(contextOf(req), req.params.key, req.query.asOf ?? '', req.query.statementBalance ?? ''),
+  );
+  api.get<Account>('/api/money/accounts/:key/reconciliations', async (req) => bank.signOffs(contextOf(req), req.params.key));
+  api.post<Account & { Body: ReconciliationSignOffRequest }>(
+    '/api/money/accounts/:key/reconciliations',
+    { schema: { body: reconciliationSignOffRequest } },
+    async (req, reply) => reply.status(201).send(await bank.signOff(contextOf(req), req.params.key, req.body)),
+  );
+
   api.post<{ Body: TransferRequest }>('/api/money/transfers', { schema: { body: transferRequest } }, async (req, reply) =>
     reply.status(201).send(await deps.moneyAccounts.transfer(contextOf(req), req.body)),
   );

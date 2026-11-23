@@ -6,11 +6,12 @@ import { TranslatePipe } from '../../../services/i18n';
 import { EditableTable } from '../../../ui/editable-table';
 import type { TableColumn } from '../../../ui/table-rows';
 import { RecordTypeStore } from './record-type-store';
+import { Btn } from '@onengo/web-kit';
 
 /** Values read from an http lookup connector while a record saves: the fields sent to it and the fields its answer fills. */
 @Component({
   selector: 'app-record-type-lookups',
-  imports: [TranslatePipe, EditableTable],
+  imports: [Btn, TranslatePipe, EditableTable],
   styleUrl: './record-type.css',
   template: `
     <h3 class="rt-heading">{{ 'ui.builder.recordType.lookupsCount' | t: { count: rows().length } }}</h3>
@@ -63,14 +64,14 @@ import { RecordTypeStore } from './record-type-store';
                   }
                 </select>
                 <input class="rt-code" [attr.aria-label]="'ui.builder.recordType.lookupValue' | t" [value]="m.value" (input)="setValue(l.key, m.field, { field: m.field, value: text($event) })" />
-                <button type="button" class="small danger" [attr.aria-label]="'ui.common.remove' | t" (click)="store.edit(removeValue(l.key, m.field))">✕</button>
+                <button appBtn="danger" size="sm" type="button" [attr.aria-label]="'ui.common.remove' | t" (click)="store.edit(removeValue(l.key, m.field))">✕</button>
               </div>
             }
-            <button type="button" class="small" (click)="store.edit(addValue(l.key))">{{ 'ui.builder.recordType.addLookupValue' | t }}</button>
+            <button appBtn size="sm" type="button" (click)="store.edit(addValue(l.key))">{{ 'ui.builder.recordType.addLookupValue' | t }}</button>
             <div class="help">{{ 'ui.builder.recordType.lookupFillsHint' | t }}</div>
           </section>
           <div class="rt-actions">
-            <button type="button" class="danger" (click)="store.removeLookup(l.key)">{{ 'ui.builder.recordType.removeLookup' | t }}</button>
+            <button appBtn="danger" type="button" (click)="store.removeLookup(l.key)">{{ 'ui.builder.recordType.removeLookup' | t }}</button>
           </div>
         }
       </div>

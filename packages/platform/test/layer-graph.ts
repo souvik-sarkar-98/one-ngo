@@ -4,7 +4,7 @@ import ts from 'typescript';
 
 /**
  * The source-dependency graph of src/ and the final layer rules (section 10.1 of
- * docs/architecture/ngo-backend-enhancement-plan.md). Imports are read with the TypeScript compiler
+ * docs/plans/ngo-backend-enhancement-plan.md). Imports are read with the TypeScript compiler
  * API, so imports, re-exports, dynamic `import()` and `import('x')` types are all seen, and a
  * type-only import is told apart from a value import.
  *
@@ -179,7 +179,7 @@ export function violations(all: Source[]): Map<string, { edge: Edge; why: string
 
 // ---------------------------------------------------------------------------------------------
 // Conformance rules (block G). Each rule returns hits keyed `<rule>: <detail>`. There are no hits
-// today, and any hit fails its test (see docs/architecture/guardrail-violations.md).
+// today, and any hit fails its test (see docs/architecture.md section 4.4).
 // ---------------------------------------------------------------------------------------------
 
 /** Blocks that own a rule: H http->application, R runtime/application siblings, D domain purity, I infrastructure, C composition. */

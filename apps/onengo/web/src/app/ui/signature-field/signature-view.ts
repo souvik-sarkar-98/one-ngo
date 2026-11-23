@@ -20,7 +20,7 @@ import { TranslatePipe } from '../../services/i18n';
     }
     .signature-view__line {
       font-size: 0.75rem;
-      color: #64748b;
+      color: var(--grey-500);
     }
   `,
   template: `

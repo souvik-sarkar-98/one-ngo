@@ -563,7 +563,6 @@ async function measureOnce(run) {
     PORT: String(port),
     PUBLIC_BASE_URL: `http://127.0.0.1:${port}`,
     WEB_ROOT: work,
-    FILE_STORE_DIR: join(work, 'files'),
     BREACHED_PASSWORD_CHECK: 'off',
   };
 

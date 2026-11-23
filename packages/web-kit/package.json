@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/public-api.ts"
+    ".": "./src/public-api.ts",
+    "./styles/*": "./src/styles/*"
   },
   "peerDependencies": {
     "@angular/core": "21.2.25"

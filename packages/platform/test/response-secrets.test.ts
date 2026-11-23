@@ -84,11 +84,11 @@ describe('connector secrets', () => {
 
   it('are dropped from the connector view even if the service were to return them', async () => {
     const view = await w.platform.connectors.get(w.as(w.ngoA), 'notify');
-    const spy = vi.spyOn(w.platform.connectors, 'get').mockResolvedValueOnce({ ...view, secretValues: { signingSecret: SIGNING } } as typeof view);
+    const spy = vi.spyOn(w.platform.connectors, 'find').mockResolvedValueOnce({ ...view, secretValues: { signingSecret: SIGNING } } as typeof view);
     const res = await call('GET', '/api/admin/connectors/notify');
     spy.mockRestore();
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual(view);
+    expect(res.json()).toEqual({ connector: view });
     expect(res.body).not.toContain(SIGNING);
   });
 });
@@ -116,7 +116,7 @@ describe('oauth connector tokens', () => {
       expect(res.statusCode, url).toBe(200);
       answers.push(res.body);
     }
-    expect((await call('GET', '/api/admin/connectors/google')).json()).toMatchObject({ secrets: ['accessToken', 'accessTokenExpiresAt', 'clientSecret', 'refreshToken'] });
+    expect((await call('GET', '/api/admin/connectors/google')).json()).toMatchObject({ connector: { secrets: ['accessToken', 'accessTokenExpiresAt', 'clientSecret', 'refreshToken'] } });
     const [row] = await w.platform.db.asSystem((tx) => tx.query<{ secret_enc: string }>(`select secret_enc from connector where tenant_id = $1 and key = 'google'`, [w.ngoA]));
     answers.push(row!.secret_enc);
     for (const body of answers) for (const secret of [OAUTH_ACCESS, OAUTH_REFRESH, OAUTH_CLIENT]) expect(body).not.toContain(secret);

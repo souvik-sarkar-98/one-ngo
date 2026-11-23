@@ -1,0 +1,28 @@
+{
+  "key": "beneficiaryConsents",
+  "recordType": "beneficiaryConsent",
+  "label": "Consents",
+  "pageSize": 20,
+  "layout": "table",
+  "columns": ["beneficiaryName", "purpose", "grantedOn", "withdrawnOn", "status"],
+  "compactColumns": ["beneficiaryName", "status"],
+  "chips": [
+    { "id": "agreed", "label": "Agreed", "statusIn": ["granted"] },
+    { "id": "withdrawn", "label": "Withdrawn", "statusIn": ["withdrawn"] },
+    { "id": "all", "label": "All" }
+  ],
+  "defaultChip": "agreed",
+  "filters": ["purpose", "grantedOn"],
+  "row": { "title": "beneficiaryName", "subtitle": ["purpose"], "meta": "grantedOn", "badge": "status" },
+  "detail": {
+    "sections": [
+      {
+        "id": "consent",
+        "label": "Consent",
+        "fields": ["status", "beneficiary", "beneficiaryName", "purpose", "grantedOn", "withdrawnOn", "notes"]
+      }
+    ]
+  },
+  "create": { "fields": ["beneficiary", "purpose", "grantedOn", "notes"] },
+  "edit": { "fields": ["purpose", "grantedOn", "notes"] }
+}

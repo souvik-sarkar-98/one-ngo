@@ -3,7 +3,7 @@ import { connectorAllowedHosts, fetchConnectorHttp, isPublicAddress, publicOnlyL
 import { runtimeRoleProblem } from '../../src/infrastructure/postgres/pg-database.js';
 import { clerk, createWorld, type TestWorld } from '../helpers.js';
 
-/** Probes for S4-9, S4-14 and S4-15 (docs/reports/s4-review-2026-10-26.md). */
+/** Probes for S4-9, S4-14 and S4-15 (architecture section 9.1). */
 let w: TestWorld;
 beforeAll(async () => {
   w = await createWorld();

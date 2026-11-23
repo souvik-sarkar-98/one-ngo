@@ -38,8 +38,10 @@ export interface ReceiptPage {
   voided: string | null;
   /** Where Back goes when there is no page to return to. */
   record: { type: string; id: string };
-  /** The name and designation kept with the receipt. The image is loaded separately. */
+  /** The name and designation kept with the receipt. The image is loaded separately. The first of `signatories`. */
   signatory: { name: string | null; designation: string | null } | null;
+  /** Every signature on the receipt, in print order. */
+  signatories?: { name: string | null; designation: string | null }[];
 }
 
 function issuerBlock(p: ReceiptPrint): ReceiptIssuerBlock {
@@ -80,7 +82,7 @@ export function receiptPage(p: ReceiptPrint, type?: RuntimeRecordType): ReceiptP
       clauses: kept.clauses,
       voided: receipt.status === 'void' ? (receipt.voidReason ? t('ui.print.voidedBecause', { reason: receipt.voidReason }) : t('ui.records.void')) : null,
       record: { type: record.type, id: record.id },
-      signatory: namesOf(p.issuer?.signatory),
+      ...signatureFields(p.issuer),
     };
   }
   const titleKey = p.recordType.titleField ?? type?.titleField;
@@ -110,7 +112,7 @@ export function receiptPage(p: ReceiptPrint, type?: RuntimeRecordType): ReceiptP
     clauses: [],
     voided: receipt.status === 'void' ? (receipt.voidReason ? t('ui.print.voidedBecause', { reason: receipt.voidReason }) : t('ui.records.void')) : null,
     record: { type: record.type, id: record.id },
-    signatory: namesOf(p.issuer?.signatory),
+    ...signatureFields(p.issuer),
   };
 }
 
@@ -143,6 +145,8 @@ export interface PublicReceiptView {
     registrations: { type: string; number: string; issuingAuthority: string | null }[];
   };
   signatory: { name: string | null; designation: string | null } | null;
+  /** Every signature, in print order. Absent on a payload from before several signatories. */
+  signatories?: { name: string | null; designation: string | null; hasImage?: boolean }[];
   hasLogo: boolean;
   hasSignature: boolean;
   /** Wording kept when the receipt was issued. Absent on older receipts. */
@@ -168,7 +172,7 @@ export function publicReceiptPage(view: PublicReceiptView): ReceiptPage {
       clauses: view.content.clauses,
       voided: view.status === 'void' ? (view.voidReason ? t('ui.print.voidedBecause', { reason: view.voidReason }) : t('ui.records.void')) : null,
       record: { type: '', id: '' },
-      signatory: namesOf(view.signatory),
+      ...signatureFields(view),
     };
   }
   const issuer = issuerBlock({
@@ -193,7 +197,7 @@ export function publicReceiptPage(view: PublicReceiptView): ReceiptPage {
     clauses: [],
     voided: view.status === 'void' ? (view.voidReason ? t('ui.print.voidedBecause', { reason: view.voidReason }) : t('ui.records.void')) : null,
     record: { type: '', id: '' },
-    signatory: namesOf(view.signatory),
+    ...signatureFields(view),
   };
 }
 
@@ -207,6 +211,15 @@ function publicValue(field: PublicReceiptField): string {
 /** A public link is a publish step: only someone allowed to open the receipt may create or revoke one. */
 export function canPublishReceiptLink(actions: readonly RuntimeAction[] | undefined): boolean {
   return !!actions?.some((action) => action.allowed && action.steps.some((step) => step.type === 'openReceipt'));
+}
+
+function signatureFields(source: { signatories?: { name?: string | null; designation?: string | null }[] | null; signatory?: { name?: string | null; designation?: string | null } | null } | null | undefined): Pick<ReceiptPage, 'signatory' | 'signatories'> {
+  const rows = source?.signatories?.length ? source.signatories : source?.signatory ? [source.signatory] : [];
+  const signatories = rows.flatMap((row) => {
+    const named = namesOf(row);
+    return named ? [named] : [];
+  });
+  return { signatories, signatory: signatories[0] ?? null };
 }
 
 function namesOf(signatory: { name?: string | null; designation?: string | null } | null | undefined): ReceiptPage['signatory'] {

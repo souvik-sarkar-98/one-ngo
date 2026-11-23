@@ -39,7 +39,7 @@ describe('money accounts', () => {
     await w.platform.moneyAccounts.transfer(ctx, { from: 'main', to: 'petty', amount: 2000, date: today(), reference: 'ATM' });
     await w.platform.moneyAccounts.transfer(ctx, { from: 'petty', to: 'ravi', amount: 500.25, date: today() });
     const balances = Object.fromEntries((await w.platform.moneyAccounts.list(ctx)).map((a) => [a.key, a.balance]));
-    expect(balances).toEqual({ main: '-2000.00', petty: '1499.75', ravi: '500.25' });
+    expect(balances).toEqual({ upi: '0.00', main: '-2000.00', petty: '1499.75', ravi: '500.25' });
   });
 
   it('does not let cash or wallets go below zero', async () => {
@@ -287,6 +287,24 @@ describe('payment terms come from the published definitions (S4-1)', () => {
     }
   });
 
+  it("holds the amount to the action's even when the paid step issues no receipt", async () => {
+    const ctx = w.as(w.ngoA);
+    const step = { type: 'createPayment', provider: 'upi', amount: 'record.amount', account: 'main', onPaid: { transition: 'cancel' } };
+    await w.platform.definitions.saveDraft(ctx, 'action', { key: 'payNoReceipt', recordType: 'donation', label: 'No receipt', placement: ['panel'], steps: [step] } as never);
+    await w.platform.definitions.publish(ctx, 'action', 'payNoReceipt');
+    const { record } = await w.platform.records.create(ctx, 'donation', { donorName: 'No receipt', amount: 1000 });
+    const ask = { recordId: record.id, provider: 'upi_direct' as const, onPaid: { transition: 'cancel' }, upiAccountKey: 'main' };
+    const err = await expectCode(w.platform.payments.createIntent(ctx, { ...ask, amount: 1 }), 'rule_violation');
+    expect(err.message).toBe("The payment is for 1.00 but the record's payment action charges 1000.00.");
+    const intent = await w.platform.payments.createIntent(ctx, { ...ask, amount: 1000 });
+
+    // The record's amount changing after the request makes confirmation refuse as well.
+    await w.platform.records.update(ctx, record.id, { data: { amount: 5000 }, expectedVersion: record.version });
+    const late = await expectCode(w.platform.payments.confirmManually(ctx, intent.id, { paidOn: today() }), 'rule_violation');
+    expect(late.message).toBe("The payment is for 1000.00 but the record's payment action charges 5000.00.");
+    expect((await w.platform.payments.get(ctx, intent.id)).status).toBe('awaiting_payment');
+  });
+
   it('needs the permission of the action that asks for the payment', async () => {
     const { record } = await w.platform.records.create(w.as(w.ngoA), 'donation', { donorName: 'Permitted', amount: 200 });
     const ask = { recordId: record.id, amount: 200, provider: 'upi_direct' as const, onPaid, upiAccountKey: 'main' };
@@ -361,5 +379,44 @@ describe('payment terms come from the published definitions (S4-1)', () => {
       tx.query(`select 1 from outbox_event where tenant_id = $1 and type = 'payment.confirmed' and status <> 'done' and payload->>'intentId' = $2`, [w.ngoA, intent.id]),
     );
     expect(pending).toEqual([]);
+  });
+});
+
+describe('a money account is the real account, attached to its ledger account', () => {
+  it('opens with the module, attached to BANK, and shows the donations posted there', async () => {
+    const ctx = w.as(w.ngoA);
+    const bank = await w.platform.moneyAccounts.get(ctx, 'upi');
+    expect(bank).toMatchObject({ kind: 'bank', ledgerCode: 'BANK', upiId: null, allowNegative: true, status: 'active' });
+
+    await expectCode(w.platform.moneyAccounts.open(ctx, { key: 'second', name: 'Second', kind: 'bank', ledgerCode: 'BANK' }), 'rule_violation');
+    await expectCode(w.platform.moneyAccounts.open(ctx, { key: 'ghost', name: 'Ghost', kind: 'bank', ledgerCode: 'NO_SUCH' }), 'rule_violation');
+    await expectCode(w.platform.moneyAccounts.open(ctx, { key: 'upi', name: 'Duplicate', kind: 'bank' }), 'rule_violation');
+    const drawer = await w.platform.moneyAccounts.open(ctx, { key: 'drawer', name: 'Cash drawer', kind: 'cash', ledgerCode: 'CASH' });
+    expect(drawer).toMatchObject({ ledgerCode: 'CASH', allowNegative: false });
+
+    await expectCode(w.platform.moneyAccounts.update(ctx, 'upi', { upiId: 'not a upi id' }), 'validation_failed');
+    const named = await w.platform.moneyAccounts.update(ctx, 'upi', { name: 'Asha Trust, SBI', upiId: 'asha.bank@sbi', custodian: 'Treasurer' });
+    expect(named).toMatchObject({ name: 'Asha Trust, SBI', upiId: 'asha.bank@sbi', custodian: 'Treasurer', ledgerCode: 'BANK' });
+    await expectCode(w.platform.moneyAccounts.update(ctx, 'nobody', { name: 'X' }), 'not_found');
+
+    const before = (await w.platform.moneyAccounts.get(ctx, 'upi')).balance;
+    const { record } = await w.platform.records.create(ctx, 'donation', { donorName: 'Books donor', amount: 250 });
+    const intent = await w.platform.payments.createIntent(ctx, { recordId: record.id, amount: 250, provider: 'upi_direct', onPaid: { ...onPaid, methodValue: 'upi' }, upiAccountKey: 'upi' });
+    await w.platform.payments.confirmManually(ctx, intent.id, { paidOn: today(), bankReference: 'UTR250' });
+    await w.platform.dispatcher.runOnce();
+
+    const after = (await w.platform.moneyAccounts.get(ctx, 'upi')).balance;
+    expect(Number(after) - Number(before)).toBe(250);
+  });
+
+  it('refuses to turn the overdraft off while the account is below zero, and keeps closed accounts fixed', async () => {
+    const ctx = w.as(w.ngoA);
+    await w.platform.moneyAccounts.open(ctx, { key: 'scratch2', name: 'Scratch 2', kind: 'bank' });
+    await w.platform.moneyAccounts.transfer(ctx, { from: 'scratch2', to: 'petty', amount: 40, date: today() });
+    await expectCode(w.platform.moneyAccounts.update(ctx, 'scratch2', { allowNegative: false }), 'rule_violation');
+    await w.platform.moneyAccounts.transfer(ctx, { from: 'petty', to: 'scratch2', amount: 40, date: today() });
+    expect((await w.platform.moneyAccounts.update(ctx, 'scratch2', { allowNegative: false })).allowNegative).toBe(false);
+    await w.platform.moneyAccounts.close(ctx, 'scratch2');
+    await expectCode(w.platform.moneyAccounts.update(ctx, 'scratch2', { name: 'Renamed' }), 'rule_violation');
   });
 });

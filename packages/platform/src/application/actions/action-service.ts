@@ -30,6 +30,11 @@ const CHANGES_RECORD = new Set<ActionStep['type']>(['setFields', 'transition', '
 function demandPaymentCreate(ctx: TenantContext, def: ActionDef): void {
   if (def.steps.some((s) => s.type === 'createPayment')) demand(ctx.actor, 'payments:create');
 }
+
+/** A notify step sends email when it asks for the email channel, or when it leaves the channels unset. */
+function stepSendsEmail(step: ActionStep): boolean {
+  return step.type === 'notify' && (!step.channels?.length || step.channels.includes('email'));
+}
 /**
  * Runs a configured record action. The action's permission and `when` are
  * the gate; its steps then run with the action's authority (as the person,
@@ -46,6 +51,7 @@ export class ActionService {
     private readonly enqueue: EnqueueEvent,
     private readonly payments: PaymentService,
     private readonly receipts: ReceiptService,
+    private readonly requireEmail?: (tenantId: string) => Promise<void>,
   ) {}
 
   async run(
@@ -61,6 +67,7 @@ export class ActionService {
     const def = action.body;
     demand(ctx.actor, actionPermission(def));
     demandPaymentCreate(ctx, def);
+    if (def.steps.some(stepSendsEmail)) await this.requireEmail?.(ctx.tenantId);
     await this.assertFieldsEditable(ctx, def);
     const input = this.formValues(def, body.input ?? {});
     const type = (await defs.get(ctx.tenantId, 'recordType', typeKey))?.body;

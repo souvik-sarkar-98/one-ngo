@@ -76,6 +76,9 @@ export class PgFileCatalog implements FileCatalog {
                 exists(selectFrom('tenant_asset as a').select(lit(1).as('one')).whereRef('a.file_id', '=', 'f.id')),
                 exists(selectFrom('receipt_issuer as ri').select(lit(1).as('one')).whereRef('ri.logo_file_id', '=', 'f.id')),
                 exists(selectFrom('receipt_issuer as ri').select(lit(1).as('one')).whereRef('ri.signatory_file_id', '=', 'f.id')),
+                exists(selectFrom('organisation_signatory as s').select(lit(1).as('one')).whereRef('s.file_id', '=', 'f.id')),
+                exists(selectFrom('receipt_signatory_file as rs').select(lit(1).as('one')).whereRef('rs.file_id', '=', 'f.id')),
+                exists(selectFrom('published_report_signatory as ps').select(lit(1).as('one')).whereRef('ps.file_id', '=', 'f.id')),
               ]),
             ),
           )

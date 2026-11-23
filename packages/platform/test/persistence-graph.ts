@@ -1,7 +1,7 @@
 import { RULE, ROOT, sources as allSources, type Hits, type Source } from './layer-graph.js';
 
 /**
- * Persistence rule (section 10.2 of docs/architecture/ngo-backend-enhancement-plan.md): Kysely and the SQL
+ * Persistence rule (section 10.2 of docs/plans/ngo-backend-enhancement-plan.md): Kysely and the SQL
  * executor types stay in the infrastructure layer and in the files that wire it in. src/domain/ports/ is no
  * longer exempt (block G): SQL executor types declared or used there are reported like any other.
  */
