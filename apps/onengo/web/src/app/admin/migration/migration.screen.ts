@@ -113,6 +113,7 @@ import { MigrationStore } from './migration-store';
                   }
                 </ul>
               }
+              @if (showAttachments) {
               <h3 class="migration__section">{{ 'ui.admin.migration.attach.title' | t }} <span class="badge">{{ 'ui.admin.migration.attach.optional' | t }}</span></h3>
               @if (store.purged()) {
                 <div class="notice warn" role="status">{{ 'ui.admin.migration.attach.deleted' | t }}</div>
@@ -202,6 +203,7 @@ import { MigrationStore } from './migration-store';
                   </div>
                 </div>
               }
+              }
             }
 
             @case ('map') {
@@ -259,301 +261,387 @@ import { MigrationStore } from './migration-store';
                               }
                             </span>
                           </label>
+                          @if (l.linked && g.key === store.peopleGroup && !store.peopleReady(src.id)) {
+                            <div class="migration__strip">
+                              <span class="migration__hint">{{ 'ui.admin.migration.group.peopleNeeds' | t }}</span>
+                            </div>
+                          }
+                          @if (l.linked && g.key !== store.peopleGroup) {
+                            @let tg = store.targetIn(src.id);
+                            @if (tg) {
+                              <div class="migration__strip">
+                                <label class="migration__field">
+                                  <span>{{ 'ui.admin.migration.oldId' | t }}</span>
+                                  <select (change)="store.setOldId(src.id, $any($event.target).value)">
+                                    @for (col of src.columns; track col.name) {
+                                      <option [value]="col.name" [selected]="col.name === tg.oldId">{{ col.name }}</option>
+                                    }
+                                  </select>
+                                  @if (store.issueIn(src.id, '/oldId'); as e) {
+                                    <span class="migration__issue">{{ e }}</span>
+                                  }
+                                </label>
+                                <label class="migration__check" [title]="'ui.admin.migration.requiredHint' | t">
+                                  <input type="checkbox" [checked]="tg.required" (change)="store.setRequired(src.id, $any($event.target).checked)" /> {{ 'ui.admin.migration.required' | t }}
+                                </label>
+                                @if (!store.filled(tg).count) {
+                                  <span class="migration__hint">{{ 'ui.admin.migration.group.noFields' | t }}</span>
+                                }
+                              </div>
+                            }
+                          }
                         }
                       </fieldset>
                       @if (g.key !== store.peopleGroup && g.files.length) {
                         <h3 class="migration__section">{{ 'ui.admin.migration.group.coverage' | t }}</h3>
-                        <table class="migration__coverage">
+                        <table class="migration__coverage migration__map">
                           <thead>
                             <tr>
                               <th scope="col">{{ 'ui.admin.migration.group.field' | t }}</th>
-                              <th scope="col">{{ 'ui.admin.migration.group.from' | t }}</th>
+                              <th scope="col">{{ 'ui.admin.migration.group.file' | t }}</th>
+                              <th scope="col">{{ 'ui.admin.migration.group.column' | t }}</th>
+                              <th scope="col">{{ 'ui.admin.migration.transform.column' | t }}</th>
                             </tr>
                           </thead>
                           <tbody>
-                            @for (c of store.coverage(); track c.field.key) {
+                            @for (r of store.fieldRows(); track r.field.key) {
                               <tr>
-                                <th scope="row">{{ c.field.label }}@if (c.field.required) {<span class="migration__req" aria-hidden="true"> *</span>}</th>
+                                <th scope="row">{{ r.field.label }}@if (r.field.required) {<span class="migration__req" aria-hidden="true"> *</span>}</th>
                                 <td>
-                                  @for (f of c.from; track $index) {
-                                    <div>{{ f.column ? ('ui.admin.migration.group.fromColumn' | t: { file: f.fileName, column: f.column }) : ('ui.admin.migration.group.fromTarget' | t: { file: f.fileName, target: store.targetLabel(f.sourceId, f.target ?? '') }) }}</div>
-                                  } @empty {
-                                    @if (c.field.required) {
-                                      <span class="migration__issue">{{ 'ui.admin.migration.group.missingRequired' | t }}</span>
-                                    } @else {
-                                      <span class="muted">{{ 'ui.admin.migration.group.notFilled' | t }}</span>
+                                  <select [attr.aria-label]="r.field.label + ' · ' + ('ui.admin.migration.group.file' | t)" (change)="store.setRowFile(r, $any($event.target).value)">
+                                    <option value="" [selected]="!r.sourceId">{{ 'ui.admin.migration.group.notFilled' | t }}</option>
+                                    @for (l of store.linkedFiles(); track l.source.id) {
+                                      <option [value]="l.source.id" [selected]="l.source.id === r.sourceId">{{ l.source.fileName }}</option>
                                     }
+                                  </select>
+                                  @if (!r.sourceId && r.field.required) {
+                                    <div class="migration__issue">{{ 'ui.admin.migration.group.missingRequired' | t }}</div>
+                                  }
+                                </td>
+                                <td>
+                                  @if (r.sourceId; as sid) {
+                                    @if (r.choice; as c) {
+                                      <select [attr.aria-label]="r.field.label + ' · ' + ('ui.admin.migration.group.column' | t)" (change)="store.setRowColumn(r, $any($event.target).value)">
+                                        <option value="" [selected]="!c.value && r.derived === null">{{ 'ui.admin.migration.notImported' | t }}</option>
+                                        @if (r.canDerive) {
+                                          <option [value]="store.combine" [selected]="r.derived !== null">{{ 'ui.admin.migration.derive.option' | t }}</option>
+                                        }
+                                        @if (c.reference) {
+                                          @for (col of store.columnsOf(sid); track col.name) {
+                                            <option [value]="'column:' + col.name" [selected]="c.value === 'column:' + col.name">{{ 'ui.admin.migration.byOldId' | t: { column: col.name } }}</option>
+                                          }
+                                          @for (e of store.earlier(sid, c.field); track e.key) {
+                                            <option [value]="'target:' + e.key" [selected]="c.value === 'target:' + e.key">{{ 'ui.admin.migration.fromTarget' | t: { target: store.typeOf(e.type)?.label ?? e.key } }}</option>
+                                          }
+                                        } @else {
+                                          @for (col of store.columnsOf(sid); track col.name) {
+                                            <option [value]="col.name" [selected]="c.value === col.name">{{ store.columnLabel(col) }}</option>
+                                          }
+                                        }
+                                      </select>
+                                      @if (store.issueIn(sid, '/fields/' + c.field.key) || store.issueIn(sid, '/refs/' + c.field.key); as e) {
+                                        <div class="migration__issue">{{ e }}</div>
+                                      }
+                                      @if (r.derived !== null) {
+                                        <div class="migration__derive">
+                                          <label class="migration__field">
+                                            <span>{{ 'ui.admin.migration.derive.template' | t }}</span>
+                                            <input type="text" [value]="r.derived" [placeholder]="templateExample" (input)="store.setTemplate(r, $any($event.target).value)" />
+                                          </label>
+                                          <div class="migration__files" role="group" [attr.aria-label]="'ui.admin.migration.derive.columns' | t">
+                                            @for (col of store.columnsOf(sid); track col.name) {
+                                              <button type="button" class="migration__chip" [class.migration__chip--on]="store.usesColumn(r, col.name)" (click)="store.addToTemplate(r, col.name)">{{ col.name }}</button>
+                                            }
+                                          </div>
+                                          @if (store.preview(r); as p) {
+                                            <div class="migration__hint">{{ 'ui.admin.migration.derive.preview' | t: { value: p } }}</div>
+                                          } @else {
+                                            <div class="migration__hint">{{ 'ui.admin.migration.derive.hint' | t }}</div>
+                                          }
+                                          @if (store.issueIn(sid, '/derived/' + c.field.key + '/template') || store.issueIn(sid, '/derived/' + c.field.key); as e) {
+                                            <div class="migration__issue">{{ e }}</div>
+                                          }
+                                        </div>
+                                      }
+                                      @if (c.person) {
+                                        <details class="migration__more" [open]="!!c.legacyColumn">
+                                          <summary>{{ 'ui.admin.migration.group.moreOptions' | t }}</summary>
+                                          <label class="migration__field">
+                                            <span>{{ 'ui.admin.migration.personLegacy' | t: { field: c.field.label } }}</span>
+                                            <select (change)="store.choosePerson(r, $any($event.target).value)">
+                                              <option value="" [selected]="!c.legacyColumn">{{ 'ui.admin.migration.notImported' | t }}</option>
+                                              @for (col of store.columnsOf(sid); track col.name) {
+                                                <option [value]="col.name" [selected]="c.legacyColumn === col.name">{{ col.name }}</option>
+                                              }
+                                            </select>
+                                            <span class="migration__hint">{{ 'ui.admin.migration.personLegacyHint' | t }}</span>
+                                            @if (store.issueIn(sid, '/persons/' + c.field.key + '/column') || store.issueIn(sid, '/persons/' + c.field.key); as e) {
+                                              <span class="migration__issue">{{ e }}</span>
+                                            }
+                                          </label>
+                                          @if (c.legacyColumn) {
+                                            <label class="migration__field">
+                                              <span>{{ 'ui.admin.migration.personOnMissing' | t }}</span>
+                                              <select (change)="store.setOnMissing(r, $any($event.target).value)">
+                                                <option value="blank" [selected]="c.onMissing === 'blank'">{{ 'ui.admin.migration.personBlank' | t }}</option>
+                                                <option value="fail" [selected]="c.onMissing === 'fail'">{{ 'ui.admin.migration.personFail' | t }}</option>
+                                              </select>
+                                              @if (store.issueIn(sid, '/persons/' + c.field.key + '/onMissing'); as e) {
+                                                <span class="migration__issue">{{ e }}</span>
+                                              }
+                                            </label>
+                                          }
+                                        </details>
+                                      }
+                                    } @else if (r.file; as fc) {
+                                      <select [attr.aria-label]="r.field.label + ' · ' + ('ui.admin.migration.group.column' | t)" [attr.aria-required]="fc.field.required" (change)="store.setRowColumn(r, $any($event.target).value)">
+                                        <option value="" [selected]="!fc.column">{{ 'ui.admin.migration.notImported' | t }}</option>
+                                        @for (col of store.columnsOf(sid); track col.name) {
+                                          <option [value]="col.name" [selected]="fc.column === col.name">{{ store.columnLabel(col) }}</option>
+                                        }
+                                      </select>
+                                      <div class="migration__hint">{{ 'ui.admin.migration.file.columnHint' | t }}</div>
+                                      @if (store.issueIn(sid, '/files/' + fc.field.key + '/column') || store.issueIn(sid, '/files/' + fc.field.key); as e) {
+                                        <div class="migration__issue">{{ e }}</div>
+                                      }
+                                      @if (fc.column) {
+                                        <details class="migration__more">
+                                          <summary>{{ 'ui.admin.migration.group.moreOptions' | t }}</summary>
+                                          <label class="migration__field">
+                                            <span>{{ 'ui.admin.migration.file.onMissing' | t }}</span>
+                                            <select (change)="store.setFileOption(r, 'onMissing', $any($event.target).value)">
+                                              <option value="fail" [selected]="fc.onMissing === 'fail'">{{ 'ui.admin.migration.file.fail' | t }}</option>
+                                              <option value="skip" [selected]="fc.onMissing === 'skip'">{{ 'ui.admin.migration.file.skip' | t }}</option>
+                                            </select>
+                                          </label>
+                                          @if (fc.field.multiple) {
+                                            <label class="migration__field">
+                                              <span>{{ 'ui.admin.migration.file.separator' | t }}</span>
+                                              <select (change)="store.setFileOption(r, 'separator', $any($event.target).value)">
+                                                <option value=";" [selected]="fc.separator === ';'">{{ 'ui.admin.migration.separator.semicolon' | t }}</option>
+                                                <option value="," [selected]="fc.separator === ','">{{ 'ui.admin.migration.separator.comma' | t }}</option>
+                                              </select>
+                                            </label>
+                                          }
+                                        </details>
+                                      }
+                                    }
+                                  } @else {
+                                    <span class="muted">—</span>
+                                  }
+                                </td>
+                                <td>
+                                  @if (r.canTransform) {
+                                    <button type="button" class="migration__link" [attr.aria-expanded]="store.openRules() === r.field.key" (click)="store.toggleRules(r)">
+                                      {{ 'ui.admin.migration.transform.link' | t }}@if (r.rules.length) { ({{ r.rules.length }}) }
+                                    </button>
+                                  }
+                                </td>
+                              </tr>
+                              @if (r.canTransform && store.openRules() === r.field.key) {
+                                <tr class="migration__rules-row">
+                                  <td colspan="4">
+                                    <div class="migration__rules" role="group" [attr.aria-label]="'ui.admin.migration.transform.title' | t: { field: r.field.label }">
+                                      <strong>{{ 'ui.admin.migration.transform.title' | t: { field: r.field.label } }}</strong>
+                                      <p class="migration__hint">{{ 'ui.admin.migration.transform.hint' | t }}</p>
+                                      <table class="migration__coverage">
+                                        <thead>
+                                          <tr>
+                                            <th scope="col">{{ 'ui.admin.migration.transform.from' | t }}</th>
+                                            <th scope="col">{{ 'ui.admin.migration.transform.to' | t }}</th>
+                                            <th scope="col" [attr.aria-label]="'ui.admin.migration.remove' | t"></th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          @for (rule of r.rules; track $index; let n = $index) {
+                                            <tr>
+                                              <td><input type="text" [value]="rule.from" [attr.aria-label]="'ui.admin.migration.transform.from' | t" (input)="store.setRule(r, n, 'from', $any($event.target).value)" /></td>
+                                              <td>
+                                                @if (r.field.type === 'choice' && r.field.choices?.length) {
+                                                  <select [attr.aria-label]="'ui.admin.migration.transform.to' | t" (change)="store.setRule(r, n, 'to', $any($event.target).value)">
+                                                    <option value="" [selected]="!rule.to">{{ 'ui.admin.migration.transform.blank' | t }}</option>
+                                                    @for (ch of r.field.choices; track ch.value) {
+                                                      <option [value]="ch.value" [selected]="rule.to === ch.value">{{ ch.label }}</option>
+                                                    }
+                                                  </select>
+                                                } @else if (r.field.type === 'boolean') {
+                                                  <select [attr.aria-label]="'ui.admin.migration.transform.to' | t" (change)="store.setRule(r, n, 'to', $any($event.target).value)">
+                                                    <option value="" [selected]="!rule.to">{{ 'ui.admin.migration.transform.blank' | t }}</option>
+                                                    <option value="yes" [selected]="rule.to === 'yes'">{{ 'ui.admin.migration.transform.yes' | t }}</option>
+                                                    <option value="no" [selected]="rule.to === 'no'">{{ 'ui.admin.migration.transform.no' | t }}</option>
+                                                  </select>
+                                                } @else {
+                                                  <input type="text" [value]="rule.to" [attr.aria-label]="'ui.admin.migration.transform.to' | t" (input)="store.setRule(r, n, 'to', $any($event.target).value)" />
+                                                }
+                                                @if (store.issueIn(r.sourceId, '/transforms/' + r.field.key + '/' + n + '/from') || store.issueIn(r.sourceId, '/transforms/' + r.field.key + '/' + n + '/to') || store.issueIn(r.sourceId, '/transforms/' + r.field.key + '/' + n); as e) {
+                                                  <div class="migration__issue">{{ e }}</div>
+                                                }
+                                              </td>
+                                              <td><button appBtn="danger" size="sm" type="button" class="migration__icon-btn" [attr.aria-label]="'ui.admin.migration.remove' | t" [title]="'ui.admin.migration.remove' | t" (click)="store.removeRule(r, n)"><app-icon name="delete" /></button></td>
+                                            </tr>
+                                          }
+                                        </tbody>
+                                      </table>
+                                      <label class="migration__field">
+                                        <span>{{ 'ui.admin.migration.transform.default' | t }}</span>
+                                        @if (r.field.type === 'choice' && r.field.choices?.length) {
+                                          <select [attr.aria-label]="'ui.admin.migration.transform.default' | t" (change)="store.setDefault(r, $any($event.target).value)">
+                                            <option value="" [selected]="!r.default">{{ 'ui.admin.migration.transform.noDefault' | t }}</option>
+                                            @for (ch of r.field.choices; track ch.value) {
+                                              <option [value]="ch.value" [selected]="r.default === ch.value">{{ ch.label }}</option>
+                                            }
+                                          </select>
+                                        } @else if (r.field.type === 'boolean') {
+                                          <select [attr.aria-label]="'ui.admin.migration.transform.default' | t" (change)="store.setDefault(r, $any($event.target).value)">
+                                            <option value="" [selected]="!r.default">{{ 'ui.admin.migration.transform.noDefault' | t }}</option>
+                                            <option value="yes" [selected]="r.default === 'yes'">{{ 'ui.admin.migration.transform.yes' | t }}</option>
+                                            <option value="no" [selected]="r.default === 'no'">{{ 'ui.admin.migration.transform.no' | t }}</option>
+                                          </select>
+                                        } @else {
+                                          <input type="text" [value]="r.default" [attr.aria-label]="'ui.admin.migration.transform.default' | t" (input)="store.setDefault(r, $any($event.target).value)" />
+                                        }
+                                        <span class="migration__hint">{{ 'ui.admin.migration.transform.defaultHint' | t }}</span>
+                                        @if (store.issueIn(r.sourceId, '/defaults/' + r.field.key); as e) {
+                                          <span class="migration__issue">{{ e }}</span>
+                                        }
+                                      </label>
+                                      @if (store.issueIn(r.sourceId, '/transforms/' + r.field.key); as e) {
+                                        <div class="migration__issue">{{ e }}</div>
+                                      }
+                                      <div class="migration__actions">
+                                        <button appBtn size="sm" type="button" class="migration__btn-icon" (click)="store.addRule(r)"><app-icon name="add" />{{ 'ui.admin.migration.transform.add' | t }}</button>
+                                        @if (store.sampleValues(r).length) {
+                                          <button appBtn size="sm" type="button" (click)="store.addSampleRules(r)">{{ 'ui.admin.migration.transform.addSamples' | t: { count: store.sampleValues(r).length } }}</button>
+                                        }
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              }
+                            }
+                          </tbody>
+                        </table>
+                      } @else if (g.key !== store.peopleGroup) {
+                        <p class="migration__hint">{{ 'ui.admin.migration.group.empty' | t }}</p>
+                      }
+                      @if (g.key === store.peopleGroup && store.peopleFiles().length) {
+                        <h3 class="migration__section">{{ 'ui.admin.migration.group.coverage' | t }}</h3>
+                        @if (store.rolesFailed()) {
+                          <div class="notice warn" role="status">{{ 'ui.admin.migration.rolesUnavailable' | t }}</div>
+                        }
+                        <table class="migration__coverage migration__map">
+                          <thead>
+                            <tr>
+                              <th scope="col">{{ 'ui.admin.migration.group.field' | t }}</th>
+                              <th scope="col">{{ 'ui.admin.migration.group.file' | t }}</th>
+                              <th scope="col">{{ 'ui.admin.migration.group.column' | t }}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (r of store.peopleRows(); track r.key) {
+                              @let d = store.drafts()[r.sourceId]?.people;
+                              <tr>
+                                <th scope="row">
+                                  {{ 'ui.admin.migration.people.' + r.draftKey | t }}@if (r.required) {<span class="migration__req" aria-hidden="true"> *</span>}
+                                  <div class="migration__hint">{{ 'ui.admin.migration.people.' + r.draftKey + 'Hint' | t }}</div>
+                                </th>
+                                <td>
+                                  <select [attr.aria-label]="('ui.admin.migration.people.' + r.draftKey | t) + ' · ' + ('ui.admin.migration.group.file' | t)" (change)="store.setPeopleRowFile(r, $any($event.target).value)">
+                                    <option value="" [selected]="!r.sourceId">{{ 'ui.admin.migration.group.notFilled' | t }}</option>
+                                    @for (f of store.peopleFileChoices(); track f.id) {
+                                      <option [value]="f.id" [selected]="f.id === r.sourceId">{{ f.name }}</option>
+                                    }
+                                  </select>
+                                  @if (!r.sourceId && r.required) {
+                                    <div class="migration__issue">{{ 'ui.admin.migration.group.missingRequired' | t }}</div>
+                                  }
+                                </td>
+                                <td>
+                                  @if (r.sourceId) {
+                                    <select [attr.aria-label]="('ui.admin.migration.people.' + r.draftKey | t) + ' · ' + ('ui.admin.migration.group.column' | t)" [attr.aria-required]="r.required" (change)="store.setPeopleRowColumn(r, $any($event.target).value)">
+                                      <option value="" [selected]="!r.column">{{ (r.required ? 'ui.admin.migration.chooseColumn' : 'ui.admin.migration.notInFile') | t }}</option>
+                                      @for (col of store.columnsOf(r.sourceId); track col.name) {
+                                        <option [value]="col.name" [selected]="r.column === col.name">{{ store.columnLabel(col) }}</option>
+                                      }
+                                    </select>
+                                  }                                  @if (store.issue('/people/' + r.key) || store.issue('/people/' + r.draftKey); as e) {
+                                    <div class="migration__issue">{{ e }}</div>
+                                  }
+                                  @if (r.key === 'status' && r.column && d) {
+                                    <details class="migration__more">
+                                      <summary>{{ 'ui.admin.migration.group.moreOptions' | t }}</summary>
+                                      <label class="migration__field">
+                                        <span>{{ 'ui.admin.migration.peopleActive' | t }}</span>
+                                        <input type="text" [value]="d?.active" (input)="store.setPeople(r.sourceId, 'active', $any($event.target).value)" />
+                                        <span class="migration__hint">{{ 'ui.admin.migration.peopleValuesHint' | t }}</span>
+                                        @if (store.issue('/people/status/active'); as e) {
+                                          <span class="migration__issue">{{ e }}</span>
+                                        }
+                                      </label>
+                                      <label class="migration__field">
+                                        <span>{{ 'ui.admin.migration.peopleSuspended' | t }}</span>
+                                        <input type="text" [value]="d?.suspended" (input)="store.setPeople(r.sourceId, 'suspended', $any($event.target).value)" />
+                                        <span class="migration__hint">{{ 'ui.admin.migration.peopleValuesHint' | t }}</span>
+                                        @if (store.issue('/people/status/suspended'); as e) {
+                                          <span class="migration__issue">{{ e }}</span>
+                                        }
+                                      </label>
+                                    </details>
+                                  }
+                                  @if (r.key === 'roles' && r.column && d) {
+                                    <details class="migration__more" open>
+                                      <summary>{{ 'ui.admin.migration.group.moreOptions' | t }}</summary>
+                                      <label class="migration__field">
+                                        <span>{{ 'ui.admin.migration.peopleSeparator' | t }}</span>
+                                        <select (change)="store.setPeople(r.sourceId, 'separator', $any($event.target).value)">
+                                          @for (sep of separators; track sep.value) {
+                                            <option [value]="sep.value" [selected]="d?.separator === sep.value">{{ 'ui.admin.migration.separator.' + sep.key | t }}</option>
+                                          }
+                                        </select>
+                                        @if (store.issue('/people/roles/separator'); as e) {
+                                          <span class="migration__issue">{{ e }}</span>
+                                        }
+                                      </label>
+                                      <div class="migration__roles" role="group" [attr.aria-label]="'ui.admin.migration.roleMapTitle' | t">
+                                        <div class="migration__roles-head"><span>{{ 'ui.admin.migration.roleMapTitle' | t }}</span><span>{{ 'ui.admin.migration.roleBecomes' | t }}</span></div>
+                                        @for (rr of store.roleTable(r.sourceId); track rr.value) {
+                                          <div class="migration__role">
+                                            <b>{{ rr.value }}</b>
+                                            <select [attr.aria-label]="'ui.admin.migration.roleFor' | t: { value: rr.value }" (change)="store.setRole(r.sourceId, rr.value, $any($event.target).value)">
+                                              <option value="" [selected]="!rr.role">{{ 'ui.admin.migration.roleIgnore' | t }}</option>
+                                              @for (role of store.roles(); track role.key) {
+                                                <option [value]="role.key" [selected]="rr.role === role.key" [disabled]="!!role.requireTwoStep && rr.role !== role.key">{{ (role.requireTwoStep ? 'ui.admin.migration.roleTwoStepOption' : 'ui.admin.migration.roleOption') | t: { role: role.label } }}</option>
+                                              }
+                                            </select>
+                                            @if (rr.role && store.twoStep(rr.role)) {
+                                              <span class="migration__issue">{{ 'ui.admin.migration.roleTwoStep' | t: { role: store.roleLabel(rr.role) } }}</span>
+                                            }
+                                            @if (store.issue('/people/roles/map/' + rr.value); as e) {
+                                              <span class="migration__issue">{{ e }}</span>
+                                            }
+                                          </div>
+                                        } @empty {
+                                          <p class="migration__hint">{{ 'ui.admin.migration.roleNone' | t }}</p>
+                                        }
+                                      </div>
+                                      <p class="migration__hint">{{ 'ui.admin.migration.roleValuesNote' | t }}</p>
+                                      <div class="migration__add-role">
+                                        <label class="migration__field">
+                                          <span>{{ 'ui.admin.migration.roleAddValue' | t }}</span>
+                                          <input type="text" [value]="store.addedRoleValue()" (input)="store.addedRoleValue.set($any($event.target).value)" (keydown.enter)="$event.preventDefault(); store.addRoleValue(r.sourceId)" />
+                                        </label>
+                                        <button appBtn size="sm" type="button" [disabled]="!store.addedRoleValue().trim()" (click)="store.addRoleValue(r.sourceId)">{{ 'ui.admin.migration.roleAdd' | t }}</button>
+                                      </div>
+                                    </details>
                                   }
                                 </td>
                               </tr>
                             }
                           </tbody>
                         </table>
-                      }
-                      @if (g.files.length) {
-                        <h3 class="migration__section">{{ 'ui.admin.migration.group.columns' | t }}</h3>
-                        <div class="migration__files" role="group" [attr.aria-label]="'ui.admin.migration.group.fileTabs' | t">
-                          @for (id of g.files; track id) {
-                            <button type="button" class="migration__chip" [class.migration__chip--on]="id === store.selected()" [attr.aria-pressed]="id === store.selected()" (click)="store.pick(id)">
-                              @if (store.saved(id)) {
-                                <app-icon name="check" />
-                              }
-                              <span>{{ store.fileName(id) }}</span>
-                              @if (store.dirty().has(id)) {
-                                <span class="migration__unsaved">{{ 'ui.admin.migration.group.unsavedFile' | t }}</span>
-                              }
-                            </button>
-                          }
-                        </div>
-                      } @else {
+                      } @else if (g.key === store.peopleGroup) {
                         <p class="migration__hint">{{ 'ui.admin.migration.group.empty' | t }}</p>
                       }
-                @if (store.source(); as src) {
-                  @if (store.kind() === 'people' && g.key === store.peopleGroup) {
-                    <p class="migration__hint">{{ 'ui.admin.migration.peopleSummary' | t: { file: src.fileName, rows: src.rowCount } }}</p>
-                    @let d = store.people();
-                    <div class="migration__grid">
-                      @for (f of peopleFields; track f.key) {
-                        <label class="migration__field">
-                          <span>{{ 'ui.admin.migration.people.' + f.key | t }}@if (f.required) {<span class="migration__req" aria-hidden="true"> *</span>}</span>
-                          <select [attr.aria-required]="f.required" (change)="store.setPeople(f.key, $any($event.target).value)">
-                            <option value="" [selected]="!d[f.key]">{{ (f.required ? 'ui.admin.migration.chooseColumn' : 'ui.admin.migration.notInFile') | t }}</option>
-                            @for (col of src.columns; track col.name) {
-                              <option [value]="col.name" [selected]="d[f.key] === col.name">{{ store.columnLabel(col) }}</option>
-                            }
-                          </select>
-                          <span class="migration__hint">{{ 'ui.admin.migration.people.' + f.key + 'Hint' | t }}</span>
-                          @if (store.issue('/people/' + f.key); as e) {
-                            <span class="migration__issue">{{ e }}</span>
-                          }
-                        </label>
-                      }
-                    </div>
-                    <h3 class="migration__section">{{ 'ui.admin.migration.peopleStatus' | t }}</h3>
-                    <div class="migration__grid">
-                      <label class="migration__field">
-                        <span>{{ 'ui.admin.migration.people.statusColumn' | t }}</span>
-                        <select (change)="store.setPeople('statusColumn', $any($event.target).value)">
-                          <option value="" [selected]="!d.statusColumn">{{ 'ui.admin.migration.notInFile' | t }}</option>
-                          @for (col of src.columns; track col.name) {
-                            <option [value]="col.name" [selected]="d.statusColumn === col.name">{{ store.columnLabel(col) }}</option>
-                          }
-                        </select>
-                        <span class="migration__hint">{{ 'ui.admin.migration.people.statusColumnHint' | t }}</span>
-                        @if (store.issue('/people/status/column') || store.issue('/people/status'); as e) {
-                          <span class="migration__issue">{{ e }}</span>
-                        }
-                      </label>
-                      @if (d.statusColumn) {
-                        <label class="migration__field">
-                          <span>{{ 'ui.admin.migration.peopleActive' | t }}</span>
-                          <input type="text" [value]="d.active" (input)="store.setPeople('active', $any($event.target).value)" />
-                          <span class="migration__hint">{{ 'ui.admin.migration.peopleValuesHint' | t }}</span>
-                          @if (store.issue('/people/status/active'); as e) {
-                            <span class="migration__issue">{{ e }}</span>
-                          }
-                        </label>
-                        <label class="migration__field">
-                          <span>{{ 'ui.admin.migration.peopleSuspended' | t }}</span>
-                          <input type="text" [value]="d.suspended" (input)="store.setPeople('suspended', $any($event.target).value)" />
-                          <span class="migration__hint">{{ 'ui.admin.migration.peopleValuesHint' | t }}</span>
-                          @if (store.issue('/people/status/suspended'); as e) {
-                            <span class="migration__issue">{{ e }}</span>
-                          }
-                        </label>
-                      }
-                    </div>
-                    <h3 class="migration__section">{{ 'ui.admin.migration.peopleRoles' | t }}</h3>
-                    <div class="migration__grid">
-                      <label class="migration__field">
-                        <span>{{ 'ui.admin.migration.people.rolesColumn' | t }}</span>
-                        <select (change)="store.setPeople('rolesColumn', $any($event.target).value)">
-                          <option value="" [selected]="!d.rolesColumn">{{ 'ui.admin.migration.notInFile' | t }}</option>
-                          @for (col of src.columns; track col.name) {
-                            <option [value]="col.name" [selected]="d.rolesColumn === col.name">{{ store.columnLabel(col) }}</option>
-                          }
-                        </select>
-                        <span class="migration__hint">{{ 'ui.admin.migration.people.rolesColumnHint' | t }}</span>
-                        @if (store.issue('/people/roles/column') || store.issue('/people/roles'); as e) {
-                          <span class="migration__issue">{{ e }}</span>
-                        }
-                      </label>
-                      @if (d.rolesColumn) {
-                        <label class="migration__field">
-                          <span>{{ 'ui.admin.migration.peopleSeparator' | t }}</span>
-                          <select (change)="store.setPeople('separator', $any($event.target).value)">
-                            @for (sep of separators; track sep.value) {
-                              <option [value]="sep.value" [selected]="d.separator === sep.value">{{ 'ui.admin.migration.separator.' + sep.key | t }}</option>
-                            }
-                          </select>
-                          @if (store.issue('/people/roles/separator'); as e) {
-                            <span class="migration__issue">{{ e }}</span>
-                          }
-                        </label>
-                      }
-                    </div>
-                    @if (d.rolesColumn) {
-                      @if (store.rolesFailed()) {
-                        <div class="notice warn" role="status">{{ 'ui.admin.migration.rolesUnavailable' | t }}</div>
-                      }
-                      <div class="migration__roles" role="group" [attr.aria-label]="'ui.admin.migration.roleMapTitle' | t">
-                        <div class="migration__roles-head"><span>{{ 'ui.admin.migration.roleMapTitle' | t }}</span><span>{{ 'ui.admin.migration.roleBecomes' | t }}</span></div>
-                        @for (r of store.roleTable(); track r.value) {
-                          <div class="migration__role">
-                            <b>{{ r.value }}</b>
-                            <select [attr.aria-label]="'ui.admin.migration.roleFor' | t: { value: r.value }" (change)="store.setRole(r.value, $any($event.target).value)">
-                              <option value="" [selected]="!r.role">{{ 'ui.admin.migration.roleIgnore' | t }}</option>
-                              @for (role of store.roles(); track role.key) {
-                                <option [value]="role.key" [selected]="r.role === role.key" [disabled]="!!role.requireTwoStep && r.role !== role.key">{{ (role.requireTwoStep ? 'ui.admin.migration.roleTwoStepOption' : 'ui.admin.migration.roleOption') | t: { role: role.label } }}</option>
-                              }
-                            </select>
-                            @if (r.role && store.twoStep(r.role)) {
-                              <span class="migration__issue">{{ 'ui.admin.migration.roleTwoStep' | t: { role: store.roleLabel(r.role) } }}</span>
-                            }
-                            @if (store.issue('/people/roles/map/' + r.value); as e) {
-                              <span class="migration__issue">{{ e }}</span>
-                            }
-                          </div>
-                        } @empty {
-                          <p class="migration__hint">{{ 'ui.admin.migration.roleNone' | t }}</p>
-                        }
-                      </div>
-                      <p class="migration__hint">{{ 'ui.admin.migration.roleValuesNote' | t }}</p>
-                      <div class="migration__add-role">
-                        <label class="migration__field">
-                          <span>{{ 'ui.admin.migration.roleAddValue' | t }}</span>
-                          <input type="text" [value]="store.addedRoleValue()" (input)="store.addedRoleValue.set($any($event.target).value)" (keydown.enter)="$event.preventDefault(); store.addRoleValue()" />
-                        </label>
-                        <button appBtn size="sm" type="button" [disabled]="!store.addedRoleValue().trim()" (click)="store.addRoleValue()">{{ 'ui.admin.migration.roleAdd' | t }}</button>
-                      </div>
-                    }
-                    <div class="notice ok" role="status">{{ 'ui.admin.migration.peopleReady' | t }}</div>
-                  } @else if (store.kind() === 'records') {
-                  @for (x of store.draft(); track x.key; let i = $index) {
-                    @if (x.type === g.key) {
-                    @let f = store.filled(x);
-                    <div class="migration__file-target">
-                      <p class="migration__hint">{{ 'ui.admin.migration.group.fileFields' | t: { file: src.fileName } }} · {{ 'ui.admin.migration.fieldsFilled' | t: { count: f.count, total: f.total } }}</p>
-                      <div>
-                        <div class="migration__grid">
-                          <label class="migration__field">
-                            <span>{{ 'ui.admin.migration.oldId' | t }}</span>
-                            <select (change)="store.setOldId(i, $any($event.target).value)">
-                              @for (c of store.columns(); track c) {
-                                <option [value]="c" [selected]="c === x.oldId">{{ c }}</option>
-                              }
-                            </select>
-                            <span class="migration__hint">{{ 'ui.admin.migration.oldIdHint' | t }}</span>
-                            @if (store.issue('/targets/' + i + '/oldId'); as e) {
-                              <span class="migration__issue">{{ e }}</span>
-                            }
-                          </label>
-                          <div class="migration__field">
-                            <label class="migration__check"><input type="checkbox" [checked]="x.required" (change)="store.setRequired(i, $any($event.target).checked)" /> {{ 'ui.admin.migration.required' | t }}</label>
-                            <span class="migration__hint">{{ 'ui.admin.migration.requiredHint' | t }}</span>
-                          </div>
-                        </div>
-                        <div class="migration__grid">
-                          @for (c of store.choices(x); track c.field.key) {
-                            <label class="migration__field">
-                              <span>{{ c.field.label }}@if (c.field.required) {<span class="migration__req" aria-hidden="true"> *</span>}</span>
-                              <select (change)="store.choose(i, c, $any($event.target).value)">
-                                <option value="" [selected]="!c.value">{{ 'ui.admin.migration.notImported' | t }}</option>
-                                @if (c.reference) {
-                                  @for (col of store.columns(); track col) {
-                                    <option [value]="'column:' + col" [selected]="c.value === 'column:' + col">{{ 'ui.admin.migration.byOldId' | t: { column: col } }}</option>
-                                  }
-                                  @for (e of store.earlier(i, c.field); track e.key) {
-                                    <option [value]="'target:' + e.key" [selected]="c.value === 'target:' + e.key">{{ 'ui.admin.migration.fromTarget' | t: { target: store.typeOf(e.type)?.label ?? e.key } }}</option>
-                                  }
-                                } @else {
-                                  @for (col of src.columns; track col.name) {
-                                    <option [value]="col.name" [selected]="c.value === col.name">{{ store.columnLabel(col) }}</option>
-                                  }
-                                }
-                              </select>
-                              @if (store.issue('/targets/' + i + '/fields/' + c.field.key) || store.issue('/targets/' + i + '/refs/' + c.field.key); as e) {
-                                <span class="migration__issue">{{ e }}</span>
-                              }
-                            </label>
-                            @if (c.person) {
-                              <div class="migration__person">
-                                <label class="migration__field">
-                                  <span>{{ 'ui.admin.migration.personLegacy' | t: { field: c.field.label } }}</span>
-                                  <select (change)="store.choosePerson(i, c, $any($event.target).value)">
-                                    <option value="" [selected]="!c.legacyColumn">{{ 'ui.admin.migration.notImported' | t }}</option>
-                                    @for (col of store.columns(); track col) {
-                                      <option [value]="col" [selected]="c.legacyColumn === col">{{ col }}</option>
-                                    }
-                                  </select>
-                                  <span class="migration__hint">{{ 'ui.admin.migration.personLegacyHint' | t }}</span>
-                                  @if (store.issue('/targets/' + i + '/persons/' + c.field.key + '/column') || store.issue('/targets/' + i + '/persons/' + c.field.key); as e) {
-                                    <span class="migration__issue">{{ e }}</span>
-                                  }
-                                </label>
-                                @if (c.legacyColumn) {
-                                  <label class="migration__field">
-                                    <span>{{ 'ui.admin.migration.personOnMissing' | t }}</span>
-                                    <select (change)="store.setOnMissing(i, c, $any($event.target).value)">
-                                      <option value="blank" [selected]="c.onMissing === 'blank'">{{ 'ui.admin.migration.personBlank' | t }}</option>
-                                      <option value="fail" [selected]="c.onMissing === 'fail'">{{ 'ui.admin.migration.personFail' | t }}</option>
-                                    </select>
-                                    @if (store.issue('/targets/' + i + '/persons/' + c.field.key + '/onMissing'); as e) {
-                                      <span class="migration__issue">{{ e }}</span>
-                                    }
-                                  </label>
-                                }
-                              </div>
-                            }
-                          }
-                        </div>
-                        @for (fc of store.fileChoices(x); track fc.field.key) {
-                          <div class="migration__person">
-                            <label class="migration__field">
-                              <span>{{ 'ui.admin.migration.file.column' | t: { field: fc.field.label } }}@if (fc.field.required) {<span class="migration__req" aria-hidden="true"> *</span>}</span>
-                              <select [attr.aria-required]="fc.field.required" (change)="store.chooseFile(i, fc, $any($event.target).value)">
-                                <option value="" [selected]="!fc.column">{{ 'ui.admin.migration.notImported' | t }}</option>
-                                @for (col of src.columns; track col.name) {
-                                  <option [value]="col.name" [selected]="fc.column === col.name">{{ store.columnLabel(col) }}</option>
-                                }
-                              </select>
-                              <span class="migration__hint">{{ 'ui.admin.migration.file.columnHint' | t }}</span>
-                              @if (store.issue('/targets/' + i + '/files/' + fc.field.key + '/column') || store.issue('/targets/' + i + '/files/' + fc.field.key); as e) {
-                                <span class="migration__issue">{{ e }}</span>
-                              }
-                            </label>
-                            @if (fc.column) {
-                              <label class="migration__field">
-                                <span>{{ 'ui.admin.migration.file.onMissing' | t }}</span>
-                                <select (change)="store.setFileOption(i, fc, 'onMissing', $any($event.target).value)">
-                                  <option value="fail" [selected]="fc.onMissing === 'fail'">{{ 'ui.admin.migration.file.fail' | t }}</option>
-                                  <option value="skip" [selected]="fc.onMissing === 'skip'">{{ 'ui.admin.migration.file.skip' | t }}</option>
-                                </select>
-                                @if (store.issue('/targets/' + i + '/files/' + fc.field.key + '/onMissing'); as e) {
-                                  <span class="migration__issue">{{ e }}</span>
-                                }
-                              </label>
-                              @if (fc.field.multiple) {
-                                <label class="migration__field">
-                                  <span>{{ 'ui.admin.migration.file.separator' | t }}</span>
-                                  <select (change)="store.setFileOption(i, fc, 'separator', $any($event.target).value)">
-                                    <option value=";" [selected]="fc.separator === ';'">{{ 'ui.admin.migration.separator.semicolon' | t }}</option>
-                                    <option value="," [selected]="fc.separator === ','">{{ 'ui.admin.migration.separator.comma' | t }}</option>
-                                  </select>
-                                  @if (store.issue('/targets/' + i + '/files/' + fc.field.key + '/separator'); as e) {
-                                    <span class="migration__issue">{{ e }}</span>
-                                  }
-                                </label>
-                              }
-                            }
-                          </div>
-                        }
-                      </div>
-                    </div>
-                    }
-                  }
-                  }
-                }
                     </div>
                   </section>
                 } @else {
@@ -577,7 +665,7 @@ import { MigrationStore } from './migration-store';
                       <strong>{{ src.fileName }}</strong>
                       <span class="muted">{{ src.mapping ? store.contents(src.mapping) : ('ui.admin.migration.leftOut' | t) }}</span>
                     </span>
-                    @if (src.mapping?.kind === 'people') {
+                    @if (store.hasPeople(src.mapping)) {
                       <span class="badge ok">{{ 'ui.admin.migration.kindPeople' | t }}</span>
                     }
                     <button appBtn size="sm" type="button" class="migration__icon-btn" [disabled]="first || off" [attr.aria-label]="'ui.admin.migration.up' | t" [title]="'ui.admin.migration.up' | t" (click)="store.move(src.id, -1)"><app-icon name="up" /></button>
@@ -661,11 +749,11 @@ import { MigrationStore } from './migration-store';
                   </ul>
                 }
                 <ul class="admin__list migration__list">
-                  @for (x of c.sources; track x.sourceId) {
+                  @for (x of c.sources; track x.sourceId + (x.kind ?? '')) {
                     <li class="admin__row">
                       <span class="migration__icon" [attr.data-status]="x.invalid ? 'problems' : 'ready'"><app-icon name="file" /></span>
                       <span class="admin__label">
-                        <strong>{{ x.fileName }}</strong>
+                        <strong>{{ x.fileName }}@if (x.kind) { · {{ (x.kind === 'people' ? 'ui.admin.migration.kindPeople' : 'ui.admin.migration.checkPart.records') | t }}}</strong>
                         <span class="muted">{{ 'ui.admin.migration.sourceCheck' | t: { ready: x.ready, invalid: x.invalid, creates: x.creates, updates: x.updates } }}</span>
                       </span>
                       <span [class]="'badge ' + (x.invalid ? 'bad' : 'ok')">{{ (x.invalid ? 'ui.admin.migration.problems' : 'ui.admin.migration.ready') | t }}</span>
@@ -839,18 +927,15 @@ import { MigrationStore } from './migration-store';
 export class MigrationScreen {
   readonly store = inject(MigrationStore);
   readonly steps = MIGRATION_STEPS;
+  /** The placeholder of a template's input. */
+  readonly templateExample = '{First name} {Last name}';
   /** A file is being dragged over the drop area. */
   readonly over = signal(false);
   /** Attachments are being dragged over their drop area. */
   readonly overFiles = signal(false);
+  /** Temporarily hidden: set to true to show the attachment upload section again. */
+  readonly showAttachments = false;
   readonly separators = ROLE_SEPARATORS.map((value, i) => ({ value, key: ['semicolon', 'comma', 'bar'][i]! }));
-  /** The columns of a people file that take one column each. */
-  readonly peopleFields = [
-    { key: 'oldId', required: true },
-    { key: 'email', required: true },
-    { key: 'name', required: true },
-    { key: 'locale', required: false },
-  ] as const;
 
   /** The files no group holds, by name, for the notice that they are left out. */
   ungroupedNames(): string {

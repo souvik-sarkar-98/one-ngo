@@ -29,6 +29,51 @@ export interface FileMapping {
 
 export const FILE_SEPARATORS = [';', ','] as const;
 
+/** One rule that rewrites a value of a column before it is read: `from` becomes `to` (an empty `to` leaves the field blank). */
+export interface ValueTransform {
+  from: string;
+  to: string;
+}
+
+/** The field types whose values a rule or a default can change. */
+export const TRANSFORM_TYPES = ['text', 'longText', 'choice', 'boolean'] as const;
+export const MAX_TRANSFORMS = 200;
+export const MAX_TRANSFORM_TEXT = 200;
+
+/** A text field built from several columns of the row: the template with each column in braces, such as `{First name} {Last name}`. */
+export interface DerivedMapping {
+  template: string;
+}
+
+/** The field types a template can build. */
+export const DERIVED_TYPES = ['text', 'longText'] as const;
+export const MAX_TEMPLATE = 500;
+
+/** The column names a template uses, in order, without repeats. */
+export const placeholders = (template: string): string[] => [...new Set([...template.matchAll(/\{([^{}]+)\}/g)].map((m) => m[1]!))];
+
+/**
+ * The text of a template for one row: each column in braces is replaced by its cell, trimmed. A template
+ * whose columns are all blank gives nothing, so the field is left blank rather than holding bare text.
+ */
+export function renderTemplate(template: string, cell: (column: string) => string): string {
+  if (placeholders(template).every((c) => !cell(c).trim())) return '';
+  return template.replace(/\{([^{}]+)\}/g, (_, column: string) => cell(column).trim()).trim();
+}
+
+const sameValue = (s: string) => s.trim().toLowerCase();
+
+/**
+ * The cell after the field's rules: the first rule whose `from` equals it (ignoring case and surrounding spaces) gives
+ * its `to`. A value no rule names becomes the field's default when it has one, an empty cell included; else it stays as it is.
+ */
+export function transformValue(rules: readonly ValueTransform[] | undefined, raw: string, fallback?: string): string {
+  const key = sameValue(raw);
+  const named = rules?.find((r) => sameValue(r.from) === key);
+  if (named) return named.to;
+  return fallback ?? raw;
+}
+
 /** One record type filled from each row of a file. */
 export interface MigrationTarget {
   /** Names the target within its file, for references from later targets. */
@@ -52,14 +97,33 @@ export interface MigrationTarget {
    * left out with a warning (`skip`). The column counts as used. Missing in older mappings.
    */
   files?: Record<string, FileMapping>;
+  /**
+   * Value rules per field, applied to the cell of the column that fills the field (a text, choice or yes/no field
+   * filled from a column). Missing in older mappings.
+   */
+  transforms?: Record<string, ValueTransform[]>;
+  /**
+   * The value a field takes when no rule names the cell's value, an empty cell included. Only for a field filled from
+   * a column, of the types the rules allow. Missing in older mappings.
+   */
+  defaults?: Record<string, string>;
+  /**
+   * Text fields built from several columns of the row by a template. The columns do not count as used, so
+   * they may also fill other fields. A field has a column or a template, not both. Missing in older mappings.
+   */
+  derived?: Record<string, DerivedMapping>;
   /** A required target that fails fails the whole row; an optional one is left out. */
   required: boolean;
 }
 
-/** A file filling record types. Rows stored before people files existed have no kind and are records. */
+/**
+ * A file filling record types. Rows stored before people files existed have no kind and are records.
+ * A file may also hold people next to its records: `people` is then its people part.
+ */
 export interface RecordsMapping {
   kind?: 'records';
   targets: MigrationTarget[];
+  people?: PeopleSpec;
 }
 
 export const ROLE_SEPARATORS = [';', ',', '|'] as const;
@@ -70,8 +134,7 @@ export interface PeopleSpec {
   oldId: string;
   email: string;
   name: string;
-  /** Roles from a column (each value may be mapped to an OneNGO role key, or 
-ull to ignore it) or the same roles for everyone. */
+  /** Roles from a column (each value may be mapped to an OneNGO role key, or null to ignore it) or the same roles for everyone. */
   roles?: { column: string; separator?: string; map?: Record<string, string | null> } | { fixed: string[] };
   /** Without status everyone is active. Values are compared ignoring case. */
   status?: { column: string; active: string[]; suspended: string[] };
@@ -93,6 +156,8 @@ export const PEOPLE_TYPE = '@people';
 export const isPeople = (m: SourceMapping | null | undefined): m is PeopleMapping => m?.kind === 'people';
 /** The record targets of a mapping; a people file has none. */
 export const targetsOf = (m: SourceMapping | null | undefined): MigrationTarget[] => (m && !isPeople(m) ? m.targets : []);
+/** The people part of a mapping: a people file's, or the people a file holds next to its records. */
+export const peopleOf = (m: SourceMapping | null | undefined): PeopleSpec | null => (m ? (isPeople(m) ? m.people : (m.people ?? null)) : null);
 
 /** The record types a profile can write, by key. */
 export type TypesByKey = ReadonlyMap<string, RecordTypeDef>;
@@ -107,6 +172,7 @@ const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v =
 export function readMapping(input: unknown, columns: readonly string[], types: TypesByKey): RecordsMapping {
   const issues: FieldIssue[] = [];
   const add = (path: string, message: string) => issues.push({ path, message });
+
   const raw = isObject(input) && Array.isArray(input.targets) ? input.targets : null;
   if (!raw) throw validationFailed('Send the targets of this file.', [{ path: '/targets', message: 'must be a list' }]);
   if (!raw.length) throw validationFailed('Choose at least one record type for this file.', [{ path: '/targets', message: 'must not be empty' }]);
@@ -234,11 +300,113 @@ export function readMapping(input: unknown, columns: readonly string[], types: T
       if (good) files[f.key] = { column, ...(separator ? { separator: separator as ';' | ',' } : {}), ...(onMissing ? { onMissing: onMissing as 'fail' | 'skip' } : {}) };
     }
 
+    // Transforms: only for a text, choice or yes/no field filled straight from a column.
+    const transforms: Record<string, ValueTransform[]> = {};
+    for (const [fieldKey, list] of Object.entries(isObject(t.transforms) ? t.transforms : {})) {
+      const path = `${at}/transforms/${fieldKey}`;
+      const f = type.fields.find((x) => x.key === fieldKey);
+      if (!f) {
+        add(path, `'${fieldKey}' is not a field of ${type.label}`);
+        continue;
+      }
+      if (!(TRANSFORM_TYPES as readonly string[]).includes(f.type)) {
+        add(path, `'${f.label}' is not a text, choice or yes/no field, so its values cannot be changed`);
+        continue;
+      }
+      if (!Object.hasOwn(fields, f.key)) {
+        add(path, `'${f.label}' has no column to change the values of`);
+        continue;
+      }
+      if (!Array.isArray(list)) {
+        add(path, 'must be a list of rules');
+        continue;
+      }
+      if (list.length > MAX_TRANSFORMS) {
+        add(path, `has more than ${MAX_TRANSFORMS} rules`);
+        continue;
+      }
+      const rules: ValueTransform[] = [];
+      for (const [n, r] of list.entries()) {
+        const from = isObject(r) && typeof r.from === 'string' ? r.from.trim() : '';
+        const to = isObject(r) && typeof r.to === 'string' ? r.to.trim() : null;
+        if (!from) add(`${path}/${n}/from`, 'enter the value to change');
+        else if (to === null) add(`${path}/${n}/to`, 'enter the value to use instead');
+        else if (from.length > MAX_TRANSFORM_TEXT || to.length > MAX_TRANSFORM_TEXT) add(`${path}/${n}`, `a value may have at most ${MAX_TRANSFORM_TEXT} characters`);
+        else if (rules.some((x) => sameValue(x.from) === sameValue(from))) add(`${path}/${n}/from`, `'${from}' is changed by another rule`);
+        else rules.push({ from, to });
+      }
+      if (rules.length) transforms[f.key] = rules;
+    }
+
+    // Defaults: the value a field takes when no rule names its cell. Only for a field filled from a column, as rules are.
+    const defaults: Record<string, string> = {};
+    for (const [fieldKey, value] of Object.entries(isObject(t.defaults) ? t.defaults : {})) {
+      const path = `${at}/defaults/${fieldKey}`;
+      const f = type.fields.find((x) => x.key === fieldKey);
+      if (!f) {
+        add(path, `'${fieldKey}' is not a field of ${type.label}`);
+        continue;
+      }
+      if (!(TRANSFORM_TYPES as readonly string[]).includes(f.type)) {
+        add(path, `'${f.label}' is not a text, choice or yes/no field, so it cannot have a default`);
+        continue;
+      }
+      if (!Object.hasOwn(fields, f.key)) {
+        add(path, `'${f.label}' has no column to take a default value from`);
+        continue;
+      }
+      if (typeof value !== 'string') {
+        add(path, 'must be text');
+        continue;
+      }
+      const v = value.trim();
+      if (v.length > MAX_TRANSFORM_TEXT) add(path, `a value may have at most ${MAX_TRANSFORM_TEXT} characters`);
+      else if (f.type === 'choice' && v && !f.choices?.some((ch) => ch.value === v)) add(path, `'${v}' is not one of the choices`);
+      else if (v) defaults[f.key] = v;
+    }
+
+    // Derived: a text field built from the row's columns; its columns are not registered in `used`.
+    const derived: Record<string, DerivedMapping> = {};
+    for (const [fieldKey, d] of Object.entries(isObject(t.derived) ? t.derived : {})) {
+      const path = `${at}/derived/${fieldKey}`;
+      const f = type.fields.find((x) => x.key === fieldKey);
+      if (!f) {
+        add(path, `'${fieldKey}' is not a field of ${type.label}`);
+        continue;
+      }
+      if (!(DERIVED_TYPES as readonly string[]).includes(f.type)) {
+        add(path, `'${f.label}' is not a text field, so it cannot be built from several columns`);
+        continue;
+      }
+      if (Object.hasOwn(fields, f.key) || Object.hasOwn(refs, f.key) || Object.hasOwn(transforms, f.key) || Object.hasOwn(isObject(t.transforms) ? t.transforms : {}, f.key)) {
+        add(path, `'${f.label}' is already filled from a column`);
+        continue;
+      }
+      const template = isObject(d) && typeof d.template === 'string' ? d.template.trim() : '';
+      const names = placeholders(template);
+      if (!names.length) add(`${path}/template`, 'use the columns of the file in braces, such as {First name} {Last name}');
+      else if (template.length > MAX_TEMPLATE) add(`${path}/template`, `a template may have at most ${MAX_TEMPLATE} characters`);
+      else if (names.some((n) => !has.has(n))) add(`${path}/template`, `the file has no column '${names.find((n) => !has.has(n))}'`);
+      else derived[f.key] = { template };
+    }
+
     // A required field may stay unmapped: a row for a record an earlier file made only updates the fields it maps,
     // and a row that would create a record without it fails with the field's own message, in the check and the run.
-    if (!Object.keys(fields).length && !Object.keys(refs).length) add(`${at}/fields`, 'match at least one column to a field');
+    if (!Object.keys(fields).length && !Object.keys(refs).length && !Object.keys(derived).length) add(`${at}/fields`, 'match at least one column to a field');
 
-    targets.push({ key, type: type.key, oldId, fields, refs, ...(Object.keys(persons).length ? { persons } : {}), ...(Object.keys(files).length ? { files } : {}), required: t.required !== false });
+    targets.push({
+      key,
+      type: type.key,
+      oldId,
+      fields,
+      refs,
+      ...(Object.keys(persons).length ? { persons } : {}),
+      ...(Object.keys(files).length ? { files } : {}),
+      ...(Object.keys(transforms).length ? { transforms } : {}),
+      ...(Object.keys(defaults).length ? { defaults } : {}),
+      ...(Object.keys(derived).length ? { derived } : {}),
+      required: t.required !== false,
+    });
   }
   if (!issues.length && !targets.some((t) => t.required)) add('/targets', 'at least one target must be required');
   if (issues.length) throw validationFailed('This mapping cannot be saved.', issues);
@@ -246,15 +414,17 @@ export function readMapping(input: unknown, columns: readonly string[], types: T
 }
 
 /**
- * Reads a mapping of either kind: { kind: 'people', people } is a people file, anything else
- * (no kind, or ecords) is read by {@link readMapping}. oles are the keys of the
+ * Reads a mapping of either kind: { kind: 'people', people } is a people file; otherwise the targets are read by
+ * {@link readMapping}, and a `people` next to them makes the file hold people as well. Roles are the keys of the
  * organisation's roles. Throws with every issue found, with paths such as /people/roles/map/Admin.
  */
 export function readSourceMapping(input: unknown, columns: readonly string[], types: TypesByKey, roles: readonly string[]): SourceMapping {
   const kind = isObject(input) ? input.kind : undefined;
-  if (kind === undefined || kind === 'records') return readMapping(input, columns, types);
-  if (kind !== 'people') throw validationFailed('This mapping cannot be saved.', [{ path: '/kind', message: "must be 'records' or 'people'" }]);
-  return readPeopleMapping(input as Record<string, unknown>, columns, roles);
+  if (kind === 'people') return readPeopleMapping(input as Record<string, unknown>, columns, roles);
+  if (kind !== undefined && kind !== 'records') throw validationFailed('This mapping cannot be saved.', [{ path: '/kind', message: "must be 'records' or 'people'" }]);
+  const records = readMapping(input, columns, types);
+  if (!isObject(input) || input.people === undefined || input.people === null) return records;
+  return { ...records, people: readPeopleMapping({ kind: 'people', people: input.people }, columns, roles).people };
 }
 
 const overlaps = (a: readonly string[], b: readonly string[]) => a.some((x) => b.some((y) => x.toLowerCase() === y.toLowerCase()));
@@ -360,8 +530,8 @@ export interface OrderedSource {
   mapping: SourceMapping | null;
 }
 
-/** Record types a file writes. */
-const writes = (s: OrderedSource) => (isPeople(s.mapping) ? new Set([PEOPLE_TYPE]) : new Set(targetsOf(s.mapping).map((t) => t.type)));
+/** Record types a file writes: its people count as one, and each record type of its targets. */
+const writes = (s: OrderedSource) => new Set([...(peopleOf(s.mapping) ? [PEOPLE_TYPE] : []), ...targetsOf(s.mapping).map((t) => t.type)]);
 
 /** Record types a file looks up by old id, written by other files. */
 function needs(s: OrderedSource, types: TypesByKey): Set<string> {

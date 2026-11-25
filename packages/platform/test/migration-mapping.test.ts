@@ -6,9 +6,13 @@ import {
   dependencies,
   deriveOrder,
   isPeople,
+  peopleOf,
   PEOPLE_TYPE,
+  placeholders,
+  renderTemplate,
   readSourceMapping,
   targetsOf,
+  transformValue,
   type OrderedSource,
   type SourceMapping,
   type TypesByKey,
@@ -220,5 +224,152 @@ describe('persons mapping', () => {
     expect(() => checkOrder([files[1]!, files[0]!], TYPES)).not.toThrow();
     // Without a person column nothing waits for the people file.
     expect(dependencies([{ ...files[0]!, mapping: read(target({ fields: { name: 'Title', owner: 'OwnerId' } }), COLS) }, files[1]!], TYPES).get('donations')).toEqual([]);
+  });
+});
+
+describe('value transforms', () => {
+  const guests = new Map<string, RecordTypeDef>([
+    ['guest', type('guest', [
+      { key: 'name', label: 'Name', type: 'text', required: true },
+      { key: 'gender', label: 'Gender', type: 'choice', choices: [{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }] },
+      { key: 'member', label: 'Member', type: 'boolean' },
+      { key: 'age', label: 'Age', type: 'number' },
+    ])],
+  ]);
+  const cols = ['Id', 'Name', 'Sex', 'Member', 'Age'];
+  const withTransforms = (transforms: unknown, fields: Record<string, string> = { name: 'Name', gender: 'Sex', member: 'Member', age: 'Age' }) => ({
+    targets: [{ key: 'g', type: 'guest', oldId: 'Id', fields, transforms }],
+  });
+  const readGuests = (input: unknown) => readSourceMapping(input, cols, guests, ROLES);
+  const problems = (input: unknown) => {
+    try {
+      readGuests(input);
+    } catch (e) {
+      return (e as { issues?: { path: string; message: string }[] }).issues ?? [];
+    }
+    throw new Error('The mapping was accepted.');
+  };
+
+  it('keeps rules for text, choice and yes/no fields filled from a column, trimmed', () => {
+    const m = readGuests(withTransforms({ gender: [{ from: ' M ', to: 'male' }, { from: 'F', to: 'female' }], member: [{ from: 'Y', to: 'yes' }], name: [] }));
+    expect(targetsOf(m)[0]!.transforms).toEqual({ gender: [{ from: 'M', to: 'male' }, { from: 'F', to: 'female' }], member: [{ from: 'Y', to: 'yes' }] });
+  });
+
+  it('stores no transforms when none are sent, as older mappings are', () => {
+    expect(targetsOf(readGuests(withTransforms(undefined)))[0]).not.toHaveProperty('transforms');
+  });
+
+  it('refuses a number field, a field no column fills, an unknown field, and duplicate or empty values', () => {
+    expect(problems(withTransforms({ age: [{ from: '1', to: '2' }] })).map((i) => i.path)).toEqual(['/targets/0/transforms/age']);
+    expect(problems(withTransforms({ gender: [{ from: 'M', to: 'male' }] }, { name: 'Name' })).map((i) => i.path)).toEqual(['/targets/0/transforms/gender']);
+    expect(problems(withTransforms({ nope: [] })).map((i) => i.path)).toEqual(['/targets/0/transforms/nope']);
+    const bad = problems(withTransforms({ gender: [{ from: 'M', to: 'male' }, { from: ' m ', to: 'female' }, { from: '', to: 'x' }, { from: 'Q' }] }));
+    expect(bad.map((i) => i.path)).toEqual(['/targets/0/transforms/gender/1/from', '/targets/0/transforms/gender/2/from', '/targets/0/transforms/gender/3/to']);
+  });
+
+  it('rewrites a cell by the first rule that names it, ignoring case and spaces, and leaves others as they are', () => {
+    const rules = [{ from: 'M', to: 'Male' }, { from: 'F', to: 'Female' }];
+    expect(transformValue(rules, 'm')).toBe('Male');
+    expect(transformValue(rules, ' F ')).toBe('Female');
+    expect(transformValue(rules, 'Other')).toBe('Other');
+    expect(transformValue(rules, '')).toBe('');
+    expect(transformValue(undefined, 'M')).toBe('M');
+    expect(transformValue([{ from: 'N/A', to: '' }], 'n/a')).toBe('');
+  });
+
+  it('gives a value no rule names the default, an empty cell included, and a rule still wins', () => {
+    expect(transformValue(undefined, '', 'Unknown')).toBe('Unknown');
+    expect(transformValue([{ from: 'N/A', to: '' }], 'Other', 'Unknown')).toBe('Unknown');
+    expect(transformValue([{ from: 'N/A', to: '' }], 'n/a', 'Unknown')).toBe('');
+    expect(transformValue([], 'Asha', undefined)).toBe('Asha');
+  });
+
+  it('keeps a default for a field filled from a column, trimmed, and refuses one that cannot take it', () => {
+    const withDefaults = (defaults: unknown, fields: Record<string, string> = { name: 'Name', gender: 'Sex', member: 'Member', age: 'Age' }) => ({
+      targets: [{ key: 'g', type: 'guest', oldId: 'Id', fields, defaults }],
+    });
+    expect(targetsOf(readGuests(withDefaults({ gender: ' male ', name: 'Anon', member: '  ' })))[0]!.defaults).toEqual({ gender: 'male', name: 'Anon' });
+    expect(targetsOf(readGuests(withDefaults({ gender: '  ' })))[0]).not.toHaveProperty('defaults');
+    expect(targetsOf(readGuests(withDefaults(undefined)))[0]).not.toHaveProperty('defaults');
+    expect(problems(withDefaults({ age: '3' })).map((i) => i.path)).toEqual(['/targets/0/defaults/age']);
+    expect(problems(withDefaults({ gender: 'male' }, { name: 'Name' })).map((i) => i.path)).toEqual(['/targets/0/defaults/gender']);
+    expect(problems(withDefaults({ nope: 'x' })).map((i) => i.path)).toEqual(['/targets/0/defaults/nope']);
+    expect(problems(withDefaults({ gender: 'Unknown' })).map((i) => i.path)).toEqual(['/targets/0/defaults/gender']);
+    expect(problems(withDefaults({ name: 'x'.repeat(201) })).map((i) => i.path)).toEqual(['/targets/0/defaults/name']);
+  });
+});
+
+describe('derived fields', () => {
+  const people = new Map<string, RecordTypeDef>([
+    ['person', type('person', [
+      { key: 'fullName', label: 'Full name', type: 'text', required: true },
+      { key: 'nickname', label: 'Nickname', type: 'text' },
+      { key: 'age', label: 'Age', type: 'number' },
+    ])],
+  ]);
+  const cols = ['Id', 'First name', 'Last name', 'Age'];
+  const target = (extra: Record<string, unknown>) => ({ targets: [{ key: 'p', type: 'person', oldId: 'Id', fields: { age: 'Age' }, ...extra }] });
+  const readPeople = (input: unknown) => readSourceMapping(input, cols, people, ROLES);
+  const problems = (input: unknown) => {
+    try {
+      readPeople(input);
+    } catch (e) {
+      return (e as { issues?: { path: string; message: string }[] }).issues ?? [];
+    }
+    throw new Error('The mapping was accepted.');
+  };
+
+  it('keeps a template of the file columns for a text field, and counts as a mapped field', () => {
+    const m = readPeople(target({ fields: {}, derived: { fullName: { template: '{First name} {Last name}', stray: 1 } } }));
+    expect(targetsOf(m)[0]!.derived).toEqual({ fullName: { template: '{First name} {Last name}' } });
+    expect(targetsOf(readPeople(target({}) as never))[0]).not.toHaveProperty('derived');
+  });
+
+  it('lets a column of the template also fill another field', () => {
+    expect(() => readPeople(target({ fields: { age: 'First name' }, derived: { fullName: { template: '{First name} {Last name}' } } }))).not.toThrow();
+  });
+
+  it('refuses a number field, a field that also has a column, a template without columns, and a column the file lacks', () => {
+    expect(problems(target({ derived: { age: { template: '{First name}' } } })).map((i) => i.path)).toContain('/targets/0/derived/age');
+    expect(problems(target({ fields: { fullName: 'Last name' }, derived: { fullName: { template: '{First name}' } } })).map((i) => i.path)).toEqual(['/targets/0/derived/fullName']);
+    expect(problems(target({ derived: { fullName: { template: 'no columns' } } })).map((i) => i.path)).toEqual(['/targets/0/derived/fullName/template']);
+    expect(problems(target({ derived: { fullName: { template: '{First name} {Surname}' } } })).map((i) => i.path)).toEqual(['/targets/0/derived/fullName/template']);
+  });
+
+  it('names the columns of a template and builds the text from a row', () => {
+    expect(placeholders('{First name} {Last name} ({First name})')).toEqual(['First name', 'Last name']);
+    const row: Record<string, string> = { 'First name': ' Asha ', 'Last name': 'Rao' };
+    const cell = (c: string) => row[c] ?? '';
+    expect(renderTemplate('{First name} {Last name}', cell)).toBe('Asha Rao');
+    expect(renderTemplate('{Last name}, {First name}', cell)).toBe('Rao, Asha');
+    expect(renderTemplate('{First name} {Last name}', (c) => (c === 'Last name' ? '' : cell(c)))).toBe('Asha');
+    expect(renderTemplate('{First name} {Last name}', () => '  ')).toBe('');
+  });
+});
+
+describe('a file that holds people and records', () => {
+  const cols = ['UserId', 'Email', 'FullName', 'Title'];
+  const records = { targets: [{ key: 'd', type: 'donation', oldId: 'UserId', fields: { name: 'Title' }, persons: { owner: { column: 'UserId' } } }] };
+
+  it('keeps the records and the people of one file side by side', () => {
+    const m = read({ ...records, people: { ...PEOPLE, stray: 1 } }, cols);
+    expect(isPeople(m)).toBe(false);
+    expect(targetsOf(m)).toHaveLength(1);
+    expect(peopleOf(m)).toEqual(PEOPLE);
+    expect(peopleOf(read(records, cols))).toBeNull();
+    expect(peopleOf(read({ kind: 'people', people: PEOPLE }, cols))).toEqual(PEOPLE);
+  });
+
+  it('names a problem of the people part with its own path', () => {
+    expect(issues({ ...records, people: { ...PEOPLE, email: 'Nope' } }, cols).map((i) => i.path)).toEqual(['/people/email']);
+    expect(issues({ ...records, people: { oldId: 'UserId', email: '', name: 'FullName' } }, cols).map((i) => i.path)).toEqual(['/people/email']);
+  });
+
+  it('writes people and records, and does not wait for the people it loads itself', () => {
+    const both = { id: 'both', fileName: 'both.csv', mapping: read({ ...records, people: PEOPLE }, cols) };
+    const other = { id: 'other', fileName: 'other.csv', mapping: read({ targets: [{ key: 'd', type: 'donation', oldId: 'UserId', fields: { name: 'Title' }, persons: { owner: { column: 'UserId' } } }] }, cols) };
+    expect(dependencies([both, other], TYPES).get('both')).toEqual([]);
+    expect(dependencies([both, other], TYPES).get('other')).toEqual(['both']);
+    expect(deriveOrder([other, both], TYPES).map((f) => f.id)).toEqual(['both', 'other']);
   });
 });

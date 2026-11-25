@@ -78,6 +78,59 @@
   width: 40%;
   font-weight: 600;
 }
+.migration__map select {
+  width: 100%;
+  max-width: 320px;
+}
+.migration__map tbody th {
+  width: 28%;
+}
+.migration__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--brand);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.migration__derive {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+}
+.migration__rules-row > td {
+  padding: 0 8px 12px;
+  background: var(--brand-tint);
+}
+.migration__rules {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+}
+.migration__rules input[type='text'],
+.migration__rules select {
+  width: 100%;
+}
+.migration__more {
+  margin-top: 6px;
+  font-size: 0.8rem;
+}
+.migration__more summary {
+  cursor: pointer;
+  color: var(--help-color);
+}
+.migration__more .migration__field {
+  margin-top: 6px;
+}
+.migration__strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 16px;
+  margin: -4px 0 4px 34px;
+  padding: 4px 0 8px;
+}
 .migration__file-target {
   margin: 0 0 12px;
 }

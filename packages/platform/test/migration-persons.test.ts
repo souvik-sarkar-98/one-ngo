@@ -230,3 +230,27 @@ describe('person fields by legacy user id', () => {
     expect(after).toEqual(before);
   });
 });
+
+describe('a file that holds people and records', () => {
+  it('loads its people first, then its records, which find their person from the same file', async () => {
+    const header = ['Id', 'Email', 'Name', 'Active', 'Title'];
+    const l = await load({
+      csv: CSV(header, [
+        ['cb1', 'combo-1@example.org', 'Combo One', '1', 'Combo gift one'],
+        ['cb2', 'combo-2@example.org', 'Combo Two', '1', 'Combo gift two'],
+      ]),
+      mapping: {
+        targets: [{ key: 'd', type: 'giftrecord', oldId: 'Id', fields: { name: 'Title' }, persons: { owner: { column: 'Id' } } }],
+        people: PEOPLE_MAP.people,
+      },
+    });
+    expect(l.check.check).toMatchObject({ invalid: 0, problems: [] });
+    // One entry for each part of the file in the check.
+    expect(l.check.check!.sources.map((s) => [s.fileName, s.kind])).toEqual([['donations.csv', 'people'], ['donations.csv', 'records']]);
+    expect(l.done.status).toBe('done');
+    expect(counts(l.done, 'donations.csv')).toMatchObject({ failed: 0 });
+    expect(await userId(w.ngoA, 'combo-1@example.org')).toBeTruthy();
+    expect(await ownerOf(w.ngoA, 'Combo gift one')).toBe(await userId(w.ngoA, 'combo-1@example.org'));
+    expect(await ownerOf(w.ngoA, 'Combo gift two')).toBe(await userId(w.ngoA, 'combo-2@example.org'));
+  });
+});

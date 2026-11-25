@@ -23,12 +23,29 @@ export interface FileMapping {
   onMissing?: 'fail' | 'skip';
 }
 
+/** One value rule: a value of the column (`from`) is read as `to`; an empty `to` leaves the field blank. */
+export interface ValueRule {
+  from: string;
+  to: string;
+}
+
+/** A text field built from columns of the same row, by a template such as `{First name} {Last name}`. */
+export interface DerivedMapping {
+  template: string;
+}
+
 export interface MigrationTarget {
   key: string;
   type: string;
   oldId: string;
   fields: Record<string, string>;
   refs: Record<string, MigrationRef>;
+  /** Value rules of fields filled from a column: text, choice and yes/no fields. Missing in older mappings. */
+  transforms?: Record<string, ValueRule[]>;
+  /** The value a field takes when no rule names its cell, an empty cell included. Missing in older mappings. */
+  defaults?: Record<string, string>;
+  /** Text fields built from several columns. Missing in older mappings. */
+  derived?: Record<string, DerivedMapping>;
   /** Person fields filled by legacy user id (the people file's old id). Missing in older mappings. */
   persons?: Record<string, PersonMapping>;
   /** File fields filled by attachment path. Missing in older mappings. */
@@ -52,6 +69,8 @@ export interface PeopleSpec {
 export interface RecordsMapping {
   kind?: 'records';
   targets: MigrationTarget[];
+  /** The same file may also hold people: they load first, then its records. */
+  people?: PeopleSpec;
 }
 
 export interface PeopleMapping {
@@ -65,6 +84,8 @@ export type SourceMapping = RecordsMapping | PeopleMapping;
 export const isPeopleMapping = (m: SourceMapping | null | undefined): m is PeopleMapping => m?.kind === 'people';
 /** The record targets of a mapping; a people file has none. */
 export const targetsOf = (m: SourceMapping | null | undefined): MigrationTarget[] => (m && !isPeopleMapping(m) ? m.targets : []);
+/** The people columns of a mapping: of a people file, or of a records file that also holds people. */
+export const peopleOf = (m: SourceMapping | null | undefined): PeopleSpec | null => (m ? (isPeopleMapping(m) ? m.people : (m.people ?? null)) : null);
 
 export interface MigrationColumn {
   name: string;
@@ -141,7 +162,7 @@ export interface MigrationCheck {
   invalid: number;
   creates: number;
   updates: number;
-  sources: { sourceId: string; fileName: string; rows: number; ready: number; invalid: number; creates: number; updates: number }[];
+  sources: { sourceId: string; kind?: 'records' | 'people'; fileName: string; rows: number; ready: number; invalid: number; creates: number; updates: number }[];
   problems: MigrationProblem[];
   warnings: MigrationWarning[];
   checkedAt: string;
@@ -314,15 +335,97 @@ export function setField(target: MigrationTarget, fieldKey: string, column: stri
   const refs = Object.fromEntries(Object.entries(target.refs).filter(([k, r]) => k !== fieldKey && !('column' in r && r.column === column)));
   if (column) fields[fieldKey] = column;
   const files = Object.entries(target.files ?? {}).filter(([, f]) => !column || f.column !== column);
-  return { ...target, fields, refs, ...(target.files ? { files: Object.fromEntries(files) } : {}) };
+  return tidy({ ...withoutDerived(target, fieldKey), fields, refs, ...(target.files ? { files: Object.fromEntries(files) } : {}) });
 }
+
+/** The target without the template of the field. */
+function withoutDerived(target: MigrationTarget, fieldKey: string): MigrationTarget {
+  if (!target.derived?.[fieldKey]) return target;
+  const { derived, ...rest } = target;
+  const others = Object.fromEntries(Object.entries(derived ?? {}).filter(([k]) => k !== fieldKey));
+  return Object.keys(others).length ? { ...rest, derived: others } : rest;
+}
+
+/** The target keeping value rules and defaults only for fields that still have a column. */
+function tidy(target: MigrationTarget): MigrationTarget {
+  if (!target.transforms && !target.defaults) return target;
+  const { transforms, defaults, ...rest } = target;
+  const kept = (m: Record<string, unknown> | undefined) => Object.fromEntries(Object.entries(m ?? {}).filter(([k]) => k in target.fields));
+  const t = kept(transforms);
+  const d = kept(defaults);
+  return { ...rest, ...(Object.keys(t).length ? { transforms: t } : {}), ...(Object.keys(d).length ? { defaults: d } : {}) } as MigrationTarget;
+}
+
+/** Whether a column, a reference, a legacy user id column or a file name column fills the field of the target. */
+export const fillsField = (target: MigrationTarget, fieldKey: string): boolean =>
+  fieldKey in target.fields || fieldKey in target.refs || !!target.persons?.[fieldKey] || !!target.files?.[fieldKey] || !!target.derived?.[fieldKey];
+
+/** The target with nothing filling the field. */
+export function clearField(target: MigrationTarget, fieldKey: string): MigrationTarget {
+  const drop = <T>(m: Record<string, T>): Record<string, T> => Object.fromEntries(Object.entries(m).filter(([k]) => k !== fieldKey));
+  return tidy({
+    ...withoutDerived(target, fieldKey),
+    fields: drop(target.fields),
+    refs: drop(target.refs),
+    ...(target.persons ? { persons: drop(target.persons) } : {}),
+    ...(target.files ? { files: drop(target.files) } : {}),
+  });
+}
+
+/** Field types whose values a rule can change: text, a choice, yes/no. */
+export const canTransform = (f: FieldDef): boolean => ['text', 'longText', 'choice', 'boolean'].includes(f.type);
+/** Field types a template can fill. */
+export const canDerive = (f: FieldDef): boolean => f.type === 'text' || f.type === 'longText';
+
+/** The target with the field's value rules replaced; none left removes them. */
+export function setRules(target: MigrationTarget, fieldKey: string, rules: readonly ValueRule[]): MigrationTarget {
+  const { transforms, ...rest } = target;
+  const others = Object.fromEntries(Object.entries(transforms ?? {}).filter(([k]) => k !== fieldKey));
+  const next = rules.length ? { ...others, [fieldKey]: rules.map((r) => ({ ...r })) } : others;
+  return Object.keys(next).length ? { ...rest, transforms: next } : rest;
+}
+
+/**
+ * The target with a text field built from a template of the file's columns, or (null) left to a column again.
+ * The field gives up its column and reference, and its value rules, since the template makes the text.
+ */
+export function setDerived(target: MigrationTarget, field: FieldDef, template: string | null): MigrationTarget {
+  const base = setRules(clearField(target, field.key), field.key, []);
+  if (template === null) return base;
+  return { ...base, derived: { ...(base.derived ?? {}), [field.key]: { template } } };
+}
+
+/** The target with the field's default set; an empty value takes it away. */
+export function setDefault(target: MigrationTarget, fieldKey: string, value: string): MigrationTarget {
+  const { defaults, ...rest } = target;
+  const others = Object.fromEntries(Object.entries(defaults ?? {}).filter(([k]) => k !== fieldKey));
+  const next = value ? { ...others, [fieldKey]: value } : others;
+  return Object.keys(next).length ? { ...rest, defaults: next } : rest;
+}
+
+/** The column names a template uses, in order, without repeats. */
+export const templateColumns = (template: string): string[] => [...new Set([...template.matchAll(/\{([^{}]+)\}/g)].map((m) => m[1]!))];
+
+/** A template filled from the first sample value of each column, as the first rows of the file would read. */
+export function templatePreview(template: string, columns: readonly MigrationColumn[], row = 0): string {
+  let any = false;
+  const text = template.replace(/\{([^{}]+)\}/g, (_, name: string) => {
+    const v = (columns.find((c) => c.name === name)?.samples[row] ?? '').trim();
+    if (v) any = true;
+    return v;
+  });
+  return any ? text.trim() : '';
+}
+
+/** The rules as they are saved: a rule with nothing typed is left out. */
+export const cleanRules = (rules: readonly ValueRule[]): ValueRule[] => rules.filter((r) => r.from.trim() !== '' || r.to.trim() !== '').map((r) => ({ from: r.from.trim(), to: r.to.trim() }));
 
 /** The target with a reference field filled by old id, or left out when `ref` is null. */
 export function setRef(target: MigrationTarget, fieldKey: string, ref: MigrationRef | null): MigrationTarget {
   const fields = Object.fromEntries(Object.entries(target.fields).filter(([k, c]) => k !== fieldKey && !(ref && 'column' in ref && c === ref.column)));
   const refs = Object.fromEntries(Object.entries(target.refs).filter(([k]) => k !== fieldKey));
   if (ref) refs[fieldKey] = ref;
-  return { ...target, fields, refs };
+  return tidy({ ...withoutDerived(target, fieldKey), fields, refs });
 }
 
 /** The value a reference field's choice holds: `column:<name>`, `target:<key>`, or empty. */
@@ -367,21 +470,27 @@ export const PEOPLE_GROUP = '@people';
 /** The most record types one file fills (the server refuses more). */
 export const MAX_TARGETS = 5;
 
-/** A file's mapping as the Map step edits it until it is saved: nothing yet, record targets, or a people mapping. */
+/**
+ * A file's mapping as the Map step edits it until it is saved: its record targets, and whether it also
+ * holds people (then `people` is what is saved; otherwise it is only a first guess at the columns).
+ */
 export interface FileDraft {
-  kind: 'records' | 'people' | null;
   targets: MigrationTarget[];
+  peopleOn: boolean;
   people: PeopleDraft;
 }
 
 export function fileDraftOf(s: Pick<MigrationSource, 'mapping' | 'columns'>): FileDraft {
-  const m = s.mapping;
+  const spec = peopleOf(s.mapping);
   return {
-    kind: isPeopleMapping(m) ? 'people' : m ? 'records' : null,
-    targets: structuredClone(targetsOf(m)),
-    people: isPeopleMapping(m) ? peopleDraftOf(m.people) : emptyPeople(s.columns.map((c) => c.name)),
+    targets: structuredClone(targetsOf(s.mapping)),
+    peopleOn: !!spec,
+    people: spec ? peopleDraftOf(spec) : emptyPeople(s.columns.map((c) => c.name)),
   };
 }
+
+/** Whether no group holds the file: it fills no record type and holds no people. */
+export const draftEmpty = (d: FileDraft): boolean => !d.peopleOn && !d.targets.length;
 
 /** A group of the Map step and the files linked to it, in load order. */
 export interface MapGroup {
@@ -402,8 +511,8 @@ export function mapGroups(sources: readonly MigrationSource[], drafts: Readonly<
   };
   for (const s of sources) {
     const d = drafts[s.id] ?? fileDraftOf(s);
-    if (d.kind === 'people') link(PEOPLE_GROUP, s.id);
-    else if (d.kind === 'records') for (const x of d.targets) link(x.type, s.id);
+    if (d.peopleOn) link(PEOPLE_GROUP, s.id);
+    for (const x of d.targets) link(x.type, s.id);
   }
   for (const key of added) link(key, null);
   const people = groups.get(PEOPLE_GROUP);
@@ -412,33 +521,31 @@ export function mapGroups(sources: readonly MigrationSource[], drafts: Readonly<
 }
 
 /** Whether the file's draft is linked to the group. */
-export const inGroup = (d: FileDraft, group: string): boolean => (group === PEOPLE_GROUP ? d.kind === 'people' : d.kind === 'records' && d.targets.some((x) => x.type === group));
+export const inGroup = (d: FileDraft, group: string): boolean => (group === PEOPLE_GROUP ? d.peopleOn : d.targets.some((x) => x.type === group));
 
-/** Why a file cannot be linked to a group, as a catalogue key; empty when it can. A file holds people or records, not both. */
+/** Why a file cannot be linked to a group, as a catalogue key; empty when it can. A file may hold people and fill record types. */
 export function linkRefusal(d: FileDraft, group: string): string {
-  if (inGroup(d, group)) return '';
-  if (group === PEOPLE_GROUP) return d.kind === 'records' ? 'ui.admin.migration.group.holdsRecords' : '';
-  if (d.kind === 'people') return 'ui.admin.migration.group.holdsPeople';
+  if (inGroup(d, group) || group === PEOPLE_GROUP) return '';
   return d.targets.length >= MAX_TARGETS ? 'ui.admin.migration.group.tooManyTypes' : '';
 }
 
-/** The draft linked to a group: People makes it a people file; a record type adds a target of that type, guessed from the columns. */
+/** The draft linked to a group: People makes it also hold people; a record type adds a target of that type, guessed from the columns. */
 export function linkGroup(d: FileDraft, group: string, type: RecordTypeBody | undefined, columns: readonly string[]): FileDraft {
   if (linkRefusal(d, group) || inGroup(d, group)) return d;
-  if (group === PEOPLE_GROUP) return { ...d, kind: 'people' };
+  if (group === PEOPLE_GROUP) return { ...d, peopleOn: true };
   if (!type) return d;
-  return { ...d, kind: 'records', targets: [...d.targets, suggestTarget(type, columns, d.targets)] };
+  return { ...d, targets: [...d.targets, suggestTarget(type, columns, d.targets)] };
 }
 
-/** The draft without the group: a people file holds nothing again; a record type's targets go, with the references other targets made to them. */
+/** The draft without the group: People stops holding people; a record type's targets go, with the references other targets made to them. */
 export function unlinkGroup(d: FileDraft, group: string): FileDraft {
   if (!inGroup(d, group)) return d;
-  if (group === PEOPLE_GROUP) return { ...d, kind: null };
+  if (group === PEOPLE_GROUP) return { ...d, peopleOn: false };
   const gone = new Set(d.targets.filter((x) => x.type === group).map((x) => x.key));
   const targets = d.targets
     .filter((x) => !gone.has(x.key))
     .map((x) => ({ ...x, refs: Object.fromEntries(Object.entries(x.refs).filter(([, r]) => !('target' in r && gone.has(r.target)))) }));
-  return { ...d, kind: targets.length ? 'records' : null, targets };
+  return { ...d, targets };
 }
 
 /** Where a field of a record type comes from: each linked file, and the column (or earlier target of the row) that fills it there. */
@@ -464,11 +571,24 @@ export function fieldCoverage(type: RecordTypeBody & { key: string }, linked: re
   }));
 }
 
-/** Whether a draft can be saved: a people file needs its old id, email and name columns; a records file a target. */
-export const draftReady = (d: FileDraft): boolean => (d.kind === 'people' ? !!(d.people.oldId && d.people.email && d.people.name) : d.kind === 'records' && d.targets.length > 0);
+/** Whether a draft can be saved: a file that holds people needs its old id, email and name columns; the file needs people or a target. */
+/** Whether a file linked to People fills any part of a person: a file the table gives no part of is not saved as people. */
+export const peopleUsed = (d: FileDraft): boolean => d.peopleOn && [d.people.oldId, d.people.email, d.people.name, d.people.locale, d.people.rolesColumn, d.people.statusColumn].some(Boolean);
 
-/** The mapping a draft saves. */
-export const mappingOf = (d: FileDraft, roles: readonly RoleRow[]): SourceMapping => (d.kind === 'people' ? { kind: 'people', people: peopleSpecOf(d.people, roles) } : { targets: d.targets });
+export const draftReady = (d: FileDraft): boolean => !draftEmpty(d) && (peopleUsed(d) ? !!(d.people.oldId && d.people.email && d.people.name) : d.targets.length > 0);
+
+/** The mapping a draft saves: records, people, or both. */
+export function mappingOf(d: FileDraft, roles: readonly RoleRow[]): SourceMapping {
+  const people = peopleUsed(d) ? peopleSpecOf(d.people, roles) : null;
+  if (people && !d.targets.length) return { kind: 'people', people };
+  return { targets: d.targets.map(withCleanRules), ...(people ? { people } : {}) };
+}
+
+/** The target with each field's rules and default as they are saved: what nothing was typed in for is left out. */
+const withCleanRules = (x: MigrationTarget): MigrationTarget => {
+  const withRules = Object.entries(x.transforms ?? {}).reduce((t, [k, rules]) => setRules(t, k, cleanRules(rules)), x);
+  return Object.entries(withRules.defaults ?? {}).reduce((t, [k, value]) => setDefault(t, k, value.trim()), withRules);
+};
 
 /** A size for the attachment list: bytes, kB, MB or GB, one decimal from MB up. */
 export function byteText(bytes: number): string {
@@ -672,7 +792,7 @@ export interface KindSummary {
 export function checkByKind(check: MigrationCheck, sources: readonly MigrationSource[]): KindSummary[] {
   const out = new Map<'records' | 'people', KindSummary>();
   for (const x of check.sources) {
-    const kind = sources.find((s) => s.id === x.sourceId)?.kind === 'people' ? 'people' : 'records';
+    const kind = x.kind ?? (sources.find((s) => s.id === x.sourceId)?.kind === 'people' ? 'people' : 'records');
     const k = out.get(kind) ?? { kind, files: 0, rows: 0, ready: 0, invalid: 0, creates: 0, updates: 0 };
     k.files++;
     k.rows += x.rows;

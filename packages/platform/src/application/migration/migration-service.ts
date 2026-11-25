@@ -19,14 +19,15 @@ import type { CsvCodec } from '../records/ports/csv-codec.js';
 import { cleanFileName } from '../shared/file-name.js';
 import { csvTable, problemsOf, readCell, type CellProblem, type CsvRow } from '../shared/import-cells.js';
 import { applyBooks, hasBooks, readBooks, type BooksInput, type BooksResult } from './books.js';
-import { checkOrder, deriveOrder, isPeople, MAX_SOURCES, readSourceMapping, targetsOf, type MigrationTarget, type OrderedSource, type PeopleMapping, type RecordsMapping, type SourceMapping, type TypesByKey } from './mapping.js';
+import { checkOrder, deriveOrder, isPeople, MAX_SOURCES, peopleOf, placeholders, readSourceMapping, renderTemplate, targetsOf, transformValue, type MigrationTarget, type OrderedSource, type PeopleMapping, type RecordsMapping, type SourceMapping, type TypesByKey } from './mapping.js';
 import { CANNOT_ADD, LINKED_ELSEWHERE, readPersonRow, type ParsedPerson, type ParsedSupplement, type PersonEnv, type PersonProblem, type RoleRule } from './people.js';
 import { typeGuards } from './guards.js';
 import type { AttachmentInfo, AttachmentItem, LinkedPerson, MigrationStore, ProfileRow, SourceCounts, SourceRow } from './ports/migration-store.js';
 import { kindOfMime } from '../../runtime/records/file-kinds.js';
 
 export type { BooksInput, BooksResult } from './books.js';
-export type { FileMapping, MigrationRef, MigrationTarget, PersonMapping, PeopleMapping, PeopleSpec, RecordsMapping, SourceMapping } from './mapping.js';
+export type { FileMapping, MigrationRef, MigrationTarget, PersonMapping, PeopleMapping, PeopleSpec, RecordsMapping, SourceMapping, ValueTransform } from './mapping.js';
+export type { DerivedMapping } from './mapping.js';
 
 const MB = 1024 * 1024;
 /** Attachments one profile holds, and the longest relative path of one. */
@@ -87,6 +88,8 @@ export interface MigrationWarning {
 
 export interface SourceCheck {
   sourceId: string;
+  /** A file holding people and records is checked once for each; older checks have no kind. */
+  kind?: 'records' | 'people';
   fileName: string;
   rows: number;
   ready: number;
@@ -438,7 +441,7 @@ export class MigrationService {
       const source = sources.find((s) => s.id === sourceId);
       if (!source) throw notFound('File not found.');
       const mapping = readSourceMapping(input, source.columns.map((c) => c.name), types, (await this.roleStore.roles(tx)).map((r) => r.key));
-      if (isPeople(mapping)) demandPeople(ctx);
+      if (peopleOf(mapping)) demandPeople(ctx);
       for (const t of targetsOf(mapping)) demand(ctx.actor, `record:${t.type}:import`);
       const next = sources.map((s) => (s.id === source.id ? { ...s, mapping } : s));
       const ordered = deriveOrder(next.map(ordering), types);
@@ -534,7 +537,7 @@ export class MigrationService {
     if (!mapped.length) throw validationFailed('Match at least one file to a record type first.');
     checkOrder(sources.map(ordering), types);
     for (const s of mapped) {
-      if (isPeople(s.mapping)) demandPeople(ctx);
+      if (peopleOf(s.mapping)) demandPeople(ctx);
       for (const t of targetsOf(s.mapping)) demand(ctx.actor, `record:${t.type}:import`);
     }
     const total = mapped.reduce((n, s) => n + s.row_count, 0);
@@ -581,7 +584,7 @@ export class MigrationService {
     const mapped = sources.filter((s) => s.mapping);
     const result: MigrationCheck = { rows: 0, ready: 0, invalid: 0, creates: 0, updates: 0, sources: [], problems: [], warnings: [], checkedAt: new Date().toISOString() };
     const guards = await typeGuards(this.defs, ctx.tenantId, types, mapped.flatMap((s) => targetsOf(s.mapping).map((t) => t.type)));
-    const peopleEnv = mapped.some((s) => isPeople(s.mapping)) ? await this.personEnv(ctx) : null;
+    const peopleEnv = mapped.some((s) => peopleOf(s.mapping)) ? await this.personEnv(ctx) : null;
     const planned = new Map<string, Set<string>>();
     // The data each record an earlier ready row of this check creates or updates will hold, as its save would leave it: a later row for it is checked as an update of that.
     const plannedData = new Map<string, Record<string, unknown>>();
@@ -609,22 +612,25 @@ export class MigrationService {
     const claimed = new Map<string, string>();
     const toLinkBytes = new Map<string, number>();
     for (const source of mapped) {
-      const mapping = source.mapping!;
+      const full = source.mapping!;
       const { rows } = await this.read(ctx, source.file_id);
       const at = columnIndex(source);
-      if (isPeople(mapping)) {
-        const checked = await this.checkPeople(ctx, source, mapping, rows, at, peopleEnv!, result, plannedPeople);
-        result.sources.push(checked);
+      // A file that holds people is checked as people first, as it is run; then, if it also fills records, as records.
+      const spec = peopleOf(full);
+      if (spec) {
+        const checked = await this.checkPeople(ctx, source, { kind: 'people', people: spec }, rows, at, peopleEnv!, result, plannedPeople);
+        result.sources.push(targetsOf(full).length ? { ...checked, kind: 'people' } : checked);
         result.rows += checked.rows;
         result.ready += checked.ready;
         result.invalid += checked.invalid;
         result.creates += checked.creates;
         result.updates += checked.updates;
-        continue;
       }
+      if (!targetsOf(full).length) continue;
+      const mapping: RecordsMapping = { targets: targetsOf(full) };
       const known = await this.knownKeys(ctx, mapping, types, rows, at);
       const lookup: OldIdLookup = async (typeKey, oldId) => known.get(typeKey)?.get(oldId)?.recordId ?? (planned.get(typeKey)?.has(oldId) ? 'pending' : null);
-      const counts: SourceCheck = { sourceId: source.id, fileName: source.file_name, rows: rows.length, ready: 0, invalid: 0, creates: 0, updates: 0 };
+      const counts: SourceCheck = { sourceId: source.id, ...(spec ? { kind: 'records' as const } : {}), fileName: source.file_name, rows: rows.length, ready: 0, invalid: 0, creates: 0, updates: 0 };
       const personCells = personColumns(mapping).map((c) => at.get(c) ?? -1);
       const linkedIds = personCells.length ? await this.linkedPeople(ctx, rows.flatMap((r) => personCells.map((i) => (r.cells[i] ?? '').trim())).filter(Boolean)) : new Map<string, LinkedPerson>();
       const person: PersonLookup = (oldId) => linkedIds.get(oldId)?.userId ?? (plannedPeople.has(oldId) ? 'pending' : null);
@@ -807,7 +813,7 @@ export class MigrationService {
     const sources = await this.tm.withTenant(ctx.tenantId, (tx) => this.store.sources(tx, profile.id));
     assertReadable(sources);
     for (const s of sources) {
-      if (isPeople(s.mapping)) demandPeople(ctx);
+      if (peopleOf(s.mapping)) demandPeople(ctx);
       for (const t of targetsOf(s.mapping)) demand(ctx.actor, `record:${t.type}:import`);
     }
     // The guards are read again: a rule published since the check must not slip through.
@@ -932,9 +938,10 @@ export class MigrationService {
   private async runBatch({ ctx, jobId, input, state, batchSize }: JobRun<{ profileId: string }, RunState>): Promise<JobBatch<RunState>> {
     const profile = await this.load(ctx, input.profileId);
     const sources = await this.tm.withTenant(ctx.tenantId, (tx) => this.store.sources(tx, profile.id));
-    const order = state.order ?? sources.filter((s) => s.mapping).map((s) => s.id);
+    // The order is a list of units: a file, or for a file holding people and records its people (`id#people`) and then its records (`id#records`).
+    const order = state.order ?? sources.filter((s) => s.mapping).flatMap((s) => (peopleOf(s.mapping) && targetsOf(s.mapping).length ? [`${s.id}#people`, `${s.id}#records`] : [s.id]));
     const byId = new Map(sources.map((s) => [s.id, s]));
-    const total = order.reduce((n, sid) => n + (byId.get(sid)?.row_count ?? 0), 0);
+    const total = order.reduce((n, unit) => n + (byId.get(unit.split('#')[0]!)?.row_count ?? 0), 0);
     let index = state.index ?? 0;
     let next = state.next ?? 0;
     let progress = state.progress ?? 0;
@@ -960,7 +967,8 @@ export class MigrationService {
       return { state: { ...state, parents: [] }, progress, total, done: true, result: { profileId: profile.id, ...sum, ...(booksError ? { booksError } : {}) } };
     }
 
-    const source = byId.get(order[index]!);
+    const [unitId, part] = order[index]!.split('#');
+    const source = byId.get(unitId!);
     if (!source?.mapping) {
       return { state: { order, index: index + 1, next: 0, progress, parents: [...deferred] }, progress, total, done: false };
     }
@@ -971,12 +979,12 @@ export class MigrationService {
     const refs = new Map<string, Promise<string>>();
     const items: JobItemResult[] = [];
     const batch = rows.slice(next, next + batchSize);
-    if (isPeople(source.mapping)) {
+    const spec = peopleOf(source.mapping);
+    if (spec && part !== 'records') {
       // The creator's access is read again every batch (the job runs with their current roles).
       if (!can(ctx.actor, MIGRATE_PEOPLE) || !can(ctx.actor, MEMBERS_MANAGE)) {
         throw new PlatformError('forbidden', 'You no longer have permission to add people (Data migration: people and Manage people). The migration was stopped; people already added stay.');
       }
-      const spec = source.mapping.people;
       const env = await this.personEnv(ctx);
       const known = await this.linkedPeople(ctx, batch.map((r) => (r.cells[at.get(spec.oldId) ?? -1] ?? '').trim()).filter(Boolean));
       for (const [i, r] of batch.entries()) {
@@ -987,11 +995,12 @@ export class MigrationService {
       this.identity.forgetActors();
     } else {
       // The legacy user ids of this batch's person columns are looked up once (this organisation's links only).
-      const personCells = personColumns(source.mapping).map((c) => at.get(c) ?? -1);
+      const records: RecordsMapping = { targets: targetsOf(source.mapping) };
+      const personCells = personColumns(records).map((c) => at.get(c) ?? -1);
       const people = personCells.length ? await this.linkedPeople(ctx, batch.flatMap((r) => personCells.map((i) => (r.cells[i] ?? '').trim())).filter(Boolean)) : new Map<string, LinkedPerson>();
       for (const [i, r] of batch.entries()) {
         const seq = index * SEQ_PER_SOURCE + next + i + 1;
-        items.push(await this.runRow(ctx, saveCtx, profile.id, source, source.mapping, types, at, r, refs, people, seq));
+        items.push(await this.runRow(ctx, saveCtx, profile.id, source, records, types, at, r, refs, people, seq));
       }
     }
     progress += batch.length;
@@ -1327,10 +1336,21 @@ export class MigrationService {
       const f = type.fields.find((x) => x.key === fieldKey);
       if (!f) continue;
       out.columnOf.set(f.key, column);
-      const raw = cell(column);
+      const raw = transformValue(t.transforms?.[f.key], cell(column), t.defaults?.[f.key]);
       if (raw === '') continue;
       const parsed = await readCell(ctx, this.records, f, raw, refs);
       if ('error' in parsed) out.problems.push({ row: r.row, column, field: f.key, message: `${f.label} ${parsed.error}` });
+      else out.data[f.key] = parsed.value;
+    }
+    for (const [fieldKey, d] of Object.entries(t.derived ?? {})) {
+      const f = type.fields.find((x) => x.key === fieldKey);
+      if (!f) continue;
+      const used = placeholders(d.template);
+      out.columnOf.set(f.key, used[0] ?? '');
+      const raw = renderTemplate(d.template, (column) => (at.has(column) ? cell(column) : ''));
+      if (raw === '') continue;
+      const parsed = await readCell(ctx, this.records, f, raw, refs);
+      if ('error' in parsed) out.problems.push({ row: r.row, column: used[0], field: f.key, message: `${f.label} ${parsed.error}` });
       else out.data[f.key] = parsed.value;
     }
     for (const [fieldKey, ref] of Object.entries(t.refs)) {
@@ -1675,18 +1695,28 @@ const hidesCell = (f: FieldDef) => f.sensitive === true;
 /** Positions of the file's columns that fill a field for which `hides` is true. */
 function columnsFilling(mapping: SourceMapping, columns: readonly MigrationColumn[], types: TypesByKey, hides: (f: FieldDef) => boolean): number[] {
   const out = new Set<number>();
-  if (isPeople(mapping)) {
+  const spec = peopleOf(mapping);
+  if (spec && hides === hidesSample) {
     // Names, emails and legacy ids are personal: their samples are hidden. Failed-row cells stay, as failed.csv needs them.
-    if (hides !== hidesSample) return [];
-    const { oldId, email, name } = mapping.people;
-    return [oldId, email, name].map((n) => columns.findIndex((c) => c.name === n)).filter((i) => i >= 0);
+    const { oldId, email, name } = spec;
+    for (const n of [oldId, email, name]) {
+      const at = columns.findIndex((c) => c.name === n);
+      if (at >= 0) out.add(at);
+    }
   }
-  for (const t of mapping.targets) {
+  for (const t of targetsOf(mapping)) {
     const fields = types.get(t.type)?.fields ?? [];
     for (const [fieldKey, column] of Object.entries(t.fields)) {
       const f = fields.find((x) => x.key === fieldKey);
       const at = columns.findIndex((c) => c.name === column);
       if (f && at >= 0 && hides(f)) out.add(at);
+    }
+    for (const [fieldKey, d] of Object.entries(t.derived ?? {})) {
+      const f = fields.find((x) => x.key === fieldKey);
+      if (f && hides(f)) for (const name of placeholders(d.template)) {
+        const at = columns.findIndex((c) => c.name === name);
+        if (at >= 0) out.add(at);
+      }
     }
     for (const [fieldKey, p] of Object.entries(t.persons ?? {})) {
       const f = fields.find((x) => x.key === fieldKey);

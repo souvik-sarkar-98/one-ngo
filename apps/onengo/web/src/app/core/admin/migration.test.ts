@@ -9,8 +9,14 @@ import {
   attachmentPathProblem,
   booksBalance,
   byteText,
+  canDerive,
+  canTransform,
+  cleanRules,
+  clearField,
+  draftEmpty,
   draftReady,
   fieldCoverage,
+  fillsField,
   fileDraftOf,
   fileFields,
   checkByKind,
@@ -33,10 +39,15 @@ import {
   refChoice,
   refOf,
   roleRows,
+  setDefault,
+  setDerived,
   setField,
   setFile,
   setPerson,
   setRef,
+  setRules,
+  templateColumns,
+  templatePreview,
   suggestTarget,
   targetsOf,
   type MigrationCheck,
@@ -100,6 +111,67 @@ describe('mapping a file of any columns', () => {
     expect(refOf('')).toBeNull();
   });
 
+  it('knows what fills a field and clears it whichever way it was filled', () => {
+    let x = suggestTarget(supporter, columns);
+    x = setRef(x, 'parent', { column: 'Legacy' });
+    x = setPerson(x, 'email', 'DonorId');
+    x = setFile(x, supporter.fields.find((f) => f.key === 'photo')!, 'Email');
+    for (const key of ['name', 'parent', 'email', 'photo']) expect(fillsField(x, key)).toBe(true);
+    expect(fillsField(x, 'total')).toBe(false);
+    const cleared = ['name', 'parent', 'email', 'photo'].reduce(clearField, x);
+    expect(cleared.fields).toEqual({});
+    expect(cleared.refs).toEqual({});
+    expect(cleared.persons).toEqual({});
+    expect(cleared.files).toEqual({});
+    expect(clearField(suggestTarget(supporter, columns), 'email').fields).toEqual({ name: 'FULL NAME' });
+  });
+
+  it('keeps value rules only while a column fills the field, and saves them without empty rules', () => {
+    const gender = { key: 'gender', label: 'Gender', type: 'choice' } as FieldDef;
+    let x = setField(suggestTarget(supporter, columns), 'email', 'E-mail');
+    x = setRules(x, 'email', [{ from: ' M ', to: 'Male' }, { from: '', to: '' }]);
+    expect(canTransform(gender)).toBe(true);
+    expect(canTransform(supporter.fields.find((f) => f.key === 'total')!)).toBe(false);
+    expect(x.transforms).toEqual({ email: [{ from: ' M ', to: 'Male' }, { from: '', to: '' }] });
+    expect(cleanRules(x.transforms!.email!)).toEqual([{ from: 'M', to: 'Male' }]);
+    expect(mappingOf({ targets: [x], peopleOn: false, people: emptyPeople([]) }, [])).toMatchObject({ targets: [{ transforms: { email: [{ from: 'M', to: 'Male' }] } }] });
+    // Another column on the field keeps its rules; clearing the column drops them.
+    expect(setField(x, 'email', 'Email').transforms).toBeDefined();
+    expect(setField(x, 'email', '').transforms).toBeUndefined();
+    expect(setRules(x, 'email', []).transforms).toBeUndefined();
+  });
+
+  it('gives a field a default while its column fills it, and saves it trimmed', () => {
+    let x = setField(suggestTarget(supporter, columns), 'email', 'E-mail');
+    x = setDefault(x, 'email', 'none@example.org');
+    expect(x.defaults).toEqual({ email: 'none@example.org' });
+    expect(mappingOf({ targets: [setDefault(x, 'email', '  unknown ')], peopleOn: false, people: emptyPeople([]) }, [])).toMatchObject({ targets: [{ defaults: { email: 'unknown' } }] });
+    expect(targetsOf(mappingOf({ targets: [setDefault(x, 'email', '  ')], peopleOn: false, people: emptyPeople([]) }, []))[0]).not.toHaveProperty('defaults');
+    expect(setDefault(x, 'email', '').defaults).toBeUndefined();
+    // Another column on the field keeps the default; taking the column away drops it.
+    expect(setField(x, 'email', 'Email').defaults).toEqual({ email: 'none@example.org' });
+    expect(setField(x, 'email', '').defaults).toBeUndefined();
+    expect(clearField(x, 'email').defaults).toBeUndefined();
+  });
+  it('builds a text field from a template and gives its column back when a column is chosen', () => {
+    const name = supporter.fields.find((f) => f.key === 'name')!;
+    let x = setDerived(suggestTarget(supporter, columns), name, '{FULL NAME} / {Legacy}');
+    expect(x.fields).toEqual({ email: 'E-mail' });
+    expect(x.derived).toEqual({ name: { template: '{FULL NAME} / {Legacy}' } });
+    expect(fillsField(x, 'name')).toBe(true);
+    expect(canDerive(name)).toBe(true);
+    expect(canDerive(supporter.fields.find((f) => f.key === 'photo')!)).toBe(false);
+    expect(templateColumns('{A} and {B} and {A}')).toEqual(['A', 'B']);
+    const cols = [{ name: 'First', samples: ['Asha', 'Ravi'] }, { name: 'Last', samples: ['Rao', ''] }];
+    expect(templatePreview('{First} {Last}', cols)).toBe('Asha Rao');
+    expect(templatePreview('{First} {Last}', cols, 1)).toBe('Ravi');
+    expect(templatePreview('{Nope}', cols)).toBe('');
+    x = setField(x, 'name', 'FULL NAME');
+    expect(x.derived).toBeUndefined();
+    expect(x.fields.name).toBe('FULL NAME');
+    expect(setDerived(setDerived(x, name, 'x {Legacy}'), name, null).derived).toBeUndefined();
+  });
+
   it('moves a file up or down, and adds up the opening journal', () => {
     const sources = [{ id: 'a' }, { id: 'b' }, { id: 'c' }] as MigrationSource[];
     expect(moved(sources, 'b', -1)).toEqual(['b', 'a', 'c']);
@@ -138,21 +210,26 @@ describe('groups of files on the Map step', () => {
       { key: 'supporter', files: ['identity'] },
       { key: 'gift', files: [] },
     ]);
-    expect(fileDraftOf(amounts)).toMatchObject({ kind: null, targets: [], people: { oldId: 'DonorId', email: 'Email' } });
+    expect(fileDraftOf(amounts)).toMatchObject({ peopleOn: false, targets: [], people: { oldId: 'DonorId', email: 'Email' } });
   });
 
   it('links a second file to a record type with its own guessed old id and fields, and takes it out again', () => {
     const linked = linkGroup(fileDraftOf(amounts), 'supporter', supporter, ['DonorId', 'Email', 'Amount']);
-    expect(linked).toMatchObject({ kind: 'records', targets: [{ type: 'supporter', oldId: 'DonorId', fields: { email: 'Email' } }] });
+    expect(linked).toMatchObject({ peopleOn: false, targets: [{ type: 'supporter', oldId: 'DonorId', fields: { email: 'Email' } }] });
     expect(mapGroups([identity, amounts], { identity: fileDraftOf(identity), amounts: linked }, [])).toEqual([{ key: 'supporter', files: ['identity', 'amounts'] }]);
-    expect(unlinkGroup(linked, 'supporter')).toMatchObject({ kind: null, targets: [] });
+    expect(unlinkGroup(linked, 'supporter')).toMatchObject({ peopleOn: false, targets: [] });
   });
 
-  it('keeps a file to people or records, and at most five record types', () => {
-    expect(linkRefusal(fileDraftOf(users), 'supporter')).toBe('ui.admin.migration.group.holdsPeople');
-    expect(linkRefusal(fileDraftOf(identity), PEOPLE_GROUP)).toBe('ui.admin.migration.group.holdsRecords');
+  it('lets one file hold people and records, and at most five record types', () => {
+    expect(linkRefusal(fileDraftOf(users), 'supporter')).toBe('');
+    const both = linkGroup(fileDraftOf(users), 'supporter', supporter, ['UserId', 'Email', 'Name']);
+    expect(both).toMatchObject({ peopleOn: true, targets: [{ type: 'supporter' }] });
+    expect(mapGroups([users], { users: both }, [])).toEqual([{ key: PEOPLE_GROUP, files: ['users'] }, { key: 'supporter', files: ['users'] }]);
+    expect(mappingOf(both, [])).toMatchObject({ targets: [{ type: 'supporter' }], people: { oldId: 'UserId' } });
+    expect(draftEmpty(unlinkGroup(unlinkGroup(both, 'supporter'), PEOPLE_GROUP))).toBe(true);
+    expect(linkRefusal(fileDraftOf(identity), PEOPLE_GROUP)).toBe('');
     expect(linkRefusal(fileDraftOf(amounts), PEOPLE_GROUP)).toBe('');
-    expect(linkGroup(fileDraftOf(amounts), PEOPLE_GROUP, undefined, [])).toMatchObject({ kind: 'people' });
+    expect(linkGroup(fileDraftOf(amounts), PEOPLE_GROUP, undefined, [])).toMatchObject({ peopleOn: true });
     const full = { ...fileDraftOf(identity), targets: Array.from({ length: 5 }, (_, i) => ({ ...suggestTarget(gift, []), key: `t${i}` })) };
     expect(linkRefusal(full, 'supporter')).toBe('ui.admin.migration.group.tooManyTypes');
   });
@@ -190,6 +267,12 @@ describe('groups of files on the Map step', () => {
     expect(draftReady(people)).toBe(true);
     expect(draftReady({ ...people, people: { ...people.people, email: '' } })).toBe(false);
     expect(mappingOf(people, [])).toEqual({ kind: 'people', people: { oldId: 'UserId', email: 'Email', name: 'Name' } });
+    // A file linked to People that fills no part of a person is not saved as people.
+    const idle = linkGroup(fileDraftOf(amounts), PEOPLE_GROUP, undefined, []);
+    expect(draftReady(idle)).toBe(false);
+    const withRecords = { ...linkGroup(idle, 'supporter', supporter, ['DonorId']), people: emptyPeople([]) };
+    expect(draftReady(withRecords)).toBe(true);
+    expect(mappingOf(withRecords, [])).not.toHaveProperty('people');
     expect(draftReady(fileDraftOf(amounts))).toBe(false);
     expect(mappingOf(fileDraftOf(identity), [])).toEqual({ targets: targetsOf(identity.mapping) });
   });
