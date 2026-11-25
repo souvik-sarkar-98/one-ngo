@@ -9,14 +9,24 @@ import {
   attachmentPathProblem,
   booksBalance,
   byteText,
+  draftReady,
+  fieldCoverage,
+  fileDraftOf,
   fileFields,
   checkByKind,
+  checkHasErrors,
   emptyPeople,
   groupWarnings,
   guessRole,
   kindOptions,
   legacyRoleValues,
+  linkGroup,
+  linkRefusal,
+  mapGroups,
+  mappingOf,
   moved,
+  PEOPLE_GROUP,
+  unlinkGroup,
   peopleDraftOf,
   peopleSpecOf,
   planAttachments,
@@ -99,6 +109,92 @@ describe('mapping a file of any columns', () => {
   });
 });
 
+describe('groups of files on the Map step', () => {
+  const gift = {
+    key: 'gift',
+    label: 'Gift',
+    fields: [
+      { key: 'amount', label: 'Amount', type: 'money', required: true },
+      { key: 'donor', label: 'Donor', type: 'reference', referenceType: 'supporter' },
+    ],
+  } as RecordTypeBody;
+  const source = (id: string, columns: string[], mapping: MigrationSource['mapping'] = null): MigrationSource => ({
+    id,
+    fileName: `${id}.csv`,
+    columns: columns.map((name) => ({ name, samples: [] })),
+    rowCount: 1,
+    position: 0,
+    mapping,
+    counts: null,
+  });
+  const identity = source('identity', ['DonorId', 'Full name', 'Email'], { targets: [suggestTarget(supporter, ['DonorId', 'Full name', 'Email'])] });
+  const amounts = source('amounts', ['DonorId', 'Email', 'Amount']);
+  const users = source('users', ['UserId', 'Email', 'Name'], { kind: 'people', people: { oldId: 'UserId', email: 'Email', name: 'Name' } });
+
+  it('lists People first, then each record type in load order, then the groups added and still empty', () => {
+    const drafts = { identity: fileDraftOf(identity), amounts: fileDraftOf(amounts), users: fileDraftOf(users) };
+    expect(mapGroups([identity, amounts, users], drafts, ['gift'])).toEqual([
+      { key: PEOPLE_GROUP, files: ['users'] },
+      { key: 'supporter', files: ['identity'] },
+      { key: 'gift', files: [] },
+    ]);
+    expect(fileDraftOf(amounts)).toMatchObject({ kind: null, targets: [], people: { oldId: 'DonorId', email: 'Email' } });
+  });
+
+  it('links a second file to a record type with its own guessed old id and fields, and takes it out again', () => {
+    const linked = linkGroup(fileDraftOf(amounts), 'supporter', supporter, ['DonorId', 'Email', 'Amount']);
+    expect(linked).toMatchObject({ kind: 'records', targets: [{ type: 'supporter', oldId: 'DonorId', fields: { email: 'Email' } }] });
+    expect(mapGroups([identity, amounts], { identity: fileDraftOf(identity), amounts: linked }, [])).toEqual([{ key: 'supporter', files: ['identity', 'amounts'] }]);
+    expect(unlinkGroup(linked, 'supporter')).toMatchObject({ kind: null, targets: [] });
+  });
+
+  it('keeps a file to people or records, and at most five record types', () => {
+    expect(linkRefusal(fileDraftOf(users), 'supporter')).toBe('ui.admin.migration.group.holdsPeople');
+    expect(linkRefusal(fileDraftOf(identity), PEOPLE_GROUP)).toBe('ui.admin.migration.group.holdsRecords');
+    expect(linkRefusal(fileDraftOf(amounts), PEOPLE_GROUP)).toBe('');
+    expect(linkGroup(fileDraftOf(amounts), PEOPLE_GROUP, undefined, [])).toMatchObject({ kind: 'people' });
+    const full = { ...fileDraftOf(identity), targets: Array.from({ length: 5 }, (_, i) => ({ ...suggestTarget(gift, []), key: `t${i}` })) };
+    expect(linkRefusal(full, 'supporter')).toBe('ui.admin.migration.group.tooManyTypes');
+  });
+
+  it('drops the references other targets made to a record type taken out of the file', () => {
+    const both = linkGroup(linkGroup(fileDraftOf(amounts), 'supporter', supporter, []), 'gift', gift, ['Amount']);
+    both.targets[1] = setRef(both.targets[1]!, 'donor', { target: 'supporter' });
+    const left = unlinkGroup(both, 'supporter');
+    expect(left.targets.map((x) => [x.type, x.refs])).toEqual([['gift', {}]]);
+  });
+
+  it('shows where each field comes from across the linked files, and a required field no file fills', () => {
+    const giftDraft = linkGroup(fileDraftOf(amounts), 'gift', gift, ['DonorId', 'Email', 'Amount']);
+    giftDraft.targets[0] = setRef({ ...giftDraft.targets[0]!, oldId: 'DonorId' }, 'donor', { column: 'DonorId' });
+    const other = { ...fileDraftOf(identity), targets: [...fileDraftOf(identity).targets, { ...suggestTarget(gift, []), key: 'g2', refs: { donor: { target: 'supporter' } } }] };
+    const coverage = fieldCoverage({ ...gift, key: 'gift' }, [
+      { source: amounts, draft: giftDraft },
+      { source: identity, draft: other },
+    ]);
+    expect(coverage.map((c) => [c.field.key, c.from])).toEqual([
+      ['amount', [{ sourceId: 'amounts', fileName: 'amounts.csv', column: 'Amount' }]],
+      [
+        'donor',
+        [
+          { sourceId: 'amounts', fileName: 'amounts.csv', column: 'DonorId' },
+          { sourceId: 'identity', fileName: 'identity.csv', target: 'supporter' },
+        ],
+      ],
+    ]);
+    expect(fieldCoverage({ ...gift, key: 'gift' }, [])[0]).toEqual({ field: gift.fields[0], from: [] });
+  });
+
+  it('saves a people file with its three columns, and a records file with a target', () => {
+    const people = fileDraftOf(users);
+    expect(draftReady(people)).toBe(true);
+    expect(draftReady({ ...people, people: { ...people.people, email: '' } })).toBe(false);
+    expect(mappingOf(people, [])).toEqual({ kind: 'people', people: { oldId: 'UserId', email: 'Email', name: 'Name' } });
+    expect(draftReady(fileDraftOf(amounts))).toBe(false);
+    expect(mappingOf(fileDraftOf(identity), [])).toEqual({ targets: targetsOf(identity.mapping) });
+  });
+});
+
 describe('the migration session', () => {
   it('names a migration, adds any CSV files, keeps going past a refused one, maps, orders and checks', async () => {
     const gateway = memoryMigrations();
@@ -141,6 +237,41 @@ describe('the migration session', () => {
     expect(gateway.jobReads).toBe(2);
     expect(session.state.value.job).toMatchObject({ status: 'done', progress: 2, total: 2 });
     expect(session.state.value.profile!.status).toBe('done');
+    session.dispose();
+  });
+
+  it('reads the migration again on each tick of a run, so the failed rows so far show while it runs', async () => {
+    const gateway = memoryMigrations();
+    const session = new MigrationSession(gateway, (fn) => setTimeout(fn, 0));
+    const seen: string[][] = [];
+    session.state.subscribe((s) => {
+      const failures = s.profile?.recentFailures;
+      if (failures?.length) seen.push(failures.map((f) => `${f.fileName}: ${f.message}`));
+    });
+    const id = (await session.create('Live'))!;
+    await session.open(id);
+    await session.addFiles([{ body: new Blob(['Id,Name\n1,A\n2,\n']), name: 'people.csv' }]);
+    await session.check();
+    await session.run();
+    await settle();
+    expect(seen[0]).toEqual(['people.csv: Name is required']);
+    expect(session.state.value.profile!.status).toBe('done');
+    expect(session.state.value.profile!.recentFailures).toEqual([]);
+    session.dispose();
+  });
+
+  it('follows a check that runs in the background until its job ends, then shows its result', async () => {
+    const gateway = memoryMigrations();
+    gateway.backgroundChecks = true;
+    const session = new MigrationSession(gateway, (fn) => setTimeout(fn, 0));
+    const id = (await session.create('Background check'))!;
+    await session.open(id);
+    await session.addFiles([{ body: new Blob(['Id,Name\n1,A\n2,B\n']), name: 'people.csv' }]);
+    await session.check();
+    expect(session.state.value.profile!).toMatchObject({ checkJobId: 'check1', check: null, status: 'draft' });
+    expect(session.state.value.job).toBeNull();
+    await settle();
+    expect(session.state.value.profile!).toMatchObject({ checkJobId: null, status: 'checked', check: { rows: 2 } });
     session.dispose();
   });
 
@@ -280,6 +411,13 @@ describe('the check by kind and its warnings', () => {
     expect(groups[1]!.items[0]!.more).toBe(0);
   });
 
+  it('counts the rows an optional target is left out of that are not shown', () => {
+    const [group] = groupWarnings([
+      { kind: 'optional-target-left-out', sourceId: 's1', fileName: 'combined.csv', target: 'gift', count: 7, samples: ['Row 3: Amount is not a number', 'Row 9: Amount must be at least 1'] },
+    ]);
+    expect(group).toMatchObject({ title: 'ui.admin.migration.warningGroup.optionalTargetLeftOut', items: [{ target: 'gift', more: 5 }] });
+  });
+
   it('adds the per-file figures up per kind, people first', () => {
     const check = {
       sources: [
@@ -293,6 +431,33 @@ describe('the check by kind and its warnings', () => {
       { kind: 'people', files: 1, rows: 5, ready: 4, invalid: 1, creates: 3, updates: 1 },
       { kind: 'records', files: 2, rows: 30, ready: 30, invalid: 0, creates: 30, updates: 0 },
     ]);
+  });
+
+  it('counts failing rows and file problems as errors, never warnings', () => {
+    const clean = { invalid: 0, problems: [] as MigrationCheck['problems'] } as MigrationCheck;
+    const problem = { sourceId: 's1', fileName: 'donors.csv', row: 0, message: 'Blocked.' };
+    expect(checkHasErrors(clean)).toBe(false);
+    expect(checkHasErrors({ ...clean, invalid: 1 })).toBe(true);
+    expect(checkHasErrors({ ...clean, problems: [problem] })).toBe(true);
+    expect(checkHasErrors({ ...clean, problems: [{ ...problem, severity: 'error' }] })).toBe(true);
+    expect(checkHasErrors({ ...clean, problems: [{ ...problem, severity: 'warning' }] })).toBe(false);
+  });
+
+  it('does not start a run while the check has errors', async () => {
+    const gateway = memoryMigrations();
+    const check = gateway.check;
+    gateway.check = async (id) => {
+      const p = await check(id);
+      return { ...p, check: { ...p.check!, ready: 1, invalid: 1 } };
+    };
+    const session = new MigrationSession(gateway, (fn) => setTimeout(fn, 0));
+    await session.open((await session.create('Errors'))!);
+    await session.addFiles([{ body: new Blob(['Id,Name\n1,A\n2,\n']), name: 'people.csv' }]);
+    await session.check();
+    await session.run();
+    expect(session.state.value.profile!).toMatchObject({ status: 'checked', jobId: null });
+    expect(gateway.jobReads).toBe(0);
+    session.dispose();
   });
 });
 describe('file fields filled from attachments', () => {

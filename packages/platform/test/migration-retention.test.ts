@@ -47,12 +47,18 @@ const addFile = (id: string, name: string, csv: string) =>
 const sql = async <T extends object>(text: string, args: unknown[] = []) => w.platform.db.asSystem((tx) => tx.query<T>(text, args));
 const count = async (text: string, args: unknown[] = []) => Number((await sql<{ n: number }>(text, args))[0]!.n);
 
+/** Starts the check (a background job, answered 202), runs that job, and returns the checked profile. */
+async function checkNow(id: string): Promise<ProfileView> {
+  await ok(await call('POST', `/api/migrations/${id}/check`), 202);
+  await w.platform.jobs.runOnce();
+  return ok(await call('GET', `/api/migrations/${id}`));
+}
 /** A profile with the file added, mapped and checked, not yet run. */
 async function checked(name: string): Promise<ProfileView> {
   const id = (await ok(await call('POST', '/api/migrations', { name }), 201)).id;
   let view = await ok(await addFile(id, `${name}.csv`, CSV), 201);
   view = await ok(await call('PUT', `/api/migrations/${id}/sources/${view.sources[0]!.id}/mapping`, MAP));
-  return ok(await call('POST', `/api/migrations/${id}/check`));
+  return checkNow(id);
 }
 async function finished(name: string): Promise<ProfileView> {
   const view = await checked(name);
@@ -97,7 +103,7 @@ describe('redaction', () => {
     expect(samples(view).PAN).toContain(PAN);
     view = await ok(await call('PUT', `/api/migrations/${id}/sources/${view.sources[0]!.id}/mapping`, MAP));
     expect(samples(view)).toMatchObject({ Id: ['P-1', 'P-2', 'P-3'], Name: ['Asha'], PAN: [], Notes: [], City: ['Pune', 'Nashik', 'Mumbai'] });
-    await ok(await call('POST', `/api/migrations/${id}/check`));
+    await checkNow(id);
     await ok(await call('POST', `/api/migrations/${id}/run`), 202);
     await w.platform.jobs.runOnce();
     redacted = await ok(await call('GET', `/api/migrations/${id}`));
@@ -118,19 +124,15 @@ describe('redaction', () => {
     }
   });
 
-  it('blanks cells already stored when a later mapping marks their column sensitive', async () => {
+  it('keeps the stored cells of a done migration, which a later mapping cannot re-mark as sensitive; purge clears them', async () => {
+    // Notes is personal, not sensitive: its cells stay in failed rows. A done migration is read-only, so it cannot be remapped to blank them.
     const view = await finished('Later redaction');
-    const pledge = { targets: [{ key: 'p', type: 'patron', oldId: 'Id', fields: { name: 'Name', pan: 'PAN', city: 'City' } }] };
-    // Notes is personal, not sensitive: its cells stay in failed rows. Remapping Notes to a sensitive field blanks them.
-    await ok(await call('PUT', `/api/migrations/${view.id}/sources/${view.sources[0]!.id}/mapping`, pledge));
     const items = await sql<{ data: { cells: string[] } }>(`select data from job_item where job_id = $1 and status = 'failed' order by seq`, [view.jobId]);
     expect(items.map((i) => i.data.cells[3])).toEqual([NOTE, NOTE]);
-    await ok(await call('PUT', `/api/migrations/${view.id}/sources/${view.sources[0]!.id}/mapping`, { targets: [{ key: 'p', type: 'patron', oldId: 'Id', fields: { name: 'Name', pan: 'Notes' } }] }));
-    const after = await sql<{ data: { cells: string[] } }>(`select data from job_item where job_id = $1 and status = 'failed' order by seq`, [view.jobId]);
-    expect(after.map((i) => i.data.cells)).toEqual([
-      ['P-2', '', '', '', 'Nashik'],
-      ['P-3', '', '', '', 'Mumbai'],
-    ]);
+    const remapped = await call('PUT', `/api/migrations/${view.id}/sources/${view.sources[0]!.id}/mapping`, { targets: [{ key: 'p', type: 'patron', oldId: 'Id', fields: { name: 'Name', pan: 'Notes' } }] });
+    expect(remapped.statusCode).toBe(409);
+    await ok(await call('POST', `/api/migrations/${view.id}/purge`), 200);
+    expect(await count(`select count(*)::int as n from job_item where job_id = $1 and data::text like '%' || $2 || '%'`, [view.jobId, NOTE])).toBe(0);
   });
 });
 
@@ -219,7 +221,7 @@ describe('purge', () => {
     await ok(await call('DELETE', `/api/migrations/${view.id}/sources/${view.sources[0]!.id}`));
     let again = await ok(await addFile(view.id, 'Re-upload.csv', CSV), 201);
     again = await ok(await call('PUT', `/api/migrations/${view.id}/sources/${again.sources[0]!.id}/mapping`, MAP));
-    again = await ok(await call('POST', `/api/migrations/${view.id}/check`));
+    again = await checkNow(view.id);
     expect(again.status).toBe('checked');
     expect(again.sources[0]!.purgedAt).toBeNull();
     await ok(await call('POST', `/api/migrations/${view.id}/run`), 202);

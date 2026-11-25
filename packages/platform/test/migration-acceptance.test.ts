@@ -114,7 +114,9 @@ describe('acceptance criterion 7: a run sends nothing', () => {
     await ok(await call('PUT', `/api/migrations/${created.id}/sources/${people.id}/mapping`, { kind: 'people', people: { oldId: 'Id', email: 'Email', name: 'Name' } }));
     await ok(await call('PUT', `/api/migrations/${created.id}/sources/${gifts.id}/mapping`, { targets: [{ key: 'gift', type: 'accGift', oldId: 'Code', fields: { name: 'Name', amount: 'Amount' } }] }));
 
-    const check = await ok(await call('POST', `/api/migrations/${created.id}/check`));
+    await ok(await call('POST', `/api/migrations/${created.id}/check`), 202);
+    await w.platform.jobs.runOnce();
+    const check = await ok(await call('GET', `/api/migrations/${created.id}`));
     expect(check.check).toMatchObject({ ready: 4, invalid: 0, problems: [] });
     // The scripts are reported, not hidden.
     expect(check.check!.warnings.map((x) => x.kind)).toContain('script-effects-suppressed');

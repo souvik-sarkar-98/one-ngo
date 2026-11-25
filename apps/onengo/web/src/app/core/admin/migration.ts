@@ -129,6 +129,8 @@ export interface MigrationWarning {
   fileName: string | null;
   /** The column the warning is about, when it is about one. */
   column?: string;
+  /** The target the warning is about, when it is about one (an optional target left out). */
+  target?: string;
   count: number;
   samples: string[];
 }
@@ -164,10 +166,14 @@ export interface MigrationProfile {
   booksResult: BooksResult | null;
   check: MigrationCheck | null;
   jobId: string | null;
+  /** The background check still running, or null when no check is running. */
+  checkJobId?: string | null;
   /** The attachments uploaded for file fields: how many, and their bytes. */
   attachments?: { count: number; bytes: number };
   /** When the source files, attachments and failed-row data were deleted; null while they are stored. */
   purgedAt?: string | null;
+  /** While it runs: the latest rows that failed, newest first, with the reason. */
+  recentFailures?: { fileName: string; message: string }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -354,6 +360,116 @@ export function setFile(target: MigrationTarget, field: FieldDef, column: string
   return { ...target, fields, refs, files };
 }
 
+// ------------------------------------------------------------------ groups
+
+/** The group of the Map step that holds people files; every other group is a record type's key. */
+export const PEOPLE_GROUP = '@people';
+/** The most record types one file fills (the server refuses more). */
+export const MAX_TARGETS = 5;
+
+/** A file's mapping as the Map step edits it until it is saved: nothing yet, record targets, or a people mapping. */
+export interface FileDraft {
+  kind: 'records' | 'people' | null;
+  targets: MigrationTarget[];
+  people: PeopleDraft;
+}
+
+export function fileDraftOf(s: Pick<MigrationSource, 'mapping' | 'columns'>): FileDraft {
+  const m = s.mapping;
+  return {
+    kind: isPeopleMapping(m) ? 'people' : m ? 'records' : null,
+    targets: structuredClone(targetsOf(m)),
+    people: isPeopleMapping(m) ? peopleDraftOf(m.people) : emptyPeople(s.columns.map((c) => c.name)),
+  };
+}
+
+/** A group of the Map step and the files linked to it, in load order. */
+export interface MapGroup {
+  key: string;
+  files: string[];
+}
+
+/**
+ * The groups of the Map step: People when a file holds people, then each record type a file
+ * fills in the order the files load, then the groups added that no file is linked to yet.
+ */
+export function mapGroups(sources: readonly MigrationSource[], drafts: Readonly<Record<string, FileDraft>>, added: readonly string[]): MapGroup[] {
+  const groups = new Map<string, string[]>();
+  const link = (key: string, id: string | null) => {
+    const files = groups.get(key) ?? [];
+    if (id && !files.includes(id)) files.push(id);
+    groups.set(key, files);
+  };
+  for (const s of sources) {
+    const d = drafts[s.id] ?? fileDraftOf(s);
+    if (d.kind === 'people') link(PEOPLE_GROUP, s.id);
+    else if (d.kind === 'records') for (const x of d.targets) link(x.type, s.id);
+  }
+  for (const key of added) link(key, null);
+  const people = groups.get(PEOPLE_GROUP);
+  groups.delete(PEOPLE_GROUP);
+  return [...(people ? [{ key: PEOPLE_GROUP, files: people }] : []), ...[...groups].map(([key, files]) => ({ key, files }))];
+}
+
+/** Whether the file's draft is linked to the group. */
+export const inGroup = (d: FileDraft, group: string): boolean => (group === PEOPLE_GROUP ? d.kind === 'people' : d.kind === 'records' && d.targets.some((x) => x.type === group));
+
+/** Why a file cannot be linked to a group, as a catalogue key; empty when it can. A file holds people or records, not both. */
+export function linkRefusal(d: FileDraft, group: string): string {
+  if (inGroup(d, group)) return '';
+  if (group === PEOPLE_GROUP) return d.kind === 'records' ? 'ui.admin.migration.group.holdsRecords' : '';
+  if (d.kind === 'people') return 'ui.admin.migration.group.holdsPeople';
+  return d.targets.length >= MAX_TARGETS ? 'ui.admin.migration.group.tooManyTypes' : '';
+}
+
+/** The draft linked to a group: People makes it a people file; a record type adds a target of that type, guessed from the columns. */
+export function linkGroup(d: FileDraft, group: string, type: RecordTypeBody | undefined, columns: readonly string[]): FileDraft {
+  if (linkRefusal(d, group) || inGroup(d, group)) return d;
+  if (group === PEOPLE_GROUP) return { ...d, kind: 'people' };
+  if (!type) return d;
+  return { ...d, kind: 'records', targets: [...d.targets, suggestTarget(type, columns, d.targets)] };
+}
+
+/** The draft without the group: a people file holds nothing again; a record type's targets go, with the references other targets made to them. */
+export function unlinkGroup(d: FileDraft, group: string): FileDraft {
+  if (!inGroup(d, group)) return d;
+  if (group === PEOPLE_GROUP) return { ...d, kind: null };
+  const gone = new Set(d.targets.filter((x) => x.type === group).map((x) => x.key));
+  const targets = d.targets
+    .filter((x) => !gone.has(x.key))
+    .map((x) => ({ ...x, refs: Object.fromEntries(Object.entries(x.refs).filter(([, r]) => !('target' in r && gone.has(r.target)))) }));
+  return { ...d, kind: targets.length ? 'records' : null, targets };
+}
+
+/** Where a field of a record type comes from: each linked file, and the column (or earlier target of the row) that fills it there. */
+export interface FieldCoverage {
+  field: FieldDef;
+  from: { sourceId: string; fileName: string; column?: string; target?: string }[];
+}
+
+/** Every field a file can fill for the type, with the linked files that fill it; a required field nothing fills has `from` empty. */
+export function fieldCoverage(type: RecordTypeBody & { key: string }, linked: readonly { source: Pick<MigrationSource, 'id' | 'fileName'>; draft: FileDraft }[]): FieldCoverage[] {
+  return [...importableFields(type), ...fileFields(type)].map((field) => ({
+    field,
+    from: linked.flatMap(({ source, draft }) =>
+      draft.targets
+        .filter((x) => x.type === type.key)
+        .flatMap((x): FieldCoverage['from'] => {
+          const ref = x.refs[field.key];
+          const column = x.fields[field.key] ?? (ref && 'column' in ref ? ref.column : undefined) ?? x.persons?.[field.key]?.column ?? x.files?.[field.key]?.column;
+          if (column) return [{ sourceId: source.id, fileName: source.fileName, column }];
+          return ref && 'target' in ref ? [{ sourceId: source.id, fileName: source.fileName, target: ref.target }] : [];
+        }),
+    ),
+  }));
+}
+
+/** Whether a draft can be saved: a people file needs its old id, email and name columns; a records file a target. */
+export const draftReady = (d: FileDraft): boolean => (d.kind === 'people' ? !!(d.people.oldId && d.people.email && d.people.name) : d.kind === 'records' && d.targets.length > 0);
+
+/** The mapping a draft saves. */
+export const mappingOf = (d: FileDraft, roles: readonly RoleRow[]): SourceMapping => (d.kind === 'people' ? { kind: 'people', people: peopleSpecOf(d.people, roles) } : { targets: d.targets });
+
 /** A size for the attachment list: bytes, kB, MB or GB, one decimal from MB up. */
 export function byteText(bytes: number): string {
   const one = (n: number) => formatNumber(Math.round(n * 10) / 10);
@@ -519,9 +635,10 @@ const WARNING_KINDS: Record<string, string> = {
   'script-effects-suppressed': 'scriptEffectsSuppressed',
   'missing-attachments': 'missingAttachments',
   'storage-over-quota': 'storageOverQuota',
+  'optional-target-left-out': 'optionalTargetLeftOut',
 };
-/** Warnings whose samples are ids or names, so "and n more" is true; for the others a sample is a sentence. */
-const ID_SAMPLES = new Set(['unresolved-legacy-users', 'missing-attachments']);
+/** Warnings with one sample per thing counted (an id, a name, a row), so "and n more" is true; for the others a sample is a sentence. */
+const ID_SAMPLES = new Set(['unresolved-legacy-users', 'missing-attachments', 'optional-target-left-out']);
 
 export interface WarningGroup {
   kind: string;
@@ -566,6 +683,11 @@ export function checkByKind(check: MigrationCheck, sources: readonly MigrationSo
     out.set(kind, k);
   }
   return [...out.values()].sort((a, b) => (a.kind === 'people' ? -1 : 1) - (b.kind === 'people' ? -1 : 1));
+}
+
+/** Whether the check found errors to fix before the run: a row that fails, or a problem that is not a warning. Warnings never block it. */
+export function checkHasErrors(check: MigrationCheck): boolean {
+  return check.invalid > 0 || check.problems.some((p) => (p.severity ?? 'error') === 'error');
 }
 
 /** Files in a new order, one moved up or down. */
@@ -714,7 +836,7 @@ export class MigrationSession {
     return this.withProfile((id) => this.gateway.removeSource(id, sourceId), t('ui.admin.migration.fileRemoved'));
   }
 
-  saveMapping(sourceId: string, mapping: SourceMapping): Promise<unknown> {
+  saveMapping(sourceId: string, mapping: SourceMapping): Promise<MigrationProfile | null> {
     return this.withProfile((id) => this.gateway.setMapping(id, sourceId, mapping), t('ui.admin.migration.mappingSaved'));
   }
 
@@ -732,11 +854,16 @@ export class MigrationSession {
     return this.withProfile((id) => this.gateway.applyBooks(id), t('ui.admin.migration.booksApplied'));
   }
 
-  check(): Promise<unknown> {
-    return this.withProfile((id) => this.gateway.check(id), '');
+  /** Starts the check in the background; it is followed until it ends, then the result is read. */
+  async check(): Promise<void> {
+    const profile = await this.withProfile((id) => this.gateway.check(id), '');
+    if (profile) this.follow(profile);
   }
 
+  /** Starts the run; refused while the check has errors to fix. */
   async run(): Promise<void> {
+    const check = this.state.value.profile?.check;
+    if (check && checkHasErrors(check)) return;
     const profile = await this.withProfile((id) => this.gateway.run(id), '');
     if (profile) this.follow(profile);
   }
@@ -755,22 +882,31 @@ export class MigrationSession {
     this.timer = null;
   }
 
-  /** While the profile runs, reads the job and the profile again until the job ends. */
+  /**
+   * While the profile runs, or a check of it is pending, reads the job and the profile again until the job ends.
+   * A run's job is shown as its progress; a check's job only moves the profile on when it ends.
+   */
   private follow(profile: MigrationProfile): void {
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
-    if (profile.status !== 'running' || !profile.jobId || this.disposed) return;
-    const jobId = profile.jobId;
+    const running = profile.status === 'running';
+    const jobId = running ? profile.jobId : profile.checkJobId;
+    if (!jobId || this.disposed) return;
     const tick = async () => {
       this.timer = null;
       if (this.disposed || this.state.value.profile?.id !== profile.id) return;
       try {
         const job = await this.gateway.job(jobId);
-        this.state.set({ job });
+        if (running) this.state.set({ job });
         if (FINISHED.has(job.status)) {
           const latest = await this.gateway.get(profile.id);
           this.state.set({ profile: latest });
           return;
+        }
+        // A run's profile carries the counts per file and the latest failed rows so far: read it again for the live view.
+        if (running && !this.disposed) {
+          const live = await this.gateway.get(profile.id);
+          if (this.state.value.profile?.id === profile.id) this.state.set({ profile: live });
         }
       } catch {
         // A failed read keeps polling; the next one shows the progress.

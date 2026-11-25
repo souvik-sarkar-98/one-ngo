@@ -1,10 +1,16 @@
 import { isPeopleMapping, targetsOf, type AttachmentQuery, type BooksInput, type MigrationAttachment, type MigrationGateway, type MigrationJob, type MigrationProfile, type SourceMapping } from '../admin/migration';
 
 /** A data migration server in memory: files keep their header row, and a run finishes on the second read of its job. */
-export function memoryMigrations(): MigrationGateway & { calls: string[]; jobReads: number } {
+export function memoryMigrations(): MigrationGateway & { calls: string[]; jobReads: number; backgroundChecks: boolean } {
   const profiles = new Map<string, MigrationProfile>();
   let n = 0;
   let job: MigrationJob | null = null;
+  let checkJob: MigrationJob | null = null;
+  /** The check as the server states it once it is done: the rows, all ready. */
+  const checkOf = (p: MigrationProfile) => {
+    const rows = p.sources.reduce((k, s) => k + s.rowCount, 0);
+    return { rows, ready: rows, invalid: 0, creates: rows, updates: 0, sources: [], problems: [], warnings: [], checkedAt: '2026-11-06' };
+  };
   const files = new Map<string, MigrationAttachment[]>();
   const held = (id: string) => files.get(id) ?? [];
   /** Totals and draft status after attachments change, as the server does (a change sends the profile back to draft). */
@@ -17,6 +23,8 @@ export function memoryMigrations(): MigrationGateway & { calls: string[]; jobRea
   const out = {
     calls: [] as string[],
     jobReads: 0,
+    /** When true, a check is answered as a background job: it stays pending until its job is read, which finishes it. */
+    backgroundChecks: false,
     async list() {
       out.calls.push('list');
       return { items: [...profiles.values()].map((p) => ({ id: p.id, name: p.name, status: p.status, files: p.sources.length, createdAt: p.createdAt, updatedAt: p.updatedAt })) };
@@ -85,8 +93,14 @@ export function memoryMigrations(): MigrationGateway & { calls: string[]; jobRea
     },
     async check(id: string) {
       const p = profiles.get(id)!;
-      const rows = p.sources.reduce((k, s) => k + s.rowCount, 0);
-      p.check = { rows, ready: rows, invalid: 0, creates: rows, updates: 0, sources: [], problems: [], warnings: [], checkedAt: '2026-11-06' };
+      if (out.backgroundChecks) {
+        checkJob = { id: 'check1', status: 'running', progress: 0, total: p.sources.reduce((k, s) => k + s.rowCount, 0), error: null, cancelRequested: false };
+        p.checkJobId = checkJob.id;
+        p.check = null;
+        p.status = 'draft';
+        return structuredClone(p);
+      }
+      p.check = checkOf(p);
       p.status = 'checked';
       return structuredClone(p);
     },
@@ -101,9 +115,23 @@ export function memoryMigrations(): MigrationGateway & { calls: string[]; jobRea
       if (job) job.cancelRequested = true;
       return structuredClone(profiles.get(id)!);
     },
-    async job() {
+    async job(jobId: string) {
+      if (checkJob && jobId === checkJob.id) {
+        // The check ends on this read: its result is saved and the pending marker cleared.
+        checkJob.status = 'done';
+        checkJob.progress = checkJob.total ?? 0;
+        for (const p of profiles.values()) {
+          if (p.checkJobId !== checkJob.id) continue;
+          p.checkJobId = null;
+          p.check = checkOf(p);
+          p.status = 'checked';
+        }
+        return { ...checkJob };
+      }
       out.jobReads++;
       if (!job) throw new Error('no job');
+      // While the run is going the profile lists a failed row so far; it is gone once the run is done.
+      for (const p of profiles.values()) if (p.jobId === job.id) p.recentFailures = out.jobReads < 2 ? [{ fileName: p.sources[0]?.fileName ?? '', message: 'Name is required' }] : [];
       if (out.jobReads >= 2) {
         job.status = 'done';
         job.progress = job.total ?? 0;

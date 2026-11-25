@@ -179,11 +179,11 @@ describe('persons mapping', () => {
   const target = (extra: Record<string, unknown>) => ({ targets: [{ key: 'd', type: 'donation', oldId: 'Id', fields: { name: 'Title' }, ...extra }] });
   const targetOf = (m: SourceMapping) => targetsOf(m)[0]!;
 
-  it('reads a person field filled by legacy user id, with onMissing, and a required person field is satisfied by it', () => {
+  it('reads a person field filled by legacy user id, with onMissing; a required person field may stay unmapped', () => {
     expect(targetOf(read(target({ persons: { owner: { column: 'OwnerId' } } }), COLS)).persons).toEqual({ owner: { column: 'OwnerId' } });
     expect(targetOf(read(target({ persons: { owner: { column: 'OwnerId', onMissing: 'fail' } } }), COLS)).persons).toEqual({ owner: { column: 'OwnerId', onMissing: 'fail' } });
-    // Without persons the required person field still needs a mapping, and old mappings have no persons.
-    expect(issues(target({}), COLS)).toEqual([{ path: '/targets/0/fields/owner', message: "donation needs 'Owner'; match a column to it" }]);
+    // Without persons the required person field may stay unmapped: a later file can fill it, and a new row without it fails in the check. Old mappings have no persons.
+    expect(() => read(target({}), COLS)).not.toThrow();
     expect(targetOf(read({ targets: [{ key: 's', type: 'supporter', oldId: 'Id', fields: { name: 'Title' } }] }, COLS)).persons).toBeUndefined();
   });
 

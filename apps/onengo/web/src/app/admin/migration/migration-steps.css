@@ -40,6 +40,47 @@
 .migration__chip app-icon {
   color: var(--ok);
 }
+.migration__unsaved {
+  color: var(--warn, var(--help-color));
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+.migration__add-group {
+  width: auto;
+  max-width: 100%;
+  padding: 5px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.78rem;
+}
+.migration__coverage {
+  width: 100%;
+  margin: 0 0 14px;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+.migration__coverage th,
+.migration__coverage td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--divider);
+  text-align: left;
+  vertical-align: top;
+}
+.migration__coverage thead th {
+  color: var(--help-color);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+.migration__coverage tbody th {
+  width: 40%;
+  font-weight: 600;
+}
+.migration__file-target {
+  margin: 0 0 12px;
+}
 .migration__target {
   margin: 0 0 12px;
   border: 1px solid var(--panel-border);
@@ -239,6 +280,13 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 14px;
+}
+/* Wraps a step's controls; disabled once the run is done, so nothing in it can be changed. */
+.migration__body {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
 }
 .migration__nav {
   display: flex;

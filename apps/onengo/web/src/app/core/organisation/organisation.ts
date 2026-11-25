@@ -1,9 +1,13 @@
 import type { OrganisationProfileRequest, RegistrationRequest, SettingsRequest } from '../contracts';
+import { currentProductName } from './product-name';
 
 export type { OrganisationProfileRequest, RegistrationRequest };
 
-/** The fixed product name: sign-in, the app bar and every browser title. It is not part of an organisation's identity. */
-export const PRODUCT = '';
+/**
+ * The product name from the server's `ONENGO_PRODUCT_NAME` (OneNGO by default): sign-in, the app bar and every browser title.
+ * It is not part of an organisation's identity. Read once the app loads, see `loadProductName`.
+ */
+export const PRODUCT = currentProductName();
 
 /** A browser title: `<screen or organisation> | OneNGO`, or the product alone. */
 export const browserTitle = (screen?: string | null): string => (screen?.trim() ? `${screen.trim()} | ${PRODUCT}` : PRODUCT);

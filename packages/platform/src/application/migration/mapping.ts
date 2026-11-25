@@ -98,8 +98,6 @@ export const targetsOf = (m: SourceMapping | null | undefined): MigrationTarget[
 export type TypesByKey = ReadonlyMap<string, RecordTypeDef>;
 
 /** Fields a save fills by itself, so a mapping does not have to. */
-const filledBySave = (f: FieldDef) => !!(f.calculated || f.rollup || f.generated || f.copyFrom || f.follow || f.visibleWhen);
-
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 
 /**
@@ -159,7 +157,6 @@ export function readMapping(input: unknown, columns: readonly string[], types: T
     }
 
     const refs: Record<string, MigrationRef> = {};
-    const tried = new Set([...Object.keys(isObject(t.fields) ? t.fields : {}), ...Object.keys(isObject(t.refs) ? t.refs : {})]);
     for (const [fieldKey, ref] of Object.entries(isObject(t.refs) ? t.refs : {})) {
       const path = `${at}/refs/${fieldKey}`;
       const f = type.fields.find((x) => x.key === fieldKey);
@@ -195,7 +192,6 @@ export function readMapping(input: unknown, columns: readonly string[], types: T
         add(path, `'${f.label}' is already filled from a column`);
         continue;
       }
-      tried.add(f.key); // a wrong entry is reported once, not again as "needs"
       const column = isObject(p) && typeof p.column === 'string' ? p.column : '';
       if (!column) add(`${path}/column`, 'choose a column');
       else if (!has.has(column)) add(`${path}/column`, `the file has no column '${column}'`);
@@ -215,7 +211,6 @@ export function readMapping(input: unknown, columns: readonly string[], types: T
         add(path, `'${fieldKey}' is not a file field of ${type.label}`);
         continue;
       }
-      tried.add(f.key);
       const column = isObject(m) && typeof m.column === 'string' ? m.column : '';
       const separator = isObject(m) ? m.separator : undefined;
       const onMissing = isObject(m) ? m.onMissing : undefined;
@@ -239,10 +234,8 @@ export function readMapping(input: unknown, columns: readonly string[], types: T
       if (good) files[f.key] = { column, ...(separator ? { separator: separator as ';' | ',' } : {}), ...(onMissing ? { onMissing: onMissing as 'fail' | 'skip' } : {}) };
     }
 
-    for (const f of type.fields) {
-      if (!f.required || filledBySave(f) || tried.has(f.key)) continue;
-      add(`${at}/fields/${f.key}`, `${type.label} needs '${f.label}'; match a column to it`);
-    }
+    // A required field may stay unmapped: a row for a record an earlier file made only updates the fields it maps,
+    // and a row that would create a record without it fails with the field's own message, in the check and the run.
     if (!Object.keys(fields).length && !Object.keys(refs).length) add(`${at}/fields`, 'match at least one column to a field');
 
     targets.push({ key, type: type.key, oldId, fields, refs, ...(Object.keys(persons).length ? { persons } : {}), ...(Object.keys(files).length ? { files } : {}), required: t.required !== false });

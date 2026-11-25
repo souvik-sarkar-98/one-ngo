@@ -115,12 +115,32 @@ export class PgMigrationStore implements MigrationStore {
     return !!row;
   }
 
-  async saveCheck(tx: Tx, profileId: string, check: Check): Promise<void> {
+  async markChecking(tx: Tx, profileId: string, jobId: string): Promise<void> {
     await pg(tx)
+      .updateTable('migration_profile')
+      .set({ check_result: JSON.stringify({ pending: jobId }), status: 'draft', updated_at: NOW })
+      .where('id', '=', profileId)
+      .where('status', '!=', 'running')
+      .execute();
+  }
+
+  async saveCheck(tx: Tx, profileId: string, check: Check, jobId: string): Promise<boolean> {
+    const row = await pg(tx)
       .updateTable('migration_profile')
       .set({ check_result: JSON.stringify(check), status: 'checked', updated_at: NOW })
       .where('id', '=', profileId)
-      .where('status', '!=', 'running')
+      .where(sql<boolean>`check_result->>'pending' = ${jobId}`)
+      .returning('id')
+      .executeTakeFirst();
+    return !!row;
+  }
+
+  async clearChecking(tx: Tx, profileId: string, jobId: string): Promise<void> {
+    await pg(tx)
+      .updateTable('migration_profile')
+      .set({ check_result: null, updated_at: NOW })
+      .where('id', '=', profileId)
+      .where(sql<boolean>`check_result->>'pending' = ${jobId}`)
       .execute();
   }
 
@@ -179,10 +199,10 @@ export class PgMigrationStore implements MigrationStore {
       .selectFrom('migration_person_key as k')
       .innerJoin('tenant_member as m', (j) => j.onRef('m.tenant_id', '=', 'k.tenant_id').onRef('m.user_id', '=', 'k.user_id'))
       .innerJoin('app_user as u', 'u.id', 'k.user_id')
-      .select(['k.old_id', 'k.user_id', 'u.email'])
+      .select(['k.old_id', 'k.user_id', 'u.email', sql<string>`coalesce(m.display_name, u.display_name)`.as('name')])
       .where('k.old_id', 'in', oldIds)
       .execute();
-    return new Map(rows.map((r) => [r.old_id, { userId: r.user_id, email: r.email.toLowerCase() }]));
+    return new Map(rows.map((r) => [r.old_id, { userId: r.user_id, email: r.email.toLowerCase(), name: r.name }]));
   }
 
   async memberEmails(tx: Tx, emails: string[]): Promise<Set<string>> {
@@ -217,6 +237,18 @@ export class PgMigrationStore implements MigrationStore {
       .limit(limit)
       .$castTo<{ seq: number; message: string | null; data: { cells?: string[] } | null }>()
       .execute();
+  }
+
+  async recentFailed(tx: Tx, jobId: string, limit: number): Promise<{ seq: number; message: string | null; sourceId: string | null }[]> {
+    const rows = await pg(tx)
+      .selectFrom('job_item')
+      .select(['seq', 'message', sql<string | null>`data->>'sourceId'`.as('sourceId')])
+      .where('job_id', '=', jobId)
+      .where('status', '=', 'failed')
+      .orderBy('seq', 'desc')
+      .limit(limit)
+      .execute();
+    return rows.map((r) => ({ seq: Number(r.seq), message: r.message, sourceId: r.sourceId }));
   }
 
   async counts(tx: Tx, jobId: string): Promise<Map<string, SourceCounts>> {

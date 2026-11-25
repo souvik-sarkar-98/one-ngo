@@ -93,6 +93,7 @@ const app = buildServer(platform.http, {
   trustAppEngineCron: !!process.env.GAE_SERVICE,
   trustProxy: trustProxyFromEnv(process.env),
   corsOrigins: corsOrigins(process.env.CORS_ORIGINS),
+  productName: process.env.ONENGO_PRODUCT_NAME,
   webRoot: process.env.WEB_ROOT ?? PATHS.web,
   guideRoot: process.env.GUIDE_ROOT ?? join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'onengo-guide', 'web', 'dist', 'guide', 'browser'),
   schemaDir: PATHS.schemas,

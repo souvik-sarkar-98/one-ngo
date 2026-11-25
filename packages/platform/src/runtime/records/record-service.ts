@@ -103,6 +103,8 @@ function lookupIssues(lookup: LookupDef, issues: FieldIssue[], inputs: string[])
 /** Deleting records and restoring them from the recycle bin. */
 const ADMIN_RECORDS = 'admin:records';
 const CHANGED = 'This record was changed by someone else. Reload it and try again.';
+/** The id a check gives a record that is not stored yet; no record has it, so unique lookups find every holder. */
+const PLANNED_ID = '00000000-0000-0000-0000-000000000000';
 
 const iso = (v: string | Date) => (v instanceof Date ? v.toISOString() : new Date(v).toISOString());
 
@@ -627,8 +629,34 @@ export class RecordService {
    * makes (permissions, visibility, conditions, required fields, rules,
    * unique values) without saving: no number is taken and nothing is written.
    * Returns the data that would be saved. For import checks.
+   *
+   * `planned` checks an update of a record that is not stored yet but would
+   * hold that data (as an earlier `check` returned it), at its starting status:
+   * a migration check of a later row for a record an earlier row creates.
    */
-  async check(ctx: TenantContext, typeKey: string, input: { data: Record<string, unknown>; id?: string }): Promise<{ data: Record<string, unknown> }> {
+  async check(ctx: TenantContext, typeKey: string, input: { data: Record<string, unknown>; id?: string; planned?: Record<string, unknown> }): Promise<{ data: Record<string, unknown> }> {
+    if (input.planned && !input.id) {
+      demand(ctx.actor, `record:${typeKey}:update`);
+      const loaded = await this.load(ctx.tenantId, typeKey);
+      const primary = this.choosePrimary(ctx, loaded, input.planned);
+      const now = new Date().toISOString();
+      const current: RecordRow = {
+        id: PLANNED_ID,
+        type_key: typeKey,
+        number: null,
+        status: primary?.initial ?? null,
+        version: 1,
+        schema_version: 1,
+        data: input.planned,
+        workflow_key: primary?.key ?? null,
+        workflow_state: {},
+        owner_id: ctx.actor.id,
+        created_by: ctx.actor.id,
+        created_at: now,
+        updated_at: now,
+      };
+      return this.db.withTenant(ctx.tenantId, (tx) => prepare(tx, this.context(ctx, loaded, current, input.data, moveOf(loaded, current), { dryRun: true })));
+    }
     if (input.id) {
       const id = input.id;
       const loadedOf = await this.loadAll(ctx.tenantId);

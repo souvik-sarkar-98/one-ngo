@@ -86,6 +86,22 @@ describe('background jobs', () => {
     expect((await w.platform.jobs.items(w.as(w.ngoA, owner), created.id)).items.map((i) => i.seq)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
   });
 
+  it('keep going on their own when a run stops at its time budget, without waiting for a tick', async () => {
+    const runner = new JobRunner(new PostgresJobStore(w.platform.db));
+    runner.register<{ n: number }, { next?: number }>('steady', {
+      label: 'Steady',
+      batchSize: 1,
+      async run({ input, state }) {
+        const next = (state.next ?? 0) + 1;
+        return { state: { next }, progress: next, total: input.n, done: next >= input.n };
+      },
+    });
+    const created = await runner.create(w.as(w.ngoA, owner), 'steady', { n: 4 });
+    await runner.runOnce({ timeBudgetMs: 0 });
+    await expect.poll(async () => (await runner.get(w.as(w.ngoA, owner), created.id)).status, { timeout: 5_000 }).toBe('done');
+    expect((await runner.get(w.as(w.ngoA, owner), created.id)).progress).toBe(4);
+  });
+
   it('tell the creator once when another runner finished the job after the lease ran out', async () => {
     const other = new JobRunner(new PostgresJobStore(w.platform.db), {
       autoRun: false,

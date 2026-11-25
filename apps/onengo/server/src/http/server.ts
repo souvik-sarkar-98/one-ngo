@@ -57,6 +57,8 @@ export interface ServerOptions {
   schemaDir?: string;
   /** Requests per minute per client address, per instance. */
   rateLimits?: { api?: number; auth?: number; webhooks?: number };
+  /** The product's name, shown in the web app's sign-in, app bar and browser titles. Unset or empty means OneNGO; otherwise used as given. */
+  productName?: string;
 }
 
 /** Header sign-in is allowed only in test runs, never on a cloud host. */
@@ -201,6 +203,10 @@ export function buildServer(host: HttpDeps | HttpHost, options: ServerOptions = 
     api.register(migrationRoutes, { deps: deps.migration });
     api.register(privacyRoutes, { deps: deps.privacy });
   });
+
+  // Public and unauthenticated: the web app reads it before anyone has signed in. Only an unset or empty value falls back; a space is shown as given.
+  const productName = options.productName || 'OneNGO';
+  app.get('/api/product', async () => ({ name: productName }));
 
   app.register(webAppRoutes, { webRoot: options.webRoot, guideRoot: options.guideRoot });
 

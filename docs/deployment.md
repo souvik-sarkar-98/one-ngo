@@ -37,6 +37,7 @@ The server reads environment variables (commented in `.env.example`) and never r
 | `ENCRYPTION_KEY_PREVIOUS` | no | Earlier keys, comma separated. After a rotation run `npm run fields:reencrypt`, and drop the old key once its jobs are done |
 | `PUBLIC_BASE_URL` | yes | Address people use. Used in emailed links, redirects and webhook URLs |
 | `SHIPPED_MODULES` | no | Default `donations` |
+| `ONENGO_PRODUCT_NAME` | no | Name shown in sign-in, the app bar and browser titles. Unset or empty means `OneNGO`; any other value, including a space, is shown exactly as given |
 | `TICK_SECRET` | no | Only for a scheduler other than App Engine cron (`POST /internal/tick`, bearer) |
 | `MEMORY_ALERT_MB` | no | Default 300. Threshold for the `memory.high` alert |
 | `AUDIT_ARCHIVE_BUCKET` | no | Bucket for the operator audit archive |

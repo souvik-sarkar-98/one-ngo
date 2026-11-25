@@ -58,6 +58,8 @@ export class JobRunner {
   private readonly kinds = new Map<string, JobKind<never, never>>();
   private running: Promise<{ jobs: number; batches: number }> | null = null;
   private kickPending = false;
+  /** The last run stopped at its time budget, so work may be left. */
+  private unfinished = false;
   private readonly logger: Logger;
   private readonly permits: (actor: Actor, permission: string) => boolean;
 
@@ -179,11 +181,16 @@ export class JobRunner {
     });
   }
 
-  /** Works through runnable jobs until none remain or the time budget runs out. */
+  /**
+   * Works through runnable jobs until none remain or the time budget runs out. When the budget
+   * runs out first, another run starts right away (unless the runner only runs on ticks), so a
+   * long job does not wait for the next scheduler tick, which can be an hour away.
+   */
   runOnce(options: { timeBudgetMs?: number } = {}): Promise<{ jobs: number; batches: number }> {
     if (this.running) return this.running;
     this.running = this.drain(options.timeBudgetMs ?? 20_000).finally(() => {
       this.running = null;
+      if (this.unfinished) this.started();
     });
     return this.running;
   }
@@ -199,15 +206,18 @@ export class JobRunner {
     const deadline = Date.now() + budgetMs;
     const out = { jobs: 0, batches: 0 };
     const tried = new Set<string>();
-    while (Date.now() < deadline || out.jobs === 0) {
+    this.unfinished = false;
+    for (;;) {
       const job = await this.claim(tried);
-      if (!job) break;
+      if (!job) return out;
       tried.add(job.id);
       out.jobs++;
       out.batches += await this.work(job, deadline);
-      if (Date.now() >= deadline) break;
+      if (Date.now() >= deadline) {
+        this.unfinished = true;
+        return out;
+      }
     }
-    return out;
   }
 
   private claim(skip: Set<string>): Promise<JobRow | undefined> {

@@ -47,6 +47,12 @@ const addFile = (actor: Actor, id: string, name: string, csv: string) =>
     payload: Buffer.from(csv),
   });
 const source = (view: ProfileView, name: string) => view.sources.find((s) => s.fileName === name)!;
+/** Starts the check (a background job, answered 202), runs that job, and returns the checked profile. */
+async function checkNow(actor: Actor, id: string): Promise<ProfileView> {
+  await ok(await call(actor, 'POST', `/api/migrations/${id}/check`), 202);
+  await w.platform.jobs.runOnce();
+  return ok(await call(actor, 'GET', `/api/migrations/${id}`));
+}
 const count = async (sql: string, args: unknown[] = []) => Number((await w.platform.db.asSystem((tx) => tx.query<{ n: number }>(sql, args)))[0]!.n);
 const all = async (type: string) => (await w.platform.records.query(w.as(w.ngoA), type, { limit: 200, sort: { field: 'createdAt', dir: 'asc' } })).items;
 const byOldId = async (type: string, oldId: string) =>
@@ -151,7 +157,7 @@ describe('data migration', () => {
 
   it('checks every row in load order without saving anything', async () => {
     const before = await count(`select count(*)::int as n from record where type_key in ('supporter', 'pledge')`);
-    const view = await ok(await call(migrator, 'POST', `/api/migrations/${id}/check`));
+    const view = await checkNow(migrator, id);
     expect(view.status).toBe('checked');
     expect(view.check).toMatchObject({ rows: 9, ready: 6, invalid: 3, creates: 7, updates: 0 });
     expect(view.check!.sources.map((s) => [s.fileName, s.ready, s.invalid, s.creates])).toEqual([
@@ -247,19 +253,17 @@ describe('data migration', () => {
     ]);
   });
 
-  it('updates by old id on a second run instead of adding records again', async () => {
-    let view = await ok(await call(migrator, 'GET', `/api/migrations/${id}`));
-    view = await ok(await call(migrator, 'DELETE', `/api/migrations/${id}/sources/${source(view, 'supporters.csv').id}`));
-    expect(view.status).toBe('draft');
+  it('updates by old id in a new migration of the corrected file, instead of adding records again', async () => {
+    // A done migration is read-only, so the corrected file goes into a new one. Old ids are per organisation, so it updates the records.
+    const second = (await ok(await call(migrator, 'POST', '/api/migrations', { name: 'Corrected supporters' }), 201)).id;
     const fixed = ['DonorId,Full Name,Mail,Legacy code', 'D-1,Asha R. Rao,asha@example.org,X19', 'D-2,Ravi Kumar,,X20', 'D-3,Dev,nobody@example.org,X21'].join('\r\n');
-    view = await ok(await addFile(migrator, id, 'supporters.csv', fixed), 201);
-    view = await ok(await call(migrator, 'PUT', `/api/migrations/${id}/sources/${source(view, 'supporters.csv').id}/mapping`, SUPPORTER_MAP));
-    expect(view.sources.map((s) => s.fileName)).toEqual(['combined.csv', 'supporters.csv', 'gifts.csv']);
-    view = await ok(await call(migrator, 'POST', `/api/migrations/${id}/check`));
+    let view = await ok(await addFile(migrator, second, 'supporters.csv', fixed), 201);
+    view = await ok(await call(migrator, 'PUT', `/api/migrations/${second}/sources/${source(view, 'supporters.csv').id}/mapping`, SUPPORTER_MAP));
+    view = await checkNow(migrator, second);
     expect(view.check!.sources.find((s) => s.fileName === 'supporters.csv')).toMatchObject({ ready: 3, invalid: 0, creates: 1, updates: 2 });
-    await ok(await call(migrator, 'POST', `/api/migrations/${id}/run`), 202);
+    await ok(await call(migrator, 'POST', `/api/migrations/${second}/run`), 202);
     await w.platform.jobs.runOnce();
-    view = await ok(await call(migrator, 'GET', `/api/migrations/${id}`));
+    view = await ok(await call(migrator, 'GET', `/api/migrations/${second}`));
     expect(view.status).toBe('done');
     expect((await all('supporter')).map((r) => r.data.name)).toEqual(['Asha R. Rao', 'Ravi Kumar', 'Meena', 'Kiran', 'Dev']);
     expect((await all('pledge')).length).toBe(3);
@@ -279,7 +283,7 @@ describe('data migration', () => {
         targets: [{ key: 's', type: 'supporter', oldId: 'Id', fields: { name: 'Who' } }],
       }),
     );
-    await ok(await call(migrator, 'POST', `/api/migrations/${other}/check`));
+    await checkNow(migrator, other);
     await ok(await call(migrator, 'POST', `/api/migrations/${other}/run`), 202);
     view = await ok(await call(migrator, 'POST', `/api/migrations/${other}/cancel`));
     await w.platform.jobs.runOnce();
@@ -292,8 +296,10 @@ describe('data migration', () => {
     const outsider: Actor = { id: 'outsider', roles: [], permissions: ['record:supporter:*'] };
     expect((await call(outsider, 'GET', '/api/migrations')).statusCode).toBe(403);
     const noPledges = await member('nopledges', ['data:migrate', 'record:supporter:*']);
-    const view = await ok(await call(migrator, 'GET', `/api/migrations/${id}`));
-    expect((await call(noPledges, 'PUT', `/api/migrations/${id}/sources/${source(view, 'gifts.csv').id}/mapping`, GIFT_MAP)).statusCode).toBe(403);
+    // The done migration is read-only (409 first), so the permission is checked on a draft that has the same file.
+    const draft = await ok(await call(migrator, 'POST', '/api/migrations', { name: 'Permission check' }), 201);
+    const withGifts = await ok(await addFile(migrator, draft.id, 'gifts.csv', GIFTS), 201);
+    expect((await call(noPledges, 'PUT', `/api/migrations/${draft.id}/sources/${source(withGifts, 'gifts.csv').id}/mapping`, GIFT_MAP)).statusCode).toBe(403);
     const elsewhere = await app.inject({ method: 'GET', url: `/api/migrations/${id}`, headers: headers({ ...migrator, id: 'admin-b' }, w.ngoB) });
     expect(elsewhere.statusCode).toBe(404);
     const keysInB = await w.platform.db.withTenant(w.ngoB, (tx) => tx.query<{ n: number }>(`select count(*)::int as n from migration_key`));

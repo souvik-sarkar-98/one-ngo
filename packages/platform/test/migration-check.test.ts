@@ -24,9 +24,15 @@ async function ok(res: Awaited<ReturnType<typeof call>>, status = 200): Promise<
   return res.json() as ProfileView;
 }
 const CSV = ['Code,Name,Amount', 'A-1,Asha,10', 'A-2,Ravi,20'].join('\r\n');
+/** Starts the check (a background job, answered 202), runs that job, and returns the checked profile. */
+async function checkNow(id: string): Promise<ProfileView> {
+  await ok(await call('POST', `/api/migrations/${id}/check`), 202);
+  await w.platform.jobs.runOnce();
+  return ok(await call('GET', `/api/migrations/${id}`));
+}
 
-/** A profile with one file mapped onto `type`, and its check. */
-async function checked(type: string): Promise<ProfileView> {
+/** A profile with one file mapped onto `type`; not yet checked. */
+async function mapped(type: string): Promise<ProfileView> {
   const created = await ok(await call('POST', '/api/migrations', { name: `Guard ${type}` }), 201);
   const added = await app.inject({
     method: 'POST',
@@ -35,10 +41,14 @@ async function checked(type: string): Promise<ProfileView> {
     payload: Buffer.from(CSV),
   });
   const view = await ok(added, 201);
-  await ok(await call('PUT', `/api/migrations/${created.id}/sources/${view.sources[0]!.id}/mapping`, {
+  return ok(await call('PUT', `/api/migrations/${created.id}/sources/${view.sources[0]!.id}/mapping`, {
     targets: [{ key: 'row', type, oldId: 'Code', fields: { name: 'Name', amount: 'Amount' } }],
   }));
-  return ok(await call('POST', `/api/migrations/${created.id}/check`));
+}
+
+/** A profile with one file mapped onto `type`, and its check. */
+async function checked(type: string): Promise<ProfileView> {
+  return checkNow((await mapped(type)).id);
 }
 
 beforeAll(async () => {
@@ -158,6 +168,30 @@ describe('migration check guards and warnings', () => {
     const done = await ok(await call('GET', `/api/migrations/${noteProfile.id}`));
     expect(done.status).toBe('done');
     expect(done.sources[0]!.counts).toEqual({ created: 2, updated: 0, failed: 0 });
+  });
+
+  it('runs the check in the background: answers 202 with its job, a run waits for it, and the result appears when it ends', async () => {
+    const profile = await mapped('guardPlain');
+    const started = await ok(await call('POST', `/api/migrations/${profile.id}/check`), 202);
+    expect(started.checkJobId).toEqual(expect.any(String));
+    expect((await call('POST', `/api/migrations/${profile.id}/run`)).statusCode).toBe(409);
+    await w.platform.jobs.runOnce();
+    const done = await ok(await call('GET', `/api/migrations/${profile.id}`));
+    expect(done.checkJobId).toBeNull();
+    expect(done.status).toBe('checked');
+    expect(done.check).toMatchObject({ rows: 2, ready: 2, invalid: 0 });
+  });
+
+  it('drops a check that an edit overtakes while it runs', async () => {
+    const profile = await mapped('guardPlain');
+    await ok(await call('POST', `/api/migrations/${profile.id}/check`), 202);
+    await ok(await call('PUT', `/api/migrations/${profile.id}/sources/${profile.sources[0]!.id}/mapping`, {
+      targets: [{ key: 'row', type: 'guardPlain', oldId: 'Code', fields: { name: 'Name' } }],
+    }));
+    await w.platform.jobs.runOnce();
+    const after = await ok(await call('GET', `/api/migrations/${profile.id}`));
+    expect(after.checkJobId).toBeNull();
+    expect(after.check).toBeNull();
   });
 
   it('reads a check stored before warnings existed', async () => {

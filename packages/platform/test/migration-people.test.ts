@@ -77,7 +77,9 @@ async function load(csv: string, mapping: unknown = MAPPING, options: { actor?: 
   const file = (await ok(added, 201)).sources[0]!;
   const mapped = await ok(await call(actor, 'PUT', `/api/migrations/${created.id}/sources/${file.id}/mapping`, mapping, tenant));
   expect(mapped.sources[0]).toMatchObject({ kind: 'people', mapping });
-  const check = await ok(await call(actor, 'POST', `/api/migrations/${created.id}/check`, undefined, tenant));
+  await ok(await call(actor, 'POST', `/api/migrations/${created.id}/check`, undefined, tenant), 202);
+  await w.platform.jobs.runOnce();
+  const check = await ok(await call(actor, 'GET', `/api/migrations/${created.id}`, undefined, tenant));
   if (options.run === false) return { id: created.id, check, done: check };
   await ok(await call(actor, 'POST', `/api/migrations/${created.id}/run`, undefined, tenant), 202);
   await w.platform.jobs.runOnce({ timeBudgetMs: 280_000 });

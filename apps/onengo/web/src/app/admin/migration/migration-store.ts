@@ -12,25 +12,35 @@ import {
   setFile,
   httpMigrationGateway,
   checkByKind,
+  checkHasErrors,
+  draftReady,
   emptyPeople,
+  fieldCoverage,
+  fileDraftOf,
   groupWarnings,
   importableFields,
+  inGroup,
   isMigrationStep,
   isPeopleMapping,
   kindOptions,
   legacyRoleValues,
-  peopleDraftOf,
-  peopleSpecOf,
+  linkGroup,
+  linkRefusal,
+  mapGroups,
+  mappingOf,
+  PEOPLE_GROUP,
   refChoice,
   refOf,
   roleRows,
   setField,
   setPerson,
   setRef,
-  suggestTarget,
   targetsOf,
+  unlinkGroup,
   type BooksInput,
   type BooksLine,
+  type FieldCoverage,
+  type FileDraft,
   type MigrationColumn,
   type MigrationSnapshot,
   type MigrationSource,
@@ -97,18 +107,54 @@ export class MigrationStore extends AdminBase {
   /** Record types a file can fill. */
   readonly types = computed<RuntimeRecordType[]>(() => [...shownRecordTypes(this.session.defs())].sort((a, b) => a.label.localeCompare(b.label)));
 
+  /** Each file's mapping as edited here, by file id; a file in `dirty` has changes not saved yet. */
+  readonly drafts = signal<Readonly<Record<string, FileDraft>>>({});
+  readonly dirty = signal<ReadonlySet<string>>(new Set());
+  /** Groups added on the Map step that no file is linked to yet. */
+  readonly addedGroups = signal<string[]>([]);
+  /** The open group: a record type's key, or People. */
+  readonly group = signal<string | null>(null);
+  readonly groups = computed(() => mapGroups(this.snap().profile?.sources ?? [], this.drafts(), this.addedGroups()));
+  readonly openGroup = computed(() => this.groups().find((g) => g.key === this.group()) ?? null);
+  /** Record types a group can still be added for; People can be added while there is no People group. */
+  readonly groupChoices = computed(() => this.types().filter((x) => !this.groups().some((g) => g.key === x.key)));
+  readonly hasPeopleGroup = computed(() => this.groups().some((g) => g.key === PEOPLE_GROUP));
+  /** Files no group holds: they are left out of the run. */
+  readonly ungrouped = computed(() => (this.snap().profile?.sources ?? []).filter((s) => !(this.drafts()[s.id] ?? fileDraftOf(s)).kind));
+  /** The open file of the group: its editor shows below the group's file tabs. */
   readonly selected = signal<string | null>(null);
-  readonly draft = signal<MigrationTarget[]>([]);
+  readonly draft = computed<MigrationTarget[]>(() => this.drafts()[this.selected() ?? '']?.targets ?? []);
   readonly source = computed(() => this.snap().profile?.sources.find((s) => s.id === this.selected()) ?? null);
   readonly columns = computed(() => this.source()?.columns.map((c) => c.name) ?? []);
+  /** Where each field of the open record type comes from, across the group's files. */
+  readonly coverage = computed<FieldCoverage[]>(() => {
+    const g = this.openGroup();
+    const type = g && g.key !== PEOPLE_GROUP ? this.typeOf(g.key) : undefined;
+    if (!g || !type) return [];
+    const sources = this.snap().profile?.sources ?? [];
+    return fieldCoverage(
+      type,
+      g.files.flatMap((id) => {
+        const source = sources.find((s) => s.id === id);
+        const draft = this.drafts()[id];
+        return source && draft ? [{ source, draft }] : [];
+      }),
+    );
+  });
   readonly running = computed(() => this.snap().profile?.status === 'running');
+  /** The run has finished: nothing on the profile can be changed any more, only read. */
+  readonly finished = computed(() => this.snap().profile?.status === 'done');
+  /** A check is running in the background: the result is not there yet, and the profile cannot be changed until it ends. */
+  readonly checking = computed(() => !!this.snap().profile?.checkJobId);
 
-  /** What the open file holds; null until it is chosen (a mapped file already knows). */
-  readonly kind = signal<'records' | 'people' | null>(null);
+  /** What the open file holds; null while no group holds it. */
+  readonly kind = computed(() => this.drafts()[this.selected() ?? '']?.kind ?? null);
   /** Whether this person may map and run people files (`data:migrate:people` and `members:manage`). */
   readonly peopleAllowed = computed(() => !!this.session.me()?.capabilities.migrationPeople);
-  readonly kindOptions = computed(() => kindOptions(this.peopleAllowed()));
-  readonly people = signal<PeopleDraft>(emptyPeople([]));
+  readonly people = computed<PeopleDraft>(() => this.drafts()[this.selected() ?? '']?.people ?? emptyPeople([]));
+  /** People as a group to add: its label, and the line under it that says what it is or why it is disabled. */
+  readonly peopleOption = computed(() => kindOptions(this.peopleAllowed()).find((o) => o.kind === 'people')!);
+  readonly peopleGroup = PEOPLE_GROUP;
   /** Roles a legacy role may become; empty when the list could not be read. */
   readonly roles = signal<RoleChoice[]>([]);
   readonly rolesFailed = signal(false);
@@ -126,6 +172,11 @@ export class MigrationStore extends AdminBase {
     return p?.check ? checkByKind(p.check, p.sources) : [];
   });
   readonly warningGroups = computed(() => groupWarnings(this.snap().profile?.check?.warnings ?? []));
+  /** The check found errors: the run stays off until they are fixed and the files checked again. */
+  readonly checkErrors = computed(() => {
+    const c = this.snap().profile?.check;
+    return !!c && checkHasErrors(c);
+  });
 
   /** Attachments: the search text, the page, and the two confirmations (clear all, delete source data). */
   readonly attachQuery = signal('');
@@ -194,7 +245,7 @@ export class MigrationStore extends AdminBase {
       untracked(() => {
         this.meta.crumbLabels.set(p ? { migration: p.name } : {});
         if (!p) return;
-        if (!this.selected() || !p.sources.some((s) => s.id === this.selected())) this.pick(p.sources.find((s) => !s.mapping)?.id ?? p.sources[0]?.id ?? null);
+        this.syncDrafts(p.sources);
         this.books.set(structuredClone(p.books ?? {}));
       });
     });
@@ -294,22 +345,104 @@ export class MigrationStore extends AdminBase {
 
   // -------------------------------------------------------------------- map
 
-  pick(sourceId: string | null): void {
-    this.selected.set(sourceId);
-    const s = this.snap().profile?.sources.find((x) => x.id === sourceId);
-    this.draft.set(structuredClone(targetsOf(s?.mapping)));
-    const m = s?.mapping;
-    this.kind.set(isPeopleMapping(m) ? 'people' : m ? 'records' : null);
-    this.people.set(isPeopleMapping(m) ? peopleDraftOf(m.people) : emptyPeople(s?.columns.map((c) => c.name) ?? []));
+  /**
+   * Takes the saved mappings in: each file without unsaved changes shows what is saved. Another
+   * profile starts afresh. Then a group and one of its files are open, when there are any.
+   */
+  private syncDrafts(sources: readonly MigrationSource[]): void {
+    const profileId = this.snap().profile?.id ?? null;
+    if (profileId !== this.draftsOf) {
+      this.draftsOf = profileId;
+      this.dirty.set(new Set());
+      this.addedGroups.set([]);
+      this.group.set(null);
+      this.selected.set(null);
+    }
+    const current = this.drafts();
+    this.drafts.set(Object.fromEntries(sources.map((s) => [s.id, this.dirty().has(s.id) && current[s.id] ? current[s.id]! : fileDraftOf(s)])));
+    this.settleGroup();
+  }
+  private draftsOf: string | null = null;
+
+  /** Keeps the open group one that exists and the open file one of its files. */
+  private settleGroup(): void {
+    const groups = this.groups();
+    if (!groups.some((g) => g.key === this.group())) this.group.set(groups[0]?.key ?? null);
+    const files = this.openGroup()?.files ?? [];
+    if (!files.includes(this.selected() ?? '')) this.selected.set(files[0] ?? null);
     this.addedRoleValue.set('');
-    if (isPeopleMapping(m)) void this.loadRoles();
+    if (this.group() === PEOPLE_GROUP) void this.loadRoles();
   }
 
-  /** The answer to "What is in this file?". People needs both permissions. */
-  chooseKind(kind: 'records' | 'people'): void {
-    if (kind === 'people' && !this.peopleAllowed()) return;
-    this.kind.set(kind);
-    if (kind === 'people') void this.loadRoles();
+  /** Opens a group of the Map step. */
+  openGroupOf(key: string): void {
+    this.group.set(key);
+    this.settleGroup();
+  }
+
+  /** Adds a group for a record type or People (when this person may migrate people) and opens it. */
+  addGroup(key: string): void {
+    if (!key || (key === PEOPLE_GROUP && !this.peopleAllowed())) return;
+    if (!this.groups().some((g) => g.key === key)) this.addedGroups.update((a) => [...a, key]);
+    this.openGroupOf(key);
+  }
+
+  /** Removes a group no file is linked to. */
+  dropGroup(key: string): void {
+    this.addedGroups.update((a) => a.filter((k) => k !== key));
+    this.settleGroup();
+  }
+
+  pick(sourceId: string | null): void {
+    this.selected.set(sourceId);
+    this.addedRoleValue.set('');
+  }
+
+  groupLabel(key: string): string {
+    return key === PEOPLE_GROUP ? t('ui.admin.migration.kindPeople') : (this.typeOf(key)?.label ?? key);
+  }
+
+  /** The record type a target of a file fills, by label: what a reference "from this row's" target names. */
+  targetLabel(sourceId: string, key: string): string {
+    const type = this.drafts()[sourceId]?.targets.find((x) => x.key === key)?.type ?? key;
+    return this.typeOf(type)?.label ?? type;
+  }
+
+  /** Whether a file's mapping is saved as shown: it has one and no unsaved change. */
+  saved(sourceId: string): boolean {
+    return !this.dirty().has(sourceId) && !!this.snap().profile?.sources.find((s) => s.id === sourceId)?.mapping;
+  }
+
+  /** Whether a file is linked to the open group, and why it cannot be when it cannot: a catalogue key. */
+  linkOf(s: MigrationSource): { linked: boolean; refusal: string } {
+    const key = this.group();
+    const d = this.drafts()[s.id] ?? fileDraftOf(s);
+    if (!key) return { linked: false, refusal: '' };
+    const linked = inGroup(d, key);
+    // A saved file keeps at least one group: a mapping cannot be taken back, only replaced (or the file removed).
+    const last = linked && !!s.mapping && unlinkGroup(d, key).kind === null;
+    return { linked, refusal: linked ? (last ? 'ui.admin.migration.group.lastGroup' : '') : linkRefusal(d, key) };
+  }
+
+  /** Links a file to the open group, or takes it out. */
+  setLinked(s: MigrationSource, linked: boolean): void {
+    const key = this.group();
+    if (!key || this.linkOf(s).refusal) return;
+    const d = this.drafts()[s.id] ?? fileDraftOf(s);
+    this.edit(s.id, () => (linked ? linkGroup(d, key, this.typeOf(key), s.columns.map((c) => c.name)) : unlinkGroup(d, key)));
+    if (linked) {
+      this.addedGroups.update((a) => a.filter((k) => k !== key));
+      this.selected.set(s.id);
+    }
+    this.settleGroup();
+  }
+
+  /** Changes one file's draft and marks it unsaved. */
+  private edit(sourceId: string, fn: (d: FileDraft) => FileDraft): void {
+    const d = this.drafts()[sourceId];
+    if (!d) return;
+    this.drafts.update((all) => ({ ...all, [sourceId]: fn(d) }));
+    this.dirty.update((set) => new Set(set).add(sourceId));
   }
 
   /** Reads the roles once, for the role table; two-step roles come marked so they can be shown disabled. */
@@ -326,21 +459,26 @@ export class MigrationStore extends AdminBase {
   }
 
   setPeople<K extends keyof PeopleDraft>(key: K, value: PeopleDraft[K]): void {
-    this.people.update((d) => ({ ...d, [key]: value }));
+    this.editPeople((d) => ({ ...d, [key]: value }));
   }
 
   /** Chooses the role a legacy value becomes; empty ignores it. Every row of the table is kept, so the guesses are saved as shown. */
   setRole(value: string, role: string): void {
     const rows = this.roleTable();
-    this.people.update((d) => ({ ...d, roleMap: { ...Object.fromEntries(rows.map((r) => [r.value, r.role])), [value]: role } }));
+    this.editPeople((d) => ({ ...d, roleMap: { ...Object.fromEntries(rows.map((r) => [r.value, r.role])), [value]: role } }));
   }
 
   addRoleValue(): void {
     const v = this.addedRoleValue().trim();
     if (!v) return;
     const rows = this.roleTable();
-    if (!rows.some((r) => r.value.toLowerCase() === v.toLowerCase())) this.people.update((d) => ({ ...d, roleMap: { ...Object.fromEntries(rows.map((r) => [r.value, r.role])), [v]: '' } }));
+    if (!rows.some((r) => r.value.toLowerCase() === v.toLowerCase())) this.editPeople((d) => ({ ...d, roleMap: { ...Object.fromEntries(rows.map((r) => [r.value, r.role])), [v]: '' } }));
     this.addedRoleValue.set('');
+  }
+
+  private editPeople(fn: (d: PeopleDraft) => PeopleDraft): void {
+    const id = this.selected();
+    if (id) this.edit(id, (d) => ({ ...d, people: fn(d.people) }));
   }
 
   /** Whether a role cannot be given by a migration: it requires two-step sign-in. */
@@ -354,16 +492,6 @@ export class MigrationStore extends AdminBase {
 
   typeOf(key: string): RuntimeRecordType | undefined {
     return this.types().find((x) => x.key === key);
-  }
-
-  addTarget(typeKey: string): void {
-    const type = this.typeOf(typeKey);
-    if (!type) return;
-    this.draft.update((d) => [...d, suggestTarget(type, this.columns(), d)]);
-  }
-
-  removeTarget(i: number): void {
-    this.draft.update((d) => d.filter((_, n) => n !== i));
   }
 
   setOldId(i: number, column: string): void {
@@ -447,21 +575,39 @@ export class MigrationStore extends AdminBase {
       .filter((x) => x.type === field.referenceType);
   }
 
-  saveMapping(): void {
-    const id = this.selected();
-    if (!id) return;
-    if (this.kind() === 'people') void this.migration.saveMapping(id, { kind: 'people', people: peopleSpecOf(this.people(), this.roleTable()) });
-    else void this.migration.saveMapping(id, { targets: this.draft() });
+  /** The files with changes to save that a group holds; a file taken out of every group has nothing to save. */
+  readonly unsaved = computed(() => (this.snap().profile?.sources ?? []).filter((s) => this.dirty().has(s.id) && this.drafts()[s.id]?.kind));
+
+  /**
+   * Saves every file with unsaved changes, one after another (one mapping each). The first one the
+   * server refuses stops the rest and opens, in its group, with the server's issues on its fields.
+   */
+  async saveMapping(): Promise<void> {
+    for (const s of this.unsaved()) {
+      const d = this.drafts()[s.id]!;
+      const col = s.columns.find((c) => c.name === d.people.rolesColumn);
+      const rows = d.kind === 'people' && d.people.rolesColumn ? roleRows(col ? legacyRoleValues(col.samples, d.people.separator) : [], d.people.roleMap, this.roles()) : [];
+      const profile = await this.migration.saveMapping(s.id, mappingOf(d, rows));
+      if (!profile) {
+        this.group.set(d.kind === 'people' ? PEOPLE_GROUP : (d.targets[0]?.type ?? this.group()));
+        this.selected.set(s.id);
+        return;
+      }
+      const saved = profile.sources.find((x) => x.id === s.id);
+      this.dirty.update((set) => {
+        const next = new Set(set);
+        next.delete(s.id);
+        return next;
+      });
+      if (saved) this.drafts.update((all) => ({ ...all, [s.id]: fileDraftOf(saved) }));
+    }
+    // Files taken out of every group without having been saved have nothing to keep.
+    this.dirty.set(new Set([...this.dirty()].filter((id) => this.drafts()[id]?.kind)));
+    this.settleGroup();
   }
 
-  /** Whether the mapping can be saved: people need the three columns, records need a target. */
-  readonly canSave = computed(() => {
-    if (this.kind() === 'people') {
-      const d = this.people();
-      return !!(d.oldId && d.email && d.name);
-    }
-    return this.kind() === 'records' && this.draft().length > 0;
-  });
+  /** Whether the changes can be saved: there are some, and each file's draft is complete (people need three columns, records a target). */
+  readonly canSave = computed(() => this.unsaved().length > 0 && this.unsaved().every((s) => draftReady(this.drafts()[s.id]!)));
 
   /** The server's issue for a path of the draft, if any. */
   issue(path: string): string {
@@ -469,7 +615,8 @@ export class MigrationStore extends AdminBase {
   }
 
   private patch(i: number, fn: (x: MigrationTarget) => MigrationTarget): void {
-    this.draft.update((d) => d.map((x, n) => (n === i ? fn(x) : x)));
+    const id = this.selected();
+    if (id) this.edit(id, (d) => ({ ...d, targets: d.targets.map((x, n) => (n === i ? fn(x) : x)) }));
   }
 
   // ------------------------------------------------------------------ order

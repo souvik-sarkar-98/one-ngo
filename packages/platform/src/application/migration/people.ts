@@ -39,17 +39,37 @@ export interface PersonProblem {
   message: string;
 }
 
-/** The person a row describes, or why the row cannot be loaded. Pure: nothing is looked up or saved. */
-export function readPersonRow(spec: PeopleSpec, cell: (column: string) => string, env: PersonEnv): { person?: ParsedPerson; problems: PersonProblem[] } {
+/** A row that only adds roles to a person another file (or an earlier run) already added: no email and no name. */
+export interface ParsedSupplement {
+  oldId: string;
+  /** Role keys, mapped and without duplicates. Added to the person's roles; none are removed. */
+  roles: string[];
+}
+
+/**
+ * The person a row describes, or why the row cannot be loaded. A row with no email and no name for a legacy id
+ * that `known` reports as already added is a supplement: it only adds roles. Pure: nothing is looked up or saved.
+ */
+export function readPersonRow(
+  spec: PeopleSpec,
+  cell: (column: string) => string,
+  env: PersonEnv,
+  known?: (oldId: string) => boolean,
+): { person?: ParsedPerson; supplement?: ParsedSupplement; problems: PersonProblem[] } {
   const problems: PersonProblem[] = [];
   const oldId = cell(spec.oldId);
   if (!oldId) problems.push({ column: spec.oldId, message: `${spec.oldId} is empty; every row needs a legacy id` });
   else if (oldId.length > MAX_OLD_ID) problems.push({ column: spec.oldId, message: `${spec.oldId} is longer than ${MAX_OLD_ID} characters` });
 
   const email = cell(spec.email).toLowerCase();
+  const name = cell(spec.name);
+  if (oldId && !email && !name && known?.(oldId)) {
+    const roles = rolesOf(spec, cell, env, problems);
+    return { supplement: { oldId, roles }, problems };
+  }
+
   if (!EMAIL.test(email) || email.length > MAX_EMAIL) problems.push({ column: spec.email, message: 'Email is not a valid address' });
 
-  const name = cell(spec.name);
   if (!name) problems.push({ column: spec.name, message: 'Name is required' });
   else if (name.length > MAX_NAME) problems.push({ column: spec.name, message: `Name is longer than ${MAX_NAME} characters` });
 

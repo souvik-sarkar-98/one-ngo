@@ -13,3 +13,4 @@ typecheck-output.txt
 .deploy/
 .vscode/
 .cursor/
+utilities/migration-samples/

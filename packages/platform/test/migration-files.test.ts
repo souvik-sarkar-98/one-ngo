@@ -64,7 +64,12 @@ async function setup(name: string, text: string, files: Record<string, unknown>,
   const view = await ok(await addCsv(actor, id, `${name}.csv`, text), 201);
   return ok(await call(actor, 'PUT', `/api/migrations/${id}/sources/${view.sources[0]!.id}/mapping`, mapping(files)));
 }
-const check = async (id: string, actor = migrator) => ok(await call(actor, 'POST', `/api/migrations/${id}/check`));
+/** Starts the check (a background job, answered 202), runs that job, and returns the checked profile. */
+async function check(id: string, actor = migrator): Promise<ProfileView> {
+  await ok(await call(actor, 'POST', `/api/migrations/${id}/check`), 202);
+  await w.platform.jobs.runOnce();
+  return ok(await call(actor, 'GET', `/api/migrations/${id}`));
+}
 async function run(id: string, actor = migrator): Promise<ProfileView> {
   await ok(await call(actor, 'POST', `/api/migrations/${id}/run`), 202);
   await w.platform.jobs.runOnce();
@@ -133,10 +138,10 @@ describe('mapping files', () => {
     return [];
   };
 
-  it('stores a files entry, and a mapped file satisfies a required file field', () => {
+  it('stores a files entry, and a required file field may stay unmapped (the check decides per row)', () => {
     const m = readMapping(target({ files: { proof: { column: 'Proof' }, extra: { column: 'Extras', separator: ',', onMissing: 'skip' } } }), columns, types);
     expect(m.targets[0]!.files).toEqual({ proof: { column: 'Proof' }, extra: { column: 'Extras', separator: ',', onMissing: 'skip' } });
-    expect(issues(target({}))).toEqual([{ path: '/targets/0/fields/proof', message: expect.stringContaining("needs 'Proof'") }]);
+    expect(issues(target({}))).toEqual([]);
   });
 
   it('still reads an old mapping without files', () => {
@@ -334,26 +339,22 @@ describe('running with files', () => {
     const a = await fileOf(view.id, 'a.png');
     expect(first.data.photo).toBe(a.id);
 
-    await check(view.id);
-    const again = await run(view.id);
-    expect(again.sources[0]!.counts).toEqual({ created: 0, updated: 1, failed: 0 });
+    // A done migration is read-only: it is not checked or run again, and its record keeps the file.
+    expect((await call(migrator, 'POST', `/api/migrations/${view.id}/check`)).statusCode).toBe(409);
     expect((await record('C-1'))!.data.photo).toBe(a.id);
     expect(await fileOf(view.id, 'a.png')).toMatchObject({ record_id: first.id, field_key: 'photo', deleted_at: null });
     expect(await count(`select count(*)::int as n from file_object where record_id = $1`, [first.id])).toBe(1);
 
-    // The same record from a new file that names b.png: the old file is unlinked, the new one linked.
-    const sourceId = again.sources[0]!.id;
-    await ok(await call(migrator, 'DELETE', `/api/migrations/${view.id}/sources/${sourceId}`));
-    const next = await ok(await addCsv(migrator, view.id, 'Rerun2.csv', csv('C-1,Asha,b.png,,')), 201);
-    await ok(await call(migrator, 'PUT', `/api/migrations/${view.id}/sources/${next.sources[0]!.id}/mapping`, mapping(PHOTO)));
-    await check(view.id);
-    const replaced = await run(view.id);
-    expect(replaced.sources[0]!.counts).toMatchObject({ updated: 1, failed: 0 });
-    const b = await fileOf(view.id, 'b.png');
+    // A later migration that names b.png for the same record: the old file is unlinked, the new one linked.
+    const next = await setup('Rerun2', csv('C-1,Asha,b.png,,'), PHOTO, [['b.png', png(2)]]);
+    await check(next.id);
+    const replaced = await run(next.id);
+    expect(replaced.sources[0]!.counts).toMatchObject({ created: 0, updated: 1, failed: 0 });
+    const b = await fileOf(next.id, 'b.png');
     expect((await record('C-1'))!.data.photo).toBe(b.id);
     expect(b).toMatchObject({ record_id: first.id, field_key: 'photo' });
     expect((await fileOf(view.id, 'a.png')).record_id).toBeNull();
-    expect(await count(`select count(*)::int as n from migration_attachment where profile_id = $1`, [view.id])).toBe(2);
+    expect(await count(`select count(*)::int as n from migration_attachment where profile_id = $1`, [next.id])).toBe(1);
   });
 
   it('refuses a file the field does not accept, and one over its size, with the normal save messages', async () => {

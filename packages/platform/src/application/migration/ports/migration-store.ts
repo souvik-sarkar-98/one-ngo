@@ -2,6 +2,11 @@ import type { Tx } from '../../../domain/ports/transaction.js';
 import type { BooksInput, BooksResult, MigrationCheck, MigrationColumn, ProfileStatus } from '../migration-service.js';
 import type { SourceMapping } from '../mapping.js';
 
+/** Stored in place of a check while the check job runs; an edit clears it, so the job's result is dropped. */
+export interface CheckPending {
+  pending: string;
+}
+
 export interface ProfileRow {
   id: string;
   name: string;
@@ -9,7 +14,8 @@ export interface ProfileRow {
   books: BooksInput;
   books_applied_at: string | Date | null;
   books_result: BooksResult | null;
-  check_result: MigrationCheck | null;
+  /** The check, or while a check job runs, the job's marker (`pending`). */
+  check_result: MigrationCheck | CheckPending | null;
   job_id: string | null;
   created_by: string;
   created_at: string | Date;
@@ -58,6 +64,8 @@ export interface LinkedPerson {
   userId: string;
   /** Lowercased. */
   email: string;
+  /** The name the organisation holds for the person. */
+  name: string;
 }
 
 /** A file uploaded to a profile, under a relative path, for a file column to name. */
@@ -98,7 +106,12 @@ export interface MigrationStore {
   saveBooks(tx: Tx, profileId: string, books: BooksInput): Promise<void>;
   /** Back to draft with no check, unless the profile is running; false then. */
   reset(tx: Tx, profileId: string): Promise<boolean>;
-  saveCheck(tx: Tx, profileId: string, check: MigrationCheck): Promise<void>;
+  /** Marks the profile as being checked by a job: back to draft, and no check until the job saves one. */
+  markChecking(tx: Tx, profileId: string, jobId: string): Promise<void>;
+  /** Saves the check only while this job still holds the profile; false when an edit came first. */
+  saveCheck(tx: Tx, profileId: string, check: MigrationCheck, jobId: string): Promise<boolean>;
+  /** Drops this job's marker, if the profile still holds it (the check did not finish). */
+  clearChecking(tx: Tx, profileId: string, jobId: string): Promise<void>;
   /** Marks a checked profile running; false when it was not checked. */
   claim(tx: Tx, profileId: string): Promise<boolean>;
   setJob(tx: Tx, profileId: string, jobId: string): Promise<void>;
@@ -119,6 +132,8 @@ export interface MigrationStore {
   putPersonKey(tx: Tx, k: { oldId: string; userId: string; profileId: string }): Promise<void>;
   /** Up to `limit` failed rows of one file after job item `after`, in order. */
   failedRows(tx: Tx, jobId: string, sourceId: string, after: number, limit: number): Promise<{ seq: number; message: string | null; data: { cells?: string[] } | null }[]>;
+  /** The latest `limit` failed rows of a run, newest first, with the file each came from. */
+  recentFailed(tx: Tx, jobId: string, limit: number): Promise<{ seq: number; message: string | null; sourceId: string | null }[]>;
   /** Records created and updated, and rows failed, per file. */
   counts(tx: Tx, jobId: string): Promise<Map<string, SourceCounts>>;
   /** Replaces a file's column list (used to blank samples). */

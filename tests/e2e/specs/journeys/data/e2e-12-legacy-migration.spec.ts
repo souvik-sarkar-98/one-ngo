@@ -21,7 +21,8 @@ import { signIn } from '../../../src/sign-in.js';
  *
  * Setup goes through the API (profile, files, mappings); the screens are used for what the
  * administrator sees: the Check warnings and problem, the run, the people list, the record, the
- * delete button, and the People option for someone without `data:migrate:people`.
+ * delete button, and the Map step's groups: People refused to someone without `data:migrate:people`,
+ * and two files linked to one record type saved as one mapping each.
  * Needs the same stack as e2e-05 (web on APP_BASE_URL, API on API_BASE_URL, fixture mailbox).
  */
 
@@ -48,7 +49,9 @@ const ui = {
   unresolved: label('ui.admin.migration.warningGroup.unresolvedLegacyUsers'),
   missingFiles: label('ui.admin.migration.warningGroup.missingAttachments'),
   kindPeople: label('ui.admin.migration.kindPeople'),
-  kindRecords: label('ui.admin.migration.kindRecords'),
+  noPeople: label('ui.admin.migration.kindNoPeople'),
+  addGroup: label('ui.admin.migration.group.add'),
+  saveMapping: label('ui.admin.migration.saveMapping'),
   invited: label('ui.people.status.invited'),
   all: label('ui.people.status.all'),
   search: label('ui.records.searchList'),
@@ -63,7 +66,15 @@ interface Profile {
   id: string;
   status: string;
   purgedAt: string | null;
-  sources: { id: string; fileName: string; kind: string; counts: Counts | null; purgedAt: string | null }[];
+  checkJobId?: string | null;
+  sources: {
+    id: string;
+    fileName: string;
+    kind: string;
+    counts: Counts | null;
+    purgedAt: string | null;
+    mapping?: { targets?: { type: string; oldId: string; fields: Record<string, string> }[] } | null;
+  }[];
   check: { ready: number; invalid: number; problems: { message: string; severity?: string }[]; warnings: { kind: string; count: number }[] } | null;
   attachments: { count: number; bytes: number };
 }
@@ -242,7 +253,10 @@ test.describe.serial('FT-E2E-12 Legacy data migration', () => {
     test.setTimeout(180_000);
     const recordsBefore = (await queryRecords(admin, typeKey, { limit: 1 })).total;
     const peopleBefore = await people(admin, `legacy.${stamp}.`);
-    await body(await admin.post(`/api/migrations/${profileId}/check`), 200, 'check again');
+    await body(await admin.post(`/api/migrations/${profileId}/check`), 202, 'check again');
+    await expect
+      .poll(async () => (await view(admin, profileId)).checkJobId ?? null, { timeout: 150_000, intervals: [1000, 2000] })
+      .toBeNull();
     await body(await admin.post(`/api/migrations/${profileId}/run`), 202, 'run again');
     await expect
       .poll(async () => (await view(admin, profileId)).status, { timeout: 150_000, intervals: [1000, 2000] })
@@ -275,7 +289,7 @@ test.describe.serial('FT-E2E-12 Legacy data migration', () => {
     expect((await queryRecords(admin, typeKey, { limit: 1 })).total).toBeGreaterThanOrEqual(donorIds.length);
   });
 
-  test('FT-MIG-907 someone without Migrate people cannot choose People', { tag: tags }, async ({ browser }) => {
+  test('FT-MIG-907 someone without Migrate people cannot add People, and links two files to one record type', { tag: tags }, async ({ browser }) => {
     test.skip(!mail, noMailbox);
     test.setTimeout(120_000);
     const permissions = ['data:migrate', 'members:manage', `record:${typeKey}:import`];
@@ -298,10 +312,32 @@ test.describe.serial('FT-E2E-12 Legacy data migration', () => {
     });
     expect(refused.status()).toBe(403);
 
+    // Two files fill the same donors, matched by old id: one mapping is saved for each.
+    await upload(limited.api, own.id, 'donor-names.csv', csv([['DonorId', 'Name'], ['D-9', donorName(9)]]));
+    await upload(limited.api, own.id, 'donor-extra.csv', csv([['DonorId', 'Name', 'Notes'], ['D-9', donorName(9), 'from the second file']]));
+
     await other.goto(`/admin/migration/${own.id}/map`);
-    const people_ = other.getByRole('radio', { name: new RegExp(ui.kindPeople) });
-    await expect(people_).toBeDisabled();
-    await expect(other.getByRole('radio', { name: new RegExp(ui.kindRecords) })).toBeEnabled();
+    const addGroup = other.getByRole('combobox', { name: ui.addGroup });
+    await expect(addGroup.locator('option', { hasText: ui.kindPeople })).toBeDisabled();
+    await expect(other.getByText(ui.noPeople)).toBeVisible();
+
+    await addGroup.selectOption({ label: 'Legacy donor' });
+    await other.getByRole('checkbox', { name: /donor-names\.csv/ }).check();
+    await other.getByRole('checkbox', { name: /donor-extra\.csv/ }).check();
+    await expect(other.getByRole('button', { name: label('ui.admin.migration.group.chip', { group: 'Legacy donor', count: 2 }) })).toBeVisible();
+    const coverage = other.locator('.migration__coverage');
+    await expect(coverage.getByText(label('ui.admin.migration.group.fromColumn', { file: 'donor-names.csv', column: 'Name' }))).toBeVisible();
+    await expect(coverage.getByText(label('ui.admin.migration.group.fromColumn', { file: 'donor-extra.csv', column: 'Name' }))).toBeVisible();
+    await expect(other.getByText(label('ui.admin.migration.group.unsaved', { count: 2 }))).toBeVisible();
+    await other.getByRole('button', { name: ui.saveMapping, exact: true }).click();
+    await expect(other.getByText(label('ui.admin.migration.group.unsaved', { count: 2 }))).toHaveCount(0);
+
+    const mapped = await view(limited.api, own.id);
+    for (const fileName of ['donor-names.csv', 'donor-extra.csv']) {
+      const targets = mapped.sources.find((s) => s.fileName === fileName)!.mapping?.targets ?? [];
+      expect(targets.map((x) => [x.type, x.oldId, x.fields.name]), fileName).toEqual([[typeKey, 'DonorId', 'Name']]);
+    }
+    expect(mapped.sources.find((s) => s.fileName === 'people.csv')!.mapping ?? null).toBeNull();
   });
 });
 

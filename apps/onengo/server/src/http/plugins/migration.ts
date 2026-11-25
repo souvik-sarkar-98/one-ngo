@@ -85,7 +85,8 @@ export async function migrationRoutes(api: FastifyInstance, { deps }: { deps: Ht
   /** { cutoverDate, lines: [{ accountCode, debit | credit }], receipts: [{ series, next }] } */
   api.put<{ Params: { id: string }; Body: unknown }>('/api/migrations/:id/books', async (req) => m.setBooks(contextOf(req), req.params.id, req.body ?? {}));
   api.post<{ Params: { id: string } }>('/api/migrations/:id/books/apply', async (req) => m.applyBooks(contextOf(req), req.params.id));
-  api.post<{ Params: { id: string } }>('/api/migrations/:id/check', async (req) => m.check(contextOf(req), req.params.id));
+  /** Starts the check in the background; answers 202 with the profile, whose `checkJobId` is set until the check is ready. */
+  api.post<{ Params: { id: string } }>('/api/migrations/:id/check', async (req, reply) => reply.status(202).send(await m.check(contextOf(req), req.params.id)));
   api.post<{ Params: { id: string } }>('/api/migrations/:id/run', async (req, reply) => reply.status(202).send(await m.run(contextOf(req), req.params.id)));
   api.post<{ Params: { id: string } }>('/api/migrations/:id/cancel', async (req) => m.cancel(contextOf(req), req.params.id));
   /** Deletes the source CSVs, column samples and failed-row cells; refused while running. Answers the profile view with `purgedAt`. */

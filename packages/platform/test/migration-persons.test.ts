@@ -72,7 +72,9 @@ async function load(
   // The donations file is added first, so mapping it must be reordered after the people file once that is mapped.
   await add('donations.csv', gifts.csv, gifts.mapping ?? giftMap());
   if (people !== undefined) await add('people.csv', people, PEOPLE_MAP);
-  const check = await ok(await call(actor, tenant, 'POST', `/api/migrations/${created.id}/check`));
+  await ok(await call(actor, tenant, 'POST', `/api/migrations/${created.id}/check`), 202);
+  await w.platform.jobs.runOnce();
+  const check = await ok(await call(actor, tenant, 'GET', `/api/migrations/${created.id}`));
   if (options.run === false) return { id: created.id, check, done: check };
   await ok(await call(actor, tenant, 'POST', `/api/migrations/${created.id}/run`), 202);
   await w.platform.jobs.runOnce({ timeBudgetMs: 280_000 });
