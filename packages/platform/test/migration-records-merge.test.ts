@@ -13,6 +13,7 @@ let app: FastifyInstance;
 let migrator: Actor;
 
 const TYPE = 'mergeDonor';
+const SPLIT = 'splitMember';
 const publish = async (kind: DefinitionKind, body: Record<string, unknown>) => {
   await w.platform.definitions.saveDraft(w.as(w.ngoA), kind, body as never);
   await w.platform.definitions.publish(w.as(w.ngoA), kind, String(body.key));
@@ -76,7 +77,17 @@ beforeAll(async () => {
       { key: 'amount', label: 'Amount', type: 'money' },
     ],
   });
-  const permissions = ['data:migrate', `record:${TYPE}:*`];
+  await publish('recordType', {
+    key: SPLIT,
+    label: 'Split member',
+    titleField: 'name',
+    fields: [
+      { key: 'name', label: 'Name', type: 'text', required: true },
+      { key: 'phone', label: 'Phone number', type: 'phone', required: true },
+      { key: 'city', label: 'City', type: 'text' },
+    ],
+  });
+  const permissions = ['data:migrate', `record:${TYPE}:*`, `record:${SPLIT}:*`];
   const [u] = await w.platform.db.asSystem((tx) =>
     tx.query<{ id: string }>(`insert into app_user (email, display_name) values ('records-merge@example.org', 'records-merge') returning id`),
   );
@@ -120,5 +131,28 @@ describe('record files that add to the same records', () => {
     expect(l.check.check!.problems[0]).toMatchObject({ row: 2, field: 'name' });
     expect(l.check.check!.problems[0]!.message).toContain('Name');
     expect(await recordOf('R-9')).toBeNull();
+  });
+
+  it('creates records when required fields are split across files and skips orphan optional rows', async () => {
+    const profiles = CSV(['id', 'name'], [['U-1', 'Suparna Ghosh'], ['U-2', 'Rozy Chatterjee']]);
+    const phones = CSV(['userId', 'phoneNumber'], [
+      ['U-1', '91-8972871031'],
+      ['U-2', '91-7003577172'],
+      ['U-99', '91-9999999999'],
+    ]);
+    const cities = CSV(['userId', 'city'], [
+      ['U-1', 'Rampurhat'],
+      ['U-99', 'Kolkata'],
+    ]);
+    const l = await load([
+      { name: 'profiles.csv', csv: profiles, mapping: { targets: [{ key: 'm', type: SPLIT, oldId: 'id', fields: { name: 'name' }, refs: {}, required: true }] } },
+      { name: 'phones.csv', csv: phones, mapping: { targets: [{ key: 'm', type: SPLIT, oldId: 'userId', fields: { phone: 'phoneNumber' }, refs: {}, required: false }] } },
+      { name: 'cities.csv', csv: cities, mapping: { targets: [{ key: 'm', type: SPLIT, oldId: 'userId', fields: { city: 'city' }, refs: {}, required: false }] } },
+    ]);
+    expect(l.check.check).toMatchObject({ invalid: 0, problems: [] });
+    expect(l.done.status).toBe('done');
+    expect(l.done.sources.find((s) => s.fileName === 'profiles.csv')!.counts).toEqual({ created: 2, updated: 0, failed: 0 });
+    expect(l.done.sources.find((s) => s.fileName === 'phones.csv')!.counts).toEqual({ created: 0, updated: 2, failed: 0, warned: 1 });
+    expect(l.done.sources.find((s) => s.fileName === 'cities.csv')!.counts).toEqual({ created: 0, updated: 1, failed: 0, warned: 1 });
   });
 });

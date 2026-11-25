@@ -408,7 +408,6 @@ export function readMapping(input: unknown, columns: readonly string[], types: T
       required: t.required !== false,
     });
   }
-  if (!issues.length && !targets.some((t) => t.required)) add('/targets', 'at least one target must be required');
   if (issues.length) throw validationFailed('This mapping cannot be saved.', issues);
   return { targets };
 }

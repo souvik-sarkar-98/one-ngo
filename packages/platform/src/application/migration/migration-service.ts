@@ -642,6 +642,13 @@ export class MigrationService {
       const missingSkipped = new Map<string, Set<string>>();
       // Optional targets left out of rows that are ready because their values are refused, by target.
       const leftOut = new Map<string, MigrationWarning>();
+      // Fields from later files in this profile that fill the same record types, used when a row creates a new record.
+      const supplement = await this.supplementaryData(
+        ctx,
+        mapped.slice(mapped.indexOf(source) + 1),
+        types,
+        new Set(mapping.targets.map((t) => t.type)),
+      );
       // Guards: reported once per file and target, not per row. A blocked type refuses its rows below.
       const blocked = new Set<string>();
       const warned = new Map<string, MigrationWarning>();
@@ -712,7 +719,9 @@ export class MigrationService {
             const tokenOf = (w: Waiting) => ('person' in w ? `person:${w.person}` : `record:${'record' in w ? w.record : rowKeys.get(w.target)}`);
             // A record an earlier row of this check creates is checked as an update of what that row leaves it with, as the run saves it.
             const prior = existing ? undefined : plannedOf(recordKey);
-            const data = copyPlanned(type, p.data, p.waiting, prior ?? null, (w) => ('person' in w ? undefined : plannedOf('record' in w ? w.record : (rowKeys.get(w.target) ?? ''))), (w) => standIn(tokenOf(w)));
+            const supp = !existing && !prior ? supplement.get(recordKey) : undefined;
+            const baseData = supp ? { ...supp, ...p.data } : p.data;
+            const data = copyPlanned(type, baseData, p.waiting, prior ?? null, (w) => ('person' in w ? undefined : plannedOf('record' in w ? w.record : (rowKeys.get(w.target) ?? ''))), (w) => standIn(tokenOf(w)));
             try {
               const checked = await this.records.check(checkCtx, t.type, existing ? { data, id: existing.recordId } : prior ? { data, planned: prior } : { data });
               saved = { ...checked.data };
@@ -998,9 +1007,26 @@ export class MigrationService {
       const records: RecordsMapping = { targets: targetsOf(source.mapping) };
       const personCells = personColumns(records).map((c) => at.get(c) ?? -1);
       const people = personCells.length ? await this.linkedPeople(ctx, batch.flatMap((r) => personCells.map((i) => (r.cells[i] ?? '').trim())).filter(Boolean)) : new Map<string, LinkedPerson>();
+      const laterSources = order
+        .slice(index + 1)
+        .map((u) => byId.get(u.split('#')[0]!))
+        .filter((s): s is SourceRow => Boolean(s?.mapping && s.id !== source.id));
+      const batchOldIds = new Set(
+        records.targets.flatMap((t) => {
+          const col = at.get(t.oldId) ?? -1;
+          return batch.map((r) => (r.cells[col] ?? '').trim()).filter(Boolean);
+        }),
+      );
+      const supplement = await this.supplementaryData(
+        ctx,
+        laterSources,
+        types,
+        new Set(records.targets.map((t) => t.type)),
+        batchOldIds,
+      );
       for (const [i, r] of batch.entries()) {
         const seq = index * SEQ_PER_SOURCE + next + i + 1;
-        items.push(await this.runRow(ctx, saveCtx, profile.id, source, records, types, at, r, refs, people, seq));
+        items.push(await this.runRow(ctx, saveCtx, profile.id, source, records, types, at, r, refs, people, seq, supplement));
       }
     }
     progress += batch.length;
@@ -1025,6 +1051,7 @@ export class MigrationService {
     refs: Map<string, Promise<string>>,
     people: ReadonlyMap<string, LinkedPerson>,
     seq: number,
+    supplement: ReadonlyMap<string, Record<string, unknown>> = new Map(),
   ): Promise<JobItemResult> {
     try {
       const out = await this.records.saveTogether(saveCtx, async (rs, tx) => {
@@ -1065,9 +1092,11 @@ export class MigrationService {
             continue;
           }
           if (p.unresolved.length || p.skippedFiles.length) warned = 1;
+          const supp = !existing ? supplement.get(`${t.type}:${p.oldId}`) : undefined;
+          const data = supp ? { ...supp, ...p.data } : p.data;
           if (!t.required) {
             try {
-              await rs.check(saveCtx, t.type, { data: p.data, ...(existing ? { id: existing.recordId } : {}) });
+              await rs.check(saveCtx, t.type, { data, ...(existing ? { id: existing.recordId } : {}) });
             } catch (e) {
               if (!(e instanceof PlatformError)) throw e;
               leaveOut(t, problemsOf(e, r.row, type, p.columnOf));
@@ -1077,8 +1106,8 @@ export class MigrationService {
           let recordId: string;
           try {
             const saved = existing
-              ? await rs.update(saveCtx, existing.recordId, { data: p.data, expectedVersion: existing.version })
-              : await rs.create(saveCtx, t.type, p.data);
+              ? await rs.update(saveCtx, existing.recordId, { data, expectedVersion: existing.version })
+              : await rs.create(saveCtx, t.type, data);
             recordId = saved.record.id;
           } catch (e) {
             if (e instanceof PlatformError) throw new RowFailure(problemsOf(e, r.row, type, p.columnOf));
@@ -1332,27 +1361,7 @@ export class MigrationService {
       out.problems.push({ row: r.row, column: t.oldId, message: `${t.oldId} is longer than 200 characters` });
       return out;
     }
-    for (const [fieldKey, column] of Object.entries(t.fields)) {
-      const f = type.fields.find((x) => x.key === fieldKey);
-      if (!f) continue;
-      out.columnOf.set(f.key, column);
-      const raw = transformValue(t.transforms?.[f.key], cell(column), t.defaults?.[f.key]);
-      if (raw === '') continue;
-      const parsed = await readCell(ctx, this.records, f, raw, refs);
-      if ('error' in parsed) out.problems.push({ row: r.row, column, field: f.key, message: `${f.label} ${parsed.error}` });
-      else out.data[f.key] = parsed.value;
-    }
-    for (const [fieldKey, d] of Object.entries(t.derived ?? {})) {
-      const f = type.fields.find((x) => x.key === fieldKey);
-      if (!f) continue;
-      const used = placeholders(d.template);
-      out.columnOf.set(f.key, used[0] ?? '');
-      const raw = renderTemplate(d.template, (column) => (at.has(column) ? cell(column) : ''));
-      if (raw === '') continue;
-      const parsed = await readCell(ctx, this.records, f, raw, refs);
-      if ('error' in parsed) out.problems.push({ row: r.row, column: used[0], field: f.key, message: `${f.label} ${parsed.error}` });
-      else out.data[f.key] = parsed.value;
-    }
+    await this.readTargetFields(ctx, type, t, at, r, refs, out);
     for (const [fieldKey, ref] of Object.entries(t.refs)) {
       const f = type.fields.find((x) => x.key === fieldKey);
       if (!f?.referenceType) continue;
@@ -1427,6 +1436,80 @@ export class MigrationService {
         out.attached.push({ fileId: a.fileId, size: a.size, recordId: a.recordId, name, column: m.column, field: f.key });
       }
       if (ids.length) out.data[f.key] = f.multiple ? ids : ids[0];
+    }
+    return out;
+  }
+
+  /** Parses a target's mapped columns and derived templates for one row into `out`. */
+  private async readTargetFields(
+    ctx: TenantContext,
+    type: RecordTypeDef,
+    t: MigrationTarget,
+    at: Map<string, number>,
+    r: CsvRow,
+    refs: Map<string, Promise<string>>,
+    out: Pick<Prepared, 'data' | 'problems' | 'columnOf'>,
+  ): Promise<void> {
+    const cell = (column: string) => (r.cells[at.get(column) ?? -1] ?? '').trim();
+    for (const [fieldKey, column] of Object.entries(t.fields)) {
+      const f = type.fields.find((x) => x.key === fieldKey);
+      if (!f) continue;
+      out.columnOf.set(f.key, column);
+      const raw = transformValue(t.transforms?.[f.key], cell(column), t.defaults?.[f.key]);
+      if (raw === '') continue;
+      const parsed = await readCell(ctx, this.records, f, raw, refs);
+      if ('error' in parsed) out.problems.push({ row: r.row, column, field: f.key, message: `${f.label} ${parsed.error}` });
+      else out.data[f.key] = parsed.value;
+    }
+    for (const [fieldKey, d] of Object.entries(t.derived ?? {})) {
+      const f = type.fields.find((x) => x.key === fieldKey);
+      if (!f) continue;
+      const used = placeholders(d.template);
+      out.columnOf.set(f.key, used[0] ?? '');
+      const raw = renderTemplate(d.template, (column) => (at.has(column) ? cell(column) : ''));
+      if (raw === '') continue;
+      const parsed = await readCell(ctx, this.records, f, raw, refs);
+      if ('error' in parsed) out.problems.push({ row: r.row, column: used[0], field: f.key, message: `${f.label} ${parsed.error}` });
+      else out.data[f.key] = parsed.value;
+    }
+  }
+
+  /**
+   * Field values from later files in the profile that target the same record types,
+   * keyed by `type:oldId`. Allows an earlier file to create a record whose required
+   * fields are spread across multiple files in the same group.
+   */
+  private async supplementaryData(
+    ctx: TenantContext,
+    laterSources: readonly SourceRow[],
+    types: TypesByKey,
+    targetTypes: ReadonlySet<string>,
+    onlyOldIds?: ReadonlySet<string>,
+  ): Promise<Map<string, Record<string, unknown>>> {
+    const out = new Map<string, Record<string, unknown>>();
+    const matching = laterSources.filter((s) => targetsOf(s.mapping).some((t) => targetTypes.has(t.type)));
+    if (!matching.length) return out;
+    const refs = new Map<string, Promise<string>>();
+    for (const source of matching) {
+      const { rows } = await this.read(ctx, source.file_id);
+      const at = columnIndex(source);
+      for (const t of targetsOf(source.mapping)) {
+        if (!targetTypes.has(t.type)) continue;
+        const type = types.get(t.type);
+        if (!type) continue;
+        const oldIdIdx = at.get(t.oldId) ?? -1;
+        for (const r of rows) {
+          const oldId = (r.cells[oldIdIdx] ?? '').trim();
+          if (!oldId || oldId.length > 200) continue;
+          if (onlyOldIds && !onlyOldIds.has(oldId)) continue;
+          const parsed = { data: {} as Record<string, unknown>, problems: [] as CellProblem[], columnOf: new Map<string, string>() };
+          await this.readTargetFields(ctx, type, t, at, r, refs, parsed);
+          if (!Object.keys(parsed.data).length) continue;
+          const key = `${t.type}:${oldId}`;
+          const prev = out.get(key);
+          out.set(key, prev ? { ...prev, ...parsed.data } : parsed.data);
+        }
+      }
     }
     return out;
   }

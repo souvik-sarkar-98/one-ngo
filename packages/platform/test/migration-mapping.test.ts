@@ -141,6 +141,11 @@ describe('kind dispatch', () => {
     expect(issues({ ...RECORDS, targets: [{ ...RECORDS.targets[0]!, type: 'nothing' }] })).toEqual([{ path: '/targets/0/type', message: "'nothing' is not a record type" }]);
     expect(issues({})).toEqual([{ path: '/targets', message: 'must be a list' }]);
   });
+
+  it('accepts a mapping whose targets are all optional (e.g. a supplementary update file)', () => {
+    const mapping = read({ targets: [{ key: 's', type: 'supporter', oldId: 'UserId', fields: { name: 'FullName' }, refs: {}, required: false }] });
+    expect(mapping).toEqual({ targets: [{ key: 's', type: 'supporter', oldId: 'UserId', fields: { name: 'FullName' }, refs: {}, required: false }] });
+  });
 });
 
 describe('@people ordering', () => {
