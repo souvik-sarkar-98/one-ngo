@@ -182,6 +182,17 @@ export class FileService {
     return rows.length;
   }
 
+  /**
+   * Removes uploads that were never linked to a record, and their stored bytes, at once. For the
+   * owner of such a file (a data migration deleting its source CSVs); the caller has checked its
+   * own permission. Files already removed or linked to a record are left alone, so it is repeatable.
+   */
+  async discardUnlinked(tenantId: string, ids: string[]): Promise<number> {
+    const rows = await this.tm.withTenant(tenantId, (tx) => this.catalog.removeByIds(tx, ids));
+    for (const r of rows) await (await this.stores.byRef(tenantId, r.store_ref)).delete(r.storage_key);
+    return rows.length;
+  }
+
   private async targetField(ctx: TenantContext, typeKey: string, fieldKey: string): Promise<FieldDef> {
     const type = await this.defs.get(ctx.tenantId, 'recordType', typeKey);
     if (!type) throw notFound(`Unknown record type '${typeKey}'.`);

@@ -1,168 +1,224 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { PlatformError } from '@onengo/kernel/errors';
-import { checkOrder, deriveOrder, readMapping, type OrderedSource, type SourceMapping } from '../src/application/migration/mapping.js';
+import {
+  checkOrder,
+  dependencies,
+  deriveOrder,
+  isPeople,
+  PEOPLE_TYPE,
+  readSourceMapping,
+  targetsOf,
+  type OrderedSource,
+  type SourceMapping,
+  type TypesByKey,
+} from '../src/application/migration/mapping.js';
 import type { RecordTypeDef } from '../src/runtime/definitions/types.js';
 
-const donor = {
-  key: 'donor',
-  label: 'Donor',
-  fields: [
+const type = (key: string, fields: Record<string, unknown>[]) => ({ key, label: key, fields }) as unknown as RecordTypeDef;
+const TYPES: TypesByKey = new Map([
+  ['supporter', type('supporter', [{ key: 'name', label: 'Name', type: 'text', required: true }])],
+  ['pledge', type('pledge', [
+    { key: 'supporter', label: 'Supporter', type: 'reference', referenceType: 'supporter', required: true },
+    { key: 'amount', label: 'Amount', type: 'money' },
+  ])],
+  ['donation', type('donation', [
     { key: 'name', label: 'Name', type: 'text', required: true },
-    { key: 'email', label: 'Email', type: 'email' },
-    { key: 'total', label: 'Total', type: 'money', rollup: { recordType: 'donation', reference: 'donor', measure: 'sum', field: 'amount' } },
-    { key: 'photo', label: 'Photo', type: 'file' },
-  ],
-} as RecordTypeDef;
-const donation = {
-  key: 'donation',
-  label: 'Donation',
-  fields: [
-    { key: 'donor', label: 'Donor', type: 'reference', referenceType: 'donor', required: true },
-    { key: 'amount', label: 'Amount', type: 'money', required: true },
-    { key: 'note', label: 'Note', type: 'text', visibleWhen: 'amount > 0', required: true },
-  ],
-} as RecordTypeDef;
-const types = new Map([
-  ['donor', donor],
-  ['donation', donation],
+    { key: 'owner', label: 'Owner', type: 'person', required: true },
+    { key: 'note', label: 'Note', type: 'text' },
+  ])],
 ]);
+const COLUMNS = ['UserId', 'Email', 'FullName', 'Roles', 'Active', 'Lang'];
+const ROLES = ['admin', 'front-desk', 'volunteer'];
+const read = (input: unknown, columns = COLUMNS) => readSourceMapping(input, columns, TYPES, ROLES);
+const PEOPLE = { oldId: 'UserId', email: 'Email', name: 'FullName' };
 
-function issuesOf(fn: () => unknown): { path: string; message: string }[] {
+function issues(input: unknown, columns = COLUMNS) {
   try {
-    fn();
+    read(input, columns);
   } catch (e) {
-    expect(e).toBeInstanceOf(PlatformError);
-    return (e as PlatformError).issues;
+    return (e as { issues?: { path: string; message: string }[] }).issues ?? [];
   }
-  throw new Error('expected a validation failure');
+  throw new Error('The mapping was accepted.');
 }
 
-describe('a file mapping', () => {
-  const columns = ['DonorId', 'Full Name', 'Email', 'TxnNo', 'Amount', 'InternalCode'];
-
-  it('fills two record types from one row, the second pointing at the first', () => {
-    const mapping = readMapping(
-      {
-        targets: [
-          { key: 'donor', type: 'donor', oldId: 'DonorId', fields: { name: 'Full Name', email: 'Email' } },
-          { key: 'gift', type: 'donation', oldId: 'TxnNo', fields: { amount: 'Amount' }, refs: { donor: { target: 'donor' } }, required: false },
-        ],
+describe('people mapping', () => {
+  it('reads the shape of plan 3.4 and stores only what it knows', () => {
+    const mapping = read({
+      kind: 'people',
+      ignored: true,
+      people: {
+        ...PEOPLE,
+        roles: { column: 'Roles', separator: ';', map: { Admin: 'admin', Clerk: 'front-desk', Guest: null }, stray: 1 },
+        status: { column: 'Active', active: ['1', ' yes '], suspended: ['0', 'no'] },
+        locale: 'Lang',
       },
-      columns,
-      types,
-    );
+    });
     expect(mapping).toEqual({
-      targets: [
-        { key: 'donor', type: 'donor', oldId: 'DonorId', fields: { name: 'Full Name', email: 'Email' }, refs: {}, required: true },
-        { key: 'gift', type: 'donation', oldId: 'TxnNo', fields: { amount: 'Amount' }, refs: { donor: { target: 'donor' } }, required: false },
-      ],
+      kind: 'people',
+      people: {
+        ...PEOPLE,
+        roles: { column: 'Roles', separator: ';', map: { Admin: 'admin', Clerk: 'front-desk', Guest: null } },
+        status: { column: 'Active', active: ['1', 'yes'], suspended: ['0', 'no'] },
+        locale: 'Lang',
+      },
+    });
+    expect(isPeople(mapping)).toBe(true);
+    expect(targetsOf(mapping)).toEqual([]);
+  });
+
+  it('needs only the legacy id, email and name, and everyone is then active with no roles', () => {
+    expect(read({ kind: 'people', people: PEOPLE })).toEqual({ kind: 'people', people: PEOPLE });
+  });
+
+  it('accepts a fixed role list for everyone', () => {
+    expect(read({ kind: 'people', people: { ...PEOPLE, roles: { fixed: ['volunteer', 'volunteer', 'admin'] } } })).toMatchObject({
+      people: { roles: { fixed: ['volunteer', 'admin'] } },
     });
   });
 
-  it('accepts any columns and leaves unmatched ones out', () => {
-    const mapping = readMapping({ targets: [{ key: 'd', type: 'donor', oldId: 'DonorId', fields: { name: 'Full Name' } }] }, columns, types);
-    expect(Object.values(mapping.targets[0]!.fields)).toEqual(['Full Name']);
-  });
-
-  it('refuses rollup and file fields, unknown fields and columns, and a column used twice', () => {
-    const issues = issuesOf(() =>
-      readMapping(
-        {
-          targets: [
-            {
-              key: 'd',
-              type: 'donor',
-              oldId: 'Nope',
-              fields: { name: 'Full Name', email: 'Full Name', total: 'Amount', photo: 'Email', age: 'Email' },
-            },
-          ],
+  it('names every problem with a path, including one entry of a role map', () => {
+    expect(
+      issues({
+        kind: 'people',
+        people: {
+          oldId: 'Nope',
+          email: 'UserId',
+          name: 'UserId',
+          roles: { column: 'Roles', separator: '/', map: { Admin: 'owner', Clerk: 'front-desk', Guest: 7 } },
+          status: { column: 'Active', active: ['1', 'Yes'], suspended: ['yes'] },
+          locale: 'Missing',
         },
-        columns,
-        types,
-      ),
-    );
-    expect(issues.map((i) => i.path)).toEqual(
-      expect.arrayContaining(['/targets/0/oldId', '/targets/0/fields/email', '/targets/0/fields/total', '/targets/0/fields/photo', '/targets/0/fields/age']),
-    );
+      }),
+    ).toEqual([
+      { path: '/people/oldId', message: "the file has no column 'Nope'" },
+      { path: '/people/name', message: "column 'UserId' already holds the email" },
+      { path: '/people/roles/separator', message: 'must be one of ; , |' },
+      { path: '/people/roles/map/Admin', message: "'owner' is not a role" },
+      { path: '/people/roles/map/Guest', message: 'choose a role, or null to ignore it' },
+      { path: '/people/status/suspended', message: 'a value cannot mean both active and suspended' },
+      { path: '/people/locale', message: "the file has no column 'Missing'" },
+    ]);
   });
 
-  it('needs every required field the save does not fill itself', () => {
-    const issues = issuesOf(() => readMapping({ targets: [{ key: 'g', type: 'donation', oldId: 'TxnNo', fields: { amount: 'Amount' } }] }, columns, types));
-    expect(issues).toEqual([{ path: '/targets/0/fields/donor', message: "Donation needs 'Donor'; match a column to it" }]);
+  it('asks for columns that are missing or blank', () => {
+    expect(issues({ kind: 'people', people: { oldId: '', email: 'Email' } })).toEqual([
+      { path: '/people/oldId', message: 'choose a column' },
+      { path: '/people/name', message: 'choose a column' },
+    ]);
+    expect(issues({ kind: 'people' })).toEqual([{ path: '/people', message: 'must be an object' }]);
   });
 
-  it('takes references from a column of old ids or an earlier target of the same type', () => {
-    expect(readMapping({ targets: [{ key: 'g', type: 'donation', oldId: 'TxnNo', fields: { amount: 'Amount' }, refs: { donor: { column: 'DonorId' } } }] }, columns, types).targets[0]!.refs).toEqual({
-      donor: { column: 'DonorId' },
-    });
-    const issues = issuesOf(() =>
-      readMapping(
-        {
-          targets: [
-            { key: 'g', type: 'donation', oldId: 'TxnNo', fields: { amount: 'Amount' }, refs: { donor: { target: 'later' } } },
-            { key: 'later', type: 'donor', oldId: 'DonorId', fields: { name: 'Full Name' }, refs: { name: { column: 'Email' } } },
-          ],
-        },
-        columns,
-        types,
-      ),
-    );
-    expect(issues.map((i) => i.path)).toEqual(['/targets/0/refs/donor', '/targets/1/refs/name']);
+  it('refuses unknown fixed roles, two ways to give roles, and empty or one-sided status lists', () => {
+    expect(issues({ kind: 'people', people: { ...PEOPLE, roles: { fixed: ['admin', 'owner'] } } })).toEqual([{ path: '/people/roles/fixed/1', message: "'owner' is not a role" }]);
+    expect(issues({ kind: 'people', people: { ...PEOPLE, roles: { fixed: ['admin'], column: 'Roles' } } })).toEqual([{ path: '/people/roles', message: "use either 'column' or 'fixed', not both" }]);
+    expect(issues({ kind: 'people', people: { ...PEOPLE, status: { column: 'Active', active: [], suspended: ['0'] } } })).toEqual([
+      { path: '/people/status/active', message: 'list at least one value' },
+    ]);
   });
 
-  it('needs at least one target, at least one required, and unique keys', () => {
-    expect(issuesOf(() => readMapping({ targets: [] }, columns, types))[0]!.path).toBe('/targets');
-    expect(issuesOf(() => readMapping({ targets: [{ key: 'd', type: 'donor', oldId: 'DonorId', fields: { name: 'Full Name' }, required: false }] }, columns, types))[0]!.path).toBe(
-      '/targets',
-    );
-    const twice = { key: 'd', type: 'donor', oldId: 'DonorId', fields: { name: 'Full Name' } };
-    expect(issuesOf(() => readMapping({ targets: [twice, twice] }, columns, types))[0]!.path).toBe('/targets/1/key');
+  it('refuses a kind it does not know', () => {
+    expect(issues({ kind: 'groups', people: PEOPLE })).toEqual([{ path: '/kind', message: "must be 'records' or 'people'" }]);
   });
 });
 
-describe('the order files load in', () => {
-  const donors: OrderedSource = {
-    id: 'a',
-    fileName: 'donors.csv',
-    mapping: { targets: [{ key: 'd', type: 'donor', oldId: 'Id', fields: { name: 'Name' }, refs: {}, required: true }] },
-  };
-  const gifts: OrderedSource = {
-    id: 'b',
-    fileName: 'donations.csv',
-    mapping: { targets: [{ key: 'g', type: 'donation', oldId: 'Txn', fields: { amount: 'Amount' }, refs: { donor: { column: 'DonorId' } }, required: true }] },
-  };
-  const unmapped: OrderedSource = { id: 'c', fileName: 'visits.csv', mapping: null };
+describe('kind dispatch', () => {
+  const RECORDS = { targets: [{ key: 's', type: 'supporter', oldId: 'UserId', fields: { name: 'FullName' } }] };
 
-  it('moves a file after the file whose records it looks up, and keeps the rest in place', () => {
-    expect(deriveOrder([unmapped, gifts, donors], types).map((s) => s.id)).toEqual(['c', 'a', 'b']);
-    expect(deriveOrder([donors, unmapped, gifts], types).map((s) => s.id)).toEqual(['a', 'c', 'b']);
+  it('reads a mapping without a kind, as old rows are, as records', () => {
+    const mapping = read(RECORDS);
+    expect(isPeople(mapping)).toBe(false);
+    expect(mapping).toEqual({ targets: [{ key: 's', type: 'supporter', oldId: 'UserId', fields: { name: 'FullName' }, refs: {}, required: true }] });
+    expect(targetsOf(mapping)).toHaveLength(1);
+    expect(read({ kind: 'records', ...RECORDS })).toEqual(mapping);
   });
 
-  it('refuses an order that loads a file before the file it looks up', () => {
-    expect(() => checkOrder([donors, gifts], types)).not.toThrow();
-    expect(issuesOf(() => checkOrder([gifts, donors], types))).toEqual([{ path: '/order/0', message: 'donations.csv looks up records from donors.csv, so it must come after it' }]);
+  it('keeps the records rules and paths', () => {
+    expect(issues({ ...RECORDS, targets: [{ ...RECORDS.targets[0]!, type: 'nothing' }] })).toEqual([{ path: '/targets/0/type', message: "'nothing' is not a record type" }]);
+    expect(issues({})).toEqual([{ path: '/targets', message: 'must be a list' }]);
+  });
+});
+
+describe('@people ordering', () => {
+  const people: SourceMapping = { kind: 'people', people: PEOPLE };
+  const records = (key: string, type: string, refs: Record<string, { column: string }> = {}): SourceMapping => ({
+    targets: [{ key, type, oldId: 'Id', fields: {}, refs, required: true }],
+  });
+  const file = (id: string, mapping: SourceMapping | null): OrderedSource => ({ id, fileName: `${id}.csv`, mapping });
+
+  it('writes a pseudo type that cannot be a record type key', () => {
+    expect(PEOPLE_TYPE).toBe('@people');
+    const schema = JSON.parse(readFileSync(join(import.meta.dirname, '../../product/schemas/recordType.schema.json'), 'utf8')) as { definitions: { key: { pattern: string } } };
+    expect(new RegExp(schema.definitions.key.pattern).test(PEOPLE_TYPE)).toBe(false);
+    expect(TYPES.has(PEOPLE_TYPE)).toBe(false);
   });
 
-  it('refuses two files that each look up the other', () => {
-    const backwards: SourceMapping = {
-      targets: [{ key: 'd', type: 'donor', oldId: 'Id', fields: { name: 'Name' }, refs: { name: { column: 'X' } }, required: true }],
-    };
-    const loopType = { ...donor, fields: [...donor.fields, { key: 'firstGift', label: 'First gift', type: 'reference', referenceType: 'donation' }] } as RecordTypeDef;
-    const loopTypes = new Map([
-      ['donor', loopType],
-      ['donation', donation],
+  it('puts a people file in the order without making any file wait for it yet', () => {
+    const files = [file('gifts', records('pledge', 'pledge', { supporter: { column: 'S' } })), file('people', people), file('supporters', records('supporter', 'supporter'))];
+    expect(dependencies(files, TYPES).get('people')).toEqual([]);
+    expect(dependencies(files, TYPES).get('gifts')).toEqual(['supporters']);
+    expect(deriveOrder(files, TYPES).map((f) => f.id)).toEqual(['people', 'supporters', 'gifts']);
+    expect(() => checkOrder(files, TYPES)).toThrow(/order that cannot run/);
+    expect(() => checkOrder([files[1]!, files[2]!, files[0]!], TYPES)).not.toThrow();
+  });
+
+  it('keeps a hand order that has the people file first, and one with it later when nothing needs it', () => {
+    const order = [file('people', people), file('supporters', records('supporter', 'supporter'))];
+    expect(deriveOrder(order, TYPES).map((f) => f.id)).toEqual(['people', 'supporters']);
+    expect(() => checkOrder([...order].reverse(), TYPES)).not.toThrow();
+  });
+
+  it('leaves a file without a mapping where it is', () => {
+    const files = [file('raw', null), file('people', people)];
+    expect(deriveOrder(files, TYPES).map((f) => f.id)).toEqual(['raw', 'people']);
+  });
+});
+
+describe('persons mapping', () => {
+  const COLS = ['Id', 'Title', 'OwnerId', 'Other'];
+  const target = (extra: Record<string, unknown>) => ({ targets: [{ key: 'd', type: 'donation', oldId: 'Id', fields: { name: 'Title' }, ...extra }] });
+  const targetOf = (m: SourceMapping) => targetsOf(m)[0]!;
+
+  it('reads a person field filled by legacy user id, with onMissing, and a required person field is satisfied by it', () => {
+    expect(targetOf(read(target({ persons: { owner: { column: 'OwnerId' } } }), COLS)).persons).toEqual({ owner: { column: 'OwnerId' } });
+    expect(targetOf(read(target({ persons: { owner: { column: 'OwnerId', onMissing: 'fail' } } }), COLS)).persons).toEqual({ owner: { column: 'OwnerId', onMissing: 'fail' } });
+    // Without persons the required person field still needs a mapping, and old mappings have no persons.
+    expect(issues(target({}), COLS)).toEqual([{ path: '/targets/0/fields/owner', message: "donation needs 'Owner'; match a column to it" }]);
+    expect(targetOf(read({ targets: [{ key: 's', type: 'supporter', oldId: 'Id', fields: { name: 'Title' } }] }, COLS)).persons).toBeUndefined();
+  });
+
+  it('names every problem with a path', () => {
+    expect(issues(target({ persons: { nothing: { column: 'OwnerId' } } }), COLS).map((i) => i.path)).toContain('/targets/0/persons/nothing');
+    expect(issues(target({ persons: { note: { column: 'OwnerId' }, owner: { column: 'OwnerId' } } }), COLS)).toEqual([{ path: '/targets/0/persons/note', message: "'note' is not a person field of donation" }]);
+    expect(issues(target({ persons: { owner: { column: 'Missing' } } }), COLS)).toEqual([{ path: '/targets/0/persons/owner/column', message: "the file has no column 'Missing'" }]);
+    expect(issues(target({ persons: { owner: {} } }), COLS)).toEqual([{ path: '/targets/0/persons/owner/column', message: 'choose a column' }]);
+    expect(issues(target({ persons: { owner: { column: 'OwnerId', onMissing: 'skip' } } }), COLS)).toEqual([{ path: '/targets/0/persons/owner/onMissing', message: "must be 'blank' or 'fail'" }]);
+  });
+
+  it('refuses a person field that is also in fields or refs', () => {
+    expect(issues(target({ fields: { name: 'Title', owner: 'Other' }, persons: { owner: { column: 'OwnerId' } } }), COLS)).toEqual([
+      { path: '/targets/0/persons/owner', message: "'Owner' is already filled from a column" },
     ]);
-    const a: OrderedSource = { ...donors, mapping: { targets: [{ ...backwards.targets[0]!, refs: { firstGift: { column: 'Gift' } } }] } };
-    expect(issuesOf(() => deriveOrder([a, gifts], loopTypes))[0]!.message).toBe('donors.csv, donations.csv');
   });
 
-  it('lets a file refer to its own record type by old id, row after row', () => {
-    const parentType = { ...donor, fields: [...donor.fields, { key: 'parent', label: 'Parent', type: 'reference', referenceType: 'donor' }] } as RecordTypeDef;
-    const self: OrderedSource = {
-      id: 'x',
-      fileName: 'donors.csv',
-      mapping: { targets: [{ key: 'd', type: 'donor', oldId: 'Id', fields: { name: 'Name' }, refs: { parent: { column: 'ParentId' } }, required: true }] },
-    };
-    expect(deriveOrder([self], new Map([['donor', parentType]])).map((s) => s.id)).toEqual(['x']);
+  it('lets one column fill a person field and a text field, since persons do not use the column', () => {
+    const m = read(target({ fields: { name: 'Title', note: 'OwnerId' }, persons: { owner: { column: 'OwnerId' } } }), COLS);
+    expect(targetOf(m)).toMatchObject({ fields: { name: 'Title', note: 'OwnerId' }, persons: { owner: { column: 'OwnerId' } } });
+  });
+
+  it('orders a file with persons after the people file, and refuses a hand order that puts it first', () => {
+    const people: SourceMapping = { kind: 'people', people: PEOPLE };
+    const donations = read(target({ persons: { owner: { column: 'OwnerId' } } }), COLS);
+    const files: OrderedSource[] = [
+      { id: 'donations', fileName: 'donations.csv', mapping: donations },
+      { id: 'people', fileName: 'people.csv', mapping: people },
+    ];
+    expect(dependencies(files, TYPES).get('donations')).toEqual(['people']);
+    expect(dependencies(files, TYPES).get('people')).toEqual([]);
+    expect(deriveOrder(files, TYPES).map((f) => f.id)).toEqual(['people', 'donations']);
+    expect(() => checkOrder(files, TYPES)).toThrow(/order that cannot run/);
+    expect(() => checkOrder([files[1]!, files[0]!], TYPES)).not.toThrow();
+    // Without a person column nothing waits for the people file.
+    expect(dependencies([{ ...files[0]!, mapping: read(target({ fields: { name: 'Title', owner: 'OwnerId' } }), COLS) }, files[1]!], TYPES).get('donations')).toEqual([]);
   });
 });

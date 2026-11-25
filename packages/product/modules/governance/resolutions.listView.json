@@ -1,5 +1,6 @@
 {
   "key": "resolutions",
+  "hidden": false,
   "recordType": "resolution",
   "label": "Resolutions",
   "pageSize": 20,

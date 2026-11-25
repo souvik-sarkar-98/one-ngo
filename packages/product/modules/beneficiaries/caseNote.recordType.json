@@ -1,5 +1,6 @@
 {
   "key": "caseNote",
+  "hidden": false,
   "label": "Case note",
   "pluralLabel": "Case notes",
   "description": "Notes on work with a beneficiary, with the date of the next follow-up.",

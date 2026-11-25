@@ -1,5 +1,6 @@
 {
   "key": "meeting",
+  "hidden": false,
   "label": "Meeting",
   "pluralLabel": "Meetings",
   "description": "Board meetings, general body meetings and the AGM, with the agenda and minutes.",

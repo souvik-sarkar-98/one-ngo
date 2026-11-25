@@ -1,30 +1,158 @@
 {
   "key": "member",
+  "hidden": false,
   "label": "Member",
   "pluralLabel": "Members",
-  "description": "Members of the organisation, with their category, contact details and membership fees.",
+  "description": "Members of the organisation, with their designation, contact details, address, and membership fees. Name, email and joining date come from the person's account.",
   "titleField": "name",
   "numbering": { "sequence": "member", "format": "MBR/{seq:5}", "reset": "never" },
   "fields": [
-    { "key": "name", "label": "Full name", "type": "text", "required": true, "maxLength": 200, "searchable": true },
     {
-      "key": "category",
-      "label": "Category",
-      "type": "choice",
+      "key": "login",
+      "label": "Person",
+      "type": "person",
       "required": true,
+      "unique": true,
+      "placeholder": "Search by name or email",
+      "help": "The person this member record belongs to. One member record per person. Name, email and joined on are taken from them"
+    },
+    {
+      "key": "memberId",
+      "label": "Member ID",
+      "type": "text",
+      "maxLength": 20,
+      "unique": true,
+      "searchable": true,
+      "placeholder": "Generated when the member is saved",
+      "generated": { "pattern": "NM{yymm:joinedOn}{initial:firstName}{initial:lastName}{seq:3}" }
+    },
+    {
+      "key": "name",
+      "label": "Full name",
+      "type": "text",
+      "maxLength": 300,
+      "searchable": true,
+      "placeholder": "Filled from the selected person",
+      "follow": { "via": "login", "field": "name" }
+    },
+    {
+      "key": "firstName",
+      "label": "First name",
+      "type": "text",
+      "maxLength": 100,
+      "searchable": true,
+      "placeholder": "Suggested from the full name",
+      "defaultFrom": "firstWord(record.name)"
+    },
+    {
+      "key": "middleName",
+      "label": "Middle name",
+      "type": "text",
+      "maxLength": 100,
+      "searchable": true,
+      "placeholder": "Suggested from the full name",
+      "defaultFrom": "middleWords(record.name)"
+    },
+    {
+      "key": "lastName",
+      "label": "Last name",
+      "type": "text",
+      "maxLength": 100,
+      "searchable": true,
+      "placeholder": "Suggested from the full name",
+      "defaultFrom": "lastWord(record.name)"
+    },
+    {
+      "key": "title",
+      "label": "Title",
+      "type": "choice",
+      "personal": true,
+      "placeholder": "Select a title",
       "choices": [
-        { "value": "ordinary", "label": "Ordinary" },
-        { "value": "associate", "label": "Associate" },
-        { "value": "life", "label": "Life" },
-        { "value": "honorary", "label": "Honorary" }
+        { "value": "mr", "label": "Mr" },
+        { "value": "mrs", "label": "Mrs" },
+        { "value": "ms", "label": "Ms" },
+        { "value": "miss", "label": "Miss" },
+        { "value": "dr", "label": "Dr" },
+        { "value": "prof", "label": "Prof" },
+        { "value": "shri", "label": "Shri" },
+        { "value": "smt", "label": "Smt" }
       ]
     },
-    { "key": "joinedOn", "label": "Joined on", "type": "date", "required": true },
-    { "key": "login", "label": "Sign-in", "type": "person", "help": "Link the member to their sign-in, if they have one" },
-    { "key": "email", "label": "Email", "type": "email", "searchable": true },
-    { "key": "phone", "label": "Phone", "type": "phone", "searchable": true },
-    { "key": "address", "label": "Address", "type": "longText", "maxLength": 1000 },
-    { "key": "city", "label": "City", "type": "text", "maxLength": 100 },
+    {
+      "key": "gender",
+      "label": "Gender",
+      "type": "choice",
+      "personal": true,
+      "placeholder": "Select a gender",
+      "choices": [
+        { "value": "male", "label": "Male" },
+        { "value": "female", "label": "Female" },
+        { "value": "other", "label": "Other" },
+        { "value": "undisclosed", "label": "Prefer not to say" }
+      ]
+    },
+    { "key": "dateOfBirth", "label": "Date of birth", "type": "date", "personal": true, "placeholder": "Select date of birth" },
+    {
+      "key": "designation",
+      "label": "Designation",
+      "type": "text",
+      "maxLength": 100,
+      "searchable": true,
+      "placeholder": "For example Secretary, Treasurer or Member"
+    },
+    {
+      "key": "joinedOn",
+      "label": "Joined on",
+      "type": "date",
+      "required": true,
+      "placeholder": "Filled from the person's joined date",
+      "follow": { "via": "login", "field": "joinedAt" }
+    },
+    {
+      "key": "email",
+      "label": "Email",
+      "type": "email",
+      "searchable": true,
+      "placeholder": "Filled from the selected person",
+      "follow": { "via": "login", "field": "email" }
+    },
+    {
+      "key": "phone",
+      "label": "Phone number",
+      "type": "phone",
+      "required": true,
+      "searchable": true,
+      "placeholder": "+91 98765 43210",
+      "help": "Include the country code, for example +91 for India"
+    },
+
+    { "key": "addressLine1", "label": "Address line 1", "type": "text", "maxLength": 200, "placeholder": "House or flat number, street" },
+    { "key": "addressLine2", "label": "Address line 2", "type": "text", "maxLength": 200, "placeholder": "Area, locality" },
+    { "key": "addressLine3", "label": "Address line 3", "type": "text", "maxLength": 200, "placeholder": "Landmark" },
+    { "key": "city", "label": "City", "type": "text", "maxLength": 100, "placeholder": "For example Bengaluru" },
+    {
+      "key": "pincode",
+      "label": "Pincode",
+      "type": "text",
+      "maxLength": 6,
+      "pattern": "[1-9][0-9]{5}",
+      "patternMessage": "Enter a 6-digit pincode.",
+      "placeholder": "560001"
+    },
+    { "key": "district", "label": "District", "type": "text", "maxLength": 100, "placeholder": "For example Bengaluru Urban" },
+    { "key": "state", "label": "State", "type": "text", "maxLength": 100, "placeholder": "For example Karnataka" },
+    { "key": "country", "label": "Country", "type": "text", "maxLength": 100, "placeholder": "For example India" },
+
+    {
+      "key": "joiningFee",
+      "label": "Membership fee",
+      "type": "money",
+      "min": 1,
+      "placeholder": "Amount to collect from this member",
+      "help": "A membership fee for this amount is raised automatically when the member is created. Leave blank to raise none"
+    },
+
     {
       "key": "feesPaid",
       "label": "Membership fees paid",
@@ -37,6 +165,12 @@
       "type": "money",
       "rollup": { "recordType": "membershipFee", "reference": "member", "measure": "sum", "field": "amount", "where": "status == 'paid'" }
     },
-    { "key": "notes", "label": "Notes", "type": "longText" }
+    {
+      "key": "notes",
+      "label": "Notes",
+      "type": "longText",
+      "placeholder": "Reason for resignation",
+      "help": "Asked only when recording a resignation"
+    }
   ]
 }

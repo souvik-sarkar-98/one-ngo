@@ -1,5 +1,6 @@
 {
   "key": "meetingStatus",
+  "hidden": false,
   "recordType": "meeting",
   "initial": "planned",
   "states": [

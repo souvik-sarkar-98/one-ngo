@@ -5,7 +5,7 @@ import type { ListViewDef, RuntimeRecordType } from '../../models';
 import { peopleSource } from '../../people/people';
 import { memoryGateway, sampleSeed } from '../../testing/memory-gateway';
 import { donationsView, donationType, donationWorkflow, donorsView, donorType } from '../../testing/sample-data';
-import { changedOnly, toFormValue } from './forms';
+import { changedOnly, fromFormValues, toFormValue } from './forms';
 import { filterPills } from './present';
 import { criteriaToFilters } from '../list/query';
 import { RecordSession, type RecordLinks } from './record-session';
@@ -179,8 +179,8 @@ describe('person picker', () => {
     const source = peopleSource(g.people);
     expect(source.minLength).toBe(0);
     expect(await source.search('')).toEqual([
-      { id: 'u1', label: 'Asha Rao', hint: 'asha@example.org' },
-      { id: 'u2', label: 'Vikram Iyer', hint: 'vikram@example.org' },
+      { id: 'u1', label: 'Asha Rao', hint: 'asha@example.org', person: { id: 'u1', name: 'Asha Rao', email: 'asha@example.org' } },
+      { id: 'u2', label: 'Vikram Iyer', hint: 'vikram@example.org', person: { id: 'u2', name: 'Vikram Iyer', email: 'vikram@example.org' } },
     ]);
     expect(await source.search('ravi')).toEqual([]);
     expect(await source.search('nobody at all')).toEqual([]);
@@ -203,6 +203,39 @@ describe('person picker', () => {
     expect(changedOnly(stored, { visitedBy: 'u2' })).toEqual({});
     expect(changedOnly(stored, { visitedBy: 'u1' })).toEqual({ visitedBy: 'u1' });
     expect(displayValue(visit.fields[1]!, stored.visitedBy)).toBe('Vikram Iyer');
+  });
+
+  it('fills the fields that follow the person at once, shows them read-only, and never sends them', async () => {
+    const member: RuntimeRecordType = {
+      ...visit,
+      key: 'member',
+      fields: [
+        { key: 'login', label: 'Person', type: 'person' },
+        { key: 'name', label: 'Full name', type: 'text', follow: { via: 'login', field: 'name' } },
+        { key: 'email', label: 'Email', type: 'email', follow: { via: 'login', field: 'email' } },
+        { key: 'joinedOn', label: 'Joined on', type: 'date', follow: { via: 'login', field: 'joinedAt' } },
+        { key: 'firstName', label: 'First name', type: 'text', defaultFrom: 'firstWord(record.name)' },
+        { key: 'middleName', label: 'Middle name', type: 'text', defaultFrom: 'middleWords(record.name)' },
+        { key: 'lastName', label: 'Last name', type: 'text', defaultFrom: 'lastWord(record.name)' },
+        { key: 'phone', label: 'Phone number', type: 'phone' },
+      ],
+    };
+    const spec = resolveListSpec(member, undefined, { key: 'members', recordType: 'member' });
+    const people: RecordLinks['people'] = {
+      pick: async () => [{ id: 'u2', name: 'Vikram Iyer', email: 'vikram@example.org', joinedAt: '2026-10-31T20:00:00.000Z' }],
+    };
+    const s = new RecordSession(fakeGateway().gateway, spec, viewer, hooks, linksTo([spec], people));
+    await s.follow(parseListUrl(paramsOf({ create: 'new' }), spec));
+    const [option] = await s.picker(s.fields(['login'])[0]!)!.source.search('');
+    await s.choose('login', option!);
+    expect(s.snapshot.values).toMatchObject({ login: 'u2', name: 'Vikram Iyer', email: 'vikram@example.org', joinedOn: '2026-11-01' });
+    expect(readOnly(s, ['login', 'name', 'email', 'joinedOn', 'phone'])).toEqual({ login: false, name: true, email: true, joinedOn: true, phone: false });
+    expect(s.snapshot.values).toMatchObject({ firstName: 'Vikram', middleName: '', lastName: 'Iyer' });
+    s.setValues({ ...s.snapshot.values, firstName: 'Vik' });
+    expect(s.snapshot.values).toMatchObject({ firstName: 'Vik', lastName: 'Iyer' });
+    expect(fromFormValues(member, s.snapshot.values)).toEqual({ login: 'u2', firstName: 'Vik', middleName: null, lastName: 'Iyer', phone: null });
+    await s.choose('login', null);
+    expect(s.snapshot.values).toMatchObject({ login: '', name: '', email: '', joinedOn: '' });
   });
 
   it('filters by person with "Assigned to me", sent as the token me', () => {

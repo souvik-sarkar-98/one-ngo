@@ -8,6 +8,7 @@ export * from '../http/contracts/definitions.js';
 export * from '../http/contracts/errors.js';
 export * from '../http/contracts/gateways.js';
 export * from '../http/contracts/members.js';
+export * from '../http/contracts/migration.js';
 export * from '../http/contracts/money.js';
 export * from '../http/contracts/organisation.js';
 export * from '../http/contracts/operator.js';

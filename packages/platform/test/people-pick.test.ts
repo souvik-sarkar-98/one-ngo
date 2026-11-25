@@ -41,22 +41,42 @@ afterAll(async () => {
 });
 
 describe('person picker', () => {
-  it('offers up to eight active people by name with their email', async () => {
+  const find = async (query: string) => ((await call('GET', `/api/people?pick=1&${query}`)).json() as { items: PersonOption[] }).items;
+  const names = async (query: string) => (await find(query)).map((p) => p.name);
+
+  it('by default offers only active people, by name with their email', async () => {
     const res = await call('GET', '/api/people?pick=1&limit=8&q=pick');
     expect(res.statusCode, res.body).toBe(200);
     const items = (res.json() as { items: PersonOption[] }).items;
     expect(items).toHaveLength(8);
-    expect(items[0]).toEqual({ id: expect.any(String), name: 'Pick Person 1', email: 'p1@pick.test' });
+    expect(items[0]).toEqual({ id: expect.any(String), name: 'Pick Person 1', email: 'p1@pick.test', joinedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) });
     expect(items.map((p) => p.name)).not.toContain('Pick Invited');
     expect(items.map((p) => p.name)).not.toContain('Pick Suspended');
   });
 
-  it('matches by email, never lists invited or suspended people, and refuses someone who edits no person field', async () => {
-    const find = async (q: string) => ((await call('GET', `/api/people?pick=1&q=${q}`)).json() as { items: PersonOption[] }).items;
-    expect((await find('p9%40pick')).map((p) => p.name)).toEqual(['Pick Person 9']);
-    expect(await find('invited%40pick')).toEqual([]);
-    expect(await find('gone%40pick')).toEqual([]);
+  it('adds invited people only when asked with include=invited, and never offers suspended people', async () => {
+    expect(await names('q=invited%40pick')).toEqual([]);
+    expect(await names('q=invited%40pick&include=invited')).toEqual(['Pick Invited']);
+    // Names sort alphabetically, so the invited person comes first.
+    expect((await names('q=pick&limit=8&include=invited'))[0]).toBe('Pick Invited');
+    expect(await names('q=gone%40pick&include=invited')).toEqual([]);
+  });
+
+  it('with email= returns only the one person with exactly that email, ignoring case', async () => {
+    expect(await names('email=p1%40pick.test')).toEqual(['Pick Person 1']);
+    expect(await names('email=P1%40PICK.TEST')).toEqual(['Pick Person 1']);
+    // A partial address is not the same person.
+    expect(await names('email=p1%40pick')).toEqual([]);
+    expect(await names('email=p1%40pick.test&q=person%202')).toEqual([]);
+    // Invited people need include=invited, as with name search.
+    expect(await names('email=invited%40pick.test')).toEqual([]);
+    expect(await names('email=invited%40pick.test&include=invited')).toEqual(['Pick Invited']);
+    expect(await names('email=gone%40pick.test&include=invited')).toEqual([]);
+  });
+
+  it('refuses someone who edits no person field', async () => {
     expect((await call('GET', '/api/people?pick=1&q=pick', undefined, anyone)).statusCode).toBe(403);
+    expect((await call('GET', '/api/people?pick=1&email=p1%40pick.test', undefined, anyone)).statusCode).toBe(403);
     expect((await call('GET', '/api/people?q=pick', undefined, anyone)).statusCode).toBe(403);
   });
 });

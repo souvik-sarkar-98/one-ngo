@@ -12,6 +12,11 @@ export interface TenantContext {
   /** Automations do not react to the change (a quiet import). */
   quiet?: boolean;
   /**
+   * A data migration is saving: a person field may hold a suspended member of the organisation.
+   * Set only by the migration service; never for ordinary saves.
+   */
+  migrating?: boolean;
+  /**
    * Parent records whose rollups a save would recompute are collected here
    * instead; the caller recomputes each of them once afterwards (imports).
    */

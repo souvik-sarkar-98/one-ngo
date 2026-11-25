@@ -1,5 +1,6 @@
 {
   "key": "donation",
+  "hidden": false,
   "recordType": "donation",
   "initial": "raised",
   "states": [

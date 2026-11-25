@@ -1,5 +1,6 @@
 {
   "key": "assets",
+  "hidden": false,
   "recordType": "asset",
   "label": "Physical assets",
   "pageSize": 20,

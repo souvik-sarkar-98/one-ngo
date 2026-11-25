@@ -7,6 +7,7 @@
   "required": ["key", "label", "widgets"],
   "properties": {
     "key": { "$ref": "#/definitions/key", "description": "Stable name; home is the Home screen", "x-order": 1 },
+    "hidden": { "type": "boolean", "default": false, "description": "Left out of menus and links. Changed on the Modules screen", "x-hidden": true },
     "label": { "type": "string", "minLength": 1, "maxLength": 60, "description": "Page title", "x-order": 2 },
     "audience": {
       "type": "array",

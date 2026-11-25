@@ -1,5 +1,6 @@
 {
   "key": "beneficiaryRegister",
+  "hidden": false,
   "label": "Register of enrolled beneficiaries",
   "datasets": [
     {

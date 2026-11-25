@@ -1,5 +1,6 @@
 {
   "key": "milestone",
+  "hidden": false,
   "label": "Milestone",
   "pluralLabel": "Milestones",
   "description": "A dated step in a project, marked done when it is reached.",

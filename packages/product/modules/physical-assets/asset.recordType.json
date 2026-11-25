@@ -1,5 +1,6 @@
 {
   "key": "asset",
+  "hidden": false,
   "label": "Physical asset",
   "pluralLabel": "Physical assets",
   "description": "Furniture, equipment, vehicles and other things the organisation owns, with where they are and who looks after them.",

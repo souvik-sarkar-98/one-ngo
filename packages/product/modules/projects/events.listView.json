@@ -1,5 +1,6 @@
 {
   "key": "events",
+  "hidden": false,
   "recordType": "event",
   "label": "Events",
   "pageSize": 20,

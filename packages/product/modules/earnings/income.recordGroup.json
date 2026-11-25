@@ -1,1 +1,1 @@
-{ "key": "income", "label": "Income", "order": 50, "recordTypes": ["earning"] }
+{ "key": "income", "hidden": false, "label": "Income", "order": 50, "recordTypes": ["earning"] }

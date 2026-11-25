@@ -85,7 +85,7 @@ export function relatedCreates(spec: ListSpec, record: RecordView, specOf: (type
   return spec.related.flatMap((s) => {
     const other = specOf(s.recordType);
     const preset = other?.presets.find((p) => p.field === s.field);
-    if (!other?.type.canCreate || !preset) return [];
+    if (!other?.type.canCreate || other.type.hidden || !preset) return [];
     return [
       {
         id: s.id,

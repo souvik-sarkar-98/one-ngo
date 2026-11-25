@@ -32,6 +32,8 @@ export interface JsonSchema {
   'x-preview'?: string;
   /** A text control for a special kind of string: `code` (monospace, Tab indents), `html` (email layout), or `colour` (`#rrggbb` with a picker). */
   'x-control'?: 'code' | 'html' | 'colour';
+  /** A setting the editor leaves out because another screen changes it. */
+  'x-hidden'?: boolean;
 }
 
 export type LeafControl = 'text' | 'textarea' | 'code' | 'html' | 'colour' | 'number' | 'switch' | 'select' | 'expression' | 'ref' | 'permission' | 'choices' | 'pills' | 'json' | 'fixed';
@@ -300,7 +302,12 @@ function children(s: JsonSchema, value: Body, path: Path, parent: string, ctx: C
     .map(([name, p], i) => ({ name, p, i, order: resolve(p, ctx.root)['x-order'] ?? Number.MAX_SAFE_INTEGER }))
     .sort((a, b) => a.order - b.order || a.i - b.i);
   const required = new Set(s.required ?? []);
-  const out = props.map(({ name, p }) => node(p, value[name], [...path, name], name, required.has(name), parent, ctx));
+  const out = props.map(({ name, p }): FormNode => {
+    const at = [...path, name];
+    // Set elsewhere (the Modules screen): carried through untouched, with no control of its own.
+    if (resolve(p, ctx.root)['x-hidden']) return { ...base(resolve(p, ctx.root), value[name], at, name, false, parent), control: 'fixed' };
+    return node(p, value[name], at, name, required.has(name), parent, ctx);
+  });
   for (const [name, v] of Object.entries(value)) {
     if (!(name in (s.properties ?? {}))) out.push(json(base({}, v, [...path, name], name, false, parent), true));
   }

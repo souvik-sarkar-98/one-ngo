@@ -8,6 +8,6 @@ import type { SaveContext } from './context.js';
 export async function validate(tx: Tx, s: SaveContext): Promise<void> {
   const validation = validateRecordData(s.type, s.loaded.type.version, s.data, s.requiredFields, s.hidden);
   if (validation.length) throw validationFailed('Some fields are not valid.', validation);
-  const people = await personFieldIssues(s.services.people, tx, s.type, s.data, s.previous);
+  const people = await personFieldIssues(s.services.people, tx, s.type, s.data, s.previous, s.ctx.migrating === true);
   if (people.length) throw validationFailed('Some fields are not valid.', people);
 }

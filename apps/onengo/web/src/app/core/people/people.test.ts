@@ -20,11 +20,21 @@ describe('People address contract', () => {
 
   it('writes every parameter it owns and leaves the default chip out', () => {
     const a = parsePeopleAddress(reader({ status: 'invited', q: 'f', add: '' }), 'management');
-    expect(peopleParams(a, 'management')).toEqual({ status: 'invited', add: '', q: 'f', role: null, sort: null, show: null, person: null });
+    expect(peopleParams(a, 'management')).toEqual({ status: 'invited', add: '', email: null, name: null, q: 'f', role: null, sort: null, show: null, person: null });
     expect(peopleParams({ ...a, status: 'active', add: false }, 'management')).toMatchObject({ status: null, add: null });
     const d = parsePeopleAddress(reader({ role: 'finance' }), 'directory');
     expect(peopleParams(d, 'directory')).toEqual({ q: null, role: 'finance', sort: null, show: null, person: null });
     expect(peopleParams(d, 'directory')).not.toHaveProperty('status');
+  });
+
+  it('starts Add a person with the email and name in the address, and drops them when Add closes', () => {
+    const a = parsePeopleAddress(reader({ add: '', email: ' demo@example.org ', name: 'Demo TestUser' }), 'management');
+    expect(a).toMatchObject({ add: true, email: 'demo@example.org', name: 'Demo TestUser' });
+    expect(peopleParams(a, 'management')).toMatchObject({ add: '', email: 'demo@example.org', name: 'Demo TestUser' });
+    expect(peopleParams({ ...a, add: false }, 'management')).toMatchObject({ add: null, email: null, name: null });
+    // Without Add, the values mean nothing; the directory has no Add at all.
+    expect(parsePeopleAddress(reader({ email: 'demo@example.org' }), 'management')).not.toHaveProperty('email');
+    expect(parsePeopleAddress(reader({ add: '', email: 'demo@example.org' }), 'directory')).not.toHaveProperty('email');
   });
 
   it('pushes only when a person or Add opens, and a new search starts from the first page', () => {

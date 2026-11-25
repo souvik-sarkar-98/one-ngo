@@ -1,105 +1,361 @@
+/* ------------------------------------------------------------------ list */
+
 .migration__new {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 8px;
+  gap: 10px;
 }
+.migration__new .migration__field {
+  flex: 1 1 260px;
+}
+.migration__new label:has(> input) {
+  margin-bottom: 0;
+}
+.migration__icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--brand-tint-strong);
+  color: var(--brand);
+  --icon-size: 20px;
+}
+.migration__icon[data-status='done'],
+.migration__icon[data-status='ready'] {
+  background: var(--badge-ok-bg);
+  color: var(--ok);
+}
+.migration__icon[data-status='failed'],
+.migration__icon[data-status='problems'] {
+  background: var(--badge-bad-bg);
+  color: var(--bad);
+}
+.migration__icon[data-status='checked'] {
+  background: var(--badge-warn-bg);
+  color: var(--warn);
+}
+.migration__chevron {
+  color: var(--grey-400);
+  --icon-size: 20px;
+}
+.migration__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 32px 16px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--card-radius);
+  background: var(--card);
+  color: var(--muted);
+  text-align: center;
+}
+.migration__empty .migration__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  --icon-size: 26px;
+}
+
+/* ---------------------------------------------------------------- fields */
+
 .migration__field {
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 0;
-  font-size: 0.85rem;
+  margin: 0;
 }
-.migration__field input,
+.migration__field > span:first-child {
+  font-size: var(--label-size);
+  font-weight: 600;
+  color: var(--label-color);
+}
+.migration__field input:not([type='checkbox']),
 .migration__field select {
-  min-height: 36px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--card);
-  font: inherit;
+  margin-top: 0;
 }
-.migration__steps {
+.migration__check {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin: 4px 0 12px;
-  padding: 0;
-  list-style: none;
-}
-.migration__step {
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--card);
-  padding: 4px 10px;
-  font: inherit;
-  font-size: 0.78rem;
-  color: var(--muted);
-  cursor: pointer;
-}
-.migration__step--on {
-  border-color: var(--brand);
-  color: var(--brand);
-  font-weight: 700;
-}
-.migration__badge {
-  flex: 0 0 auto;
-  border-radius: 999px;
-  padding: 3px 8px;
-  background: var(--line);
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-.migration__badge[data-status='done'],
-.migration__badge[data-status='ready'] {
-  background: color-mix(in srgb, var(--ok, #1d7a46) 14%, #fff);
-}
-.migration__badge[data-status='failed'],
-.migration__badge[data-status='problems'] {
-  background: color-mix(in srgb, var(--bad) 14%, #fff);
-}
-.migration__badge[data-status='running'] {
-  background: color-mix(in srgb, var(--brand) 14%, #fff);
-}
-.migration__target {
-  margin: 12px 0;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--card);
-}
-.migration__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 8px 12px;
-  margin: 8px 0;
-}
-.migration__counts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 6px;
-  margin: 8px 0 12px;
-}
-.migration__counts div {
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--card);
-  text-align: center;
-}
-.migration__counts b {
-  display: block;
-  font-size: 1.1rem;
-}
-.migration__actions {
-  display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  margin-top: 12px;
+  min-height: var(--field-height);
+  font-size: var(--label-size);
+  font-weight: 600;
+  color: var(--label-color);
+}
+.migration__hint {
+  color: var(--help-color);
+  font-size: var(--help-size);
+  line-height: 1.4;
+}
+.migration__req {
+  color: var(--required-color);
 }
 .migration__issue {
   color: var(--bad);
+  font-size: var(--help-size);
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------- summary */
+
+.migration__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* --------------------------------------------------------------- stepper */
+
+.migration__steps {
+  display: flex;
+  margin: 0 0 14px;
+  padding: 14px 8px 10px;
+  list-style: none;
+  background: var(--card);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
+  box-shadow: var(--card-shadow);
+  overflow-x: auto;
+}
+.migration__steps > li {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 64px;
+}
+.migration__steps > li + li::before {
+  content: '';
+  position: absolute;
+  top: 15px;
+  right: calc(50% + 20px);
+  left: calc(-50% + 20px);
+  height: 2px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.migration__steps > li.migration__done + li::before {
+  background: var(--ok);
+}
+.migration__step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+.migration__step:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.migration__step:disabled:hover .migration__dot {
+  border-color: var(--line-strong);
+  color: var(--muted);
+}
+.migration__step:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+.migration__dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.8rem;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+  --icon-size: 18px;
+}
+.migration__step:hover .migration__dot {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.migration__done .migration__dot {
+  border-color: var(--ok);
+  background: var(--ok);
+  color: var(--brand-fg);
+}
+.migration__step--on {
+  color: var(--fg);
+  font-weight: 700;
+}
+.migration__step--on .migration__dot,
+.migration__step--on:hover .migration__dot {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--brand-fg);
+  box-shadow: 0 0 0 4px var(--brand-tint-strong);
+}
+
+/* ------------------------------------------------------------- step card */
+
+.migration__card {
+  margin-bottom: 12px;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
+  box-shadow: var(--panel-shadow);
+}
+.migration__head {
+  margin-bottom: 14px;
+}
+.migration__eyebrow {
+  color: var(--brand);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.migration__head h2 {
+  margin: 2px 0 4px;
+  font-size: 1.05rem;
+}
+.migration__head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.migration__section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 8px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.migration__section::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--divider);
+}
+
+/* -------------------------------------------------------------- dropzone */
+
+.migration__drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 26px 16px;
+  border: 2px dashed var(--brand-tint-line);
+  border-radius: var(--card-radius);
+  background: var(--brand-tint);
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.migration__drop:hover,
+.migration__drop--over {
+  border-color: var(--brand);
+  background: var(--brand-tint-strong);
+}
+.migration__drop:focus-within {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.migration__drop--off {
+  opacity: 0.55;
+  cursor: default;
+}
+.migration__drop strong {
+  color: var(--brand);
+  font-size: 0.9rem;
+}
+.migration__drop .migration__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: var(--card);
+  --icon-size: 26px;
+}
+.migration__drop input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------- list rows */
+
+.migration__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--card-radius);
+  overflow: hidden;
+}
+.migration__list .admin__row {
+  gap: 12px;
+}
+.migration__list li + li .admin__row {
+  border-top: 1px solid var(--row-line);
+}
+.migration__list .admin__label strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.migration__list .admin__label .muted {
+  font-size: 0.76rem;
+}
+.migration__pos {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--brand-tint-strong);
+  color: var(--brand);
   font-size: 0.78rem;
+  font-weight: 700;
+}
+.migration__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  --icon-size: 18px;
+}
+.migration__btn-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  --icon-size: 16px;
 }

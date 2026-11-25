@@ -1,10 +1,9 @@
 {
   "key": "expenses",
-  "version": "1.0.0",
+  "version": "1.2.1",
   "label": "Expenses",
   "description": "Expense claims with the bill attached. A treasurer approves each claim and records its payment, which posts to the books.",
   "engine": "0.1.0",
-  "dependsOn": ["donations"],
   "definitions": [
     "expenseClaim.recordType.json",
     "expenseClaim.workflow.json",
@@ -29,6 +28,8 @@
       }
     ],
     "accounts": [
+      { "code": "BANK", "name": "Bank account", "type": "asset" },
+      { "code": "CASH", "name": "Cash in hand", "type": "asset" },
       { "code": "EXP_ADMIN", "name": "Administration expenses", "type": "expense" },
       { "code": "EXP_PROGRAM", "name": "Programme expenses", "type": "expense" },
       { "code": "EXP_TRAVEL", "name": "Travel expenses", "type": "expense" },

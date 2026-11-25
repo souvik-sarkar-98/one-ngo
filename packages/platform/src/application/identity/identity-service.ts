@@ -5,7 +5,7 @@ import type { CredentialCrypto } from '@onengo/kernel/ports';
 import type { TenantDirectory } from '../../domain/organisations/ports/organisation-directory.js';
 import type { Actor, TenantContext } from '../../domain/ports/tenant-context.js';
 import { forbidden, notFound, PlatformError, validationFailed } from '@onengo/kernel/errors';
-import { demand, demandGrant } from '../../domain/permissions.js';
+import { demand, demandGrant, mayGrant } from '../../domain/permissions.js';
 import type { TransactionManager, Tx } from '../../domain/ports/transaction.js';
 import { PasswordPolicy } from '../../domain/identity/password-policy.js';
 import { ROLES_PERMISSION } from '../../domain/identity/role-policy.js';
@@ -120,6 +120,31 @@ export interface TokenPair {
   acr?: string;
 }
 
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+/** One person of a data migration. */
+export interface ImportMemberInput {
+  email: string;
+  displayName: string;
+  /** Role keys to add; none is ever removed. */
+  roles: string[];
+  /** The status of a new membership; an existing one keeps its own. */
+  status: 'active' | 'suspended';
+  locale?: string | null;
+  /** The account, when the migration already knows it; else it is found or created by email. */
+  userId?: string;
+  /** Whether an existing membership's name and language follow the file (default true). */
+  update?: boolean;
+}
+
+export interface ImportedMember {
+  userId: string;
+  created: boolean;
+  /** The membership's status after the import. */
+  status: string;
+  rolesAdded: string[];
+}
+
 export interface RoleInput {
   key: string;
   label: string;
@@ -187,7 +212,7 @@ export class IdentityService {
   constructor(
     private readonly transactions: TransactionManager,
     private readonly members: MemberStore,
-    private readonly roles: Pick<RoleStore, 'save' | 'grants' | 'assign'>,
+    private readonly roles: Pick<RoleStore, 'save' | 'grants' | 'assign' | 'assigned'>,
     private readonly limits: SharedLimits,
     private readonly tenants: TenantDirectory,
     private readonly accounts: AccountStore,
@@ -253,6 +278,58 @@ export class IdentityService {
     });
     this.actorCache.clear();
     return userId;
+  }
+
+  
+  /**
+   * Adds a person for a data migration, without reactivating, inviting or emailing anyone. Differences from
+   * {@link addMember}: an existing membership keeps its status (a new one can start suspended), the language
+   * is set, roles are only added (and only to active people, for roles the actor may give), and the audit
+   * event is `member.imported`, written only when something changed. No password or invitation is created, and
+   * the actor cache is not cleared: each membership and role insert bumps the organisation's access version,
+   * so the caller calls {@link forgetActors} once per batch. `userId` skips the account step when the
+   * migration already knows the account. `alongside` runs in the membership transaction.
+   */
+  async importMember(ctx: TenantContext, input: ImportMemberInput, alongside?: (tx: Tx, userId: string) => Promise<void>): Promise<ImportedMember> {
+    demand(ctx.actor, 'members:manage');
+    const email = input.email.trim().toLowerCase();
+    if (!EMAIL.test(email) || email.length > 254) throw validationFailed('Email is not a valid address');
+    const displayName = input.displayName.trim();
+    if (!displayName) throw validationFailed('Name is required');
+    if (displayName.length > 120) throw validationFailed('Name is longer than 120 characters');
+    const userId = input.userId ?? (await this.accounts.add(email, displayName));
+    return this.transactions.withTenant(ctx.tenantId, async (tx) => {
+      const joined = await this.members.importJoin(tx, userId, { displayName, status: input.status, locale: input.locale ?? null, update: input.update });
+      const rolesAdded: string[] = [];
+      if (joined.status === 'active' && input.roles.length) {
+        const held = await this.roles.assigned(tx, userId);
+        const wanted = [...new Set(input.roles)].filter((r) => !held.includes(r));
+        if (wanted.length) {
+          const known = await this.roles.grants(tx);
+          for (const key of wanted) {
+            const role = known.find((g) => g.key === key);
+            if (!role) throw validationFailed(`Role '${key}' does not exist`);
+            if (!mayGrant(ctx.actor, role.permissions)) throw forbidden(`You cannot give the role '${key}'`);
+          }
+          for (const key of wanted) {
+            await this.roles.assign(tx, userId, key, ctx.actor.id);
+            rolesAdded.push(key);
+          }
+        }
+      }
+      if (joined.created || joined.changed || rolesAdded.length) {
+        await this.members.audit(tx, {
+          actorId: ctx.actor.id,
+          action: 'member.imported',
+          entity: 'member',
+          entityId: userId,
+          after: { created: joined.created, status: joined.status, roles: rolesAdded },
+        });
+      }
+      if (joined.created || joined.changed) await this.config.userUpdated?.(tx, { userId, name: displayName, email });
+      await alongside?.(tx, userId);
+      return { userId, created: joined.created, status: joined.status, rolesAdded };
+    });
   }
 
   /** Signs the person out of the organisation on every device; access tokens stop working on the next request. */

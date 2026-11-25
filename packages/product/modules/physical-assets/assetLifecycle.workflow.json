@@ -1,5 +1,6 @@
 {
   "key": "assetLifecycle",
+  "hidden": false,
   "recordType": "asset",
   "initial": "active",
   "states": [

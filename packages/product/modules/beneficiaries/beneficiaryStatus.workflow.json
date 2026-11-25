@@ -1,5 +1,6 @@
 {
   "key": "beneficiaryStatus",
+  "hidden": false,
   "recordType": "beneficiary",
   "initial": "enrolled",
   "states": [

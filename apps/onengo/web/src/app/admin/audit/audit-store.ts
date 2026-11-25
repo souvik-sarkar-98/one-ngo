@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { AuditEntry } from '../../core/admin/admin';
 import type { AuditAddress } from '../../core/admin/address';
 import { AuditSession } from '../../core/admin/audit';
+import { shownRecordTypes } from '../../core/hidden';
 import { t } from '../../core/i18n/i18n';
 import type { PagedSnapshot } from '../../core/paging/paged-controller';
 import type { FormValues } from '../../core/records/record/forms';
@@ -20,7 +21,7 @@ export class AuditStore extends AdminBase {
   readonly state = signal<AuditAddress>(this.audit.state);
   readonly rows = signal<PagedSnapshot<AuditEntry>>(EMPTY);
   readonly filtersOpen = signal(false);
-  private readonly types = computed(() => (this.session.defs()?.recordTypes ?? []).map((x) => ({ key: x.key, label: plural(x) })));
+  private readonly types = computed(() => shownRecordTypes(this.session.defs()).map((x) => ({ key: x.key, label: plural(x) })));
   readonly columns = computed(() => {
     this.i18n.locale();
     return auditColumns();

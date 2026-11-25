@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildServer } from '@onengo/server/http/server.js';
+import { targetsOf } from '../src/application/migration/mapping.js';
 import type { ProfileView } from '../src/application/migration/migration-service.js';
 import type { Actor } from '../src/infrastructure/postgres/db.js';
 import { asTx } from '../src/infrastructure/postgres/tx.js';
@@ -131,7 +132,7 @@ describe('data migration', () => {
     expect(view.sources.map((s) => s.fileName)).toEqual(['supporters.csv', 'gifts.csv', 'combined.csv']);
     view = await ok(await call(migrator, 'PUT', `/api/migrations/${id}/sources/${source(view, 'combined.csv').id}/mapping`, COMBINED_MAP));
     expect(view.sources.map((s) => s.fileName)).toEqual(['supporters.csv', 'combined.csv', 'gifts.csv']);
-    expect(source(view, 'combined.csv').mapping!.targets.map((t) => [t.type, t.required])).toEqual([
+    expect(targetsOf(source(view, 'combined.csv').mapping).map((t) => [t.type, t.required])).toEqual([
       ['supporter', true],
       ['pledge', false],
     ]);

@@ -1,5 +1,6 @@
 {
   "key": "eventAttendee",
+  "hidden": false,
   "label": "Attendee",
   "pluralLabel": "Attendees",
   "description": "A person on the list for an event, with whether they came.",

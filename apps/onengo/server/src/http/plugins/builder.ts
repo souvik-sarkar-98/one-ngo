@@ -74,6 +74,10 @@ export async function builderRoutes(api: FastifyInstance, { deps, schemaDir }: {
   api.get('/api/builder/modules', async (req) => builder.modules(contextOf(req)));
   api.post<{ Params: { key: string } }>('/api/builder/modules/:key/enable', async (req) => builder.enableModule(contextOf(req), req.params.key));
   api.post<{ Params: { key: string } }>('/api/builder/modules/:key/disable', async (req) => builder.disableModule(contextOf(req), req.params.key));
+  api.put<{ Params: { key: string; kind: string; defKey: string }; Body: { hidden?: unknown } }>(
+    '/api/builder/modules/:key/definitions/:kind/:defKey/hidden',
+    async (req) => builder.setDefinitionHidden(contextOf(req), req.params.key, definitionKindOf(req.params.kind), req.params.defKey, req.body?.hidden as boolean),
+  );
   api.post<DefParams>('/api/builder/definitions/:kind/:key/disable', async (req) =>
     builder.disableDefinition(contextOf(req), definitionKindOf(req.params.kind), req.params.key),
   );

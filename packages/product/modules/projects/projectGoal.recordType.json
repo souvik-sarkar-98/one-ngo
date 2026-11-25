@@ -1,5 +1,6 @@
 {
   "key": "projectGoal",
+  "hidden": false,
   "label": "Goal",
   "pluralLabel": "Goals",
   "description": "A measurable goal of a project, with its target and what has been achieved so far.",

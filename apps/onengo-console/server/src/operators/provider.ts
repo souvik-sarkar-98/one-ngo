@@ -8,7 +8,6 @@ export interface ProviderConfig {
   clientSecret?: string;
   redirectUri: string;
   audience: string;
-  mfaAcr?: string;
   iapAudience?: string;
 }
 
@@ -49,9 +48,12 @@ export class OperatorProvider {
       code_challenge: pkceChallenge(login.verifier), code_challenge_method: 'S256',
     };
     if (stepUp) {
+      // A step-up forces a fresh login at the provider.
       params.prompt = 'login';
       params.max_age = '0';
-      if (this.config.mfaAcr) params.acr_values = this.config.mfaAcr;
+    } else {
+      // `max_age` makes the provider return `auth_time`, which the session record needs.
+      params.max_age = '300';
     }
     for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
     return { url: url.toString(), login };
@@ -73,7 +75,8 @@ export class OperatorProvider {
     const identity = await verifyIdToken(tokens.id_token, {
       issuer: this.config.issuer, audience: this.config.clientId, nonce: login.nonce, keys: remoteJwks(metadata.jwks_uri),
     });
-    this.requireFreshMfa(identity);
+    if (!identity.authTime) throw new Error('Operator identity provider did not return the sign-in time.');
+    if (login.stepUp) this.requireRecentSignIn(identity);
     return { identity, tokens };
   }
 
@@ -90,10 +93,9 @@ export class OperatorProvider {
     return { issuer: String(payload.iss), sid: payload.sid };
   }
 
-  requireFreshMfa(identity: ExternalAuthResult, now = Math.floor(Date.now() / 1000)): void {
+  /** A step-up must come from a login in the last five minutes. MFA is not required. */
+  requireRecentSignIn(identity: ExternalAuthResult, now = Math.floor(Date.now() / 1000)): void {
     if (!identity.authTime || now - identity.authTime > 300 || identity.authTime > now + 60) throw new Error('Fresh operator authentication is required.');
-    if (!identity.amr.includes('mfa')) throw new Error('The identity provider did not prove multi-factor authentication.');
-    if (this.config.mfaAcr && identity.acr !== this.config.mfaAcr) throw new Error('The required operator assurance level was not met.');
   }
 }
 

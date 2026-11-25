@@ -51,6 +51,19 @@ export class PgFileCatalog implements FileCatalog {
       .execute();
   }
 
+  removeByIds(tx: Tx, ids: string[]): Promise<{ id: string; storage_key: string; store_ref: string }[]> {
+    if (!ids.length) return Promise.resolve([]);
+    return pg(tx)
+      .updateTable('file_object')
+      .set({ deleted_at: sql<Date>`now()` })
+      .where('tenant_id', '=', APP_TENANT)
+      .where('id', 'in', ids)
+      .where('record_id', 'is', null)
+      .where('deleted_at', 'is', null)
+      .returning(['id', 'storage_key', 'store_ref'])
+      .execute();
+  }
+
   removeUnlinked(tx: Tx, unlinkedHours: number, limit: number): Promise<{ id: string; storage_key: string; store_ref: string }[]> {
     return pg(tx)
       .updateTable('file_object')
@@ -73,6 +86,7 @@ export class PgFileCatalog implements FileCatalog {
                     .where('i.status', 'not in', ['done', 'failed']),
                 ),
                 exists(selectFrom('migration_source as ms').select(lit(1).as('one')).whereRef('ms.file_id', '=', 'f.id')),
+                exists(selectFrom('migration_attachment as ma').select(lit(1).as('one')).whereRef('ma.file_id', '=', 'f.id')),
                 exists(selectFrom('tenant_asset as a').select(lit(1).as('one')).whereRef('a.file_id', '=', 'f.id')),
                 exists(selectFrom('receipt_issuer as ri').select(lit(1).as('one')).whereRef('ri.logo_file_id', '=', 'f.id')),
                 exists(selectFrom('receipt_issuer as ri').select(lit(1).as('one')).whereRef('ri.signatory_file_id', '=', 'f.id')),

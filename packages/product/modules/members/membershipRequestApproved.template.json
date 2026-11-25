@@ -1,0 +1,6 @@
+{
+  "key": "membershipRequestApproved",
+  "label": "Membership request approved",
+  "subject": "Your membership request {{ record.number }} has been approved",
+  "body": "Dear {{ record.name }},\n\nYour membership request {{ record.number }} has been approved. We are now setting up your member profile. You will receive a separate email with an invitation to sign in.\n\nThank you for joining us."
+}

@@ -1121,10 +1121,11 @@ export function memoryGateway(seed: SampleSeed = sampleSeed()): MemoryGateways {
       enabled: true,
       dependsOn: [],
       definitions: [
-        { kind: 'recordType', key: 'donor' },
-        { kind: 'recordType', key: 'donation' },
-        { kind: 'workflow', key: 'donation' },
-        { kind: 'listView', key: 'donations' },
+        { kind: 'recordType', key: 'donor', label: 'Donor', hidden: false, hideable: true, blocked: null },
+        { kind: 'recordType', key: 'donation', label: 'Donation', hidden: false, hideable: true, blocked: null },
+        { kind: 'workflow', key: 'donation', label: null, hidden: false, hideable: true, blocked: null },
+        { kind: 'listView', key: 'donations', label: 'Donations', hidden: false, hideable: true, blocked: 'draft' },
+        { kind: 'template', key: 'receipt', label: null, hidden: false, hideable: false, blocked: null },
       ],
       updateAvailable: true,
     },
@@ -1137,9 +1138,9 @@ export function memoryGateway(seed: SampleSeed = sampleSeed()): MemoryGateways {
       enabled: false,
       dependsOn: [],
       definitions: [
-        { kind: 'recordType', key: 'beneficiary' },
-        { kind: 'recordType', key: 'visit' },
-        { kind: 'listView', key: 'visits' },
+        { kind: 'recordType', key: 'beneficiary', label: 'Beneficiary', hidden: false, hideable: true, blocked: null },
+        { kind: 'recordType', key: 'visit', label: 'Visit', hidden: false, hideable: true, blocked: null },
+        { kind: 'listView', key: 'visits', label: 'Visits', hidden: false, hideable: true, blocked: null },
       ],
       updateAvailable: false,
     },
@@ -1246,6 +1247,12 @@ export function memoryGateway(seed: SampleSeed = sampleSeed()): MemoryGateways {
     async disableModule(key) {
       log('access', 'disableModule', [key]);
       moduleRow(key).enabled = false;
+    },
+    async setDefinitionHidden(key, kind, defKey, hidden) {
+      log('access', 'setDefinitionHidden', [key, kind, defKey, hidden]);
+      const d = moduleRow(key).definitions.find((x) => x.kind === kind && x.key === defKey);
+      if (!d) throw fail('not_found', `Module '${key}' has no ${kind} '${defKey}'.`);
+      d.hidden = hidden;
     },
     async moduleUpdate(key) {
       log('access', 'moduleUpdate', [key]);

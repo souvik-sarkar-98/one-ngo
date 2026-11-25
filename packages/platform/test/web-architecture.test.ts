@@ -21,6 +21,7 @@ const SHARED_MODULES = [
   'permissions/permissions',
   'records/email-html',
   'records/rich-text',
+  'time/organisation-time',
 ];
 
 function files(dir: string): string[] {

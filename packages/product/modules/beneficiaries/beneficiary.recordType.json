@@ -1,5 +1,6 @@
 {
   "key": "beneficiary",
+  "hidden": false,
   "label": "Beneficiary",
   "pluralLabel": "Beneficiaries",
   "description": "People or households the organisation serves. Each one has consent records and case notes.",

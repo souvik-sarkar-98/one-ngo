@@ -1,5 +1,6 @@
 {
   "key": "expenseRegister",
+  "hidden": false,
   "label": "Expense register",
   "parameters": [
     { "key": "from", "label": "From", "type": "date", "required": true },

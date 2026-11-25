@@ -1,5 +1,6 @@
 {
   "key": "beneficiaries",
+  "hidden": false,
   "recordType": "beneficiary",
   "label": "Beneficiaries",
   "pageSize": 20,

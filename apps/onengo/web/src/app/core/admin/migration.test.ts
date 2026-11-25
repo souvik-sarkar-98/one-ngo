@@ -1,8 +1,38 @@
 import { describe, expect, it } from 'vitest';
-import type { Me, RecordTypeBody } from '../models';
+import type { FieldDef, Me, RecordTypeBody } from '../models';
 import { memoryMigrations } from '../testing/memory-migrations';
 import { adminHome, mayOpen } from './areas';
-import { MigrationSession, booksBalance, moved, refChoice, refOf, setField, setRef, suggestTarget, type MigrationSource } from './migration';
+import {
+  ATTACHMENT_LIMIT,
+  MigrationSession,
+  attachmentPath,
+  attachmentPathProblem,
+  booksBalance,
+  byteText,
+  fileFields,
+  checkByKind,
+  emptyPeople,
+  groupWarnings,
+  guessRole,
+  kindOptions,
+  legacyRoleValues,
+  moved,
+  peopleDraftOf,
+  peopleSpecOf,
+  planAttachments,
+  refChoice,
+  refOf,
+  roleRows,
+  setField,
+  setFile,
+  setPerson,
+  setRef,
+  suggestTarget,
+  targetsOf,
+  type MigrationCheck,
+  type MigrationSource,
+  type MigrationWarning,
+} from './migration';
 
 const caps = (c: Partial<Me['capabilities']>): Me['capabilities'] => ({ configure: false, publish: false, scripts: false, money: false, ...c });
 const settle = async () => {
@@ -90,7 +120,7 @@ describe('the migration session', () => {
 
     const donors = s.profile!.sources[0]!;
     await session.saveMapping(donors.id, { targets: [suggestTarget(supporter, donors.columns.map((c) => c.name))] });
-    expect(session.state.value.profile!.sources[0]!.mapping!.targets[0]!.fields).toEqual({ name: 'Full Name' });
+    expect(targetsOf(session.state.value.profile!.sources[0]!.mapping)[0]!.fields).toEqual({ name: 'Full Name' });
     await session.move(donors.id, 1);
     expect(session.state.value.profile!.sources.map((x) => x.fileName)).toEqual(['visits.csv', 'donors.csv']);
     await session.check();
@@ -123,5 +153,316 @@ describe('the migration session', () => {
     await session.open((await session.create('Bad'))!);
     await session.saveMapping('s1', { targets: [] });
     expect(session.state.value).toMatchObject({ busy: false, error: 'This mapping cannot be saved.', issues: [{ path: '/targets/0/oldId', message: 'choose the column that holds the old id' }] });
+  });
+});
+
+const person: RecordTypeBody = {
+  key: 'donation',
+  label: 'Donation',
+  fields: [
+    { key: 'amount', label: 'Amount', type: 'money' },
+    { key: 'collector', label: 'Collected by', type: 'person' },
+  ],
+} as RecordTypeBody;
+
+describe('mapping a file of people', () => {
+  const columns = ['UserId', 'Email', 'FullName', 'Roles', 'Active', 'Lang'];
+
+  it('asks what is in the file, and disables People with the reason when the person lacks the permissions', () => {
+    expect(kindOptions(true).map((o) => [o.kind, o.disabled, o.hint])).toEqual([
+      ['records', false, 'ui.admin.migration.kindRecordsHint'],
+      ['people', false, 'ui.admin.migration.kindPeopleHint'],
+    ]);
+    expect(kindOptions(false).find((o) => o.kind === 'people')).toMatchObject({ disabled: true, hint: 'ui.admin.migration.kindPeopleDenied' });
+    expect(kindOptions(false).find((o) => o.kind === 'records')!.disabled).toBe(false);
+  });
+
+  it('guesses the columns, and saves a people mapping with the role table, status and language', async () => {
+    const draft = emptyPeople(columns);
+    expect(draft).toMatchObject({ oldId: 'UserId', email: 'Email', name: 'FullName', rolesColumn: 'Roles', statusColumn: 'Active', locale: 'Lang', separator: ';' });
+    const roles = [
+      { key: 'admin', label: 'Organisation administrator' },
+      { key: 'finance', label: 'Finance', requireTwoStep: true },
+      { key: 'front-desk', label: 'Front desk' },
+    ];
+    const values = legacyRoleValues(['Admin;Clerk', 'admin ; Guest', 'Finance'], ';');
+    expect(values).toEqual(['Admin', 'Clerk', 'Guest', 'Finance']);
+    expect(guessRole('Admin', roles)).toBe('admin');
+    expect(guessRole('Clerk', roles)).toBe('');
+    expect(guessRole('Front desk', roles)).toBe('front-desk');
+    expect(guessRole('Finance', roles)).toBe('');
+    const rows = roleRows(values, { Clerk: 'front-desk', Admin: 'admin', Extra: '' }, roles);
+    expect(rows).toEqual([
+      { value: 'Admin', role: 'admin' },
+      { value: 'Clerk', role: 'front-desk' },
+      { value: 'Guest', role: '' },
+      { value: 'Finance', role: '' },
+      { value: 'Extra', role: '' },
+    ]);
+
+    const gateway = memoryMigrations();
+    const session = new MigrationSession(gateway);
+    await session.open((await session.create('People'))!);
+    await session.addFiles([{ body: new Blob(['UserId,Email,FullName,Roles,Active,Lang\n,,,Admin;Clerk,1,en\n']), name: 'people.csv' }]);
+    const spec = peopleSpecOf({ ...draft, active: '1, yes', suspended: '0,no' }, rows);
+    expect(spec).toEqual({
+      oldId: 'UserId',
+      email: 'Email',
+      name: 'FullName',
+      roles: { column: 'Roles', separator: ';', map: { Admin: 'admin', Clerk: 'front-desk', Guest: null, Finance: null, Extra: null } },
+      status: { column: 'Active', active: ['1', 'yes'], suspended: ['0', 'no'] },
+      locale: 'Lang',
+    });
+    await session.saveMapping('s2', { kind: 'people', people: spec });
+    const saved = session.state.value.profile!.sources[0]!;
+    expect(saved).toMatchObject({ kind: 'people', mapping: { kind: 'people', people: spec } });
+    expect(gateway.calls.at(-1)).toBe('map s2 people');
+    expect(peopleDraftOf(spec)).toMatchObject({ rolesColumn: 'Roles', active: '1, yes', suspended: '0, no', roleMap: { Guest: '' } });
+  });
+
+  it('leaves out what has no column, and keeps fixed roles', () => {
+    const d = { ...emptyPeople(['Id', 'Mail', 'Name']), oldId: 'Id', email: 'Mail', name: 'Name', fixed: ['front-desk'] };
+    expect(peopleSpecOf(d, [])).toEqual({ oldId: 'Id', email: 'Mail', name: 'Name', roles: { fixed: ['front-desk'] } });
+    expect(peopleDraftOf({ oldId: 'Id', email: 'Mail', name: 'Name', roles: { fixed: ['a'] } }).fixed).toEqual(['a']);
+  });
+
+  it('shows a 422 issue path on the role it belongs to', async () => {
+    const gateway = memoryMigrations();
+    gateway.setMapping = async () => {
+      throw Object.assign(new Error('This mapping cannot be saved.'), { code: 'validation_failed', issues: [{ path: '/people/roles/map/Admin', message: 'requires two-step sign-in' }] });
+    };
+    const session = new MigrationSession(gateway);
+    await session.open((await session.create('Bad'))!);
+    await session.saveMapping('s1', { kind: 'people', people: { oldId: 'a', email: 'b', name: 'c' } });
+    expect(session.state.value.issues).toEqual([{ path: '/people/roles/map/Admin', message: 'requires two-step sign-in' }]);
+  });
+});
+
+describe('a person field filled by legacy user id', () => {
+  it('keeps the legacy column apart from the field’s email-or-id column, and fail-the-row only when chosen', () => {
+    let x = suggestTarget(person, ['TxnNo', 'Amount', 'CreatedBy']);
+    x = setField(x, 'collector', 'CreatedBy');
+    x = setPerson(x, 'collector', 'CreatedBy');
+    expect(x.fields).toEqual({ amount: 'Amount', collector: 'CreatedBy' });
+    expect(x.persons).toEqual({ collector: { column: 'CreatedBy' } });
+    x = setPerson(x, 'collector', 'CreatedBy', 'fail');
+    expect(x.persons).toEqual({ collector: { column: 'CreatedBy', onMissing: 'fail' } });
+    expect(setPerson(x, 'collector', '').persons).toEqual({});
+  });
+
+  it('saves the person mapping with the records mapping', async () => {
+    const gateway = memoryMigrations();
+    const session = new MigrationSession(gateway);
+    await session.open((await session.create('Donations'))!);
+    await session.addFiles([{ body: new Blob(['TxnNo,Amount,CreatedBy\nT-1,10,U-1\n']), name: 'donations.csv' }]);
+    const target = setPerson(suggestTarget(person, ['TxnNo', 'Amount', 'CreatedBy']), 'collector', 'CreatedBy', 'fail');
+    await session.saveMapping('s2', { targets: [target] });
+    expect(targetsOf(session.state.value.profile!.sources[0]!.mapping)[0]!.persons).toEqual({ collector: { column: 'CreatedBy', onMissing: 'fail' } });
+  });
+});
+
+describe('the check by kind and its warnings', () => {
+  const warnings: MigrationWarning[] = [
+    { kind: 'unresolved-legacy-users', sourceId: 's2', fileName: 'donations.csv', column: 'CreatedBy', count: 12, samples: ['U-0017', 'U-0022', 'U-0031'] },
+    { kind: 'duplicate-email', sourceId: 's1', fileName: 'people.csv', count: 2, samples: ['Legacy ids a, b share one email; they will be one person'] },
+    { kind: 'unresolved-legacy-users', sourceId: 's3', fileName: 'gifts.csv', column: 'By', count: 1, samples: ['U-9'] },
+    { kind: 'something-new', sourceId: null, fileName: null, count: 3, samples: [] },
+  ];
+
+  it('groups warnings by kind with their samples, and counts what is not shown for ids only', () => {
+    const groups = groupWarnings(warnings);
+    expect(groups.map((g) => [g.kind, g.title, g.items.length])).toEqual([
+      ['unresolved-legacy-users', 'ui.admin.migration.warningGroup.unresolvedLegacyUsers', 2],
+      ['duplicate-email', 'ui.admin.migration.warningGroup.duplicateEmail', 1],
+      ['something-new', 'ui.admin.migration.warningGroup.other', 1],
+    ]);
+    expect(groups[0]!.items.map((i) => i.more)).toEqual([9, 0]);
+    expect(groups[1]!.items[0]!.more).toBe(0);
+  });
+
+  it('adds the per-file figures up per kind, people first', () => {
+    const check = {
+      sources: [
+        { sourceId: 's1', fileName: 'donors.csv', rows: 10, ready: 10, invalid: 0, creates: 10, updates: 0 },
+        { sourceId: 's2', fileName: 'people.csv', rows: 5, ready: 4, invalid: 1, creates: 3, updates: 1 },
+        { sourceId: 's3', fileName: 'donations.csv', rows: 20, ready: 20, invalid: 0, creates: 20, updates: 0 },
+      ],
+    } as MigrationCheck;
+    const sources = [{ id: 's1', kind: 'records' }, { id: 's2', kind: 'people' }, { id: 's3' }] as MigrationSource[];
+    expect(checkByKind(check, sources)).toEqual([
+      { kind: 'people', files: 1, rows: 5, ready: 4, invalid: 1, creates: 3, updates: 1 },
+      { kind: 'records', files: 2, rows: 30, ready: 30, invalid: 0, creates: 30, updates: 0 },
+    ]);
+  });
+});
+describe('file fields filled from attachments', () => {
+  const scans: RecordTypeBody = {
+    key: 'donation',
+    label: 'Donation',
+    fields: [
+      { key: 'amount', label: 'Amount', type: 'money' },
+      { key: 'receipt', label: 'Receipt scan', type: 'file', multiple: true, required: true },
+      { key: 'photo', label: 'Photo', type: 'file' },
+    ],
+  } as RecordTypeBody;
+  const [receipt, photo] = fileFields(scans) as [FieldDef, FieldDef];
+
+  it('lists the file fields, and keeps the separator for several-file fields and "skip" only when chosen', () => {
+    expect(fileFields(scans).map((f) => f.key)).toEqual(['receipt', 'photo']);
+    let x = suggestTarget(scans, ['TxnNo', 'Amount', 'Scans']);
+    expect(x.files).toBeUndefined();
+    x = setFile(x, receipt, 'Scans');
+    expect(x.files).toEqual({ receipt: { column: 'Scans' } });
+    x = setFile(x, receipt, 'Scans', { separator: ',', onMissing: 'skip' });
+    expect(x.files).toEqual({ receipt: { column: 'Scans', separator: ',', onMissing: 'skip' } });
+    x = setFile(x, photo, 'Pic', { separator: ',', onMissing: 'fail' });
+    expect(x.files!.photo).toEqual({ column: 'Pic' });
+    expect(setFile(x, receipt, '').files).toEqual({ photo: { column: 'Pic' } });
+  });
+
+  it('gives a column to one field only', () => {
+    let x = suggestTarget(scans, ['TxnNo', 'Amount', 'Scans']);
+    x = setFile(x, receipt, 'Scans');
+    expect(x.fields).toEqual({ amount: 'Amount' });
+    x = setFile(x, photo, 'Amount');
+    expect(x.fields).toEqual({});
+    x = setField(x, 'amount', 'Scans');
+    expect(x.files).toEqual({ photo: { column: 'Amount' } });
+    x = setFile(setField(x, 'amount', 'Pic'), receipt, 'Pic');
+    expect(x.fields).toEqual({});
+    expect(x.files).toEqual({ photo: { column: 'Amount' }, receipt: { column: 'Pic' } });
+  });
+
+  it('sends the files mapping with the records mapping', async () => {
+    const gateway = memoryMigrations();
+    const session = new MigrationSession(gateway);
+    await session.open((await session.create('Donations'))!);
+    await session.addFiles([{ body: new Blob(['TxnNo,Amount,Scans\nT-1,10,a.pdf;b.pdf\n']), name: 'donations.csv' }]);
+    const target = setFile(suggestTarget(scans, ['TxnNo', 'Amount', 'Scans']), receipt, 'Scans', { onMissing: 'skip' });
+    await session.saveMapping('s2', { targets: [target] });
+    expect(targetsOf(session.state.value.profile!.sources[0]!.mapping)[0]!.files).toEqual({ receipt: { column: 'Scans', onMissing: 'skip' } });
+  });
+});
+
+describe('attachments', () => {
+  const file = (text: string) => new Blob([text]);
+  const open = async () => {
+    const gateway = memoryMigrations();
+    const session = new MigrationSession(gateway);
+    await session.open((await session.create('Donations'))!);
+    return { gateway, session };
+  };
+
+  it('cleans paths and refuses the ones the server would, and anything past 5,000', () => {
+    expect(attachmentPath('\\scans\\D-1.pdf')).toBe('scans/D-1.pdf');
+    expect(attachmentPathProblem('scans/D-1.pdf')).toBeNull();
+    expect(attachmentPathProblem('')).toBe('ui.admin.migration.attach.pathEmpty');
+    expect(attachmentPathProblem('a/../b.pdf')).toBe('ui.admin.migration.attach.pathDots');
+    expect(attachmentPathProblem('x'.repeat(256))).toBe('ui.admin.migration.attach.pathLong');
+    expect(attachmentPathProblem('..b/..c.pdf')).toBeNull();
+    const plan = planAttachments([{ body: file('a'), name: 'a.pdf' }, { body: file('b'), name: '../b.pdf' }, { body: file('c'), name: '/c.pdf' }], ATTACHMENT_LIMIT - 1);
+    expect(plan.ok.map((f) => f.name)).toEqual(['a.pdf']);
+    expect(plan.refused.map((r) => r.name)).toEqual(['../b.pdf', 'c.pdf']);
+  });
+
+  it('writes sizes as people read them', () => {
+    expect([512, 2048, 5 * 1024 ** 2, 1.5 * 1024 ** 3].map(byteText)).toEqual(['512 B', '2 kB', '5 MB', '1.5 GB']);
+  });
+
+  it('uploads one after another under their paths, lists the refusals, and goes on past them', async () => {
+    const { gateway, session } = await open();
+    await session.addAttachments([
+      { body: file('1'), name: 'scans/D-1.pdf' },
+      { body: file('2'), name: 'scans/d-1.PDF' },
+      { body: file('3'), name: '../x.pdf' },
+      { body: file('44'), name: 'photos/ravi.jpg' },
+    ]);
+    const s = session.state.value;
+    expect(gateway.calls.filter((c) => c.startsWith('attach'))).toEqual(['attach scans/D-1.pdf', 'attach scans/d-1.PDF', 'attach photos/ravi.jpg']);
+    expect(s.refused.map((r) => [r.name, r.message])).toEqual([
+      ['../x.pdf', 'The path may not contain "..".'],
+      ['scans/d-1.PDF', 'The attachment scans/d-1.PDF is already there.'],
+    ]);
+    expect(s.profile!.attachments).toEqual({ count: 2, bytes: 3 });
+    expect(s.attachmentList!.items.map((a) => [a.path, a.size, a.usedBy])).toEqual([['scans/D-1.pdf', 1, 0], ['photos/ravi.jpg', 2, 0]]);
+    expect(s.upload).toBeNull();
+    expect(s.busy).toBe(false);
+  });
+
+  it('searches and pages the list, removes one, and clears all, which sends the profile back to draft', async () => {
+    const { gateway, session } = await open();
+    await session.addFiles([{ body: file('A,B\n1,2\n'), name: 'a.csv' }]);
+    await session.addAttachments(['a.pdf', 'b.pdf', 'c.jpg'].map((name) => ({ body: file('x'), name })));
+    await session.check();
+    expect(session.state.value.profile!.status).toBe('checked');
+
+    await session.loadAttachments({ q: 'PDF', limit: 1, offset: 1 });
+    expect(session.state.value.attachmentList).toEqual({ items: [expect.objectContaining({ path: 'b.pdf' })], total: 2 });
+
+    const id = session.state.value.attachmentList!.items[0]!.id;
+    await session.removeAttachment(id);
+    expect(gateway.calls).toContain(`unattach ${id}`);
+    expect(session.state.value.profile!).toMatchObject({ status: 'draft', attachments: { count: 2, bytes: 2 } });
+    expect(session.state.value.attachmentList!.items.map((a) => a.path)).toEqual(['a.pdf', 'c.jpg']);
+
+    await session.clearAttachments();
+    expect(session.state.value.profile!.attachments).toEqual({ count: 0, bytes: 0 });
+    expect(session.state.value.attachmentList).toEqual({ items: [], total: 0 });
+  });
+
+  it('shows a refusal of a remove', async () => {
+    const { gateway, session } = await open();
+    gateway.removeAttachment = async () => {
+      throw Object.assign(new Error('The migration is running.'), { code: 'conflict' });
+    };
+    await session.removeAttachment('a1');
+    expect(session.state.value).toMatchObject({ error: 'The migration is running.', busy: false });
+  });
+});
+
+describe('deleting the source data', () => {
+  it('purges, keeps the mapping, marks the files and profile, and empties the attachments', async () => {
+    const gateway = memoryMigrations();
+    const session = new MigrationSession(gateway);
+    await session.open((await session.create('Donations'))!);
+    await session.addFiles([{ body: new Blob(['TxnNo,Amount\nT-1,10\n']), name: 'donations.csv' }]);
+    await session.saveMapping('s2', { targets: [suggestTarget(supporter, ['TxnNo', 'Amount'])] });
+    await session.addAttachments([{ body: new Blob(['x']), name: 'a.pdf' }]);
+    expect(session.state.value.profile!.purgedAt).toBeNull();
+
+    await session.purge();
+    const p = session.state.value.profile!;
+    expect(gateway.calls).toContain('purge');
+    expect(p.purgedAt).toBe('2026-11-25T00:00:00.000Z');
+    expect(p.sources[0]).toMatchObject({ purgedAt: p.purgedAt, columns: [{ name: 'TxnNo', samples: [] }, { name: 'Amount', samples: [] }] });
+    expect(p.sources[0]!.mapping).not.toBeNull();
+    expect(p.attachments).toEqual({ count: 0, bytes: 0 });
+    expect(session.state.value.attachmentList).toEqual({ items: [], total: 0 });
+  });
+
+  it('shows the refusal while a migration runs, and leaves the profile as it was', async () => {
+    const gateway = memoryMigrations();
+    const session = new MigrationSession(gateway, (fn) => setTimeout(fn, 60_000));
+    await session.open((await session.create('Donations'))!);
+    await session.addFiles([{ body: new Blob(['A\n1\n']), name: 'a.csv' }]);
+    await session.check();
+    await session.run();
+    await session.purge();
+    expect(session.state.value.error).toBe('The migration is running.');
+    expect(session.state.value.profile!.purgedAt).toBeNull();
+    session.dispose();
+  });
+});
+
+describe('check warnings about attachments', () => {
+  it('groups missing files and storage under their own titles, counting the names not shown', () => {
+    const groups = groupWarnings([
+      { kind: 'missing-attachments', sourceId: 's2', fileName: 'donations.csv', column: 'Scans', count: 8, samples: ['a.pdf', 'b.pdf', 'c.pdf', 'd.pdf', 'e.pdf'] },
+      { kind: 'storage-over-quota', sourceId: null, fileName: null, count: 1, samples: ['40 attachments are still to link'] },
+    ]);
+    expect(groups.map((g) => [g.title, g.items.map((i) => i.more)])).toEqual([
+      ['ui.admin.migration.warningGroup.missingAttachments', [3]],
+      ['ui.admin.migration.warningGroup.storageOverQuota', [0]],
+    ]);
   });
 });

@@ -164,6 +164,7 @@
       <a href="#connectors">Connectors</a>
       <a href="#api-keys">API keys</a>
       <a href="#activity">Jobs, audit log, migration</a>
+      <a href="#migration">Moving data from an old system</a>
       <div class="group">Help</div>
       <a href="#trouble">Common messages and fixes</a>
     </nav>
@@ -459,6 +460,8 @@ daysBetween(record.startDate, today()) days since the start date</code></pre>
             <tr><td><code>coalesce(a, b)</code></td><td>The first value that is not blank</td></tr>
             <tr><td><code>contains(list, x)</code></td><td>Whether a text or list contains a value</td></tr>
             <tr><td><code>lower(text)</code> / <code>upper(text)</code> / <code>trim(text)</code></td><td>Text in small letters / capital letters / without spaces at either end</td></tr>
+            <tr><td><code>firstWord(text)</code> / <code>lastWord(text)</code></td><td>The first word of a text / its last word, blank when the text is a single word, for example a first and last name from a full name</td></tr>
+            <tr><td><code>middleWords(text)</code></td><td>The words between the first and the last, blank when there are fewer than three, for example the middle name from a full name</td></tr>
             <tr><td><code>round(x, 2)</code> / <code>abs(x)</code></td><td>Rounds to a number of decimals / a number without its sign</td></tr>
             <tr><td><code>min(a, b)</code> / <code>max(a, b)</code></td><td>The smallest / largest of the numbers</td></tr>
             <tr><td><code>today()</code> / <code>now()</code></td><td>Today's date / the date and time now</td></tr>
@@ -1366,7 +1369,36 @@ daysBetween(record.startDate, today()) days since the start date</code></pre>
           <tbody>
             <tr><td><b>Jobs</b>: Running / Failed / All, <b>Cancel job</b>, <b>Download failed rows (CSV)</b></td><td><span class="k">Screen</span></td><td>Long-running work such as imports and bulk changes, with progress and any failed rows.</td></tr>
             <tr><td><b>Audit log</b>: When, Who, What, Area, <b>Search</b>, filters Person / Area / Record type / Date</td><td><span class="k">Screen</span></td><td>A read-only history of who changed what, including every Builder publish.</td></tr>
-            <tr><td><b>Data migration</b>: <b>New migration</b>, then Files, Map, Order, Books, Check, Run</td><td><span class="k">Screen</span></td><td>Bring in CSV files from an old system: upload files, match columns to fields, set the load order, enter opening balances and receipt numbers, check, then run. "Automations, mail and receipts stay off for the run."</td></tr>
+            <tr><td><b>Data migration</b>: <b>New migration</b>, then Files, Map, Order, Books, Check, Run</td><td><span class="k">Screen</span></td><td>Bring in CSV files from an old system: upload files, match columns to fields, set the load order, enter opening balances and receipt numbers, check, then run. "Automations, mail and receipts stay off for the run." People and files are covered in <a href="#migration">Moving data from an old system</a>.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="migration">
+        <h2>Moving data from an old system</h2>
+        <p>Open <b>Administration &rsaquo; Data &rsaquo; Migration</b>, press <b>New migration</b> and give it a name. One migration holds all the files of one move, and you can run it again after fixing a file.</p>
+        <ol class="steps">
+          <li><b>Export from the old system as CSV.</b> One file for the people, one for each kind of record (donors, donations). Keep a column with the old id of every row. Photos, scans and other documents are exported as ordinary files in a folder.</li>
+          <li><b>Files.</b> Add every CSV. Under <b>Attachments</b> drop the folder of photos and documents. A folder keeps its folder names, such as <code>photos/D-1042.png</code>, and a column in your CSV must name the file the same way. Each attachment can be used by one row, up to 5,000 files, within the size limit of the field (25 MB if it has none) and your organisation's storage.</li>
+          <li><b>Map.</b> For each file choose <b>People</b> or <b>Records</b>. A people file needs the <b>Migrate people</b> and <b>Manage people</b> permissions; without them the People option is greyed out. Pick the columns for legacy user id, email and name, and optionally roles, status and language. People are added as <b>Invited</b>: no password is set and no email goes out. They get a link when you invite them from <b>People</b>, as for anyone else.</li>
+          <li><b>Order.</b> People load first, because records look people up by their old id. Saving a mapping puts the files in the right order, and a hand order that breaks a lookup is refused.</li>
+          <li><b>Check.</b> Nothing is saved. Problems stop a row; warnings do not. Read both, fix the CSV, upload it again and check again.</li>
+          <li><b>Run.</b> You can leave the page. Press <b>Download failed rows</b> to fix the rows that failed and run again.</li>
+        </ol>
+
+        <table>
+          <thead><tr><th>Topic</th><th>What to know</th></tr></thead>
+          <tbody>
+            <tr><td><b>Legacy roles</b></td><td>The roles column may hold several roles in one cell, separated by <code>;</code>, <code>,</code> or <code>|</code>. The Map step lists each legacy role it finds and lets you choose which role here it becomes, or <b>Ignore</b>. You can only give roles you could give yourself. Roles are added, never taken away, so people who already belong keep theirs.</td></tr>
+            <tr><td><b>Roles that need two-step sign-in</b></td><td>These cannot be given in a migration: the person could not sign in to set two-step up. Choose <b>Ignore</b>, and add the role in <b>People</b> after they have signed in for the first time and enrolled.</td></tr>
+            <tr><td><b>Owners and other person fields</b></td><td>On a record file, choose the <b>Legacy user id column</b> for a person field. A blank cell stays blank. If the id is not in the people file the field stays blank and the Check warns; choose <b>Fail the row</b> if blank is not acceptable.</td></tr>
+            <tr><td><b>Photos and attachments</b></td><td>For a file field choose the <b>File name column</b>. If a named file was not uploaded you choose <b>Fail the row</b> or <b>Skip the file and warn</b>. A file of the wrong type or over the size limit fails the row with the normal message.</td></tr>
+            <tr><td><b>Warnings</b></td><td>They are grouped: legacy users not found, files not uploaded, storage that may run out, people already here, emails shared by several legacy ids, roles skipped for suspended people, and script effects held back. The run is quiet: no email, automation, script notification or receipt comes out of it.</td></tr>
+            <tr><td><b>Stopped by Check</b></td><td>A record type whose workflow starts in a state that posts a journal entry or issues a receipt cannot be migrated, and neither can one with a script that may propose journal entries. Opening balances go in on the <b>Books</b> step instead.</td></tr>
+            <tr><td><b>Running again</b></td><td>It is safe. Rows already loaded are matched by their old id and updated, never duplicated. A suspended person stays suspended, roles are not removed, and a legacy user id that now has a different email fails with "already linked to someone else here".</td></tr>
+            <tr><td><b>Deleting the source data</b></td><td>The files contain personal information. On the Run step press <b>Delete source files and failed-row data</b> when you are done. It removes the CSVs, attachments, sample values and the text of failed rows; records, people and books already loaded stay. A finished migration is also cleared automatically after 30 days. After that, add the files again to check or run it.</td></tr>
+            <tr><td><b>History in a field</b></td><td>Old comments, notes and status history cannot become OneNGO history. Add a long-text field to the record type (for example "Imported history"), set its edit permission so nobody can change it, and map the old column to it.</td></tr>
+            <tr><td><b>Not moved</b></td><td>Shares, workflow status (every record starts in the first status; keep the old one in a choice or text field), original created and changed dates, signatures, and old journal entries and receipts. Excel, JSON and ZIP files are not read, and there is no undo.</td></tr>
           </tbody>
         </table>
       </section>

@@ -5,12 +5,20 @@ export interface PersonOption {
   id: string;
   name: string;
   email: string;
+  /** When they joined the organisation, ISO 8601. */
+  joinedAt?: string;
+}
+
+/** Narrows the picker. `email` finds the one person with exactly that email; `includeInvited` also finds invited people. */
+export interface PickOptions {
+  email?: string;
+  includeInvited?: boolean;
 }
 
 /** What the person picker needs from the server. The only implementation that talks HTTP is in http-people.ts. */
 export interface PeopleGateway {
-  /** Active members matching the text by name or email, a few at a time. */
-  pick(q: string): Promise<PersonOption[]>;
+  /** Members matching the text by name or email, a few at a time; active members only unless `options.includeInvited`. */
+  pick(q: string, options?: PickOptions): Promise<PersonOption[]>;
 }
 
 export type MemberStatus = 'active' | 'invited' | 'suspended';
@@ -76,10 +84,23 @@ export interface PeopleListGateway {
   removeFromRole(role: string, userId: string): Promise<void>;
 }
 
-/** Suggestions for a person field: name, with the email as the second line. People are never created from here. */
-export function peopleSource(gateway: PeopleGateway): SuggestionSource {
+/** A person suggestion, carrying the person so a field that follows the account can be filled at once. */
+export interface PersonSuggestion extends Suggestion {
+  person: PersonOption;
+}
+
+/**
+ * Suggestions for a person field: name, with the email as the second line. People are never created from here.
+ * With `emailOf`, the suggestions are only the person whose email is that value (invited people included); none while it is blank.
+ */
+export function peopleSource(gateway: PeopleGateway, emailOf?: () => string): SuggestionSource {
+  const suggest = (people: PersonOption[]) => people.map((p): PersonSuggestion => ({ id: p.id, label: p.name, hint: p.email, person: p }));
   return {
     minLength: 0,
-    search: async (text) => (await gateway.pick(text.trim())).map((p): Suggestion => ({ id: p.id, label: p.name, hint: p.email })),
+    search: async (text) => {
+      if (!emailOf) return suggest(await gateway.pick(text.trim()));
+      const email = emailOf().trim();
+      return email ? suggest(await gateway.pick('', { email, includeInvited: true })) : [];
+    },
   };
 }

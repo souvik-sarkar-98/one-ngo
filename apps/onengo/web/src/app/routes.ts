@@ -65,6 +65,9 @@ const shellStyles: CanActivateFn = async () => {
   return true;
 };
 
+/** Public screens that draw a `cf-form` use Material fields (outlines, select, date picker), so they need the Material theme too. */
+const formStyles: CanActivateFn = shellStyles;
+
 /**
  * Screens drawn without the shell: no app bar, navigation or breadcrumb.
  * They still use the shared classes in app-styles (tabs, full-width actions, text links).
@@ -78,8 +81,8 @@ const bare: Routes = [
   { path: 'print/report/:key', canActivate: [signedIn, appStyles, withText('core')], loadComponent: () => import('./print/report.screen').then((m) => m.ReportPrintScreen) },
   { path: 'r/:token', canActivate: [appStyles, withText('core')], loadComponent: () => import('./print/public-receipt.screen').then((m) => m.PublicReceiptScreen) },
   { path: 'o/:code/c/:type', canActivate: [appStyles, withText('core')], loadComponent: () => import('./public/public-catalogue.screen').then((m) => m.PublicCatalogueScreen) },
-  { path: 'o/:code/f/:type', canActivate: [appStyles, withText('core')], loadComponent: () => import('./public/public-form.screen').then((m) => m.PublicFormScreen) },
-  { path: 'f/:token', canActivate: [appStyles, withText('core')], loadComponent: () => import('./public/public-record.screen').then((m) => m.PublicRecordScreen) },
+  { path: 'o/:code/f/:type', canActivate: [formStyles, withText('core')], loadChildren: () => import('./public/public.routes').then((m) => m.PUBLIC_FORM_ROUTES) },
+  { path: 'f/:token', canActivate: [formStyles, withText('core')], loadChildren: () => import('./public/public.routes').then((m) => m.PUBLIC_RECORD_ROUTES) },
 ];
 
 /** The destinations and everything reached from them, inside the shell. */

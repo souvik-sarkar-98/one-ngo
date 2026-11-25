@@ -1,0 +1,6 @@
+{
+  "key": "membershipRequestNotApproved",
+  "label": "Membership request dismissed",
+  "subject": "Your membership request {{ record.number }} has been dismissed",
+  "body": "Dear {{ record.name }},\n\nWe are sorry that your membership request {{ record.number }} has been dismissed.\n\nReason: {{ record.rejectionReason }}\n\nYou are welcome to apply again at any time."
+}

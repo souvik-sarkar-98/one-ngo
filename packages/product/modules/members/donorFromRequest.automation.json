@@ -1,0 +1,24 @@
+{
+  "key": "donorFromRequest",
+  "label": "Create the donor profile when a membership request is completed",
+  "recordType": "membershipRequest",
+  "trigger": { "event": "statusChanged", "to": "completed" },
+  "condition": "isEmpty(record.existingDonor)",
+  "actions": [
+    {
+      "type": "createRecord",
+      "recordType": "donor",
+      "values": {
+        "name": "record.name",
+        "email": "record.email",
+        "phone": "record.phone",
+        "pan": "record.pan",
+        "address": "trim(record.addressLine1 + ' ' + text(record.addressLine2) + ' ' + text(record.addressLine3))",
+        "city": "record.city",
+        "login": "record.login",
+        "donorType": "'member'",
+        "monthlyDonation": "record.preferredDonation == 'none' ? null : number(record.preferredDonation)"
+      }
+    }
+  ]
+}

@@ -916,6 +916,8 @@ daysBetween(record.startDate, today()) days since the start date</code></pre>
             <tr><td><code>coalesce(a, b)</code></td><td>The first value that is not blank</td></tr>
             <tr><td><code>contains(list, x)</code></td><td>Whether a text or list contains a value</td></tr>
             <tr><td><code>lower(text)</code> / <code>upper(text)</code> / <code>trim(text)</code></td><td>Text in small letters / capital letters / without spaces at either end</td></tr>
+            <tr><td><code>firstWord(text)</code> / <code>lastWord(text)</code></td><td>The first word of a text / its last word, blank when the text is a single word, for example a first and last name from a full name</td></tr>
+            <tr><td><code>middleWords(text)</code></td><td>The words between the first and the last, blank when there are fewer than three, for example the middle name from a full name</td></tr>
             <tr><td><code>round(x, 2)</code> / <code>abs(x)</code></td><td>Rounds to a number of decimals / a number without its sign</td></tr>
             <tr><td><code>min(a, b)</code> / <code>max(a, b)</code></td><td>The smallest / largest of the numbers</td></tr>
             <tr><td><code>today()</code> / <code>now()</code></td><td>Today's date / the date and time now</td></tr>

@@ -1,5 +1,8 @@
 import type { Tx } from '../../../domain/ports/transaction.js';
 import type { DefinitionKind, ModuleManifest } from '../types.js';
+import type { LegacyOptionState } from '../legacy-module-options.js';
+
+export type { LegacyOptionState };
 
 export type { DefinitionKind, ModuleManifest } from '../types.js';
 
@@ -107,6 +110,11 @@ export interface DefinitionStore {
   disabledDefinitions(tx: Tx): Promise<{ kind: DefinitionKind; key: string }[]>;
   /** Marks a shipped definition as turned off or on again. Does not change what is published. */
   setDefinitionDisabled(tx: Tx, kind: DefinitionKind, key: string, disabled: boolean, actorId: string): Promise<void>;
+  /** What the organisation chose for the retired module options, by module; empty once moved over. */
+  legacyModuleOptions(tx: Tx): Promise<Record<string, LegacyOptionState>>;
+  clearLegacyModuleOptions(tx: Tx): Promise<void>;
+  /** Marks roles as changed by the organisation, so module updates leave their permissions alone. */
+  markRolesCustomised(tx: Tx, keys: string[]): Promise<void>;
 
   /** 
 amedRecipientsSetting is the organisation setting that holds the named fixed recipients (NAMED_RECIPIENTS_SETTING). */

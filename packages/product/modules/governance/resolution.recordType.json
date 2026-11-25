@@ -1,5 +1,6 @@
 {
   "key": "resolution",
+  "hidden": false,
   "label": "Resolution",
   "pluralLabel": "Resolutions",
   "description": "Resolutions put to a meeting. An office bearer vote passes or rejects each one, and a passed resolution is kept as a numbered record.",

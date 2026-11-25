@@ -1,5 +1,6 @@
 {
   "key": "meetings",
+  "hidden": false,
   "recordType": "meeting",
   "label": "Meetings",
   "pageSize": 20,

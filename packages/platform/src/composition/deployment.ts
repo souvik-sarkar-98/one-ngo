@@ -24,6 +24,8 @@ export interface DeploymentResult {
   /** Migration files applied by this run. */
   migrations: string[];
   modules: ModulePackage[];
+  /** Organisations whose retired module options could not be moved over (an open draft, say); tried again next run. */
+  optionsKept: { tenantId: string; reason: string }[];
 }
 
 /**
@@ -36,14 +38,24 @@ export async function runDeploymentSteps(db: Database, options: DeploymentOption
   assertNoIncompatibleNewerSchema(await readSchemaCompatibility(db, before.unknown));
   const migrations = await migrate(db, paths.migrations, before.unknown);
   const schemas = new SchemaRegistry(paths.schemas);
-  const definitions = new DefinitionService(transactions(db), new PgDefinitionStore(), schemas, ownerCapabilities(db).definitionBase, pgAuditTrail);
+  const owner = ownerCapabilities(db);
+  const definitions = new DefinitionService(transactions(db), new PgDefinitionStore(), schemas, owner.definitionBase, pgAuditTrail);
   const modules: ModulePackage[] = [];
   for (const key of options.shippedModules) {
     const pkg = await loadModulePackage(join(paths.modules, key), schemas);
     await publishModulePackage(definitions, pkg);
     modules.push(pkg);
   }
-  return { migrations, modules };
+  const optionsKept: DeploymentResult['optionsKept'] = [];
+  const manifests = modules.map((m) => m.manifest);
+  for (const tenantId of await owner.tenants.activeIds()) {
+    try {
+      await definitions.retireModuleOptions(tenantId, manifests);
+    } catch (e) {
+      optionsKept.push({ tenantId, reason: e instanceof Error ? e.message : String(e) });
+    }
+  }
+  return { migrations, modules, optionsKept };
 }
 
 /** Rewrites stored two-step, connector and gateway secrets under the current key. */

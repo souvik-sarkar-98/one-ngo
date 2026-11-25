@@ -1,5 +1,6 @@
 {
   "key": "projectStatus",
+  "hidden": false,
   "recordType": "project",
   "initial": "planning",
   "states": [

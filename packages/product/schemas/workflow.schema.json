@@ -7,6 +7,7 @@
   "required": ["key", "recordType", "initial", "states", "transitions"],
   "properties": {
     "key": { "$ref": "#/definitions/key", "description": "Stable name of the workflow", "x-order": 1 },
+    "hidden": { "type": "boolean", "default": false, "description": "Its steps are not offered; record statuses still show. Changed on the Modules screen", "x-hidden": true },
     "recordType": { "$ref": "#/definitions/key", "description": "The record type that follows this workflow", "x-ref": "recordType", "x-order": 2 },
     "role": {
       "enum": ["primary", "parallel"],

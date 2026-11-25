@@ -4,15 +4,15 @@ import { OperatorProvider } from '../src/operators/provider.js';
 import { SESSION_COOKIE, SecretBox, canonicalTarget } from '../src/operators/security.js';
 
 describe('operator security boundary', () => {
-  it('requires provider-proven recent MFA and configured assurance', () => {
+  it('requires a sign-in in the last five minutes for a step-up, without MFA', () => {
     const provider = new OperatorProvider({
       issuer: 'https://id.example/', clientId: 'operator', redirectUri: 'https://op.example/op/auth/callback',
-      audience: 'operator-api', mfaAcr: 'urn:mfa',
+      audience: 'operator-api',
     });
     const now = 1_800_000_000;
-    expect(() => provider.requireFreshMfa({ issuer: 'https://id.example/', subject: 'x', emailVerified: true, authTime: now, amr: ['pwd'], acr: 'urn:mfa' }, now)).toThrow(/multi-factor/i);
-    expect(() => provider.requireFreshMfa({ issuer: 'https://id.example/', subject: 'x', emailVerified: true, authTime: now - 301, amr: ['mfa'], acr: 'urn:mfa' }, now)).toThrow(/fresh/i);
-    expect(() => provider.requireFreshMfa({ issuer: 'https://id.example/', subject: 'x', emailVerified: true, authTime: now, amr: ['mfa'], acr: 'wrong' }, now)).toThrow(/assurance/i);
+    expect(() => provider.requireRecentSignIn({ issuer: 'https://id.example/', subject: 'x', emailVerified: true, authTime: now, amr: ['pwd'] }, now)).not.toThrow();
+    expect(() => provider.requireRecentSignIn({ issuer: 'https://id.example/', subject: 'x', emailVerified: true, authTime: now - 301, amr: ['pwd'] }, now)).toThrow(/fresh/i);
+    expect(() => provider.requireRecentSignIn({ issuer: 'https://id.example/', subject: 'x', emailVerified: true, authTime: now + 120, amr: ['pwd'] }, now)).toThrow(/fresh/i);
   });
 
   it('encrypts provider material and canonicalises step-up targets', () => {

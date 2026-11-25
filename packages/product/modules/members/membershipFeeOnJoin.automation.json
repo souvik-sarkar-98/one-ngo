@@ -1,0 +1,19 @@
+{
+  "key": "membershipFeeOnJoin",
+  "label": "Raise the membership fee when a member is created",
+  "recordType": "member",
+  "trigger": { "event": "created" },
+  "condition": "not isEmpty(record.joiningFee)",
+  "actions": [
+    {
+      "type": "createRecord",
+      "recordType": "membershipFee",
+      "values": {
+        "member": "record.id",
+        "memberName": "record.name",
+        "memberEmail": "record.email",
+        "amount": "record.joiningFee"
+      }
+    }
+  ]
+}

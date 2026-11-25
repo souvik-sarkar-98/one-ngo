@@ -21,6 +21,36 @@ export const postgresMemberStore: MemberStore = {
       .execute();
   },
 
+  async importJoin(tx, userId, member) {
+    const k = pg(tx);
+    const find = () =>
+      k.selectFrom('tenant_member').select(['status', 'display_name', 'locale']).where('tenant_id', '=', APP_TENANT).where('user_id', '=', userId).executeTakeFirst();
+    let existing = await find();
+    if (!existing) {
+      const added = await k
+        .insertInto('tenant_member')
+        .values({ tenant_id: APP_TENANT, user_id: userId, display_name: member.displayName || null, locale: member.locale, status: member.status })
+        .onConflict((oc) => oc.columns(['tenant_id', 'user_id']).doNothing())
+        .returning('status')
+        .executeTakeFirst();
+      if (added) return { created: true, changed: true, status: added.status };
+      existing = await find();
+    }
+    const row = existing!;
+    const name = member.displayName || null;
+    const nameChanged = member.update !== false && name !== null && row.display_name !== name;
+    const localeChanged = member.update !== false && member.locale !== null && row.locale !== member.locale;
+    if (nameChanged || localeChanged) {
+      await k
+        .updateTable('tenant_member')
+        .set({ ...(nameChanged ? { display_name: name } : {}), ...(localeChanged ? { locale: member.locale } : {}) })
+        .where('tenant_id', '=', APP_TENANT)
+        .where('user_id', '=', userId)
+        .execute();
+    }
+    return { created: false, changed: nameChanged || localeChanged, status: row.status };
+  },
+
   async isMember(tx, userId) {
     const member = await pg(tx)
       .selectFrom('tenant_member')

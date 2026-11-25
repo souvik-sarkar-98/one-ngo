@@ -1,5 +1,6 @@
 {
   "key": "sendReminder",
+  "hidden": false,
   "recordType": "donation",
   "label": "Send reminder",
   "placement": ["panel", "row", "bulk"],

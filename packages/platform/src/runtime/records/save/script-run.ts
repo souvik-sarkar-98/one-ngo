@@ -196,7 +196,8 @@ export async function applyEffects(tx: Tx, s: SaveContext, row: RecordRow): Prom
             break;
           }
           case 'notify':
-            await s.services.store.enqueueEvent(tx, 'script.notify', {
+            // a quiet save (import / migration) sends nothing outward
+            if (!s.ctx.quiet) await s.services.store.enqueueEvent(tx, 'script.notify', {
               script: script.key,
               version: script.version,
               template: e.template,
@@ -213,7 +214,9 @@ export async function applyEffects(tx: Tx, s: SaveContext, row: RecordRow): Prom
             applied.push({ ...base, template: e.template });
             break;
           case 'connector.call':
-            if (s.loaded.connectors.get(e.connector)?.type === 'http') {
+            if (s.ctx.quiet) {
+              // a quiet save (import / migration) sends nothing outward
+            } else if (s.loaded.connectors.get(e.connector)?.type === 'http') {
               await s.services.store.enqueueEvent(tx, 'connector.http', {
                 connector: e.connector,
                 event: `script.${script.key}`,

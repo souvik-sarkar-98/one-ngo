@@ -13,6 +13,7 @@ export async function authorize(tx: Tx, s: SaveContext): Promise<void> {
     const f = fields.get(k);
     if (!f) issues.push({ path: `/${k}`, message: 'is not a field of this record type' });
     else if (f.calculated) issues.push({ path: `/${k}`, message: 'is calculated and cannot be set' });
+    else if (f.generated) issues.push({ path: `/${k}`, message: 'is generated and cannot be set' });
     else if (f.rollup) issues.push({ path: `/${k}`, message: 'is kept up to date automatically and cannot be set' });
     else if (isReadProtected(type, f) && previous && patch[k] === MASK) delete patch[k];
   }

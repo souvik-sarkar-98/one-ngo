@@ -50,6 +50,8 @@ export const TENANT_TABLES = [
   'migration_profile',
   'migration_source',
   'migration_key',
+  'migration_person_key',
+  'migration_attachment',
   'record_share',
   'consent_event',
   'erasure_request',

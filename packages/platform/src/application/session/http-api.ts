@@ -48,6 +48,7 @@ export class CurrentPerson {
         settings: can(ctx.actor, 'admin:settings'),
         migration: can(ctx.actor, 'data:migrate'),
         migrationBooks: can(ctx.actor, 'data:migrate:books'),
+        migrationPeople: can(ctx.actor, 'data:migrate:people') && can(ctx.actor, 'members:manage'),
       },
     };
   }

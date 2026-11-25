@@ -1,1 +1,1 @@
-{ "key": "spending", "label": "Spending", "order": 40, "recordTypes": ["expenseClaim"] }
+{ "key": "spending", "hidden": false, "label": "Spending", "order": 40, "recordTypes": ["expenseClaim"] }

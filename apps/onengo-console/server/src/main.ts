@@ -45,7 +45,6 @@ const provider = new OperatorProvider({
   clientSecret: process.env.OPERATOR_OIDC_CLIENT_SECRET,
   redirectUri: `${publicBaseUrl}/op/auth/callback`,
   audience: required('OPERATOR_OIDC_AUDIENCE'),
-  mfaAcr: process.env.OPERATOR_OIDC_MFA_ACR,
 });
 await provider.check().catch(async (error: unknown) => {
   logger.log('CRITICAL', 'Start-up failed: the operator identity provider could not be reached or is misconfigured', {}, error);

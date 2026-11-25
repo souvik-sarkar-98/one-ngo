@@ -65,6 +65,7 @@ export const APP_AREAS: [string, string][] = [
   ['data:export', "Export all of the organisation's data (API only)"],
   ['data:migrate', 'Administration: data migration'],
   ['data:migrate:books', 'Administration: data migration opening balances and receipt numbers'],
+  ['data:migrate:people', 'Administration: data migration people files'],
   ['privacy:consent:read', 'Privacy: consent records (API only)'],
   ['privacy:consent:record', 'Privacy: record consent (API only)'],
   ['privacy:erase', 'Privacy: erase a person (API only)'],

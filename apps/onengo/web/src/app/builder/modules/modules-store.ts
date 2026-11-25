@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { httpAccess, type ModuleReview, type ModuleRow } from '../../core/builder/http-access';
+import { httpAccess, type ModuleDefinition, type ModuleReview, type ModuleRow } from '../../core/builder/http-access';
+import { definitionName } from '../../core/builder/module-visibility';
 import { holds } from '../../core/builder/permission-grid';
 import { t } from '../../core/i18n/i18n';
 import { Api } from '../../services/api';
@@ -23,6 +24,8 @@ export class ModulesStore {
   readonly error = signal('');
   readonly message = signal('');
   readonly review = signal<ModuleReview | null>(null);
+  /** Key of the module whose "Choose what shows" panel is open. */
+  readonly open = signal<string | null>(null);
   readonly canChange = computed(() => holds(this.session.me()?.permissions ?? [], 'config:modules') && !this.narrow());
 
   constructor() {
@@ -47,6 +50,19 @@ export class ModulesStore {
 
   async turnOff(m: ModuleRow): Promise<void> {
     await this.act(() => this.gateway.disableModule(m.key), t('ui.builder.modules.turnedOff', { name: m.label }));
+  }
+
+  /** Opens one module's "Choose what shows" panel; only one is open at a time. */
+  toggleOpen(m: ModuleRow): void {
+    this.open.set(this.open() === m.key ? null : m.key);
+  }
+
+  /** Keeps one definition out of menus, lists and pages, or shows it again. Records and permissions are kept either way. */
+  async setHidden(m: ModuleRow, d: ModuleDefinition, hidden: boolean): Promise<void> {
+    await this.act(
+      () => this.gateway.setDefinitionHidden(m.key, d.kind, d.key, hidden),
+      t(hidden ? 'ui.builder.modules.wasHidden' : 'ui.builder.modules.wasShown', { name: definitionName(d) }),
+    );
   }
 
   async openReview(m: ModuleRow): Promise<void> {

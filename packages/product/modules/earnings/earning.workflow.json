@@ -1,5 +1,6 @@
 {
   "key": "earning",
+  "hidden": false,
   "recordType": "earning",
   "initial": "expected",
   "states": [

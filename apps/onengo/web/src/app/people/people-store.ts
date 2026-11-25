@@ -389,8 +389,8 @@ export class PeopleStore {
   // ------------------------------------------------------------ internals
 
   private resetAdd(): void {
-    this.addEmail.set('');
-    this.addName.set('');
+    this.addEmail.set(this.state().email ?? '');
+    this.addName.set(this.state().name ?? '');
     this.addRoles.set([]);
     this.addInvite.set(true);
     this.addErrors.set({});

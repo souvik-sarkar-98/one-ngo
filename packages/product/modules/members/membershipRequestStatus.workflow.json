@@ -1,0 +1,35 @@
+{
+  "key": "membershipRequestStatus",
+  "hidden": false,
+  "recordType": "membershipRequest",
+  "initial": "submitted",
+  "states": [
+    { "key": "submitted", "label": "Submitted" },
+    { "key": "approved", "label": "Approved" },
+    { "key": "rejected", "label": "Dismissed", "final": true },
+    { "key": "completed", "label": "Completed", "final": true }
+  ],
+  "transitions": [
+    {
+      "key": "verify",
+      "label": "Mark as verified",
+      "from": ["submitted"],
+      "to": "approved",
+      "approval": { "roles": ["membership-manager"], "count": 1 }
+    },
+    {
+      "key": "complete",
+      "label": "Onboard",
+      "from": ["approved"],
+      "to": "completed",
+      "requiredFields": ["login"]
+    },
+    {
+      "key": "reject",
+      "label": "Dismiss",
+      "from": ["submitted"],
+      "to": "rejected",
+      "requiredFields": ["rejectionReason"]
+    }
+  ]
+}

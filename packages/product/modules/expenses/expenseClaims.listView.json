@@ -1,5 +1,6 @@
 {
   "key": "expenseClaims",
+  "hidden": false,
   "recordType": "expenseClaim",
   "label": "Expense claims",
   "pageSize": 20,

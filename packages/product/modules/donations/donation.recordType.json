@@ -1,5 +1,6 @@
 {
   "key": "donation",
+  "hidden": false,
   "label": "Donation",
   "pluralLabel": "Donations",
   "titleField": "donorName",

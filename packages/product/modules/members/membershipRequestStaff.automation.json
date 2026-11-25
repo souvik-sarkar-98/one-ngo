@@ -1,0 +1,9 @@
+{
+  "key": "membershipRequestStaff",
+  "label": "Tell membership managers about a new request",
+  "recordType": "membershipRequest",
+  "trigger": { "event": "created" },
+  "actions": [
+    { "type": "notify", "template": "membershipRequestStaff", "to": { "roles": ["membership-manager"] }, "channels": ["inApp", "email"] }
+  ]
+}

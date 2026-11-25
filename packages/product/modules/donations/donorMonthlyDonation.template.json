@@ -1,0 +1,6 @@
+{
+  "key": "donorMonthlyDonation",
+  "label": "Monthly donation raised",
+  "subject": "Your monthly donation of Rs. {{ record.monthlyDonation }}, {{ record.name }}",
+  "body": "Dear {{ record.name }},\n\nYour monthly donation of Rs. {{ record.monthlyDonation }} has been raised for this month. Thank you for your continued support.\n\nIf you have already paid, please ignore this message. Otherwise, please pay as you usually do, and reply to this email if you need the payment details again."
+}

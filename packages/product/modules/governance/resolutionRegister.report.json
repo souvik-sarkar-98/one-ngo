@@ -1,5 +1,6 @@
 {
   "key": "resolutionRegister",
+  "hidden": false,
   "label": "Register of passed resolutions",
   "datasets": [
     {

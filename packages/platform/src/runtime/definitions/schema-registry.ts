@@ -5,7 +5,7 @@ import type { FieldIssue } from '@onengo/kernel/errors';
 import { DEFINITION_KINDS, type DefinitionKind } from './types.js';
 
 /** Schema annotations that steer the Builder's generic editor; they never affect validation. */
-export const EDITOR_ANNOTATIONS = ['x-expression', 'x-ref', 'x-order', 'x-group', 'x-preview', 'x-control'] as const;
+export const EDITOR_ANNOTATIONS = ['x-expression', 'x-ref', 'x-order', 'x-group', 'x-preview', 'x-control', 'x-hidden'] as const;
 
 export function toIssues(errors: ErrorObject[] | null | undefined): FieldIssue[] {
   return (errors ?? []).map((e) => ({

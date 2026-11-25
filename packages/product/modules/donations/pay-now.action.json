@@ -1,5 +1,6 @@
 {
   "key": "payNow",
+  "hidden": false,
   "recordType": "donation",
   "label": "Pay now",
   "placement": ["panel"],

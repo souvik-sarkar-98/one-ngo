@@ -1,0 +1,43 @@
+{
+  "key": "membershipRequests",
+  "hidden": false,
+  "recordType": "membershipRequest",
+  "label": "Membership requests",
+  "pageSize": 20,
+  "layout": "table",
+  "columns": ["number", "name", "email", "phone", "preferredDonation", "status"],
+  "compactColumns": ["name", "status"],
+  "chips": [
+    { "id": "open", "label": "Open", "statusIn": ["submitted", "approved"] },
+    { "id": "completed", "label": "Completed", "statusIn": ["completed"] },
+    { "id": "rejected", "label": "Dismissed", "statusIn": ["rejected"] },
+    { "id": "all", "label": "All" }
+  ],
+  "defaultChip": "open",
+  "filters": ["city"],
+  "row": { "title": "name", "subtitle": ["email", "phone"], "meta": "number", "badge": "status" },
+  "detail": {
+    "sections": [
+      { "id": "request", "label": "Request", "fields": ["number", "status", "rejectionReason", "notes"] },
+      { "id": "personal", "label": "Personal details", "fields": ["title", "firstName", "lastName", "gender", "dateOfBirth"] },
+      { "id": "contact", "label": "Contact details", "fields": ["email", "phone"] },
+      { "id": "address", "label": "Address", "fields": ["addressLine1", "addressLine2", "addressLine3", "city", "pincode", "district", "state", "country"] },
+      { "id": "membership", "label": "Membership", "fields": ["preferredDonation", "designation", "feeApplies", "login", "existingDonor", "pan"] }
+    ]
+  },
+  "create": {
+    "steps": [
+      { "key": "basic", "label": "Basic details", "fields": ["firstName", "lastName", "title", "gender", "dateOfBirth"] },
+      { "key": "contact", "label": "Contact details", "fields": ["email", "phone"] },
+      { "key": "address", "label": "Address details", "fields": ["addressLine1", "addressLine2", "addressLine3", "city", "pincode", "district", "state", "country"] },
+      { "key": "membership", "label": "Membership", "fields": ["preferredDonation", "designation", "feeApplies", "login", "existingDonor", "pan", "notes"] }
+    ]
+  },
+  "edit": {
+    "fields": [
+      "firstName", "lastName", "title", "gender", "dateOfBirth", "email", "phone",
+      "addressLine1", "addressLine2", "addressLine3", "city", "pincode", "district", "state", "country",
+      "preferredDonation", "designation", "feeApplies", "login", "existingDonor", "pan", "notes"
+    ]
+  }
+}

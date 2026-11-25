@@ -1,5 +1,6 @@
 {
   "key": "earningsRegister",
+  "hidden": false,
   "label": "Earnings register",
   "parameters": [
     { "key": "from", "label": "From", "type": "date", "required": true },

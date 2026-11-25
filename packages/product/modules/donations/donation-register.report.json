@@ -1,5 +1,6 @@
 {
   "key": "donationRegister",
+  "hidden": false,
   "label": "Donation register",
   "parameters": [
     { "key": "from", "label": "From", "type": "date", "required": true },

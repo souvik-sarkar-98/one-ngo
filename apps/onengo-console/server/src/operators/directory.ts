@@ -319,7 +319,7 @@ export class OperatorDirectory {
   private async audit(tx: SqlExecutor, actor: OperatorActor, action: string, stepUpId: string, detail: unknown): Promise<void> {
     await tx.query(
       `insert into platform_audit(operator, operator_account_id, display_snapshot, action, detail, issuer, subject, permission, auth_time, assurance, amr, acr, operator_session_id, step_up_id)
-       values($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9::timestamptz,'mfa',$10,$11,$12,$13)`,
+       values($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9::timestamptz,case when 'mfa'=any($10::text[]) then 'mfa' else 'single_factor' end,$10,$11,$12,$13)`,
       [actor.display, actor.operatorId, actor.display, action, JSON.stringify(detail), actor.issuer, actor.subject, 'operators', actor.authTime, actor.amr, actor.acr ?? null, actor.sessionId, stepUpId],
     );
   }

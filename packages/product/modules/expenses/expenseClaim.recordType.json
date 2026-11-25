@@ -1,5 +1,6 @@
 {
   "key": "expenseClaim",
+  "hidden": false,
   "label": "Expense claim",
   "pluralLabel": "Expense claims",
   "description": "Money a person paid for the organisation, claimed with the bill. Once approved and paid, the claim posts to the books.",

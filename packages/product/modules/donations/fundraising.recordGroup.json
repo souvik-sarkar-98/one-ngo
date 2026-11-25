@@ -1,5 +1,6 @@
 {
   "key": "fundraising",
+  "hidden": false,
   "label": "Fundraising",
   "order": 10,
   "recordTypes": ["donor", "donation"]

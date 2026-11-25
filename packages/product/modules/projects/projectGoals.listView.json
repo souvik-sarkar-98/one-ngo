@@ -1,5 +1,6 @@
 {
   "key": "projectGoals",
+  "hidden": false,
   "recordType": "projectGoal",
   "label": "Goals",
   "pageSize": 20,

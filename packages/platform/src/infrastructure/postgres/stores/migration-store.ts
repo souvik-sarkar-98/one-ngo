@@ -1,5 +1,5 @@
 import { sql } from 'kysely';
-import type { KeyedRecord, MigrationStore, NewSource, ProfileRow, SourceCounts, SourceRow } from '../../../application/migration/ports/migration-store.js';
+import type { AttachmentInfo, AttachmentItem, KeyedRecord, LinkedPerson, MigrationStore, NewSource, ProfileRow, SourceCounts, SourceRow } from '../../../application/migration/ports/migration-store.js';
 import type { Tx } from '../../../domain/ports/transaction.js';
 import { pg } from '../tx.js';
 
@@ -17,13 +17,15 @@ const PROFILE_COLUMNS = [
   'created_by',
   'created_at',
   'updated_at',
+  'purged_at',
 ] as const;
-const SOURCE_COLUMNS = ['id', 'profile_id', 'file_id', 'file_name', 'columns', 'row_count', 'position', 'mapping'] as const;
+const SOURCE_COLUMNS = ['id', 'profile_id', 'file_id', 'file_name', 'columns', 'row_count', 'position', 'mapping', 'purged_at'] as const;
 
 type Books = Parameters<MigrationStore['saveBooks']>[2];
 type Check = Parameters<MigrationStore['saveCheck']>[2];
 type Status = Parameters<MigrationStore['setStatus']>[2];
 type Mapping = Parameters<MigrationStore['saveMapping']>[3];
+type Columns = Parameters<MigrationStore['setColumns']>[3];
 type BooksResult = Parameters<MigrationStore['saveBooksResult']>[2];
 
 export class PgMigrationStore implements MigrationStore {
@@ -171,6 +173,38 @@ export class PgMigrationStore implements MigrationStore {
       .execute();
   }
 
+  async personKeys(tx: Tx, oldIds: string[]): Promise<Map<string, LinkedPerson>> {
+    if (!oldIds.length) return new Map();
+    const rows = await pg(tx)
+      .selectFrom('migration_person_key as k')
+      .innerJoin('tenant_member as m', (j) => j.onRef('m.tenant_id', '=', 'k.tenant_id').onRef('m.user_id', '=', 'k.user_id'))
+      .innerJoin('app_user as u', 'u.id', 'k.user_id')
+      .select(['k.old_id', 'k.user_id', 'u.email'])
+      .where('k.old_id', 'in', oldIds)
+      .execute();
+    return new Map(rows.map((r) => [r.old_id, { userId: r.user_id, email: r.email.toLowerCase() }]));
+  }
+
+  async memberEmails(tx: Tx, emails: string[]): Promise<Set<string>> {
+    if (!emails.length) return new Set();
+    const rows = await pg(tx)
+      .selectFrom('tenant_member as m')
+      .innerJoin('app_user as u', 'u.id', 'm.user_id')
+      .select('u.email')
+      .where('m.tenant_id', '=', APP_TENANT)
+      .where((eb) => eb(eb.fn('lower', ['u.email']), 'in', emails))
+      .execute();
+    return new Set(rows.map((r) => r.email.toLowerCase()));
+  }
+
+  async putPersonKey(tx: Tx, k: { oldId: string; userId: string; profileId: string }): Promise<void> {
+    await pg(tx)
+      .insertInto('migration_person_key')
+      .values({ tenant_id: APP_TENANT, old_id: k.oldId, user_id: k.userId, profile_id: k.profileId })
+      .onConflict((oc) => oc.columns(['tenant_id', 'old_id']).doNothing())
+      .execute();
+  }
+
   failedRows(tx: Tx, jobId: string, sourceId: string, after: number, limit: number) {
     return pg(tx)
       .selectFrom('job_item')
@@ -193,10 +227,128 @@ export class PgMigrationStore implements MigrationStore {
         sql<number>`coalesce(sum((data->>'created')::int) filter (where status = 'done'), 0)::int`.as('created'),
         sql<number>`coalesce(sum((data->>'updated')::int) filter (where status = 'done'), 0)::int`.as('updated'),
         sql<number>`count(*) filter (where status = 'failed')::int`.as('failed'),
+        sql<number>`coalesce(sum((data->>'warned')::int) filter (where status = 'done'), 0)::int`.as('warned'),
       ])
       .where('job_id', '=', jobId)
       .groupBy(sql`data->>'sourceId'`)
       .execute();
-    return new Map(rows.filter((r) => r.source_id).map((r) => [r.source_id, { created: r.created, updated: r.updated, failed: r.failed }]));
+    return new Map(rows.filter((r) => r.source_id).map((r) => [r.source_id, { created: r.created, updated: r.updated, failed: r.failed, ...(r.warned ? { warned: r.warned } : {}) }]));
+  }
+
+  async setColumns(tx: Tx, profileId: string, sourceId: string, columns: Columns): Promise<void> {
+    await pg(tx).updateTable('migration_source').set({ columns: JSON.stringify(columns), updated_at: NOW }).where('profile_id', '=', profileId).where('id', '=', sourceId).execute();
+  }
+
+  async markSourcePurged(tx: Tx, profileId: string, sourceId: string, columns: Columns): Promise<void> {
+    await pg(tx)
+      .updateTable('migration_source')
+      .set({ columns: JSON.stringify(columns), purged_at: NOW, updated_at: NOW })
+      .where('profile_id', '=', profileId)
+      .where('id', '=', sourceId)
+      .where('purged_at', 'is', null)
+      .execute();
+  }
+
+  async markProfilePurged(tx: Tx, profileId: string): Promise<boolean> {
+    const row = await pg(tx)
+      .updateTable('migration_profile')
+      .set({ purged_at: NOW, updated_at: NOW })
+      .where('id', '=', profileId)
+      .where('purged_at', 'is', null)
+      .returning('id')
+      .executeTakeFirst();
+    return !!row;
+  }
+
+  async blankFailedCells(tx: Tx, jobId: string, sourceId: string, positions: number[]): Promise<void> {
+    if (!positions.length) return;
+    await sql`
+      update job_item set data = jsonb_set(data, '{cells}', (
+        select coalesce(jsonb_agg(case when (c.n - 1) = any(${positions}::int[]) then '""'::jsonb else c.v end order by c.n), '[]'::jsonb)
+          from jsonb_array_elements(data->'cells') with ordinality as c(v, n)))
+       where job_id = ${jobId} and status = 'failed' and data->>'sourceId' = ${sourceId} and jsonb_typeof(data->'cells') = 'array'`.execute(pg(tx));
+  }
+
+  async clearFailedCells(tx: Tx, jobId: string): Promise<void> {
+    await sql`update job_item set data = data - 'cells' where job_id = ${jobId} and status = 'failed' and data->'cells' is not null`.execute(pg(tx));
+  }
+
+  expiredProfiles(tx: Tx, days: number, limit: number): Promise<ProfileRow[]> {
+    return pg(tx)
+      .selectFrom('migration_profile')
+      .select(PROFILE_COLUMNS)
+      .where('purged_at', 'is', null)
+      .where('status', 'in', ['done', 'failed'])
+      .where('updated_at', '<', sql<Date>`now() - make_interval(days => ${days})`)
+      .orderBy('updated_at')
+      .orderBy('id')
+      .limit(limit)
+      .$castTo<ProfileRow>()
+      .execute();
+  }
+
+  async attachmentTotals(tx: Tx, profileId: string): Promise<{ count: number; bytes: number }> {
+    const row = await pg(tx)
+      .selectFrom('migration_attachment')
+      .select([sql<number>`count(*)::int`.as('count'), sql<string>`coalesce(sum(size), 0)`.as('bytes')])
+      .where('profile_id', '=', profileId)
+      .executeTakeFirstOrThrow();
+    return { count: row.count, bytes: Number(row.bytes) };
+  }
+
+  async addAttachment(tx: Tx, a: { profileId: string; path: string; fileId: string; size: number; uploadedBy: string }): Promise<boolean> {
+    const row = await pg(tx)
+      .insertInto('migration_attachment')
+      .values({ tenant_id: APP_TENANT, profile_id: a.profileId, path: a.path, file_id: a.fileId, size: a.size, uploaded_by: a.uploadedBy })
+      .onConflict((oc) => oc.expression(sql`profile_id, lower(path)`).doNothing())
+      .returning('id')
+      .executeTakeFirst();
+    return !!row;
+  }
+
+  async attachmentPage(tx: Tx, profileId: string, page: { q: string; limit: number; offset: number }): Promise<{ items: AttachmentItem[]; total: number }> {
+    const like = `%${page.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+    const where = sql<boolean>`a.profile_id = ${profileId} and (${page.q} = '' or lower(a.path) like lower(${like}) escape '\\')`;
+    const total = await sql<{ n: number }>`select count(*)::int as n from migration_attachment a where ${where}`.execute(pg(tx));
+    const rows = await sql<{ id: string; path: string; size: string; mime: string; used: boolean }>`
+      select a.id, a.path, a.size, f.mime, (f.record_id is not null) as used
+        from migration_attachment a join file_object f on f.id = a.file_id
+       where ${where}
+       order by lower(a.path), a.id
+       limit ${page.limit} offset ${page.offset}`.execute(pg(tx));
+    return { total: total.rows[0]?.n ?? 0, items: rows.rows.map((r) => ({ id: r.id, path: r.path, size: Number(r.size), mime: r.mime, usedBy: r.used ? 1 : 0 })) };
+  }
+
+  async attachmentsByPath(tx: Tx, profileId: string, lowerPaths: string[]): Promise<Map<string, AttachmentInfo>> {
+    if (!lowerPaths.length) return new Map();
+    const rows = await pg(tx)
+      .selectFrom('migration_attachment as a')
+      .innerJoin('file_object as f', 'f.id', 'a.file_id')
+      .select(['a.id', 'a.path', 'a.file_id', 'a.size', 'a.uploaded_by', 'f.mime', 'f.record_id'])
+      .where('a.profile_id', '=', profileId)
+      .where('f.deleted_at', 'is', null)
+      .where(sql<boolean>`lower(a.path) = any(${lowerPaths}::text[])`)
+      .execute();
+    return new Map(
+      rows.map((r) => [
+        r.path.toLowerCase(),
+        { id: r.id, path: r.path, fileId: r.file_id, size: Number(r.size), mime: r.mime, uploadedBy: r.uploaded_by, recordId: r.record_id },
+      ]),
+    );
+  }
+
+  async attachmentFileIds(tx: Tx, profileId: string): Promise<string[]> {
+    const rows = await pg(tx).selectFrom('migration_attachment').select('file_id').where('profile_id', '=', profileId).execute();
+    return rows.map((r) => r.file_id);
+  }
+
+  async removeAttachment(tx: Tx, profileId: string, attachmentId: string): Promise<string | undefined> {
+    const row = await pg(tx).deleteFrom('migration_attachment').where('profile_id', '=', profileId).where('id', '=', attachmentId).returning('file_id').executeTakeFirst();
+    return row?.file_id;
+  }
+
+  async clearAttachments(tx: Tx, profileId: string): Promise<string[]> {
+    const rows = await pg(tx).deleteFrom('migration_attachment').where('profile_id', '=', profileId).returning('file_id').execute();
+    return rows.map((r) => r.file_id);
   }
 }

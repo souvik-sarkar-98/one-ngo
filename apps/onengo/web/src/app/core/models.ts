@@ -39,6 +39,14 @@ export interface FieldDef {
   editableWhen?: string;
   /** Filled from the record chosen in a reference field of this record type whenever that choice changes. */
   copyFrom?: { reference: string; field: string };
+  /** A suggestion for an editable text field from other fields; the form fills it until the person types their own value. */
+  defaultFrom?: string;
+  /** A boolean field's starting value on a new record, for example true for a box that starts ticked. */
+  defaultValue?: boolean;
+  /** Kept equal to a source by the server; read-only on forms. A person field's account fields are `id`, `name`, `email` and `joinedAt`. */
+  follow?: { via: string; field: string };
+  /** A person field's picker finds only the person whose email is the value of this email field. */
+  emailFrom?: string;
   unique?: boolean;
   /** Regular expression the whole value must match; `patternMessage` is shown when it does not. */
   pattern?: string;
@@ -87,6 +95,7 @@ export type ListViewSection = FieldSectionDef | RelatedSectionDef;
 /** Mirrors the server's listView definition kind. */
 export interface ListViewDef {
   key: string;
+  hidden?: boolean;
   recordType: string;
   label?: string;
   pageSize?: number;
@@ -148,6 +157,8 @@ export interface QueryResult {
 
 export interface RecordTypeBody {
   key: string;
+  /** Kept out of menus, Home and "New" buttons; its records still open from links and references. */
+  hidden?: boolean;
   label: string;
   pluralLabel?: string;
   description?: string;
@@ -182,6 +193,8 @@ export interface TransitionDef {
 
 export interface WorkflowBody {
   key: string;
+  /** Its steps are not offered; the states still label records. */
+  hidden?: boolean;
   recordType: string;
   /** Primary workflows hold the record's status; parallel ones run beside it. Default primary. */
   role?: 'primary' | 'parallel';
@@ -269,6 +282,7 @@ export type PageWidget = { index?: number; permission?: string } & (
 
 export interface PageDef {
   key: string;
+  hidden?: boolean;
   label: string;
   audience?: string[];
   widgets: PageWidget[];
@@ -325,6 +339,8 @@ export interface Me {
     migration?: boolean;
     /** `data:migrate:books`: the opening journal and receipt numbers of a migration. */
     migrationBooks?: boolean;
+    /** `data:migrate:people`: map and run a people file (the person also needs `members:manage`). */
+    migrationPeople?: boolean;
     /** dmin:records: delete records and restore them from the recycle bin. */
     recordBin?: boolean;
   };

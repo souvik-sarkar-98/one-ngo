@@ -1,5 +1,6 @@
 {
   "key": "consentStatus",
+  "hidden": false,
   "recordType": "beneficiaryConsent",
   "initial": "granted",
   "states": [

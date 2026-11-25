@@ -1,5 +1,6 @@
 {
   "key": "milestones",
+  "hidden": false,
   "recordType": "milestone",
   "label": "Milestones",
   "pageSize": 20,

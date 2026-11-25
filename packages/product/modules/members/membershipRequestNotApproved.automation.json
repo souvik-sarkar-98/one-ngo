@@ -1,0 +1,9 @@
+{
+  "key": "membershipRequestNotApproved",
+  "label": "Tell the applicant when a request is dismissed",
+  "recordType": "membershipRequest",
+  "trigger": { "event": "statusChanged", "to": "rejected" },
+  "actions": [
+    { "type": "notify", "template": "membershipRequestNotApproved", "to": { "email": "record.email" }, "channels": ["email"] }
+  ]
+}

@@ -7,6 +7,7 @@
   "required": ["key", "label", "reports"],
   "properties": {
     "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,62}$", "description": "Stable name of the group" },
+    "hidden": { "type": "boolean", "default": false, "description": "Left out of the Reports list, with reports only in this group. Changed on the Modules screen", "x-hidden": true },
     "label": { "type": "string", "minLength": 1, "maxLength": 60, "description": "Group heading" },
     "order": { "type": "integer", "minimum": 0, "maximum": 1000, "description": "Lower comes first" },
     "reports": {

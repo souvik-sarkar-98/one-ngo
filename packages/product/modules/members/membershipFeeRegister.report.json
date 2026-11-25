@@ -1,5 +1,6 @@
 {
   "key": "membershipFeeRegister",
+  "hidden": false,
   "label": "Membership fee register",
   "parameters": [
     { "key": "from", "label": "From", "type": "date", "required": true },

@@ -31,5 +31,18 @@ export function pgRetentionScan(db: Database): RetentionScan {
       );
       return rows.map((r) => r.tenant_id);
     },
+    async tenantsWithExpiredMigrations(days) {
+      const rows = await db.asSystem((tx) =>
+        typed(tx)
+          .selectFrom('migration_profile as p')
+          .select('p.tenant_id')
+          .distinct()
+          .where('p.purged_at', 'is', null)
+          .where('p.status', 'in', ['done', 'failed'])
+          .where('p.updated_at', '<', sql<Date>`now() - make_interval(days => ${days})`)
+          .execute(),
+      );
+      return rows.map((r) => r.tenant_id);
+    },
   };
 }

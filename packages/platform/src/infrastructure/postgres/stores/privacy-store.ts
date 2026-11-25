@@ -159,7 +159,13 @@ export function postgresPrivacyStore(): PrivacyStore {
     },
     async eraseSideData(tx, e) {
       const { rows } = await sql<{ counts: Record<string, number> }>`select app_erase_side_data(${e.erasureId}::uuid, ${JSON.stringify(e.records)}::jsonb, ${e.memberId}::uuid, ${e.fileIds}::text[]) as counts`.execute(pg(tx));
-      return rows[0]?.counts ?? {};
+      const counts = rows[0]?.counts ?? {};
+      if (e.memberId) {
+        // The legacy ids a data migration linked to this person (an old id can be an email or a national id).
+        const keys = await sql<{ n: number }>`select app_erase_migration_person_key(${e.memberId}::uuid) as n`.execute(pg(tx));
+        if (keys.rows[0]?.n) counts.migrationPersonKeys = keys.rows[0].n;
+      }
+      return counts;
     },
     async financialRows(tx, recordIds) {
       if (!recordIds.length) return { receipts: 0, journalEntries: 0, paymentIntents: 0, latestDate: null };

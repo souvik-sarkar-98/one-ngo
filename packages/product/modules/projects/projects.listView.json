@@ -1,5 +1,6 @@
 {
   "key": "projects",
+  "hidden": false,
   "recordType": "project",
   "label": "Projects",
   "pageSize": 20,

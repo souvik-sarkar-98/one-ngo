@@ -1,0 +1,61 @@
+/* Attachments, the confirm dialogs, and the purge card. */
+
+.migration__drop--files {
+  cursor: default;
+}
+.migration__stats {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+}
+.migration__stats .admin__bar {
+  margin: 0;
+}
+.migration__refused {
+  max-height: 160px;
+  margin: 6px 0 0;
+  padding-left: 18px;
+  overflow: auto;
+  font-size: 0.78rem;
+}
+.migration__search,
+.migration__pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+.migration__search input {
+  flex: 1 1 220px;
+  margin: 0;
+}
+.migration__pager {
+  justify-content: space-between;
+  margin: 10px 0 0;
+}
+.migration__purge {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--notice-error-border);
+  border-radius: var(--card-radius);
+}
+.migration__purge p {
+  margin: 0;
+}
+.migration__shade {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--fg) 35%, transparent);
+}
+.migration__dialog {
+  width: min(440px, calc(100% - 32px));
+  margin: 0;
+}

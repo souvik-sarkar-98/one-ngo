@@ -368,6 +368,17 @@ export interface MemberPin {
   user_id: string;
 }
 
+export interface MigrationAttachment {
+  created_at: Generated<Timestamp>;
+  file_id: string;
+  id: Generated<string>;
+  path: string;
+  profile_id: string;
+  size: Int8;
+  tenant_id: string;
+  uploaded_by: string;
+}
+
 export interface MigrationKey {
   created_at: Generated<Timestamp>;
   old_id: string;
@@ -375,6 +386,14 @@ export interface MigrationKey {
   record_id: string;
   tenant_id: string;
   type_key: string;
+}
+
+export interface MigrationPersonKey {
+  created_at: Generated<Timestamp>;
+  old_id: string;
+  profile_id: string | null;
+  tenant_id: string;
+  user_id: string;
 }
 
 export interface MigrationProfile {
@@ -387,6 +406,7 @@ export interface MigrationProfile {
   id: Generated<string>;
   job_id: string | null;
   name: string;
+  purged_at: Timestamp | null;
   status: Generated<string>;
   tenant_id: string;
   updated_at: Generated<Timestamp>;
@@ -401,6 +421,7 @@ export interface MigrationSource {
   mapping: ColumnType<Json, string, string> | null;
   position: number;
   profile_id: string;
+  purged_at: Timestamp | null;
   row_count: Generated<number>;
   tenant_id: string;
   updated_at: Generated<Timestamp>;
@@ -1067,7 +1088,9 @@ export interface DB {
   ledger_account: LedgerAccount;
   managed_index: ManagedIndex;
   member_pin: MemberPin;
+  migration_attachment: MigrationAttachment;
   migration_key: MigrationKey;
+  migration_person_key: MigrationPersonKey;
   migration_profile: MigrationProfile;
   migration_source: MigrationSource;
   money_account: MoneyAccount;

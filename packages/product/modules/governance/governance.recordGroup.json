@@ -1,1 +1,1 @@
-{ "key": "governance", "label": "Governance", "order": 70, "recordTypes": ["meeting", "resolution", "memberNotice"] }
+{ "key": "governance", "hidden": false, "label": "Governance", "order": 70, "recordTypes": ["meeting", "resolution", "memberNotice"] }

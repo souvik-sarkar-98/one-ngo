@@ -50,9 +50,9 @@ export interface PublishedReport {
   createdAt: string;
 }
 
-/** The first group that lists the report. A report in several groups shows in the earliest. */
+/** The first shown group that lists the report. A report in several groups shows in the earliest. */
 export function groupOf(reportKey: string, groups: ReportGroupDef[]): ReportSummary['group'] {
-  const sorted = [...groups].sort((a, b) => (a.order ?? 1000) - (b.order ?? 1000) || a.label.localeCompare(b.label));
+  const sorted = groups.filter((g) => !g.hidden).sort((a, b) => (a.order ?? 1000) - (b.order ?? 1000) || a.label.localeCompare(b.label));
   const found = sorted.find((g) => g.reports.includes(reportKey));
   return found ? { key: found.key, label: found.label, order: found.order ?? 1000 } : null;
 }
@@ -229,11 +229,17 @@ export class ReportService {
     });
   }
 
-  /** Reports this person may run, with their group and format. */
+  /**
+   * Reports this person may run, with their group and format. Hidden reports, and reports listed
+   * only in hidden groups, are left out; they still open from a link.
+   */
   async list(ctx: TenantContext): Promise<ReportSummary[]> {
     const [all, groups] = await Promise.all([this.defs.list(ctx.tenantId, 'report'), this.defs.list(ctx.tenantId, 'reportGroup')]);
     const bodies = groups.map((g) => g.body);
-    return all.filter((r) => can(ctx.actor, `report:${r.key}:run`) && audienceAllows(ctx, r.body)).map((r) => summaryOf(r.key, r.body, bodies));
+    const onlyInHidden = (key: string) => bodies.some((g) => g.reports.includes(key)) && !bodies.some((g) => !g.hidden && g.reports.includes(key));
+    return all
+      .filter((r) => !r.body.hidden && !onlyInHidden(r.key) && can(ctx.actor, `report:${r.key}:run`) && audienceAllows(ctx, r.body))
+      .map((r) => summaryOf(r.key, r.body, bodies));
   }
 
   /** One report and the files published from it, newest first. */

@@ -7,6 +7,7 @@
   "required": ["key", "recordType", "label", "placement", "steps"],
   "properties": {
     "key": { "$ref": "#/definitions/key", "description": "Stable name of the action; part of its permission", "x-order": 1 },
+    "hidden": { "type": "boolean", "default": false, "description": "Not offered on records. Changed on the Modules screen", "x-hidden": true },
     "recordType": { "$ref": "#/definitions/key", "description": "The record type the action runs on", "x-ref": "recordType", "x-order": 2 },
     "label": { "type": "string", "minLength": 1, "maxLength": 60, "description": "Button text", "x-order": 3 },
     "placement": {

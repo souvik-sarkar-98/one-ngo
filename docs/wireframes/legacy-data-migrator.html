@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NGO Platform — Legacy data migrator (people, legacy user ids, files)</title>
+<style>
+  :root {
+    --fg: #1d2733; --muted: #5b6878; --line: #d8dee6; --bg: #f5f7fa; --card: #fff;
+    --brand: #1f5f8b; --ok: #1d7a46; --warn: #9a6200; --bad: #b3261e; --radius: 6px;
+    --b50: color-mix(in srgb, var(--brand) 6%, #fff); --b100: color-mix(in srgb, var(--brand) 12%, #fff); --b200: color-mix(in srgb, var(--brand) 25%, #fff);
+    --page: #eef1f5; --ink: #18212b;
+    --font: 'Segoe UI', Roboto, 'Noto Sans', Helvetica, Arial, sans-serif;
+    --mono: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font); color: var(--ink); background: linear-gradient(180deg, #f6f8fa, var(--page)); }
+  header.page { max-width: 1440px; margin: 0 auto; padding: 36px 40px 18px; }
+  header.page h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -.01em; }
+  header.page p { margin: 0 0 10px; max-width: 980px; line-height: 1.55; color: #36414d; }
+  .tag { display: inline-block; font: 700 11px var(--mono); background: #fff; border: 1px solid #ccd5de; border-radius: 5px; padding: 2px 7px; color: #3a4a5a; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 16px; }
+  .rules div { background: #fff; border: 1px solid #dfe5eb; border-radius: 10px; padding: 12px 14px; font-size: 13.5px; line-height: 1.5; }
+  .rules b { display: block; color: var(--brand); margin-bottom: 3px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; font-size: 13px; color: #3a4552; align-items: center; }
+  .legend .sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 5px; }
+  nav.toc { position: sticky; top: 0; z-index: 20; background: rgba(238,241,245,.94); backdrop-filter: blur(6px); border-bottom: 1px solid #dbe1e7; }
+  nav.toc div { max-width: 1440px; margin: 0 auto; padding: 9px 40px; display: flex; gap: 4px; overflow-x: auto; }
+  nav.toc a { font: 600 12px var(--mono); color: #3a4a5a; text-decoration: none; padding: 6px 10px; border-radius: 6px; white-space: nowrap; }
+  nav.toc a:hover { background: #fff; }
+  main.page { max-width: 1440px; margin: 0 auto; padding: 0 40px 80px; }
+  section.flow { margin-top: 40px; }
+  .flabel { font: 700 12px var(--mono); color: var(--brand); text-transform: uppercase; letter-spacing: .06em; display: flex; gap: 8px; align-items: center; }
+  .flabel::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+  section.flow > h2 { margin: 4px 0 4px; font-size: 22px; }
+  section.flow > p { margin: 0 0 14px; color: #3a4552; max-width: 980px; line-height: 1.5; }
+  .step { display: grid; grid-template-columns: 52px 330px minmax(0, 1fr); gap: 18px; align-items: start; padding: 18px 0; border-top: 1px dashed #d3dae2; }
+  @media (max-width: 1200px) { .step { grid-template-columns: 44px minmax(0, 1fr); } .step .desk { grid-column: 2; } }
+  .num { width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 2px solid var(--brand); color: var(--brand); font: 700 15px/36px var(--font); text-align: center; }
+  .stephead { grid-column: 2 / -1; margin-bottom: -6px; }
+  .stephead b { font-size: 16px; }
+  .stephead .act { display: inline-block; margin-left: 10px; font-size: 13px; color: #3a4552; }
+  .stephead .act kbd { font: 600 12px var(--font); background: #fff; border: 1px solid #ccd5de; border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; }
+  .stephead .blk { margin-left: 8px; }
+  .stephead code { display: block; margin-top: 4px; font: 12px var(--mono); color: #556373; }
+  .cap { font: 600 10.5px var(--mono); color: #6a7683; text-transform: uppercase; letter-spacing: .05em; margin: 0 0 5px; }
+  .noteline { font-size: 13px; color: #3a4552; line-height: 1.5; margin-top: 8px; max-width: 760px; }
+
+  .phone { width: 330px; height: 700px; border-radius: 34px; background: #0f141a; padding: 10px; box-shadow: 0 14px 30px rgba(15,23,42,.18); }
+  .phone .scr { width: 100%; height: 100%; border-radius: 26px; overflow: hidden; background: var(--bg); position: relative; display: flex; flex-direction: column; color: var(--fg); font-size: 14px; }
+  .status { height: 26px; flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; font: 600 11px var(--font); background: var(--brand); color: #fff; }
+  .browser { border-radius: 10px; background: #fff; border: 1px solid #d5dbe2; box-shadow: 0 14px 30px rgba(15,23,42,.12); overflow: hidden; min-width: 0; }
+  .browser .chrome { height: 30px; background: #e9edf1; border-bottom: 1px solid #d5dbe2; display: flex; align-items: center; padding: 0 10px; }
+  .browser .url { flex: 1; height: 20px; border-radius: 6px; background: #fff; font: 11.5px var(--mono); color: #536171; display: flex; align-items: center; padding: 0 9px; overflow: hidden; white-space: nowrap; }
+  .browser .scr { height: 700px; background: var(--bg); position: relative; overflow: hidden; display: flex; flex-direction: column; color: var(--fg); font-size: 14px; }
+  .appbar { height: 50px; flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 12px; background: var(--brand); color: #fff; }
+  .appbar .brand { font-weight: 700; font-size: 15px; }
+  .appbar .mark { width: 22px; height: 22px; border-radius: 5px; background: #fff; color: var(--brand); font: 800 9px/22px var(--font); text-align: center; flex: 0 0 auto; }
+  .appbar .org { font-weight: 600; font-size: 13px; padding-left: 8px; border-left: 1px solid rgba(255,255,255,.4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .appbar .sp { flex: 1; }
+  .pagehead { display: flex; align-items: center; gap: 2px; margin: 0 0 8px; }
+  .pagehead .h1 { margin: 0; line-height: 1.25; font-size: 1.15rem; font-weight: 700; }
+  .pagehead .back { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; flex: 0 0 auto; }
+  .ib { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; position: relative; font-size: 17px; }
+  .ib.av { background: rgba(255,255,255,.2); font: 700 12px var(--font); }
+  .ib .dot { position: absolute; top: 3px; right: 2px; min-width: 15px; height: 15px; border-radius: 8px; background: #fdf1dc; color: var(--warn); font: 700 9.5px/15px var(--font); text-align: center; }
+  .frame-body { flex: 1; display: flex; min-height: 0; }
+  .main { flex: 1; min-width: 0; overflow: hidden; padding: 12px 12px 16px; position: relative; }
+  .browser .main { padding: 16px 20px 20px; }
+  .navbar { flex: 0 0 auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: #fff; border-top: 1px solid var(--line); height: 58px; }
+  .rail { flex: 0 0 auto; width: 84px; background: #fff; border-right: 1px solid var(--line); display: flex; flex-direction: column; padding-top: 10px; gap: 4px; }
+  .nv { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 10.5px; color: var(--muted); padding: 6px 0; }
+  .nv .g { width: 44px; height: 26px; border-radius: 13px; display: grid; place-items: center; }
+  .nv.on { color: var(--brand); font-weight: 600; }
+  .nv.on .g { background: var(--b100); }
+  .nv svg { width: 20px; height: 20px; fill: currentColor; }
+  .intro { margin: 0 0 10px; font-size: .75rem; color: var(--muted); line-height: 1.4; }
+  .hit { outline: 3px solid #f3be26; outline-offset: 2px; border-radius: 12px; }
+  .panel { background: #fff; border-radius: 16px; border: 1px solid rgba(148,163,184,.22); box-shadow: 0 1px 2px #0f172a0d, 0 4px 14px #0f172a12; overflow: hidden; margin-bottom: 12px; }
+  .btn { font: inherit; font-size: 13px; min-height: 36px; padding: .45rem .8rem; border-radius: var(--radius); border: 1px solid var(--line); background: #fff; color: var(--fg); display: inline-flex; align-items: center; justify-content: center; cursor: default; }
+  .btn.p { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn.d { background: #fff; border-color: #e5b4b0; color: var(--bad); }
+  .btn.off { opacity: .45; }
+  .card { background: #fff; border: 1px solid rgba(148,163,184,.25); border-radius: 14px; padding: 12px; margin-bottom: 10px; box-shadow: 0 1px 2px #0f172a0a; }
+  .cs { font-size: .72rem; color: #64748b; line-height: 1.35; }
+  .listrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid rgba(148,163,184,.18); font-size: .8rem; background: #fff; }
+  .listrow:last-child { border-bottom: 0; }
+  .note { background: #eef5fb; border: 1px solid #c6d9e8; color: var(--brand); border-radius: 12px; padding: 9px 12px; font-size: .72rem; margin-bottom: 10px; line-height: 1.4; }
+  .note.warn { background: #fdf6e8; border-color: #ead7a6; color: var(--warn); }
+  .note.bad { background: #fdecea; border-color: #f3c4c0; color: var(--bad); }
+  .note.ok { background: #e8f6ee; border-color: #b7e0c6; color: var(--ok); }
+  .note b { display: block; margin-bottom: 2px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .sp { flex: 1; }
+  .crumbs { flex: 0 0 auto; background: #fff; border-bottom: 1px solid var(--line); padding: 0 12px; height: 28px; display: flex; align-items: center; font-size: 11.5px; }
+  .browser .crumbs { padding-left: 16px; height: 30px; font-size: 12.5px; }
+  .crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; min-width: 0; overflow: hidden; white-space: nowrap; }
+  .crumbs li { display: flex; align-items: center; color: var(--muted); }
+  .crumbs li + li::before { content: '›'; margin: 0 6px; color: #94a3b8; }
+  .crumbs a { color: var(--brand); font-weight: 600; text-decoration: none; }
+  .crumbs li[aria-current] { color: var(--fg); font-weight: 600; }
+  .mf { margin-bottom: 8px; }
+  .mf .l { font-size: .72rem; font-weight: 600; color: #374151; margin-bottom: 3px; }
+  .mf .l i { color: #f97316; font-style: normal; }
+  .mf .h { font-size: .68rem; color: #64748b; margin-top: 3px; }
+  .mf .o { border: 1px solid #79747e; border-radius: 4px; min-height: 32px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .78rem; background: #fff; }
+  .mf .o.off { background: #f1f3f5; color: #8a94a0; border-color: #c9d0d8; }
+  .mf .o.bad { border-color: var(--bad); }
+  .mf .e { font-size: .68rem; color: var(--bad); margin-top: 3px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .drop { border: 1.5px dashed #9aafc2; border-radius: 14px; background: #fff; padding: 14px 12px; text-align: center; margin-bottom: 10px; }
+  .drop b { display: block; font-size: .85rem; margin-bottom: 4px; }
+  .stepper { display: flex; gap: 4px; flex-wrap: wrap; margin: 0 0 10px; }
+  .stepper span { font-size: .62rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: #64748b; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; }
+  .stepper span.on { background: var(--b100); color: var(--brand); border-color: var(--b200); }
+  .bdg { font-size: .56rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; border-radius: 999px; padding: 4px 8px; line-height: 1; white-space: nowrap; }
+  .bdg.s { background: #e3f4ea; color: var(--ok); }
+  .bdg.p { background: var(--b100); color: var(--brand); }
+  .bdg.w { background: #fdf1dc; color: var(--warn); }
+  .bdg.b { background: #fdecea; color: var(--bad); }
+  .bdg.n { background: #e8edf3; color: #64748b; }
+  .counts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+  .counts div { background: #fff; border: 1px solid rgba(148,163,184,.25); border-radius: 12px; padding: 8px; text-align: center; }
+  .counts b { display: block; font-size: 1rem; }
+  .counts span { font-size: .62rem; color: #64748b; }
+  .bar { height: 8px; border-radius: 99px; background: #e6ebf1; overflow: hidden; margin: 6px 0; }
+  .bar i { display: block; height: 100%; background: var(--brand); }
+  .tbl { width: 100%; border-collapse: collapse; font-size: .76rem; }
+  .tbl th { text-align: left; font-size: .64rem; text-transform: uppercase; letter-spacing: .04em; color: #64748b; padding: 6px 10px; border-bottom: 1px solid var(--line); background: #fafbfc; }
+  .tbl td { padding: 7px 10px; border-bottom: 1px solid rgba(148,163,184,.18); vertical-align: middle; }
+  .tbl tr:last-child td { border-bottom: 0; }
+  .sel { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #79747e; border-radius: 4px; min-height: 26px; padding: 0 8px; background: #fff; font-size: .74rem; }
+  .sel.off { background: #f1f3f5; color: #8a94a0; border-color: #c9d0d8; }
+  .sel.bad { border-color: var(--bad); }
+  .radio { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .radio .opt { background: #fff; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px; font-size: .76rem; line-height: 1.4; }
+  .radio .opt b { display: block; font-size: .82rem; margin-bottom: 2px; }
+  .radio .opt.on { border-color: var(--brand); background: var(--b50); }
+  .radio .opt.off { background: #f1f3f5; color: #7b8794; }
+  .grp { font: 700 10.5px var(--mono); text-transform: uppercase; letter-spacing: .05em; margin: 12px 0 5px; }
+  .grp.bad { color: var(--bad); } .grp.warn { color: var(--warn); } .grp.info { color: var(--brand); }
+  .iss { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-bottom: 1px solid rgba(148,163,184,.18); font-size: .75rem; line-height: 1.4; background: #fff; }
+  .iss:last-child { border-bottom: 0; }
+  .iss .ic { flex: 0 0 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font: 800 10px var(--font); color: #fff; margin-top: 1px; }
+  .iss .ic.bad { background: var(--bad); } .iss .ic.warn { background: #c98a1a; } .iss .ic.info { background: var(--brand); }
+  .iss code { font: 11px var(--mono); background: #f1f4f7; border-radius: 4px; padding: 0 4px; }
+  .av2 { width: 26px; height: 26px; border-radius: 50%; background: var(--b100); color: var(--brand); font: 700 10px/26px var(--font); text-align: center; flex: 0 0 auto; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; background: #fff; border: 1px solid var(--line); border-radius: 999px; font-size: .68rem; padding: 2px 8px; }
+  .ph { width: 54px; height: 54px; border-radius: 10px; background: linear-gradient(135deg, #cfe0ee, #a9c6dc); display: grid; place-items: center; color: #fff; font-size: 20px; flex: 0 0 auto; }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>Legacy data migrator <span class="tag">proposed</span></h1>
+  <p>These screens show the changes in <code>docs/plans/legacy-data-migrator-plan.md</code>. The six steps of <code>/admin/migration</code> (Files, Map, Order, Books, Check, Run) stay as they are. What is new: a <b>People</b> file kind, <b>legacy user id</b> columns for person fields, <b>attachments</b> for file fields, a Check with <b>warnings</b>, and <b>Delete source data</b> after a run. Asha is an administrator holding <code>data:migrate</code>, <code>data:migrate:people</code> and <code>members:manage</code>.</p>
+  <div class="rules">
+    <div><b>People arrive Invited</b>No password, no two-step secret and no email is created. Each person sets a password later from an invitation, a reset link or an emailed sign-in code.</div>
+    <div><b>Legacy ids stay internal</b>A per-organisation table maps each legacy user id to the new person. Records can then fill person fields from the legacy id, whether it is a UUID, a number or text.</div>
+    <div><b>Check says everything first</b>Blocking problems and warnings are listed before anything is written, including unresolved people and files. It never says anything about accounts other organisations hold.</div>
+    <div><b>Re-runs update, never duplicate</b>The same profile run twice changes nothing the second time except edits. Status and roles added by hand are never undone.</div>
+  </div>
+  <div class="legend">
+    <span><span class="sw" style="background:#f3be26"></span>What Asha does next</span>
+    <span><span class="bdg n">New</span> screens and controls that do not exist today</span>
+    <span><span class="bdg b">Blocks run</span> must be fixed</span>
+    <span><span class="bdg w">Warning</span> row still loads</span>
+  </div>
+</header>
+<nav class="toc"><div id="toc"></div></nav>
+<main class="page" id="flows"></main>
+<script>
+const ICON = {
+  home: '<svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>',
+  records: '<svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>',
+  inbox: '<svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 12h-4a3 3 0 0 1-6 0H5V5h14v10z"/></svg>',
+  more: '<svg viewBox="0 0 24 24"><path d="M6 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm12 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>',
+};
+const NAV = [['home', 'Home'], ['records', 'Records'], ['inbox', 'Inbox'], ['more', 'More']];
+const hit = (on) => (on ? ' hit' : '');
+const NEW = '<span class="bdg n">New</span>';
+const desk = (k) => k !== 'phone';
+
+function nav(k, on) {
+  const html = NAV.map(([key, label]) => `<div class="nv${key === on ? ' on' : ''}"><span class="g">${ICON[key]}</span><span>${label}</span></div>`).join('');
+  return k === 'phone' ? `<div class="navbar">${html}</div>` : `<div class="rail">${html}</div>`;
+}
+const appbar = () => `<div class="appbar"><span class="mark">DF</span><span class="brand">NGOOne</span><span class="org">Demo Foundation</span><span class="sp"></span><span class="ib">🔔<span class="dot">2</span></span><span class="ib av">AS</span></div>`;
+const crumbs = (s) => `<nav class="crumbs" aria-label="Breadcrumb"><ol>${s.crumbs.map((it, i) => (i === s.crumbs.length - 1 ? `<li aria-current="page">${it}</li>` : `<li><a>${it}</a></li>`)).join('')}</ol></nav>`;
+function frame(k, s) {
+  const head = `<div class="pagehead">${s.back ? '<span class="back" aria-hidden="true">←</span>' : ''}<div class="h1">${s.title}</div></div>`;
+  const body = `<div class="main">${head}${s.body(k)}</div>`;
+  const on = s.nav || 'more';
+  return k === 'phone'
+    ? `<div class="phone"><div class="scr"><div class="status"><span>9:41</span><span>100%</span></div>${appbar()}${crumbs(s)}<div class="frame-body">${body}</div>${nav('phone', on)}</div></div>`
+    : `<div class="browser"><div class="chrome"><div class="url">${s.url}</div></div><div class="scr">${appbar()}${crumbs(s)}<div class="frame-body">${nav('desk', on)}${body}</div></div></div>`;
+}
+
+const field = (l, v, o = {}) => `<div class="mf"><div class="l">${l}${o.req ? ' <i>*</i>' : ''}${o.isNew ? ' ' + NEW : ''}</div><div class="o${o.off ? ' off' : ''}${o.bad ? ' bad' : ''}"><span>${v}</span><span>▾</span></div>${o.err ? `<div class="e">${o.err}</div>` : ''}${o.hint ? `<div class="h">${o.hint}</div>` : ''}</div>`;
+const steps = (on) => `<div class="stepper">${['Files', 'Map', 'Order', 'Books', 'Check', 'Run'].map((n) => `<span class="${n === on ? 'on' : ''}">${n}</span>`).join('')}</div>`;
+const row = (title, sub, extra) => `<div class="listrow"><div><b>${title}</b><div class="cs">${sub}</div></div>${extra || '<span class="cs">›</span>'}</div>`;
+const sel = (v, c = '') => `<span class="sel ${c}">${v} ▾</span>`;
+const iss = (kind, html) => `<div class="iss"><span class="ic ${kind}">${kind === 'bad' ? '!' : kind === 'warn' ? '?' : 'i'}</span><div>${html}</div></div>`;
+
+// ---------------------------------------------------------------- screens
+
+function filesBody(k) {
+  return `${steps('Files')}
+    <p class="intro">Add every table you exported. A people file is just another CSV; you say what it contains on the Map step.</p>
+    <div class="drop"><b>Drop CSV files here</b><span class="cs">Up to 50 files · 10 MB and 20,000 rows each.</span></div>
+    <div class="panel">
+      ${row('people.csv', '6 columns · 212 rows', '<span class="bdg p">People</span>')}
+      ${row('donors.csv', '7 columns · 840 rows · Donor', '<span class="bdg s">Mapped</span>')}
+      ${row('donations.csv', '8 columns · 2,140 rows · Donation', '<span class="bdg s">Mapped</span>')}
+      ${row('ward-visits.csv', '4 columns · 36 rows', '<span class="bdg n">Not mapped</span>')}
+    </div>
+    <div class="row" style="margin:14px 0 6px"><b style="font-size:.85rem">Attachments</b>${NEW}<span class="cs">optional</span></div>
+    <div class="drop${hit(true)}"><b>Drop a folder or files</b><span class="cs">Photos, scans and documents that records point at by file name. Up to 5,000 files; each within its field’s size limit.</span></div>
+    <div class="card"><div class="row"><b style="font-size:.8rem">412 files · 186 MB</b><span class="sp"></span><span class="cs">814 MB storage left</span></div><div class="bar"><i style="width:18%"></i></div>
+      ${desk(k) ? `<div class="row" style="margin-top:6px"><span class="chip">🔍 Search names</span><span class="sp"></span><span class="btn">Clear all</span></div>
+      <table class="tbl" style="margin-top:8px"><tr><th>Name</th><th>Size</th><th>Used by</th><th></th></tr>
+        <tr><td>scans/D-1042.pdf</td><td>220 kB</td><td>1 row</td><td>✕</td></tr>
+        <tr><td>scans/D-1043.pdf</td><td>198 kB</td><td>1 row</td><td>✕</td></tr>
+        <tr><td>photos/ravi.jpg</td><td>1.4 MB</td><td><span class="bdg w">Not used</span></td><td>✕</td></tr>
+      </table>` : `<div class="cs" style="margin-top:6px">scans/D-1042.pdf · 220 kB · 1 row ✕<br>photos/ravi.jpg · 1.4 MB · not used ✕</div>`}
+    </div>
+    <div class="note">Each file can be used by one record. Only you can run this migration, because only the person who uploaded a file can attach it.</div>`;
+}
+
+function mapKindBody(k) {
+  return `${steps('Map')}
+    <p class="intro"><b>people.csv</b> · 212 rows · Legacy id <code>UserId</code> sample U-0017, U-0022</p>
+    <div class="cap">What is in this file? ${NEW}</div>
+    <div class="radio${hit(true)}">
+      <div class="opt"><b>Records</b>Fill record types such as donors or donations.</div>
+      <div class="opt on"><b>People</b>Add people to this organisation, with roles. No passwords and no emails.</div>
+    </div>
+    <div class="note">People need two permissions: <b style="display:inline">Migrate people</b> and <b style="display:inline">Manage people</b>. They are added as Invited.</div>
+    <div class="row"><span class="btn p">Continue</span></div>`;
+}
+
+function mapPeopleBody(k, bad) {
+  const cols = `<option>`;
+  const roleRows = [
+    ['Admin', sel('Organisation administrator'), ''],
+    ['Clerk', sel('Front desk'), ''],
+    ['Guest', sel('Ignore'), ''],
+    ['Treasurer', bad ? sel('Finance', 'bad') : sel('Ignore'), bad ? '<div class="e" style="color:var(--bad);font-size:.68rem;margin-top:3px">Finance requires two-step sign-in. People with it could not sign in. Choose Ignore and add the role after they have signed in and enrolled.</div>' : ''],
+  ];
+  const roleTable = desk(k)
+    ? `<table class="tbl"><tr><th>Legacy role in file</th><th>Becomes</th></tr>${roleRows.map(([a, b, c]) => `<tr><td>${a}</td><td>${b}${c}</td></tr>`).join('')}</table>`
+    : roleRows.map(([a, b, c]) => `<div class="listrow" style="display:block"><div class="row"><b>${a}</b><span class="sp"></span>${b}</div>${c}</div>`).join('');
+  return `${steps('Map')}
+    <p class="intro"><b>people.csv</b> · People · 212 rows</p>
+    <div class="${desk(k) ? 'two' : ''}">
+      <div>
+        ${field('Legacy user id', 'UserId', { req: 1, isNew: 1, hint: 'Any format. Used to link records to people.' })}
+        ${field('Email', 'Email', { req: 1 })}
+        ${field('Name', 'FullName', { req: 1 })}
+        ${field('Language', 'Lang', { hint: 'Optional. A supported language code.' })}
+      </div>
+      <div>
+        ${field('Status column', 'Active', { hint: 'Active: 1, yes · Suspended: 0, no' })}
+        ${field('Roles column', 'Roles', { hint: 'Several roles in one cell, separated by ;' })}
+      </div>
+    </div>
+    <div class="panel${hit(bad)}" style="margin-top:6px">${roleTable}</div>
+    ${bad ? `<div class="note bad"><b>This mapping cannot be saved</b>Treasurer → Finance: this role requires two-step sign-in.</div>` : `<div class="note ok"><b>Ready to save</b>Roles are limited to the ones you may give. People who already belong keep their roles; nothing is removed.</div>`}
+    <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p${bad ? ' off' : ''}">Save mapping</span></div>`;
+}
+
+function mapDonationsBody(k) {
+  return `${steps('Map')}
+    <p class="intro"><b>donations.csv</b> · Donation · old id <code>TxnNo</code> · 2,140 rows</p>
+    ${field('Donor', 'DonorId · by old id', { req: 1 })}
+    ${field('Amount', 'Amount', { req: 1 })}
+    ${field('Paid on', 'Paid On')}
+    <div class="card${hit(true)}" style="margin:10px 0">
+      <div class="row"><b style="font-size:.8rem">Collected by</b><span class="cs">person field</span>${NEW}</div>
+      ${field('Legacy user id column', 'CreatedBy', { hint: 'Looks the person up from people.csv. A blank cell stays blank.' })}
+      ${field('If the person is not found', 'Leave blank and warn')}
+      <div class="cs">Other choices: Fail the row. Match by email instead.</div>
+    </div>
+    <div class="card${hit(true)}" style="margin:10px 0">
+      <div class="row"><b style="font-size:.8rem">Receipt scan</b><span class="cs">file field · several allowed</span>${NEW}</div>
+      ${field('File name column', 'ScanFile', { hint: 'Names must match files on the Files step, such as scans/D-1042.pdf.' })}
+      ${field('Separator', '; (semicolon)')}
+      ${field('If a file is missing', 'Fail the row')}
+    </div>
+    <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p">Save mapping</span></div>`;
+}
+
+function orderBody() {
+  return `${steps('Order')}
+    <p class="intro">Files load top to bottom. A file waits for the files it looks things up in.</p>
+    <div class="panel">
+      <div class="listrow"><div><b>1 · people.csv</b><div class="cs">Adds 212 people. Nothing here depends on another file.</div></div><span class="bdg p">People</span></div>
+      <div class="listrow"><div><b>2 · donors.csv</b><div class="cs">Donor</div></div><span class="cs">↑ ↓</span></div>
+      <div class="listrow"><div><b>3 · donations.csv</b><div class="cs">Needs people.csv (Collected by) and donors.csv (Donor)</div></div><span class="cs">↑ ↓</span></div>
+    </div>
+    <div class="note">People always load before any file that links to them. Moving donations.csv above people.csv is refused with this reason.</div>
+    <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p">Next</span></div>`;
+}
+
+function checkBody(k) {
+  const per = desk(k)
+    ? `<table class="tbl"><tr><th>File</th><th>Rows</th><th>Ready</th><th>Invalid</th><th>Add or create</th><th>Update or link</th></tr>
+        <tr><td>people.csv</td><td>212</td><td>209</td><td><span class="bdg b">3</span></td><td>205</td><td>4</td></tr>
+        <tr><td>donors.csv</td><td>840</td><td>840</td><td>0</td><td>840</td><td>0</td></tr>
+        <tr><td>donations.csv</td><td>2,140</td><td>2,140</td><td>0</td><td>2,140</td><td>0</td></tr></table>`
+    : `${row('people.csv', '212 rows · 209 ready · 3 invalid')}${row('donors.csv', '840 rows · all ready')}${row('donations.csv', '2,140 rows · all ready')}`;
+  return `${steps('Check')}
+    <div class="counts"><div><b>3,192</b><span>Rows</span></div><div><b>3,189</b><span>Ready</span></div><div><b>3</b><span>Invalid</span></div><div><b>5</b><span>Warnings</span></div></div>
+    <div class="panel">${per}</div>
+    <div class="grp bad">Blocks the run · 3</div>
+    <div class="panel">
+      ${iss('bad', 'Donation: the receipt rule <code>donation-receipt</code> fires when a record reaches <b>Raised</b>, which is where new donations start. Saving these records would issue receipts. Change the rule or start state in the Builder.')}
+      ${iss('bad', 'people.csv · row 14 · Roles: <b>Treasurer</b> becomes Finance, which requires two-step sign-in.')}
+      ${iss('bad', 'people.csv · row 88 · Legacy id <code>U-0077</code> appears with two different emails.')}
+    </div>
+    <div class="grp warn">Warnings · row still loads ${NEW}</div>
+    <div class="panel">
+      ${iss('warn', '<b>12 legacy users</b> in donations.csv (Collected by) are not in people.csv: <code>U-0017</code> <code>U-0022</code> <code>U-0031</code> and 9 more. The field is left blank.')}
+      ${iss('warn', '<b>3 files</b> named in donations.csv were not uploaded: <code>scans/D-2201.pdf</code> and 2 more. Those rows will fail.')}
+      ${iss('warn', '<b>2 emails</b> appear under more than one legacy id in people.csv. Both ids will point to one person.')}
+      ${iss('warn', '<b>5 suspended people</b> have roles in the file. Suspended people cannot hold roles, so the roles are skipped.')}
+      ${iss('warn', 'The <b>Collected by</b> link can reach 4 people who are suspended. They will be linked and shown by name.')}
+    </div>
+    <div class="grp info">For information</div>
+    <div class="panel">${iss('info', '<b>4 people</b> in people.csv already belong to this organisation. They will be linked, not changed.')}</div>
+    <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn">Check again</span><span class="btn p off">Run</span></div>`;
+}
+
+function checkOkBody(k) {
+  return `${steps('Check')}
+    <div class="counts"><div><b>3,192</b><span>Rows</span></div><div><b>3,192</b><span>Ready</span></div><div><b>0</b><span>Invalid</span></div><div><b>2</b><span>Warnings</span></div></div>
+    <div class="note ok"><b>Nothing blocks the run</b>Warnings do not stop rows. You can fix the source files and check again at any time.</div>
+    <div class="panel">
+      ${iss('warn', '<b>12 legacy users</b> are not in people.csv: <code>U-0017</code> <code>U-0022</code> and 10 more. Their Collected by field is left blank.')}
+      ${iss('warn', '<b>5 suspended people</b> have roles in the file. The roles are skipped.')}
+    </div>
+    <div class="note">No email is sent. People are added as <b style="display:inline">Invited</b>. Automations stay off. Scripts that notify or call a connector are held back too.</div>
+    <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p${hit(true)}">Run</span></div>`;
+}
+
+function runBody() {
+  return `${steps('Run')}
+    <p class="intro">You can leave this page. A notification arrives when the migration finishes.</p>
+    <div class="card"><div class="row"><b style="font-size:.85rem">Migrating…</b><span class="sp"></span><span class="bdg p">Running</span></div>
+      <div class="bar"><i style="width:62%"></i></div><div class="cs">1,979 of 3,192 rows · people.csv done · donors.csv done · donations.csv 927 of 2,140</div></div>
+    <div class="panel">
+      ${row('people.csv', '205 added · 4 already here · 3 failed', '<span class="bdg s">Done</span>')}
+      ${row('donors.csv', '840 created · 0 failed', '<span class="bdg s">Done</span>')}
+      ${row('donations.csv', '927 of 2,140', '<span class="bdg p">Running</span>')}
+    </div>
+    <div class="row"><span class="sp"></span><span class="btn d">Cancel</span></div>
+    <div class="cs" style="margin-top:6px">Cancelling stops before the next batch. Rows already written stay.</div>`;
+}
+
+function resultBody(k) {
+  return `<div class="note ok"><b>Data migration finished</b>3,152 records and people created, 4 linked, 40 rows failed.</div>
+    <div class="panel">
+      ${row('people.csv', '205 added · 4 already here', '<span class="bdg w">3 failed</span>')}
+      ${row('donors.csv', '840 created', '<span class="bdg s">0 failed</span>')}
+      ${row('donations.csv', '2,107 created', '<span class="bdg w">37 failed</span>')}
+    </div>
+    <div class="row" style="margin-bottom:10px"><span class="btn">Download failed rows · donations.csv</span><span class="btn">people.csv</span></div>
+    <div class="card"><b style="font-size:.8rem">Books</b><div class="cs">Opening journal posted 30 Sep 2026. Receipt series <code>donation-receipt</code> continues at 2045.</div></div>
+    <div class="card${hit(true)}"><div class="row"><b style="font-size:.85rem">Delete source data</b>${NEW}</div>
+      <div class="cs" style="margin:4px 0 8px">Removes the uploaded CSVs and attachments, the sample values, and the stored text of failed rows. Records, people and books are not touched. Failed-row downloads stop working. This also happens on <b>25 Dec 2026</b>.</div>
+      <div class="row"><span class="btn d">Delete source data…</span></div></div>
+    <div class="note">The map and legacy ids are kept, so you can add fixed files and run again to fill in what failed.</div>`;
+}
+
+function purgedBody() {
+  return `<div class="note ok"><b>Source data deleted</b>25 Nov 2026, 11:42 · by Asha Sharma</div>
+    <div class="panel">
+      ${row('people.csv', '205 added · 4 already here', '<span class="bdg n">Source deleted</span>')}
+      ${row('donors.csv', '840 created', '<span class="bdg n">Source deleted</span>')}
+      ${row('donations.csv', '2,107 created · 37 failed', '<span class="bdg n">Source deleted</span>')}
+    </div>
+    <div class="card"><div class="cs">Failed-row downloads are gone. To fix and run again, add the corrected CSV files and attachments and check again. People and records already loaded are matched by their legacy ids.</div></div>
+    <div class="row"><span class="btn p">Add files</span></div>`;
+}
+
+function peopleListBody(k) {
+  const person = (i, n, e, st, roles) => `<div class="listrow"><div class="row"><span class="av2">${i}</span><div><b>${n}</b><div class="cs">${e}${roles ? ' · ' + roles : ''}</div></div></div>${st}</div>`;
+  return `<p class="intro">Migrated people appear here as Invited. No email was sent. Send invitations from here when you are ready.</p>
+    <div class="row" style="margin-bottom:8px"><span class="chip">All 260</span><span class="chip">Active 48</span><span class="chip" style="border-color:var(--brand);color:var(--brand)">Invited 205</span><span class="chip">Suspended 7</span></div>
+    <div class="panel">
+      ${person('MJ', 'Meera Joshi', 'meera@example.org', '<span class="bdg p">Invited</span>', 'Front desk')}
+      ${person('RK', 'Ravi Kumar', 'ravi@example.org', '<span class="bdg p">Invited</span>', 'Organisation administrator')}
+      ${person('SN', 'Sunita Nair', 'sunita@example.org', '<span class="bdg p">Invited</span>', 'Front desk')}
+      ${person('PD', 'Prakash Desai', 'prakash@example.org', '<span class="bdg n">Suspended</span>', '')}
+      ${person('AS', 'Asha Sharma', 'asha@example.org', '<span class="bdg s">Active</span>', 'Organisation administrator')}
+    </div>
+    <div class="note">Not in this release: sending all invitations at once. Use <b style="display:inline">Invite</b> on a person, or have them use “Email me a sign-in code”.</div>`;
+}
+
+function recordBody(k) {
+  return `<p class="intro">A migrated donation. The person and the file came from the legacy ids and the attachments.</p>
+    <div class="card">
+      <div class="row"><b>Donation T-8831</b><span class="sp"></span><span class="bdg s">Raised</span></div>
+      <div class="cs" style="margin:2px 0 8px">Imported 25 Nov 2026 by Asha Sharma</div>
+      <table class="tbl" style="font-size:.76rem"><tr><td class="cs">Donor</td><td><b>Ravi Kumar</b> · D-1042</td></tr>
+      <tr><td class="cs">Amount</td><td>₹2,500</td></tr>
+      <tr><td class="cs">Paid on</td><td>04 Nov 2025</td></tr>
+      <tr><td class="cs">Collected by ${NEW}</td><td><span class="row"><span class="av2">MJ</span> Meera Joshi <span class="cs">(legacy U-0017)</span></span></td></tr>
+      <tr><td class="cs">Receipt scan ${NEW}</td><td><span class="row"><span class="ph" style="width:36px;height:36px;font-size:14px">📄</span> D-1042.pdf · 220 kB</span></td></tr>
+      <tr><td class="cs">Legacy history</td><td class="cs">A read-only text field the type can hold. Audit entries are not faked.</td></tr></table>
+    </div>`;
+}
+
+function noAccessBody(k) {
+  return `${steps('Map')}
+    <p class="intro"><b>people.csv</b> · 212 rows</p>
+    <div class="cap">What is in this file?</div>
+    <div class="radio">
+      <div class="opt on"><b>Records</b>Fill record types such as donors or donations.</div>
+      <div class="opt off"><b>People</b>Needs <i>Migrate people</i> and <i>Manage people</i>. Ask an organisation administrator.</div>
+    </div>
+    <div class="note warn"><b>You cannot add people</b>You can still map record files. A profile with a people file can only be mapped and run by someone with both permissions.</div>`;
+}
+
+// ----------------------------------------------------------------- flows
+
+const S = (id, t, act, url, title, crumbs, body, note, extra = {}) => ({ id, t, act, url, title, crumbs, body, note, back: true, ...extra });
+const C = (...t) => ['Administration', 'Migration', ...t];
+
+const FLOWS = [
+  {
+    id: 'a', label: 'Setting up', h: 'Files, People and attachments',
+    p: 'Asha adds the CSV exports and a folder of scans. She says people.csv contains People, maps its columns, and maps a person field and a file field on donations.',
+    steps: [
+      S('files', 'Files and attachments', 'Drop the export and the scans folder', '/admin/migration/legacy/files', 'Legacy extract', C('Files'), filesBody, 'The Attachments panel is optional. It shows the count and bytes against the 5,000-file and storage limits. A file nothing points at is shown as Not used. Adding or removing one sends the profile back to draft, so it must be checked again.'),
+      S('kind', 'What is in this file?', 'Open <kbd>people.csv</kbd>', '/admin/migration/legacy/map/people.csv', 'Map columns', C('Map'), mapKindBody, 'A file is either Records or People, never both. The People choice is greyed out without the new permission (see the last flow).'),
+      S('people', 'Map people', 'Match the columns', '/admin/migration/legacy/map/people.csv', 'Map columns', C('Map'), (k) => mapPeopleBody(k, false), 'Roles map by key. A legacy role value that has no match is left on Ignore until Asha chooses. Only roles Asha may give appear in the list. The language column is optional.'),
+      S('people-bad', 'A role that cannot be given', 'Choose Finance for Treasurer', '/admin/migration/legacy/map/people.csv', 'Map columns', C('Map'), (k) => mapPeopleBody(k, true), 'A role that requires two-step sign-in is refused: nobody can enrol in two-step before they can sign in, so they would be locked out. Asha adds that role later, after the person has signed in and enrolled.', { blk: 'Blocks save' }),
+      S('donations', 'Map donations', 'Open <kbd>donations.csv</kbd>', '/admin/migration/legacy/map/donations.csv', 'Map columns', C('Map'), mapDonationsBody, 'A person field now offers a “Legacy user id column”, resolved from people.csv. A file field offers a “File name column”. The same column may also fill a text field, so the legacy value can be kept next to the link.'),
+      S('order', 'Order', 'Next', '/admin/migration/legacy/order', 'Load order', C('Order'), orderBody, 'People files always come first. Saving a mapping reorders when it must; a hand order that breaks a dependency is refused.'),
+    ],
+  },
+  {
+    id: 'b', label: 'Checking', h: 'Check says everything first',
+    p: 'Nothing is written during Check. Blocking problems stop the run; warnings do not. It never looks at accounts other organisations hold, so it cannot say whether an email has an account elsewhere.',
+    steps: [
+      S('check', 'Check with problems', 'Next, then Check', '/admin/migration/legacy/check', 'Check', C('Check'), checkBody, 'Warnings are grouped by kind and show the first few legacy ids. The type-level check blocks a migration that would issue receipts or post journals while loading records. A globally disabled account cannot be predicted here; that row fails at run time with a generic message.', { blk: 'Run disabled' }),
+      S('check-ok', 'Check, ready to run', 'Fix the files, Check again', '/admin/migration/legacy/check', 'Check', C('Check'), checkOkBody, 'Warnings remain and do not block. The note states what the run will not do: no email, no automations, no script notifications.'),
+    ],
+  },
+  {
+    id: 'c', label: 'Running', h: 'Run, result and delete source data',
+    p: 'The run is the same exclusive job as today. People are added first, then records and files, one transaction per row. A second run updates and never duplicates.',
+    steps: [
+      S('run', 'Run', 'Tap <kbd>Run</kbd>', '/admin/migration/legacy/run', 'Running', C('Run'), runBody, 'People counts read “added” and “already here”. A person who was already a member is linked and left as they are.'),
+      S('result', 'Result', 'When the job finishes', '/admin/migration/legacy/result', 'Result', C('Result'), resultBody, 'Failed rows download per file as today. The new Delete source data card removes the CSVs, attachments, sample values and failed-row text. It also runs by itself after 30 days.'),
+      S('purged', 'After deleting source data', 'Confirm Delete', '/admin/migration/legacy/result', 'Result', C('Result'), purgedBody, 'The profile keeps its mapping and legacy ids. To fix failures Asha adds the corrected files and checks again; rows already loaded are matched by their legacy ids and updated.'),
+    ],
+  },
+  {
+    id: 'd', label: 'Afterwards', h: 'What people and records look like',
+    p: 'The same data seen from the screens that already exist. No new screen is needed here.',
+    steps: [
+      S('people-list', 'People list', 'Administration → People', '/admin/people', 'People', ['Administration', 'People'], peopleListBody, 'Migrated people show as Invited. No password, invitation or email exists until an administrator sends one. Roles marked as requiring two-step are not on them.'),
+      S('record', 'A migrated record', 'Open a donation', '/records/donation/T-8831', 'Donation', ['Records', 'Donations', 'T-8831'], recordBody, 'The person field is filled from the legacy id and the file field holds the attachment. Created by and Created on show the migration, because the platform sets them. Original dates live in ordinary fields the type declares.', { nav: 'records' }),
+    ],
+  },
+  {
+    id: 'e', label: 'Permissions', h: 'Without the people permission',
+    p: 'A person with only data:migrate can map record files. People files need data:migrate:people and members:manage, both checked again for every batch of a run.',
+    steps: [
+      S('denied', 'No people access', 'Open <kbd>people.csv</kbd>', '/admin/migration/legacy/map/people.csv', 'Map columns', C('Map'), noAccessBody, 'The reason is shown on the greyed-out choice. The server refuses the request as well; hiding the choice is not the control.'),
+    ],
+  },
+];
+
+const toc = document.getElementById('toc');
+const root = document.getElementById('flows');
+let n = 0;
+for (const f of FLOWS) {
+  toc.insertAdjacentHTML('beforeend', `<a href="#flow-${f.id}">${f.label}</a>`);
+  root.insertAdjacentHTML('beforeend', `<section class="flow" id="flow-${f.id}"><div class="flabel">${f.label}</div><h2>${f.h}</h2><p>${f.p}</p>${f.steps.map((s) => {
+    n++;
+    return `<div class="step" id="${s.id}"><div class="num">${n}</div><div class="stephead"><b>${s.t}</b><span class="act">${s.act}</span>${s.blk ? `<span class="bdg b blk">${s.blk}</span>` : ''}<code>${s.url}</code></div><div></div><div><p class="cap">Phone</p>${frame('phone', s)}</div><div class="desk"><p class="cap">Desktop</p>${frame('desk', s)}<div class="noteline">${s.note}</div></div></div>`;
+  }).join('')}</section>`);
+}
+</script>
+</body>
+</html>

@@ -29,15 +29,15 @@ export class PgPersonDirectory implements PersonDirectory {
     return new Map(rows.map((r) => [r.id, r.display_name]));
   }
 
-  async identities(tx: Tx, ids: string[]): Promise<Map<string, { name: string; email: string }>> {
+  async identities(tx: Tx, ids: string[]): Promise<Map<string, { name: string; email: string; joinedAt: string }>> {
     if (!ids.length) return new Map();
     const rows = await pg(tx)
       .selectFrom('app_user as u')
       .innerJoin('tenant_member as m', (j) => j.onRef('m.user_id', '=', 'u.id').on('m.tenant_id', '=', APP_TENANT))
-      .select((eb) => ['u.id', 'u.email', eb.fn.coalesce('m.display_name', 'u.display_name').as('name')])
+      .select((eb) => ['u.id', 'u.email', 'm.joined_at', eb.fn.coalesce('m.display_name', 'u.display_name').as('name')])
       .where('u.id', '=', sql<string>`any(${ids}::uuid[])`)
       .execute();
-    return new Map(rows.map((r) => [r.id, { name: String(r.name), email: r.email }]));
+    return new Map(rows.map((r) => [r.id, { name: String(r.name), email: r.email, joinedAt: new Date(r.joined_at).toISOString() }]));
   }
 
   async memberStatus(tx: Tx, userId: string): Promise<string | undefined> {

@@ -7,6 +7,7 @@
   "required": ["key", "label", "fields"],
   "properties": {
     "key": { "$ref": "#/definitions/key", "description": "Stable name used in addresses and permissions" },
+    "hidden": { "type": "boolean", "default": false, "description": "Left out of menus, lists and pages; records and permissions are kept. Changed on the Modules screen", "x-hidden": true },
     "label": { "type": "string", "minLength": 1, "description": "Name of one record, for example Donation" },
     "pluralLabel": { "type": "string", "description": "Name of several records, for example Donations" },
     "description": { "type": "string", "description": "Shown under the name on the Records screen" },
@@ -166,6 +167,17 @@
         "max": { "type": "number", "description": "Largest number allowed" },
         "maxLength": { "type": "integer", "minimum": 1, "description": "Longest text allowed" },
         "calculated": { "type": "string", "description": "Expression; the field is read-only and computed on save", "x-expression": { "recordType": "/key" } },
+        "defaultValue": { "type": "boolean", "description": "Boolean fields only: the value a new record starts with, for example true for a box that starts ticked. Existing records keep what they hold" },
+        "defaultFrom": { "type": "string", "minLength": 1, "maxLength": 2000, "description": "Expression that suggests a value for an editable text field from other fields, for example firstWord(record.name). It fills the field when those fields change, until the person types their own value", "x-expression": { "recordType": "/key" } },
+        "generated": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pattern"],
+          "description": "Text filled in on save when empty, for example an identifier. Read-only. Use {yymm:<date field>}, {initial:<text field>} and one {seq:N} counter at the end",
+          "properties": {
+            "pattern": { "type": "string", "minLength": 1, "maxLength": 200, "description": "Pattern, for example NM{yymm:joinedOn}{initial:firstName}{initial:lastName}{seq:3}" }
+          }
+        },
         "sensitive": { "type": "boolean", "description": "Masked unless the viewer has record:<type>:sensitive; the same as readPermission record:<type>:sensitive unless readPermission is set" },
         "personal": { "type": "boolean", "description": "Whether erasing the person this record is about clears this field. By default text, email, phone, location, signature, file and sensitive fields are cleared; true adds a field of another type, false keeps one" },
         "readPermission": {
@@ -201,12 +213,13 @@
           "type": "object",
           "additionalProperties": false,
           "required": ["via", "field"],
-          "description": "Kept equal to a source field. via is a reference or person field on this record type. When that source changes, this field is updated. It is filled by the sync, not typed, and cannot also be calculated, a rollup, or copyFrom.",
+          "description": "Kept equal to a source field. via is a reference or person field on this record type. When that source changes, this field is updated. It is filled by the sync, not typed, and cannot also be calculated, a rollup, or copyFrom. An account field is id, name, email, or joinedAt (the day they joined the organisation, for a date field).",
           "properties": {
             "via": { "type": "string", "description": "A reference or person field of this record type", "x-ref": "field" },
-            "field": { "type": "string", "description": "A field on the referenced record, or an account field (id, name, email) when via is a person field" }
+            "field": { "type": "string", "description": "A field on the referenced record, or an account field (id, name, email or joinedAt) when via is a person field" }
           }
         },
+        "emailFrom": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_]{0,62}$", "description": "Person fields only. The person picker shows only the person whose email is exactly the value of this email field on the same record, and includes invited people. Blank until that email is entered", "x-ref": "field" },
         "unique": { "type": "boolean", "description": "No two records may share a value; blanks are allowed. Text, email, phone and number fields" },
         "pattern": { "type": "string", "minLength": 1, "maxLength": 200, "description": "Regular expression the whole value must match, for example [A-Z]{5}[0-9]{4}[A-Z]. Text fields" },
         "patternMessage": { "type": "string", "maxLength": 200, "description": "Shown under the field when the value does not match the pattern" },

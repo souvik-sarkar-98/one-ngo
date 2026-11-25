@@ -29,7 +29,7 @@ function property(f: FieldDef): Json {
     ...fieldSchema(f),
     title: f.label,
     ...(f.help ? { description: f.help } : {}),
-    ...(f.calculated || f.rollup ? { readOnly: true } : {}),
+    ...(f.calculated || f.rollup || f.generated ? { readOnly: true } : {}),
     ...(f.referenceType ? { 'x-reference-type': f.referenceType } : {}),
     ...(f.sensitive ? { 'x-sensitive': true } : {}),
   };

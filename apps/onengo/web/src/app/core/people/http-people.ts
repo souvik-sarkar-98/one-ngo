@@ -5,7 +5,12 @@ import type { PeopleGateway, PeopleListGateway, PeoplePage, PeopleQuery, PersonI
 /** The people API over HTTP, as far as the person picker needs it. */
 export function httpPeople(http: HttpLike): PeopleGateway {
   return {
-    pick: async (q) => (await http.get<{ items: PersonOption[] }>(`/api/people?pick=1&limit=8&q=${encodeURIComponent(q)}`)).items,
+    pick: async (q, options = {}) => {
+      const params = [`pick=1`, `limit=8`, `q=${encodeURIComponent(q)}`];
+      if (options.email) params.push(`email=${encodeURIComponent(options.email)}`);
+      if (options.includeInvited) params.push('include=invited');
+      return (await http.get<{ items: PersonOption[] }>(`/api/people?${params.join('&')}`)).items;
+    },
   };
 }
 

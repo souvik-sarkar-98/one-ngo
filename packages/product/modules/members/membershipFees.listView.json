@@ -1,5 +1,6 @@
 {
   "key": "membershipFees",
+  "hidden": false,
   "recordType": "membershipFee",
   "label": "Membership fees",
   "pageSize": 20,

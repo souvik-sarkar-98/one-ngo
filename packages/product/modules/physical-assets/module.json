@@ -1,6 +1,6 @@
 {
   "key": "physical-assets",
-  "version": "1.0.1",
+  "version": "1.1.1",
   "label": "Physical assets",
   "description": "A register of the organisation's physical assets: what it is, where it is, who looks after it, and when it was disposed of. No depreciation in 1.0.0.",
   "engine": "0.1.0",

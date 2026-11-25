@@ -6,6 +6,7 @@ import type {
   DefinitionKind,
   DefinitionRow,
   DefinitionStore,
+  LegacyOptionState,
   ModuleManifest,
   NewPublished,
   ReferenceFacts,
@@ -17,6 +18,9 @@ const PLATFORM_MODULE = 'platform';
 
 /** The organisation setting that lists the shipped definitions turned off, as `kind|key`. */
 const DISABLED_DEFINITIONS_SETTING = 'definitions.disabled';
+
+/** The setting of the retired module options: each module's options and the keys turned off. */
+const LEGACY_MODULE_OPTIONS_SETTING = 'modules.options';
 
 const appTenant = sql<string>`app_tenant()`;
 
@@ -331,6 +335,27 @@ export class PgDefinitionStore implements DefinitionStore {
         })),
       )
       .execute();
+  }
+
+  async legacyModuleOptions(tx: Tx): Promise<Record<string, LegacyOptionState>> {
+    const row = await pg(tx).selectFrom('tenant_setting').select('value').where('tenant_id', '=', appTenant).where('key', '=', LEGACY_MODULE_OPTIONS_SETTING).executeTakeFirst();
+    const value = row?.value;
+    return value && typeof value === 'object' && !Array.isArray(value) ? (value as unknown as Record<string, LegacyOptionState>) : {};
+  }
+
+  async clearLegacyModuleOptions(tx: Tx): Promise<void> {
+    // The app role may not delete settings; an empty value reads as nothing to move.
+    await pg(tx)
+      .updateTable('tenant_setting')
+      .set({ value: JSON.stringify({}), updated_at: sql<Date>`now()` })
+      .where('tenant_id', '=', appTenant)
+      .where('key', '=', LEGACY_MODULE_OPTIONS_SETTING)
+      .execute();
+  }
+
+  async markRolesCustomised(tx: Tx, keys: string[]): Promise<void> {
+    if (!keys.length) return;
+    await pg(tx).updateTable('role').set({ customised: true }).where('tenant_id', '=', appTenant).where('key', 'in', keys).execute();
   }
 
   async disabledDefinitions(tx: Tx): Promise<{ kind: DefinitionKind; key: string }[]> {

@@ -1,6 +1,9 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { availableActions, createRecord, runStep, saveEdit } from './record/actions';
-import { changedOnly, fieldModels, fromFormValues, missingRequired, toFormValues } from './record/forms';
+import { addPersonHref, changedOnly, fieldModels, fromFormValues, missingRequired, newRecordValues, stepKeys, toFormValues, type FieldSet } from './record/forms';
 import { preferredLayout, rememberLayout } from './list/layout';
 import { detailSections, filterPills, rowModel } from './record/present';
 import { criteriaToFilters, queryBody } from './list/query';
@@ -79,6 +82,57 @@ describe('presentation', () => {
       amount: { from: 100, to: null },
       anonymous: { eq: false },
     });
+  });
+});
+
+describe('the membership request steps, as shipped', () => {
+  const members = join(dirname(fileURLToPath(import.meta.url)), '../../../../../../../packages/product/modules/members');
+  const read = (file: string) => JSON.parse(readFileSync(join(members, file), 'utf8')) as Record<string, any>;
+  const type = read('membershipRequest.recordType.json') as unknown as FieldSet;
+  const step = (key: string) => read('membershipRequestStatus.workflow.json')['transitions'].find((t: { key: string }) => t.key === key);
+  const request = { email: 'demo.testuser@example.org', name: 'Demo TestUser' };
+
+  it('asks for nothing on Mark as verified, so no person selector is shown', () => {
+    expect(step('verify').label).toBe('Mark as verified');
+    expect(stepKeys(type, step('verify'), request, 'submitted', viewer)).toEqual([]);
+  });
+
+  it('asks for the person, with the Add a new person link, on Onboard', () => {
+    expect(step('complete').label).toBe('Onboard');
+    const keys = stepKeys(type, step('complete'), request, 'approved', viewer);
+    expect(keys).toEqual(['login']);
+    const [login] = fieldModels(type, keys, request, 'completed', viewer);
+    expect(login).toMatchObject({ key: 'login', addPersonHref: '/admin/people?add=&email=demo.testuser%40example.org&name=Demo+TestUser' });
+  });
+
+  it('starts the fee box ticked on a new request, and sends it ticked', () => {
+    const values = newRecordValues(type);
+    expect(values['feeApplies']).toBe(true);
+    expect(fromFormValues(type, values)['feeApplies']).toBe(true);
+    // Existing records are not touched: a blank stored value still reads as unticked in the form.
+    expect(toFormValues(type, {})['feeApplies']).toBe(false);
+  });
+
+  it('keeps the person field out of the edit form until the request is onboarded', () => {
+    expect(fieldModels(type, ['login'], request, 'approved', viewer)).toEqual([]);
+  });
+});
+
+describe('a person field that looks people up by email', () => {
+  const login = { key: 'login', label: 'Person (login)', type: 'person' as const, emailFrom: 'email' };
+  const type = { fields: [{ key: 'email', label: 'Email', type: 'email' as const }, login] };
+
+  it('links to Add a person with the record email and name filled in', () => {
+    expect(addPersonHref(login, { email: ' demo.testuser@example.org ', name: 'Demo TestUser' })).toBe('/admin/people?add=&email=demo.testuser%40example.org&name=Demo+TestUser');
+    expect(addPersonHref(login, {})).toBe('/admin/people?add=');
+    const models = fieldModels(type, ['login'], { email: 'a@example.org' }, null, viewer);
+    expect(models[0]!.addPersonHref).toBe('/admin/people?add=&email=a%40example.org');
+  });
+
+  it('offers no link on other fields, or when the field is read only', () => {
+    expect(addPersonHref({ type: 'person' }, { email: 'a@example.org' })).toBeUndefined();
+    expect(addPersonHref({ type: 'text', emailFrom: 'email' }, { email: 'a@example.org' })).toBeUndefined();
+    expect(fieldModels(type, ['login'], { email: 'a@example.org' }, null, viewer, { readOnly: true })[0]).not.toHaveProperty('addPersonHref');
   });
 });
 

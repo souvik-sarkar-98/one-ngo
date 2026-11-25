@@ -1,4 +1,5 @@
 import { checkPattern } from './field-pattern.js';
+import { parseGenerated } from '../../shared/definitions/generated-pattern.js';
 import { checkExpression } from '../expressions/expression.js';
 import type { FieldIssue } from '@onengo/kernel/errors';
 import { checkCron } from './cron.js';
@@ -88,7 +89,7 @@ function needType(issues: FieldIssue[], lookup: DefinitionLookup, key: string): 
 
 const TEXTUAL = new Set(['text', 'longText']);
 
-const ACCOUNT_FIELDS = new Set(['id', 'name', 'email']);
+const ACCOUNT_FIELDS = new Set(['id', 'name', 'email', 'joinedAt']);
 
 function checkFollow(def: RecordTypeDef, issues: FieldIssue[], lookup: DefinitionLookup): void {
   const fields = new Map(def.fields.map((f) => [f.key, f]));
@@ -102,9 +103,10 @@ function checkFollow(def: RecordTypeDef, issues: FieldIssue[], lookup: Definitio
       return;
     }
     if (via.type === 'person') {
-      if (!ACCOUNT_FIELDS.has(f.follow.field)) issues.push({ path: `${at}/field`, message: 'an account field is id, name or email' });
+      if (!ACCOUNT_FIELDS.has(f.follow.field)) issues.push({ path: `${at}/field`, message: 'an account field is id, name, email or joinedAt' });
       else if (f.follow.field === 'email' && f.type !== 'email') issues.push({ path: `${at}/field`, message: 'email follows onto an email field' });
-      else if (f.follow.field !== 'email' && !TEXTUAL.has(f.type)) issues.push({ path: `${at}/field`, message: 'id and name follow onto a text field' });
+      else if (f.follow.field === 'joinedAt' && f.type !== 'date') issues.push({ path: `${at}/field`, message: 'joinedAt follows onto a date field' });
+      else if ((f.follow.field === 'id' || f.follow.field === 'name') && !TEXTUAL.has(f.type)) issues.push({ path: `${at}/field`, message: 'id and name follow onto a text field' });
       return;
     }
     const target = via.referenceType === def.key ? def : lookup.recordType(via.referenceType ?? '');
@@ -117,6 +119,18 @@ function checkFollow(def: RecordTypeDef, issues: FieldIssue[], lookup: Definitio
     else if (source.type !== f.type && !(TEXTUAL.has(source.type) && TEXTUAL.has(f.type))) {
       issues.push({ path: `${at}/field`, message: `'${source.key}' is ${source.type} but this field is ${f.type}` });
     }
+  });
+}
+
+/** A person field may look people up by the value of an email field on the same record. */
+function checkEmailLookup(def: RecordTypeDef, issues: FieldIssue[]): void {
+  const fields = new Map(def.fields.map((f) => [f.key, f]));
+  def.fields.forEach((f, i) => {
+    if (f.emailFrom === undefined) return;
+    const at = `/fields/${i}/emailFrom`;
+    if (f.type !== 'person') issues.push({ path: at, message: 'only a person field can look people up by email' });
+    const source = fields.get(f.emailFrom);
+    if (!source || source.type !== 'email') issues.push({ path: at, message: `'${f.emailFrom}' must be an email field of this record type` });
   });
 }
 
@@ -182,6 +196,7 @@ function checkRollup(def: RecordTypeDef, f: FieldDef, at: string, issues: FieldI
 function checkRecordType(def: RecordTypeDef, issues: FieldIssue[], lookup: DefinitionLookup): void {
   checkCopies(def, issues, lookup);
   checkFollow(def, issues, lookup);
+  checkEmailLookup(def, issues);
   const seen = new Set<string>();
   def.fields.forEach((f, i) => {
     if (seen.has(f.key)) issues.push({ path: `/fields/${i}/key`, message: `duplicate field '${f.key}'` });
@@ -216,13 +231,24 @@ function checkRecordType(def: RecordTypeDef, issues: FieldIssue[], lookup: Defin
       issues.push({ path: `/fields/${i}/referenceType`, message: 'reference fields need a referenceType' });
     }
     expr(issues, `/fields/${i}/calculated`, f.calculated);
+    if (f.generated) checkGenerated(def, f, i, issues);
     expr(issues, `/fields/${i}/visibleWhen`, f.visibleWhen);
     expr(issues, `/fields/${i}/editableWhen`, f.editableWhen);
+    if (f.defaultValue !== undefined && f.type !== 'boolean') {
+      issues.push({ path: `/fields/${i}/defaultValue`, message: 'only boolean fields can have a starting value' });
+    }
+    if (f.defaultFrom !== undefined) {
+      expr(issues, `/fields/${i}/defaultFrom`, f.defaultFrom);
+      if (!TEXTUAL.has(f.type)) issues.push({ path: `/fields/${i}/defaultFrom`, message: 'only text fields can have a default from other fields' });
+      if (f.calculated || f.rollup || f.follow || f.copyFrom || f.generated) {
+        issues.push({ path: `/fields/${i}/defaultFrom`, message: 'a field with a default cannot also be calculated, a rollup, followed, copied or generated' });
+      }
+    }
     if (f.calculated && (f.visibleWhen || f.editableWhen)) {
       issues.push({ path: `/fields/${i}`, message: 'calculated fields cannot have visibleWhen or editableWhen' });
     }
-    if (f.editPermission && (f.calculated || f.rollup || f.follow)) {
-      issues.push({ path: `/fields/${i}/editPermission`, message: 'calculated, rollup and followed fields cannot be changed, so they have no edit permission' });
+    if (f.editPermission && (f.calculated || f.rollup || f.follow || f.generated)) {
+      issues.push({ path: `/fields/${i}/editPermission`, message: 'calculated, generated, rollup and followed fields cannot be changed, so they have no edit permission' });
     }
     if (f.sensitive && f.readPermission && f.readPermission !== `record:${def.key}:sensitive`) {
       issues.push({
@@ -242,6 +268,27 @@ function checkRecordType(def: RecordTypeDef, issues: FieldIssue[], lookup: Defin
   checkPublic(def, issues, lookup);
 }
 
+/** A generated field: text only, its pattern parses, and each date or text field it reads exists with the right type. */
+function checkGenerated(def: RecordTypeDef, f: FieldDef, i: number, issues: FieldIssue[]): void {
+  const at = `/fields/${i}/generated`;
+  if (f.type !== 'text') issues.push({ path: at, message: 'only text fields can be generated' });
+  if (f.calculated || f.rollup || f.follow || f.copyFrom) {
+    issues.push({ path: at, message: 'a generated field cannot also be calculated, a rollup, followed or copied' });
+  }
+  const parts = parseGenerated(f.generated?.pattern ?? '');
+  if (typeof parts === 'string') {
+    issues.push({ path: `${at}/pattern`, message: parts });
+    return;
+  }
+  for (const p of parts) {
+    if (p.kind !== 'yymm' && p.kind !== 'initial') continue;
+    const source = def.fields.find((g) => g.key === p.field);
+    const want = p.kind === 'yymm' ? 'date' : 'text';
+    if (!source) issues.push({ path: `${at}/pattern`, message: `unknown field '${p.field}'` });
+    else if (source.type !== want) issues.push({ path: `${at}/pattern`, message: `'${p.field}' must be a ${want} field` });
+  }
+}
+
 const PUBLIC_VALUE_TYPES = new Set(['text', 'longText', 'number', 'money', 'date', 'boolean', 'choice', 'multiChoice', 'email', 'phone', 'location', 'richText']);
 
 /** Why a field cannot be shown or accepted on a public form, or undefined when it can. */
@@ -252,7 +299,7 @@ function publicFieldProblem(def: RecordTypeDef, key: string, displayOnly: boolea
   if (f.type === 'person' || f.type === 'file' || f.type === 'signature') return `'${key}' cannot be public`;
   if (f.type === 'reference') return displayOnly ? `'${key}' cannot be shown in a catalogue` : undefined;
   if (!PUBLIC_VALUE_TYPES.has(f.type)) return `'${key}' cannot be public`;
-  if (!displayOnly && (f.calculated || f.rollup || f.follow)) return `'${key}' is filled automatically and cannot be entered`;
+  if (!displayOnly && (f.calculated || f.rollup || f.follow || f.generated)) return `'${key}' is filled automatically and cannot be entered`;
   if (!displayOnly && f.editPermission) return `'${key}' can only be changed by someone with a permission`;
   if (!displayOnly && def.lookups?.some((lookup) => lookup.inputs.includes(key))) return `'${key}' is sent to a lookup and cannot be entered by a visitor`;
   return undefined;

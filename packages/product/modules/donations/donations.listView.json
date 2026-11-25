@@ -1,5 +1,6 @@
 {
   "key": "donations",
+  "hidden": false,
   "recordType": "donation",
   "label": "Donations",
   "pageSize": 12,

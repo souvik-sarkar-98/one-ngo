@@ -1,5 +1,6 @@
 {
   "key": "beneficiaryConsents",
+  "hidden": false,
   "recordType": "beneficiaryConsent",
   "label": "Consents",
   "pageSize": 20,

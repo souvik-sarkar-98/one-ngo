@@ -18,12 +18,12 @@ import {
   type StepAction,
 } from './actions';
 import { asSignature, dataUrlBlob, type FileUploader } from '../../fields/files';
-import { peopleSource, type PeopleGateway } from '../../people/people';
+import { peopleSource, type PeopleGateway, type PersonOption, type PersonSuggestion } from '../../people/people';
 import type { Suggestion, SuggestionSource } from '../../ui-logic/autocomplete';
-import { changedOnly, fieldModels, formProblems, fromFormValues, splitIssues, stepKeys, toFormValues, type FieldModel, type FieldOptions, type FormValues, type Viewer } from './forms';
+import { changedOnly, fieldModels, formProblems, fromFormValues, newRecordValues, splitIssues, stepKeys, toFormValues, withDefaults, type FieldModel, type FieldOptions, type FormValues, type Viewer } from './forms';
 import { asGatewayError, type RecordsGateway } from '../gateway/gateway';
 import { recordTitle, type DetailSection } from './present';
-import { copyPicked, personTitles, pickReference, recordSource, referenceTitles, type PickOption } from './references';
+import { copyPicked, followPerson, personTitles, pickReference, recordSource, referenceTitles, type PickOption } from './references';
 import { loadRelated, relatedCreates, relatedDetail, type RelatedCreate, type RelatedSection } from './related';
 import type { ListSpec } from '../spec';
 import type { ListState } from '../list/url';
@@ -152,9 +152,10 @@ export class RecordSession {
    * empty field it complained about. The form is checked again on save.
    */
   setValues(values: FormValues): void {
-    const same = (key: string) => JSON.stringify(values[key] ?? null) === JSON.stringify(this.snap.values[key] ?? null);
+    const next = this.withSuggestions(values);
+    const same = (key: string) => JSON.stringify(next[key] ?? null) === JSON.stringify(this.snap.values[key] ?? null);
     const errors = Object.fromEntries(Object.entries(this.snap.errors).filter(([key]) => same(key)));
-    this.set({ values, ...(Object.keys(errors).length === Object.keys(this.snap.errors).length ? {} : { errors }) });
+    this.set({ values: next, ...(Object.keys(errors).length === Object.keys(this.snap.errors).length ? {} : { errors }) });
   }
 
   /**
@@ -174,10 +175,15 @@ export class RecordSession {
   async choose(key: string, option: Suggestion | null): Promise<void> {
     const o = option as PickOption | null;
     const field = this.fieldDefs().find((f) => f.key === key);
-    if (!o || !field) return this.pickReference(key, null);
+    if (!o || !field) {
+      if (field?.type === 'person') this.set({ values: this.followedValues(key, null) });
+      else this.pickReference(key, null);
+      return;
+    }
     const { [key]: _, ...errors } = this.snap.errors;
     if (field.type === 'person') {
-      this.set({ values: { ...this.snap.values, [key]: o.id }, titles: { ...this.snap.titles, [o.id]: o.label }, errors });
+      const person = (option as Partial<PersonSuggestion>).person ?? { id: o.id, name: o.label, email: o.hint ?? '' };
+      this.set({ values: this.followedValues(key, person), titles: { ...this.snap.titles, [o.id]: o.label }, errors });
       return;
     }
     const spec = field.referenceType ? this.links.spec(field.referenceType) : null;
@@ -408,6 +414,18 @@ export class RecordSession {
     return this.spec.actions.find((a) => a.key === key);
   }
 
+  /** Form values after choosing `person` (or clearing the choice) in person field `key`, with the fields that follow their account filled in the form too. */
+  private followedValues(key: string, person: PersonOption | null): FormValues {
+    if (this.snap.mode?.kind === 'action') return { ...this.snap.values, [key]: person?.id ?? '' };
+    return this.withSuggestions(followPerson(this.spec.type, this.snap.values, key, person));
+  }
+
+  /** The values with each field's suggestion brought up to date from the change; actions have their own form, so none. */
+  private withSuggestions(values: FormValues): FormValues {
+    if (this.snap.mode?.kind === 'action') return values;
+    return withDefaults(this.spec.type, this.snap.values, values, this.viewer());
+  }
+
   /** The definitions of the fields the current form can hold. */
   private fieldDefs() {
     const mode = this.snap.mode;
@@ -415,13 +433,17 @@ export class RecordSession {
   }
 
   private sourceFor(field: FieldModel): SuggestionSource | null {
-    const key = field.kind === 'person' ? 'person' : field.kind === 'reference' && field.referenceType ? `record:${field.referenceType}` : '';
+    // A person field that looks people up by an email field gets its own source, which reads that email as it is now.
+    const emailFrom = field.kind === 'person' ? this.fieldDefs().find((f) => f.key === field.key)?.emailFrom : undefined;
+    const key = field.kind === 'person' ? (emailFrom ? `person:${field.key}` : 'person') : field.kind === 'reference' && field.referenceType ? `record:${field.referenceType}` : '';
     if (!key) return null;
     let source = this.sources.get(key);
     if (!source) {
       const spec = field.kind === 'reference' ? this.links.spec(field.referenceType!) : null;
       if (field.kind === 'person' ? !this.links.people : !spec) return null;
-      source = spec ? recordSource(this.gateway, spec) : peopleSource(this.links.people!);
+      source = spec
+        ? recordSource(this.gateway, spec)
+        : peopleSource(this.links.people!, emailFrom ? () => String(this.snap.values[emailFrom] ?? '') : undefined);
       this.sources.set(key, source);
     }
     return source;
@@ -457,7 +479,7 @@ export class RecordSession {
     const { record, mode } = this.snap;
     if (mode?.kind === 'action') this.set({ values: toFormValues(actionForm(this.actionDef(mode.action)), {}) });
     else if (mode?.kind === 'create') {
-      const values = toFormValues(this.spec.type, {});
+      const values = newRecordValues(this.spec.type);
       for (const p of this.spec.presets) if (presets[p.param] !== undefined) values[p.field] = presets[p.param]!;
       this.set({ record: null, receipts: [], pending: null, related: [], values });
     } else this.set({ values: record ? toFormValues(this.spec.type, record.data) : {} });

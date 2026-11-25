@@ -1,0 +1,6 @@
+{
+  "key": "membershipRequestReceived",
+  "label": "Membership request received",
+  "subject": "We have received your membership request {{ record.number }}",
+  "body": "Dear {{ record.name }},\n\nThank you for applying to join. We have received your membership request, number {{ record.number }}.\n\nWe will review it and write to you again. Please quote this number in any correspondence."
+}

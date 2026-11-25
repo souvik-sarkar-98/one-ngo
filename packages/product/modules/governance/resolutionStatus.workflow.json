@@ -1,5 +1,6 @@
 {
   "key": "resolutionStatus",
+  "hidden": false,
   "recordType": "resolution",
   "initial": "draft",
   "states": [

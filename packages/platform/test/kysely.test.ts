@@ -57,13 +57,13 @@ describe('generated database types', () => {
     const text = readFileSync(TYPES_FILE, 'utf8');
     const db = /export interface DB \{\n([^}]*)\}/.exec(text)![1]!;
     const tables = [...db.matchAll(/^ {2}(\w+): \w+;$/gm)].map((m) => m[1]!);
-    expect(tables).toHaveLength(84);
+    expect(tables).toHaveLength(86);
     expect(tables).toEqual(
       expect.arrayContaining([
         'tenant', 'app_user', 'tenant_member', 'role', 'definition', 'record', 'record_link', 'job', 'journal_entry', 'receipt',
         'organisation_profile', 'organisation_registration', 'tenant_asset', 'organisation_onboarding', 'platform_audit', 'receipt_issuer', 'receipt_content',
         'consent_event', 'erasure_request', 'connector_oauth_state', 'passkey_credential', 'passkey_challenge',
-        'migration_profile', 'migration_source', 'migration_key', 'tenant_auth_email_template',
+        'migration_profile', 'migration_source', 'migration_key', 'migration_person_key', 'migration_attachment', 'tenant_auth_email_template',
       ]),
     );
     expect(text).not.toMatch(/kysely_migration|schema_migration/);

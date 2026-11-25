@@ -12,6 +12,7 @@ import type { Definitions } from './definitions.js';
 import type { Files } from './files.js';
 import type { Base } from './infrastructure.js';
 import type { Jobs } from './jobs.js';
+import type { Migration } from './migration.js';
 import type { Operations } from './operations.js';
 import type { Records } from './records.js';
 
@@ -40,6 +41,7 @@ export function wireScheduler(
   { files }: Files,
   { dispatcher, jobs, indexes }: Jobs,
   { automations }: Operations,
+  { migration }: Migration,
 ): Scheduler {
   const { db, owner, logger, options, schemas, paths } = base;
   let indexesMaintainedAt = 0;
@@ -53,6 +55,13 @@ export function wireScheduler(
         }
       } catch (error) {
         logger.log('ERROR', 'Scheduling file clean-up failed', {}, error);
+      }
+      try {
+        for (const tenantId of await migration.tenantsWithExpiredData()) {
+          await jobs.createUnlessQueued({ tenantId, actor: systemActor('migration') }, 'migration.purge', {});
+        }
+      } catch (error) {
+        logger.log('ERROR', 'Scheduling migration data purge failed', {}, error);
       }
       const jobRun = await jobs.runOnce();
       if (Date.now() - indexesMaintainedAt > 6 * 3_600_000) {

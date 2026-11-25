@@ -42,10 +42,13 @@ export async function personFieldIssues(
   type: RecordTypeDef,
   data: Record<string, unknown>,
   previous: Record<string, unknown> | null,
+  /** A data migration is saving: a suspended member of this organisation is accepted too (never a non-member). */
+  migrating = false,
 ): Promise<FieldIssue[]> {
   const changed = personFields(type).filter((f) => typeof data[f.key] === 'string' && data[f.key] !== previous?.[f.key]);
   if (!changed.length) return [];
-  const active = await activeMembers(people, tx, changed.map((f) => data[f.key] as string));
+  const ids = changed.map((f) => data[f.key] as string);
+  const active = migrating ? new Set((await personNames(people, tx, ids)).keys()) : await activeMembers(people, tx, ids);
   return changed.filter((f) => !active.has(data[f.key] as string)).map((f) => ({ path: `/${f.key}`, message: 'must be an active member of the organisation' }));
 }
 

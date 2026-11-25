@@ -2,6 +2,7 @@ import { Injectable, computed, effect, inject, signal, untracked } from '@angula
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
+import { shownRecordTypes } from '../core/hidden';
 import { httpPages } from '../core/http/http-pages';
 import { t } from '../core/i18n/i18n';
 import {
@@ -70,7 +71,7 @@ export class HomeStore {
     const key = this.key();
     return this.session.defs()?.pages?.find((p) => p.key === key)?.label ?? '';
   });
-  readonly noRecords = computed(() => !this.session.defs()?.recordTypes.length);
+  readonly noRecords = computed(() => !shownRecordTypes(this.session.defs()).length);
   private readonly updatedAt = signal<Date | null>(null);
   /** When the figures were last loaded, on pages from More. */
   readonly updated = computed(() => {

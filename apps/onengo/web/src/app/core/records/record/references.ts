@@ -1,5 +1,7 @@
 import { t } from '../../i18n/i18n';
 import type { FieldDef, RecordView, RuntimeRecordType } from '../../models';
+import type { PersonOption } from '../../people/people';
+import { organisationToday } from '../../server';
 import type { Suggestion, SuggestionSource } from '../../ui-logic/autocomplete';
 import { personId, toFormValue, type FormValues } from './forms';
 import type { RecordsGateway } from '../gateway/gateway';
@@ -38,9 +40,41 @@ export function copyPicked(type: RuntimeRecordType, values: FormValues, key: str
   return next;
 }
 
+/** The fields that follow an account field of the person chosen in the person field `key`. */
+export function followTargets(type: RuntimeRecordType, key: string): FieldDef[] {
+  return type.fields.filter((f) => f.follow?.via === key);
+}
+
+/**
+ * Form values after choosing `person` in the person field `key`, as the server
+ * will save them: each field that follows the person's account takes their name,
+ * email or joined day, or goes blank when the choice is cleared. Followed
+ * fields are read-only, so this is the only way they get a value on a new record.
+ */
+export function followPerson(type: RuntimeRecordType, values: FormValues, key: string, person: PersonOption | null): FormValues {
+  const next: FormValues = { ...values, [key]: person?.id ?? '' };
+  for (const f of followTargets(type, key)) {
+    const source = f.follow!.field;
+    const value =
+      !person
+        ? ''
+        : source === 'id'
+          ? person.id
+          : source === 'name'
+            ? person.name
+            : source === 'email'
+              ? person.email
+              : source === 'joinedAt' && person.joinedAt
+                ? organisationToday(new Date(person.joinedAt))
+                : '';
+    next[f.key] = value;
+  }
+  return next;
+}
+
 /** Whether "New <type> “text”" is offered: the person may create the type and it has a title field to fill. */
 export function createsFromText(spec: ListSpec): boolean {
-  return spec.type.canCreate && !!spec.type.titleField;
+  return spec.type.canCreate && !spec.type.hidden && !!spec.type.titleField;
 }
 
 /** The second line of a picker suggestion: the referenced list view's first subtitle field. */

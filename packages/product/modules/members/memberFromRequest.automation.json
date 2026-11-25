@@ -1,0 +1,31 @@
+{
+  "key": "memberFromRequest",
+  "label": "Create the member profile when a membership request is completed",
+  "recordType": "membershipRequest",
+  "trigger": { "event": "statusChanged", "to": "completed" },
+  "actions": [
+    {
+      "type": "createRecord",
+      "recordType": "member",
+      "values": {
+        "login": "record.login",
+        "phone": "record.phone",
+        "title": "record.title",
+        "gender": "record.gender",
+        "dateOfBirth": "record.dateOfBirth",
+        "firstName": "record.firstName",
+        "lastName": "record.lastName",
+        "addressLine1": "record.addressLine1",
+        "addressLine2": "record.addressLine2",
+        "addressLine3": "record.addressLine3",
+        "city": "record.city",
+        "pincode": "record.pincode",
+        "district": "record.district",
+        "state": "record.state",
+        "country": "record.country",
+        "designation": "isEmpty(record.designation) ? 'Member' : record.designation",
+        "joiningFee": "record.feeApplies == false ? null : 100"
+      }
+    }
+  ]
+}

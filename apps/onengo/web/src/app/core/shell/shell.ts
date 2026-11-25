@@ -1,6 +1,7 @@
 import { isIconName } from '@onengo/platform/icons';
 import { t } from '../i18n/i18n';
 import { permissionMatches } from '../server';
+import { shownRecordTypes } from '../hidden';
 import type { Me, RuntimeDefinitions, RuntimeRecordType } from '../models';
 
 export type Destination = 'home' | 'records' | 'inbox' | 'more';
@@ -140,7 +141,7 @@ function navTarget(key: string, me: Me | null, defs: RuntimeDefinitions | null, 
   if (key === 'settings') return { key, label: t('ui.nav.settings'), icon, link: '/settings' };
   if (key === 'signout') return { key, label: t('ui.shell.signOut'), icon, link: '', command: 'sign-out' };
   if (key.startsWith('record:')) {
-    const type = defs?.recordTypes.find((x) => x.key === key.slice(7));
+    const type = shownRecordTypes(defs).find((x) => x.key === key.slice(7));
     return type ? { key, label: plural(type), icon, link: `/records/${encodeURIComponent(type.key)}` } : null;
   }
   if (key.startsWith('page:')) {
@@ -265,7 +266,7 @@ export interface RecordGroupView {
 
 /** Record types the person can read, by record group in order; types in no group come last under "Other". */
 export function recordGroups(defs: RuntimeDefinitions | null): RecordGroupView[] {
-  const types = defs?.recordTypes ?? [];
+  const types = shownRecordTypes(defs);
   const placed = new Set<string>();
   const out: RecordGroupView[] = [];
   for (const g of defs?.recordGroups ?? []) {

@@ -1,4 +1,5 @@
 import { compileExpression } from '../../server';
+import { offeredWorkflows } from '../../hidden';
 import { t } from '../../i18n/i18n';
 import type { ActionPlacement, FieldDef, PendingApproval, Receipt, RecordView, RuntimeAction, RuntimeWorkflow, SaveResult } from '../../models';
 import { changedOnly, fromFormValues, type FormValues, type Viewer } from './forms';
@@ -25,7 +26,7 @@ export interface AvailableActions {
 /** What a person can do with a record right now. `chip` is the list chip it was opened from, when there is one. */
 export function availableActions(spec: ListSpec, record: RecordView, chip?: string): AvailableActions {
   const edit = spec.type.canUpdate && !isLocked(spec, record) && (chip === undefined || !spec.editChips || spec.editChips.includes(chip));
-  const steps = (spec.workflow?.transitions ?? [])
+  const steps = (spec.workflow && !spec.workflow.hidden ? spec.workflow.transitions : [])
     .filter((t) => t.allowed && !!record.status && t.from.includes(record.status))
     .map((t) => ({ key: t.key, label: t.label, fields: t.requiredFields ?? [], approval: !!t.approval, primary: t.to !== spec.workflow?.initial }));
   return { edit, steps };
@@ -44,7 +45,7 @@ export function rowActions(spec: ListSpec, record: RecordView, chip: string): { 
 export function hasRowActions(spec: ListSpec): boolean {
   return (
     spec.type.canUpdate ||
-    spec.workflows.some((w) => w.transitions.some((t) => t.allowed)) ||
+    offeredWorkflows(spec.workflows).some((w) => w.transitions.some((t) => t.allowed)) ||
     spec.actions.some((a) => a.allowed && a.placement.includes('row'))
   );
 }
@@ -103,6 +104,7 @@ export function actionOffered(action: RuntimeAction, record: RecordView, viewer:
 /** Everything a person can do with a record: edit, the allowed steps of each of its workflows, and the configured actions. */
 export function recordActions(spec: ListSpec, record: RecordView, viewer: Viewer, chip?: string): RecordActions {
   const workflows = workflowStates(spec, record)
+    .filter(({ workflow: w }) => !w.hidden)
     .map(({ workflow: w, state, primary }) => ({
       workflow: w.key,
       primary,

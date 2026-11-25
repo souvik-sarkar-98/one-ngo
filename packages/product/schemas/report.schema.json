@@ -7,6 +7,7 @@
   "required": ["key", "label", "datasets"],
   "properties": {
     "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,62}$", "description": "Stable name of the report; part of its permission" },
+    "hidden": { "type": "boolean", "default": false, "description": "Left out of the Reports list. Changed on the Modules screen", "x-hidden": true },
     "label": { "type": "string", "minLength": 1, "maxLength": 80, "description": "Name shown to the person running it" },
     "audience": {
       "type": "array",

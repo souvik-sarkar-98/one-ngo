@@ -238,7 +238,7 @@ Screens: `.cursor/docs/design/wireframes/ngo-builder-screens.html`. The Builder 
     - they leave the directory; administrators still see them under the Suspended chip;
     - people are suspended, never deleted.
   - **Person field type** (`person`), for any record type, for example "Case worker", "Visited by" or "Fundraiser":
-    - chosen with the record picker, which searches active people;
+    - chosen with the record picker, which searches active and invited people (not suspended ones) by name or email;
     - stored as the person's user id and shown as their name;
     - lists can filter by it, including "Assigned to me";
     - notifications can go to "the person in field X".

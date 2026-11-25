@@ -1,0 +1,169 @@
+{
+  "key": "membershipRequest",
+  "hidden": false,
+  "label": "Membership request",
+  "pluralLabel": "Membership requests",
+  "description": "An application to join. Applicants submit it themselves or staff enter it. Once approved and completed, it creates the member and donor profiles for the same person.",
+  "titleField": "name",
+  "numbering": { "sequence": "membershipRequest", "format": "MREQ/{fy}/{seq:5}", "reset": "fiscal_year" },
+  "public": {
+    "create": true,
+    "view": true,
+    "fields": [
+      "title", "firstName", "lastName", "gender", "dateOfBirth", "email", "phone",
+      "addressLine1", "addressLine2", "addressLine3", "city", "pincode", "district", "state", "country",
+      "preferredDonation"
+    ],
+    "thanks": "Thank you for applying. We have emailed you the request number. We will review your application and write to you."
+  },
+  "fields": [
+    {
+      "key": "firstName",
+      "label": "First name",
+      "type": "text",
+      "required": true,
+      "maxLength": 100,
+      "searchable": true,
+      "placeholder": "Enter first name"
+    },
+    {
+      "key": "lastName",
+      "label": "Last name",
+      "type": "text",
+      "required": true,
+      "maxLength": 100,
+      "searchable": true,
+      "placeholder": "Enter last name"
+    },
+    {
+      "key": "name",
+      "label": "Full name",
+      "type": "text",
+      "calculated": "trim(record.firstName + ' ' + text(record.lastName))",
+      "help": "Worked out from the first and last name when saved"
+    },
+    {
+      "key": "title",
+      "label": "Title",
+      "type": "choice",
+      "required": true,
+      "placeholder": "Select title",
+      "choices": [
+        { "value": "mr", "label": "Mr" },
+        { "value": "mrs", "label": "Mrs" },
+        { "value": "ms", "label": "Ms" },
+        { "value": "miss", "label": "Miss" },
+        { "value": "dr", "label": "Dr" },
+        { "value": "prof", "label": "Prof" },
+        { "value": "shri", "label": "Shri" },
+        { "value": "smt", "label": "Smt" }
+      ]
+    },
+    {
+      "key": "gender",
+      "label": "Gender",
+      "type": "choice",
+      "required": true,
+      "placeholder": "Select gender",
+      "choices": [
+        { "value": "male", "label": "Male" },
+        { "value": "female", "label": "Female" },
+        { "value": "other", "label": "Other" },
+        { "value": "undisclosed", "label": "Prefer not to say" }
+      ]
+    },
+    { "key": "dateOfBirth", "label": "Date of birth", "type": "date", "required": true, "placeholder": "Select date of birth" },
+    { "key": "email", "label": "Email", "type": "email", "required": true, "searchable": true, "placeholder": "Enter email address", "help": "We will send updates to this address" },
+    {
+      "key": "phone",
+      "label": "Phone number",
+      "type": "phone",
+      "required": true,
+      "searchable": true,
+      "placeholder": "Enter phone number",
+      "help": "Include the country code, for example +91 for India"
+    },
+    { "key": "addressLine1", "label": "Address line 1", "type": "text", "required": true, "maxLength": 200, "placeholder": "Enter house or flat number and street" },
+    { "key": "addressLine2", "label": "Address line 2", "type": "text", "maxLength": 200, "placeholder": "Enter area or locality" },
+    { "key": "addressLine3", "label": "Address line 3", "type": "text", "maxLength": 200, "placeholder": "Enter landmark" },
+    { "key": "city", "label": "City", "type": "text", "required": true, "maxLength": 100, "searchable": true, "placeholder": "Enter city" },
+    {
+      "key": "pincode",
+      "label": "Pincode",
+      "type": "text",
+      "required": true,
+      "maxLength": 6,
+      "pattern": "[1-9][0-9]{5}",
+      "patternMessage": "Enter a 6-digit pincode.",
+      "placeholder": "Enter 6-digit pincode"
+    },
+    { "key": "district", "label": "District", "type": "text", "required": true, "maxLength": 100, "placeholder": "Enter district" },
+    { "key": "state", "label": "State", "type": "text", "required": true, "maxLength": 100, "placeholder": "Enter state" },
+    { "key": "country", "label": "Country", "type": "text", "required": true, "maxLength": 100, "placeholder": "Enter country" },
+    {
+      "key": "preferredDonation",
+      "label": "Preferred monthly donation",
+      "type": "choice",
+      "required": true,
+      "placeholder": "Select monthly amount",
+      "choices": [
+        { "value": "100", "label": "Rs. 100 a month" },
+        { "value": "250", "label": "Rs. 250 a month" },
+        { "value": "500", "label": "Rs. 500 a month" },
+        { "value": "1000", "label": "Rs. 1,000 a month" },
+        { "value": "2500", "label": "Rs. 2,500 a month" },
+        { "value": "none", "label": "No monthly donation" }
+      ]
+    },
+
+    {
+      "key": "designation",
+      "label": "Designation",
+      "type": "text",
+      "maxLength": 100,
+      "placeholder": "Enter designation",
+      "help": "Staff only. Blank means Member."
+    },
+    {
+      "key": "feeApplies",
+      "label": "Raise the membership fee",
+      "type": "boolean",
+      "defaultValue": true,
+      "help": "Staff only. Ticked by default, so the standard fee is raised. Untick to waive the membership fee."
+    },
+    {
+      "key": "login",
+      "label": "Person (login)",
+      "type": "person",
+      "emailFrom": "email",
+      "placeholder": "Select person",
+      "visibleWhen": "status == 'completed'",
+      "help": "Staff only. Asked for when you click Onboard, after a second manager approves. Choose Add a new person, add the applicant, then select them here."
+    },
+    {
+      "key": "existingDonor",
+      "label": "Existing donor",
+      "type": "reference",
+      "referenceType": "donor",
+      "help": "Staff only. Set when this person already gives. No new donor profile is created then; update that donor's Person and Monthly donation by hand."
+    },
+    {
+      "key": "pan",
+      "label": "PAN",
+      "type": "text",
+      "maxLength": 10,
+      "sensitive": true,
+      "pattern": "[A-Z]{5}[0-9]{4}[A-Z]",
+      "patternMessage": "Enter the PAN as five letters, four digits and a letter, for example ABCDE1234F.",
+      "help": "Staff only. Copied to the donor profile."
+    },
+    {
+      "key": "rejectionReason",
+      "label": "Reason for dismissing",
+      "type": "longText",
+      "visibleWhen": "status == 'rejected'",
+      "help": "Sent to the applicant by email, so write it for them."
+    },
+    { "key": "notes", "label": "Internal notes", "type": "longText", "help": "Staff only. Never sent to the applicant." }
+  ]
+}

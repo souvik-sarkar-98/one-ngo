@@ -1,5 +1,6 @@
 {
   "key": "memberNotice",
+  "hidden": false,
   "label": "Notice to member",
   "pluralLabel": "Notices to members",
   "description": "A notice emailed to one member. Each notice is kept as a record, so the list is the record of what was sent.",

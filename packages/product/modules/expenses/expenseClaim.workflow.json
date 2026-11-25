@@ -1,5 +1,6 @@
 {
   "key": "expenseClaim",
+  "hidden": false,
   "recordType": "expenseClaim",
   "initial": "draft",
   "states": [

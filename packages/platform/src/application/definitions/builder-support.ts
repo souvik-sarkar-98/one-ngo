@@ -12,6 +12,7 @@ import { renderEmailHtml, renderTemplate } from '../../runtime/definitions/templ
 import { DocumentTemplateError, renderDocumentHtml } from '../../runtime/definitions/document-template.js';
 import {
   DEFINITION_KINDS,
+  isHideable,
   type DefinitionBodies,
   type DefinitionKind,
   type FieldType,
@@ -79,6 +80,19 @@ const FIELD_VALUE: Partial<Record<FieldType, ValueType>> = {
   location: 'object',
   signature: 'object',
 };
+
+/** Why the Modules screen cannot change whether a definition shows right now. */
+export type HideBlock = 'disabled' | 'draft' | 'update';
+
+export interface ModuleDefinitionRow {
+  kind: DefinitionKind;
+  key: string;
+  label: string | null;
+  hidden: boolean;
+  /** Whether people ever see this kind in menus, lists or pages. */
+  hideable: boolean;
+  blocked: HideBlock | null;
+}
 
 const KIND_NOUN: Record<DefinitionKind, string> = {
   recordType: 'record type',
@@ -706,6 +720,17 @@ export class BuilderSupport {
     demand(ctx.actor, 'config:read');
     const rows = await this.moduleRows(ctx);
     const shipped = this.shipped();
+    const catalogue = new Map((await this.p.definitions.catalogue(ctx)).map((c) => [`${c.kind}|${c.key}`, c]));
+    const describe = async (contents: ModuleContent[], current: boolean): Promise<ModuleDefinitionRow[]> =>
+      Promise.all(
+        contents.map(async (c) => {
+          const item = catalogue.get(`${c.kind}|${c.key}`);
+          const body = (await this.p.definitions.get(ctx.tenantId, c.kind, c.key))?.body as { hidden?: unknown } | undefined;
+          const hideable = isHideable(c.kind);
+          const blocked: HideBlock | null = !hideable ? null : item?.disabled ? 'disabled' : item?.draftVersion != null ? 'draft' : !current ? 'update' : null;
+          return { kind: c.kind, key: c.key, label: item?.label ?? null, hidden: body?.hidden === true, hideable, blocked };
+        }),
+      );
     const out = await Promise.all(
       shipped.map(async (m) => {
         const r = rows.find((x) => x.module_key === m.key);
@@ -717,7 +742,9 @@ export class BuilderSupport {
           installedVersion: r?.module_version ?? null,
           enabled: r?.enabled ?? false,
           dependsOn: m.dependsOn ?? [],
-          definitions: r?.enabled ? await this.installedContents(ctx.tenantId, m.key) : await moduleContents(this.moduleDir(m.key), m),
+          definitions: r?.enabled
+            ? await describe(await this.installedContents(ctx.tenantId, m.key), r.module_version === m.version)
+            : await describe(await moduleContents(this.moduleDir(m.key), m), true),
           updateAvailable: !!r && r.module_version !== m.version,
         };
       }),
@@ -732,11 +759,33 @@ export class BuilderSupport {
         installedVersion: r.module_version,
         enabled: r.enabled,
         dependsOn: [],
-        definitions: await this.installedContents(ctx.tenantId, r.module_key),
+        definitions: await describe(await this.installedContents(ctx.tenantId, r.module_key), false),
         updateAvailable: false,
       });
     }
     return out;
+  }
+
+  /**
+   * Keeps one definition of a module that is on out of menus, lists and pages, or shows it again.
+   * The module must be at its shipped version and the definition must have no open draft.
+   */
+  async setDefinitionHidden(ctx: TenantContext, moduleKey: string, kind: DefinitionKind, key: string, hidden: boolean) {
+    demand(ctx.actor, 'config:modules');
+    if (typeof hidden !== 'boolean') throw validationFailed('Say whether it is hidden.', [{ path: 'hidden', message: 'true or false.' }]);
+    if (!(DEFINITION_KINDS as readonly string[]).includes(kind) || !isHideable(kind)) {
+      throw validationFailed(`A ${KIND_NOUN[kind] ?? kind} is never shown in menus.`, [{ path: 'kind', message: 'Choose a kind people see.' }]);
+    }
+    const manifest = this.shipped().find((m) => m.key === moduleKey);
+    if (!manifest) throw notFound(`Unknown module '${moduleKey}'.`);
+    const row = (await this.moduleRows(ctx)).find((r) => r.module_key === moduleKey && r.enabled);
+    if (!row) throw ruleViolation(`Turn on the module '${moduleKey}' first.`);
+    if (row.module_version !== manifest.version) throw ruleViolation(`Update the module '${moduleKey}' to version ${manifest.version} before choosing what shows.`);
+    const owned = await this.p.definitions.moduleDefinitions(ctx.tenantId, moduleKey);
+    if (!owned.some((o) => o.kind === kind && o.key === key)) throw notFound(`The module '${moduleKey}' has no ${KIND_NOUN[kind]} '${key}'.`);
+    if (await this.p.definitions.getDraft(ctx, kind, key)) throw ruleViolation(`The ${KIND_NOUN[kind]} '${key}' has an open draft. Publish or discard it first.`);
+    const published = await this.p.definitions.setDefinitionHidden(ctx, kind, key, hidden);
+    return { kind, key, hidden, version: published.version };
   }
 
   /** Turns a module on, or brings it up to the shipped version. */

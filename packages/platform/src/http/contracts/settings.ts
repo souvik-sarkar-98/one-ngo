@@ -37,8 +37,6 @@ export interface NamedRecipientRequest {
 }
 
 const whole = { type: 'integer', nullable: true } as const;
-const templateKey = { type: 'string', nullable: true } as const;
-
 export const settingsRequest = schemaOf<SettingsRequest>({
   type: 'object',
   additionalProperties: false,
@@ -57,7 +55,12 @@ export const settingsRequest = schemaOf<SettingsRequest>({
       type: 'object',
       nullable: true,
       additionalProperties: false,
-      properties: { sign_in_code: templateKey, password_reset: templateKey, invite: templateKey },
+      // null is meaningful here (keep the default wording). schemaOf strips `nullable`, so null is spelled as an explicit branch.
+      properties: {
+        sign_in_code: { anyOf: [{ type: 'string' }, { type: 'null', nullable: true }], nullable: true },
+        password_reset: { anyOf: [{ type: 'string' }, { type: 'null', nullable: true }], nullable: true },
+        invite: { anyOf: [{ type: 'string' }, { type: 'null', nullable: true }], nullable: true },
+      },
     },
     namedRecipients: {
       type: 'object',

@@ -72,7 +72,7 @@ export async function adminRoutes(api: FastifyInstance, { deps }: { deps: AdminA
   );
   /**
    * The directory (`people:read`): active people with name, email and roles.
-   * `?pick=1&q=`: active members for a person field's picker.
+   * `?pick=1&q=&email=&include=invited`: members for a person field's picker. Active only unless `include=invited`.
    */
   api.get<ListQuery>('/api/people', async (req) => {
     const ctx = contextOf(req);

@@ -7,6 +7,7 @@
   "required": ["key", "recordType"],
   "properties": {
     "key": { "$ref": "#/definitions/key", "description": "Stable name of the list view", "x-order": 1 },
+    "hidden": { "type": "boolean", "default": false, "description": "Not used to show its record type's list. Changed on the Modules screen", "x-hidden": true },
     "recordType": { "$ref": "#/definitions/key", "description": "The record type listed", "x-ref": "recordType", "x-order": 2 },
     "label": { "type": "string", "description": "Name of the list; the record type's plural name when not set", "x-order": 3 },
     "pageSize": { "type": "integer", "minimum": 5, "maximum": 100, "description": "Rows loaded at a time", "x-group": "layout", "x-order": 4 },

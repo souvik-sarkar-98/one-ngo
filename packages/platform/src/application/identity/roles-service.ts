@@ -76,6 +76,7 @@ const SETUP: [string, string][] = [
   ['data:export', "Export all of the organisation's data (API only)"],
   ['data:migrate', 'Bring in CSV files from another system'],
   ['data:migrate:books', 'Set opening balances and receipt numbers when migrating'],
+  ['data:migrate:people', 'Add people from another system when migrating (also needs Manage people)'],
   ['privacy:consent:read', 'See consent records (API only)'],
   ['privacy:consent:record', 'Record consent given or withdrawn (API only)'],
   ['privacy:erase', 'Erase a person (pseudonymise their personal data) (API only)'],

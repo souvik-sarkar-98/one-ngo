@@ -1,5 +1,6 @@
 {
   "key": "project",
+  "hidden": false,
   "label": "Project",
   "pluralLabel": "Projects",
   "description": "Programmes and projects the organisation runs, with their goals, milestones and events.",

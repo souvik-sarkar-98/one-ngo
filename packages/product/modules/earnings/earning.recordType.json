@@ -1,5 +1,6 @@
 {
   "key": "earning",
+  "hidden": false,
   "label": "Earning",
   "pluralLabel": "Earnings",
   "description": "Income other than donations and membership fees, such as interest, sales or service fees. Received earnings post to the books.",

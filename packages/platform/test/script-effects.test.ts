@@ -358,6 +358,38 @@ describe('connector effects', () => {
   });
 });
 
+describe('quiet saves', () => {
+  it('enqueue neither script.notify nor connector events, while a normal save still enqueues both', async () => {
+    const ctx = ctxOf();
+    await w.platform.connectors.save(ctx, 'quiet-hook', { kind: 'webhook', config: { url: 'https://quiet.test/hooks' } });
+    await w.platform.connectors.save(ctx, 'quiet-tally', { kind: 'http', config: { mode: 'send', method: 'POST', url: 'https://quiet.test/vouchers' } });
+    await recordType('quietDoc');
+    await script({
+      key: 'quietNotify',
+      recordType: 'quietDoc',
+      effects: { allow: ['notify'] },
+      code: `ctx.propose.notify('donationThanks', { roles: ['admin'] }, { channels: ['inApp'] });`,
+    });
+    await script({
+      key: 'quietConnect',
+      recordType: 'quietDoc',
+      effects: { allow: ['connector.call'], connectors: ['quiet-tally', 'quiet-hook'] },
+      code: `ctx.propose.connector('quiet-tally', { n: ctx.record.note }); ctx.propose.connector('quiet-hook', { n: ctx.record.note });`,
+    });
+    const events = (id: string) =>
+      count(
+        `select count(*)::int as n from outbox_event where type in ('script.notify', 'connector.http', 'connector.webhook') and (payload->>'recordId' = $1 or payload->'record'->>'id' = $1)`,
+        [id],
+      );
+
+    const quiet = await w.platform.records.create({ ...ctxOf(author), quiet: true }, 'quietDoc', { amount: 1, note: 'q' });
+    expect(await events(quiet.record.id)).toBe(0);
+
+    const loud = await w.platform.records.create(ctxOf(author), 'quietDoc', { amount: 1, note: 'n' });
+    expect(await events(loud.record.id)).toBe(3);
+  });
+});
+
 describe('effect helpers', () => {
   it('push the same objects as ctx.effects.push', async () => {
     const out = await new ScriptSandbox(SCHEMA_DIR, SANDBOX_WORKER).run({

@@ -1,10 +1,11 @@
 {
   "key": "members",
+  "hidden": false,
   "recordType": "member",
   "label": "Members",
   "pageSize": 20,
   "layout": "table",
-  "columns": ["number", "name", "category", "city", "joinedOn", "feesPaid", "status"],
+  "columns": ["memberId", "name", "designation", "city", "joinedOn", "feesPaid", "status"],
   "compactColumns": ["name", "status"],
   "chips": [
     { "id": "active", "label": "Active", "statusIn": ["active"] },
@@ -12,15 +13,30 @@
     { "id": "all", "label": "All" }
   ],
   "defaultChip": "active",
-  "filters": ["category", "city", "joinedOn"],
-  "row": { "title": "name", "subtitle": ["category", "email"], "meta": "number", "badge": "status" },
+  "filters": ["designation", "city", "joinedOn"],
+  "row": { "title": "name", "subtitle": ["designation", "email"], "meta": "memberId", "badge": "status" },
   "detail": {
     "sections": [
-      { "id": "member", "label": "Member", "fields": ["number", "name", "category", "status", "joinedOn", "login", "email", "phone", "address", "city", "notes"] },
-      { "id": "fees", "label": "Membership fees", "fields": ["feesPaid", "feesTotal"] },
+      { "id": "member", "label": "Member", "fields": ["memberId", "name", "designation", "status", "joinedOn", "login", "notes"] },
+      { "id": "personal", "label": "Personal details", "fields": ["title", "firstName", "middleName", "lastName", "gender", "dateOfBirth"] },
+      { "id": "contact", "label": "Contact details", "fields": ["email", "phone"] },
+      { "id": "address", "label": "Address", "fields": ["addressLine1", "addressLine2", "addressLine3", "city", "pincode", "district", "state", "country"] },
+      { "id": "fees", "label": "Membership fees", "fields": ["joiningFee", "feesPaid", "feesTotal"] },
       { "id": "feeList", "label": "Fee payments", "related": { "recordType": "membershipFee", "field": "member", "total": "amount" } }
     ]
   },
-  "create": { "fields": ["name", "category", "joinedOn", "login", "email", "phone", "address", "city", "notes"] },
-  "edit": { "fields": ["name", "category", "joinedOn", "login", "email", "phone", "address", "city", "notes"] }
+  "create": {
+    "steps": [
+      { "key": "basic", "label": "Basic details", "fields": ["login", "name", "firstName", "middleName", "lastName", "title", "gender", "dateOfBirth"] },
+      { "key": "contact", "label": "Contact details", "fields": ["email", "phone"] },
+      { "key": "address", "label": "Address details", "fields": ["addressLine1", "addressLine2", "addressLine3", "city", "pincode", "district", "state", "country"] },
+      { "key": "additional", "label": "Additional details", "fields": ["designation", "joinedOn", "joiningFee"] }
+    ]
+  },
+  "edit": {
+    "fields": [
+      "login", "name", "firstName", "middleName", "lastName", "title", "gender", "dateOfBirth", "designation", "joinedOn", "email", "phone",
+      "addressLine1", "addressLine2", "addressLine3", "city", "pincode", "district", "state", "country"
+    ]
+  }
 }

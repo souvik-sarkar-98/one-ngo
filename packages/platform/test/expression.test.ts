@@ -27,6 +27,14 @@ describe('expression language', () => {
     expect(run("len('abc')")).toBe(3);
     expect(run('round(2.345, 2)')).toBe(2.35);
     expect(run("isEmpty('')")).toBe(true);
+    expect(run("firstWord('  Asha  Kumari   Rao ')")).toBe('Asha');
+    expect(run("lastWord('Asha Kumari Rao')")).toBe('Rao');
+    expect(run("lastWord('Asha')")).toBe('');
+    expect(run("middleWords('Asha Kumari Rao')")).toBe('Kumari');
+    expect(run("middleWords('Mary Ann Jane Smith')")).toBe('Ann Jane');
+    expect(run("middleWords('Asha Rao')")).toBe('');
+    expect(run("middleWords('Asha')")).toBe('');
+    expect(run('firstWord(record.missing)', { record: {} })).toBe('');
     expect(run("addDays('2026-03-30', 3)")).toBe('2026-04-02');
     expect(run('sum(rows, "amount")', { rows: [{ amount: 10 }, { amount: 2.5 }] })).toBe(12.5);
     expect(run('avg(rows, "amount")', { rows: [{ amount: 10 }, { amount: 20 }] })).toBe(15);

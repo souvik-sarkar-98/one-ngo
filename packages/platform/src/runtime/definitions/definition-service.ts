@@ -10,10 +10,12 @@ import type { TransactionManager, Tx } from '../../domain/ports/transaction.js';
 import { ORGANISATION_THEME } from './appearance.js';
 import { checkCrossReferences, checkWarnings, type DefinitionLookup } from './cross-refs.js';
 import { applyExtensionPatch, makePatch } from './merge.js';
+import { patchKeepingParts, planLegacyOptions } from './legacy-module-options.js';
 import type { CatalogueRow, ConnectorFact, DefinitionRow, DefinitionStore, ModuleState } from './ports/definition-store.js';
 import type { SchemaRegistry } from './schema-registry.js';
 import { adminOnlyParts, isFinanceScript, SCRIPT_ADMIN_PERMISSION } from './script-inputs.js';
 import { isPrimary, workflowsOf } from './workflows.js';
+import { isHideable } from './types.js';
 import type {
   DefinitionBodies,
   DefinitionKind,
@@ -293,7 +295,7 @@ export class DefinitionService {
   ): Promise<{ baseVersion: number; base: DefinitionBodies[K]; patch: unknown | null; disabled: boolean; moduleKey: string | null } | undefined> {
     demand(ctx.actor, 'config:read');
     return this.tm.withTenant(ctx.tenantId, async (tx) => {
-      const base = await this.store.base(tx, kind, key);
+      const base = await this.layeredBase(tx, kind, key);
       if (!base) return undefined;
       const p = await this.store.patch(tx, kind, key);
       return { baseVersion: base.version, base: base.body as DefinitionBodies[K], patch: p?.patch ?? null, disabled: await this.isDisabled(tx, kind, key), moduleKey: base.module_key };
@@ -415,7 +417,7 @@ export class DefinitionService {
       const old = await this.store.ownVersion(tx, kind, key, toVersion);
       if (!old) throw notFound(`Version ${toVersion} of ${kind} '${key}' does not exist.`);
       if (kind === 'script') assertScriptPublisher(ctx, old.body as ScriptDef);
-      const base = old.base_version === null ? undefined : await this.store.base(tx, kind, key);
+      const base = old.base_version === null ? undefined : await this.layeredBase(tx, kind, key);
       if (old.base_version !== null && !base) {
         throw definitionInvalid('Shipped definitions are changed through extension patches, not rollback.');
       }
@@ -471,7 +473,7 @@ export class DefinitionService {
   ): Promise<PublishedDefinition<K>> {
     demand(ctx.actor, requiredPermission(kind));
     const result = await this.tm.withTenant(ctx.tenantId, async (tx) => {
-      const base = await this.store.base(tx, kind, key);
+      const base = await this.layeredBase(tx, kind, key);
       if (!base) throw notFound(`${kind} '${key}' is not a shipped definition.`);
       await this.assertModuleEnabled(tx, base.module_key);
       await this.assertNotDisabled(tx, kind, key);
@@ -521,7 +523,7 @@ export class DefinitionService {
   async enableDefinition<K extends DefinitionKind>(ctx: TenantContext, kind: K, key: string): Promise<PublishedDefinition<K>> {
     demand(ctx.actor, requiredPermission(kind));
     const result = await this.tm.withTenant(ctx.tenantId, async (tx) => {
-      const base = await this.store.base(tx, kind, key);
+      const base = await this.layeredBase(tx, kind, key);
       if (!base) throw notFound(`${kind} '${key}' is not a shipped definition.`);
       await this.assertModuleEnabled(tx, base.module_key);
       if (!(await this.isDisabled(tx, kind, key))) throw definitionInvalid(`The ${kind} '${key}' is not turned off.`);
@@ -589,51 +591,137 @@ export class DefinitionService {
    */
   async enableModule(ctx: TenantContext, manifest: ModuleManifest): Promise<{ materialised: string[] }> {
     demand(ctx.actor, 'config:modules');
+    const result = await this.tm.withTenant(ctx.tenantId, (tx) => this.materialiseModule(tx, ctx, manifest));
+    this.snapshots.delete(ctx.tenantId);
+    return result;
+  }
+
+  /**
+   * Keeps one shipped definition of a module out of menus, lists and pages, or shows it again.
+   * Saved as `hidden` in the organisation's patch, so module updates keep the choice.
+   */
+  async setDefinitionHidden<K extends DefinitionKind>(ctx: TenantContext, kind: K, key: string, hidden: boolean): Promise<PublishedDefinition<K>> {
+    demand(ctx.actor, 'config:modules');
+    if (!isHideable(kind)) throw validationFailed(`A ${kind} is never shown in menus.`, [{ path: 'kind', message: 'Choose a kind people see.' }]);
     const result = await this.tm.withTenant(ctx.tenantId, async (tx) => {
-      await this.store.installModule(tx, manifest);
-
-      const off = new Set((await this.store.disabledDefinitions(tx)).map((d) => id(d.kind, d.key)));
-      const bases = (await this.store.moduleBases(tx, manifest.key)).filter((b) => !off.has(id(b.kind, b.key)));
-      const patches = new Map((await this.store.patches(tx)).map((p) => [id(p.kind, p.key), p.patch]));
-      const effective = bases.map((b) => {
-        const patch = patches.get(id(b.kind, b.key));
-        const body = patch === undefined ? b.body : applyExtensionPatch(b.body, patch);
-        return { base: b, body: body as DefinitionBodies[DefinitionKind] };
-      });
-
-      const issues: FieldIssue[] = [];
-      const lookup = await this.lookup(
-        tx,
-        effective.map((e) => ({ kind: e.base.kind, body: e.body })),
-      );
-      for (const e of effective) {
-        for (const i of this.schemas.validate(e.base.kind, e.body)) issues.push({ ...i, path: `${e.base.kind}:${e.base.key}${i.path}` });
-        for (const i of checkCrossReferences(e.base.kind, e.body, lookup)) issues.push({ ...i, path: `${e.base.kind}:${e.base.key}${i.path}` });
-      }
-      if (issues.length) throw definitionInvalid(`Module '${manifest.key}' cannot be enabled.`, issues);
-
-      const materialised: string[] = [];
-      for (const e of effective) {
-        const current = await this.store.publishedState(tx, e.base.kind, e.base.key);
-        if (current && current.base_version === null) {
-          throw definitionInvalid(`The NGO already has its own ${e.base.kind} '${e.base.key}'.`);
-        }
-        if (current && current.base_version === e.base.version && current.checksum === checksum(e.body)) continue;
-        await this.insertPublished(tx, ctx.actor.id, e.base.kind, e.base.key, e.body, e.base.version, manifest.key);
-        materialised.push(id(e.base.kind, e.base.key));
-      }
+      const base = await this.layeredBase(tx, kind, key);
+      if (!base || !base.module_key || base.module_key === PLATFORM_MODULE) throw notFound(`${kind} '${key}' did not come with a module.`);
+      await this.assertModuleEnabled(tx, base.module_key);
+      await this.assertNotDisabled(tx, kind, key);
+      const { hidden: _was, ...rest } = ((await this.store.patch(tx, kind, key))?.patch ?? {}) as Record<string, unknown>;
+      const patch = hidden ? { ...rest, hidden: true } : rest;
+      const body = applyExtensionPatch(base.body, patch) as DefinitionBodies[K];
+      this.assertSchema(kind, body);
+      await this.store.savePatch(tx, kind, key, patch, ctx.actor.id);
+      const published = await this.insertPublished(tx, ctx.actor.id, kind, key, body, base.version, base.module_key);
       await this.store.bumpConfigVersion(tx);
       await this.audit.audit(tx, {
         actorId: ctx.actor.id,
-        action: 'module.enabled',
-        entity: 'module',
-        entityId: manifest.key,
-        after: { version: manifest.version, materialised },
+        action: hidden ? 'definition.hidden' : 'definition.shown',
+        entity: `definition:${kind}`,
+        entityId: key,
+        after: { version: published.version, baseVersion: base.version },
       });
-      return { materialised };
+      return published as PublishedDefinition<K>;
     });
     this.snapshots.delete(ctx.tenantId);
     return result;
+  }
+
+  /**
+   * Moves what an organisation chose for the retired module options over, once: a record type an option
+   * took out of its group is hidden, a definition it took out whole is turned off, and the other parts it
+   * took out go into the organisation's patch. Roles that lost permissions keep them lost. Definitions stay
+   * at their base version, so no module update happens here. Returns what changed, as `kind|key`.
+   */
+  async retireModuleOptions(tenantId: string, manifests: Pick<ModuleManifest, 'key' | 'setup'>[]): Promise<string[]> {
+    const result = await this.tm.withTenant(tenantId, async (tx) => {
+      const legacy = await this.store.legacyModuleOptions(tx);
+      if (!Object.keys(legacy).length) return [];
+      const plan = planLegacyOptions(legacy);
+      const changed: string[] = [];
+      for (const d of plan.disabled) {
+        const at = d.indexOf('|');
+        const kind = d.slice(0, at) as DefinitionKind;
+        const key = d.slice(at + 1);
+        const current = await this.store.publishedState(tx, kind, key);
+        if (current && current.base_version !== null) await this.store.supersede(tx, kind, key);
+        if (!(await this.isDisabled(tx, kind, key))) await this.store.setDefinitionDisabled(tx, kind, key, true, 'system');
+        changed.push(d);
+      }
+      const touched = new Set([...[...plan.hiddenTypes].map((t) => id('recordType', t)), ...plan.partHides.keys()]);
+      for (const t of touched) {
+        if (plan.disabled.has(t)) continue;
+        const at = t.indexOf('|');
+        const kind = t.slice(0, at) as DefinitionKind;
+        const key = t.slice(at + 1);
+        const row = (await this.store.published(tx)).find((r) => r.kind === kind && r.key === key);
+        if (!row || row.base_version === null || !row.module_key) continue;
+        const base = (await this.store.moduleBaseVersions(tx, row.module_key)).find((b) => b.kind === kind && b.key === key && b.version === row.base_version);
+        if (!base) continue;
+        const patch = patchKeepingParts(base.body, (await this.store.patch(tx, kind, key))?.patch, plan.partHides.get(t) ?? [], kind === 'recordType' && plan.hiddenTypes.has(key));
+        const body = applyExtensionPatch(base.body, patch);
+        await this.store.savePatch(tx, kind, key, patch, 'system');
+        if (checksum(body) !== row.checksum) await this.insertPublished(tx, 'system', kind, key, body, base.version, row.module_key);
+        changed.push(t);
+      }
+      const roles = new Set<string>();
+      for (const [moduleKey, revoked] of plan.revokedRoles) {
+        const setupRoles = manifests.find((m) => m.key === moduleKey)?.setup?.roles?.map((r) => r.key) ?? [];
+        for (const r of revoked) for (const k of r.role ? [r.role] : setupRoles) roles.add(k);
+      }
+      await this.store.markRolesCustomised(tx, [...roles]);
+      await this.store.clearLegacyModuleOptions(tx);
+      await this.store.bumpConfigVersion(tx);
+      await this.audit.audit(tx, { actorId: 'system', action: 'module.options.retired', entity: 'module', entityId: 'options', after: { changed, roles: [...roles] } });
+      return changed;
+    });
+    this.snapshots.delete(tenantId);
+    return result;
+  }
+
+  private async materialiseModule(tx: Tx, ctx: TenantContext, manifest: ModuleManifest): Promise<{ materialised: string[] }> {
+    await this.store.installModule(tx, manifest);
+
+    const off = new Set((await this.store.disabledDefinitions(tx)).map((d) => id(d.kind, d.key)));
+    const bases = (await this.store.moduleBases(tx, manifest.key)).filter((b) => !off.has(id(b.kind, b.key)));
+    const patches = new Map((await this.store.patches(tx)).map((p) => [id(p.kind, p.key), p.patch]));
+    const effective = bases.map((b) => {
+      const patch = patches.get(id(b.kind, b.key));
+      const body = patch === undefined ? b.body : applyExtensionPatch(b.body, patch);
+      return { base: b, body: body as DefinitionBodies[DefinitionKind] };
+    });
+
+    const issues: FieldIssue[] = [];
+    const lookup = await this.lookup(
+      tx,
+      effective.map((e) => ({ kind: e.base.kind, body: e.body })),
+    );
+    for (const e of effective) {
+      for (const i of this.schemas.validate(e.base.kind, e.body)) issues.push({ ...i, path: `${e.base.kind}:${e.base.key}${i.path}` });
+      for (const i of checkCrossReferences(e.base.kind, e.body, lookup)) issues.push({ ...i, path: `${e.base.kind}:${e.base.key}${i.path}` });
+    }
+    if (issues.length) throw definitionInvalid(`Module '${manifest.key}' cannot be enabled.`, issues);
+
+    const materialised: string[] = [];
+    for (const e of effective) {
+      const current = await this.store.publishedState(tx, e.base.kind, e.base.key);
+      if (current && current.base_version === null) {
+        throw definitionInvalid(`The NGO already has its own ${e.base.kind} '${e.base.key}'.`);
+      }
+      if (current && current.base_version === e.base.version && current.checksum === checksum(e.body)) continue;
+      await this.insertPublished(tx, ctx.actor.id, e.base.kind, e.base.key, e.body, e.base.version, manifest.key);
+      materialised.push(id(e.base.kind, e.base.key));
+    }
+    await this.store.bumpConfigVersion(tx);
+    await this.audit.audit(tx, {
+      actorId: ctx.actor.id,
+      action: 'module.enabled',
+      entity: 'module',
+      entityId: manifest.key,
+      after: { version: manifest.version, materialised },
+    });
+    return { materialised };
   }
 
   /**
@@ -689,6 +777,11 @@ export class DefinitionService {
   private assertCrossRefs<K extends DefinitionKind>(kind: K, body: DefinitionBodies[K], lookup: DefinitionLookup): void {
     const issues = checkCrossReferences(kind, body, lookup);
     if (issues.length) throw definitionInvalid(`The ${kind} definition refers to things that do not exist.`, issues);
+  }
+
+  /** The shipped base of a definition. */
+  private layeredBase(tx: Tx, kind: DefinitionKind, key: string): Promise<DefinitionRow | undefined> {
+    return this.store.base(tx, kind, key);
   }
 
   private async assertNotBase(tx: Tx, kind: DefinitionKind, key: string): Promise<void> {

@@ -1,5 +1,6 @@
 {
   "key": "membershipFee",
+  "hidden": false,
   "recordType": "membershipFee",
   "initial": "raised",
   "states": [

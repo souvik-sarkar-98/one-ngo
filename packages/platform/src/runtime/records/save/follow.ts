@@ -1,5 +1,6 @@
 import { validationFailed, type FieldIssue } from '@onengo/kernel/errors';
 import { can } from '../../../domain/permissions.js';
+import { organisationToday } from '../../../shared/time/organisation-time.js';
 import type { Tx } from '../../../domain/ports/transaction.js';
 import { UUID, type SaveContext } from './context.js';
 
@@ -38,7 +39,16 @@ export async function follow(tx: Tx, s: SaveContext): Promise<void> {
       for (const f of follows) {
         if (f.follow!.via !== key) continue;
         const source = f.follow!.field;
-        const value = source === 'id' ? id : source === 'name' ? account?.name : source === 'email' ? account?.email : undefined;
+        const value =
+          source === 'id'
+            ? id
+            : source === 'name'
+              ? account?.name
+              : source === 'email'
+                ? account?.email
+                : source === 'joinedAt' && account
+                  ? organisationToday(new Date(account.joinedAt))
+                  : undefined;
         assign(data, f.key, value);
       }
     }

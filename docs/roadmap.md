@@ -14,7 +14,7 @@ What is planned or open. Built behaviour is in `architecture.md` and `user-guide
 | `expenses` | 1.0.0 | donations | Claims with bill attached; treasurer approves; paying posts to the ledger |
 | `earnings` | 1.0.0 | donations | Other income (interest, sales, service fees) with posting rules |
 | `physical-assets` | 1.0.1 | none | Asset register with disposal. No depreciation |
-| `members` | 1.0.0 | donations | Member profile; one-time membership fee with receipts from the `MEM` series |
+| `members` | 1.2.0 | donations | Member profile (name parts, gender, date of birth, present and permanent address, link to a person, generated Member ID); one-time membership fee with receipts from the `MEM` series |
 | `governance` | 1.0.0 | members | Meetings with agenda and minutes; resolutions passed by office-bearer vote; notices emailed to members with a delivery record |
 | `projects` | 1.0.0 | none | Projects with goals and milestones; events with date, venue and attendee list |
 | `beneficiaries` | 1.0.0 | projects | Beneficiary record; consent per purpose; case notes with follow-up dates |

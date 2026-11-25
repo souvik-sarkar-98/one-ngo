@@ -1,5 +1,6 @@
 {
   "key": "eventStatus",
+  "hidden": false,
   "recordType": "event",
   "initial": "planned",
   "states": [

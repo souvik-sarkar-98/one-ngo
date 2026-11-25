@@ -1,5 +1,6 @@
 {
   "key": "caseNotes",
+  "hidden": false,
   "recordType": "caseNote",
   "label": "Case notes",
   "pageSize": 20,

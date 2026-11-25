@@ -42,6 +42,8 @@ export interface PersonOption {
   id: string;
   name: string;
   email: string;
+  /** When they joined the organisation, ISO 8601. */
+  joinedAt: string;
 }
 
 /** Active members for a person field's picker. */
@@ -187,8 +189,8 @@ export class PeopleService {
     };
   }
 
-  /** `?pick=1`: active members for a person field's picker. */
-  async pick(ctx: TenantContext, query: { q?: unknown; limit?: unknown }) {
+  /** `?pick=1`: members for a person field's picker; see ProfileService.pick for `email` and `include`. */
+  async pick(ctx: TenantContext, query: { q?: unknown; limit?: unknown; email?: unknown; include?: unknown }) {
     return this.profiles.pick(ctx, query);
   }
 

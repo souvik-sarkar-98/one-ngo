@@ -2,6 +2,7 @@ import { Injectable, computed, signal } from '@angular/core';
 import { mayPublishLook } from '../../core/admin/areas';
 import { addRecordItem, removeRecordItem, reorderItems, setItemIcon, startingLayout, toPublished, type LayoutDraft } from '../../core/admin/layout-draft';
 import { failure } from '../../core/admin/roles';
+import { shownRecordTypes } from '../../core/hidden';
 import { t } from '../../core/i18n/i18n';
 import { ICON_NAMES } from '@onengo/platform/icons';
 import { navIcon } from '../../core/shell/shell';
@@ -33,7 +34,7 @@ export class LayoutStore extends AdminBase {
   readonly recordChoices = computed(() => {
     this.i18n.locale();
     const placed = new Set(this.draft().items);
-    return (this.session.defs()?.recordTypes ?? [])
+    return shownRecordTypes(this.session.defs())
       .filter((type) => !placed.has(`record:${type.key}`))
       .map((type) => ({ key: `record:${type.key}`, label: type.pluralLabel || type.label }));
   });

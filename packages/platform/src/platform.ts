@@ -232,12 +232,12 @@ export async function createPlatform(db: Database, options: PlatformOptions): Pr
   const payments = wirePayments(base, defs, crypto, recs, finance);
   const jobs = wireJobs(base, defs, recs, messaging, identity);
   const files = wireFiles(base, defs, recs, jobs, messaging.oauthCredentials, crypto.secretKeys);
-  const migration = wireMigration(base, defs, recs, finance, jobs, files);
+  const migration = wireMigration(base, defs, recs, finance, jobs, files, identity);
   const admin = wireAdministration(base, defs, crypto, identity, files);
   const ops = wireOperations(base, defs, recs, finance, messaging, payments, jobs, files, crypto, admin, identity.apiKeys);
   const reports = new ReportService(base.tm, defs.definitions, recs.records, recs.aggregates, files.files, jobs.jobs, base.audit, base.sandbox, defs.organisationName, new ReportProviders(), new PgPublishedReportStore(), postgresOrganisationAdminStore);
   registerOutboxHandlers(base, defs, recs, messaging, jobs, ops);
-  const scheduler = wireScheduler(base, defs, recs, files, jobs, ops);
+  const scheduler = wireScheduler(base, defs, recs, files, jobs, ops, migration);
   const http = httpDeps(base, defs, recs, finance, messaging, identity, payments, jobs, files, ops, admin, scheduler, reports, migration);
   // The platform extends the scheduler object itself, so the HTTP layer's tick is the platform's tick even when a test replaces it.
   return Object.assign(scheduler, {

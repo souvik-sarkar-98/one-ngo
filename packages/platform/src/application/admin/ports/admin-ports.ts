@@ -39,7 +39,7 @@ export interface PeopleAdmin {
   invite(ctx: TenantContext, userId: string): Promise<void>;
   suspend(ctx: TenantContext, userId: string): Promise<MemberView>;
   reactivate(ctx: TenantContext, userId: string): Promise<MemberView>;
-  pick(ctx: TenantContext, query: { q?: unknown; limit?: unknown }): Promise<{ items: PersonOption[] }>;
+  pick(ctx: TenantContext, query: { q?: unknown; limit?: unknown; email?: unknown; include?: unknown }): Promise<{ items: PersonOption[] }>;
   directory(ctx: TenantContext, query?: DirectoryQuery): Promise<DirectoryPage>;
   roleMembers(ctx: TenantContext, key: string, query?: MemberListQuery): Promise<MemberPage & { role: RoleOption }>;
   addRoleMembers(ctx: TenantContext, key: string, input: { userIds?: unknown }): Promise<MemberPage & { role: RoleOption }>;

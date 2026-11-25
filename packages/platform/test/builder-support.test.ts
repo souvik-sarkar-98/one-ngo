@@ -358,24 +358,29 @@ describe('modules', () => {
   it('lists shipped modules with their state', async () => {
     const res = await get('/api/builder/modules');
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toContainEqual(expect.objectContaining({ key: 'donations', version: '0.2.3', installedVersion: '0.2.3', enabled: true, updateAvailable: false }));
+    expect(res.json()).toContainEqual(expect.objectContaining({ key: 'donations', version: '0.4.1', installedVersion: '0.4.1', enabled: true, updateAvailable: false }));
     expect((await get('/api/builder/modules', clerk)).statusCode).toBe(403);
   });
 
   it('lists the definitions a module brings, whether it is on or off', async () => {
     const donations = (list: unknown) =>
-      (list as { key: string; enabled: boolean; definitions: { kind: string; key: string }[] }[]).find((m) => m.key === 'donations')!;
+      (list as { key: string; enabled: boolean; definitions: { kind: string; key: string; hidden: boolean; hideable: boolean; blocked: string | null }[] }[]).find(
+        (m) => m.key === 'donations',
+      )!;
 
     const on = donations((await get('/api/builder/modules', admin, w.ngoB)).json());
-    expect(on.definitions).toContainEqual({ kind: 'recordType', key: 'donation' });
-    expect(on.definitions).toContainEqual({ kind: 'receiptRule', key: 'donationPaidReceipt' });
-    expect(on.definitions[0]).toEqual({ kind: 'recordType', key: 'donation' });
+    const keys = (m: typeof on) => m.definitions.map((d) => ({ kind: d.kind, key: d.key }));
+    expect(keys(on)).toContainEqual({ kind: 'recordType', key: 'donation' });
+    expect(keys(on)).toContainEqual({ kind: 'receiptRule', key: 'donationPaidReceipt' });
+    expect(keys(on)[0]).toEqual({ kind: 'recordType', key: 'donation' });
+    expect(on.definitions[0]).toMatchObject({ hidden: false, hideable: true, blocked: null });
+    expect(on.definitions.find((d) => d.kind === 'receiptRule')).toMatchObject({ hidden: false, hideable: false, blocked: null });
 
     expect((await post('/api/builder/modules/donations/disable', {}, admin, w.ngoB)).statusCode).toBe(200);
     try {
       const off = donations((await get('/api/builder/modules', admin, w.ngoB)).json());
       expect(off.enabled).toBe(false);
-      expect(off.definitions).toEqual(on.definitions);
+      expect(keys(off)).toEqual(keys(on));
     } finally {
       await post('/api/builder/modules/donations/enable', {}, admin, w.ngoB);
     }
@@ -384,7 +389,7 @@ describe('modules', () => {
   it('reviews an update with nothing to change', async () => {
     const res = await get('/api/builder/modules/donations/update');
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ key: 'donations', version: '0.2.3', canUpdate: true, conflicts: [] });
+    expect(res.json()).toMatchObject({ key: 'donations', version: '0.4.1', canUpdate: true, conflicts: [] });
     expect((res.json().definitions as { status: string }[]).every((d) => d.status === 'unchanged')).toBe(true);
     expect((await get('/api/builder/modules/nothing/update')).statusCode).toBe(404);
   });
@@ -398,12 +403,12 @@ describe('modules', () => {
       type.fields = type.fields.filter((f) => f.key !== 'notes');
       writeFileSync(typeFile, JSON.stringify(type));
       const manifestFile = join(dir, 'donations', 'module.json');
-      writeFileSync(manifestFile, readFileSync(manifestFile, 'utf8').replace('"0.2.3"', '"0.3.0"'));
+      writeFileSync(manifestFile, readFileSync(manifestFile, 'utf8').replace('"0.4.1"', '"0.5.0"'));
 
       await w.platform.definitions.setExtensionPatch(w.as(w.ngoB), 'recordType', 'donation', { fields: [{ key: 'notes', required: true }] });
       const review = await w.platform.builderSupport(dir).updateReview(w.as(w.ngoB), 'donations');
-      expect(review.version).toBe('0.3.0');
-      expect(review.installedVersion).toBe('0.2.3');
+      expect(review.version).toBe('0.5.0');
+      expect(review.installedVersion).toBe('0.4.1');
       expect(review.canUpdate).toBe(false);
       expect(review.conflicts).toContainEqual({
         kind: 'recordType',
@@ -445,7 +450,7 @@ describe('modules', () => {
 
     const on = await post('/api/builder/modules/donations/enable', {}, admin, w.ngoB);
     expect(on.statusCode).toBe(200);
-    expect(on.json()).toMatchObject({ key: 'donations', version: '0.2.3', enabled: true });
+    expect(on.json()).toMatchObject({ key: 'donations', version: '0.4.1', enabled: true });
     const donation = await w.platform.definitions.get(w.ngoB, 'recordType', 'donation');
     expect(donation?.body.fields.find((f) => f.key === 'notes')?.required).toBe(true);
     expect((await post('/api/builder/modules/nothing/enable')).statusCode).toBe(404);

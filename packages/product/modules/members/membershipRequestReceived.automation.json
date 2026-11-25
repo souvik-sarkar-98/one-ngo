@@ -1,0 +1,9 @@
+{
+  "key": "membershipRequestReceived",
+  "label": "Email the applicant when a membership request is received",
+  "recordType": "membershipRequest",
+  "trigger": { "event": "created" },
+  "actions": [
+    { "type": "notify", "template": "membershipRequestReceived", "to": { "email": "record.email" }, "channels": ["email"] }
+  ]
+}

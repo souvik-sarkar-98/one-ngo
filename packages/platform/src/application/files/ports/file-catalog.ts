@@ -43,4 +43,6 @@ export interface FileCatalog {
    * Returns where their bytes are.
    */
   removeUnlinked(tx: Tx, unlinkedHours: number, limit: number): Promise<{ id: string; storage_key: string; store_ref: string }[]>;
+  /** Marks removed those of `ids` that are not removed and never linked to a record; returns where their bytes are. */
+  removeByIds(tx: Tx, ids: string[]): Promise<{ id: string; storage_key: string; store_ref: string }[]>;
 }

@@ -24,6 +24,7 @@ export interface BuilderApi {
     | 'modules'
     | 'enableModule'
     | 'disableModule'
+    | 'setDefinitionHidden'
     | 'disableDefinition'
     | 'enableDefinition'
     | 'updateReview'

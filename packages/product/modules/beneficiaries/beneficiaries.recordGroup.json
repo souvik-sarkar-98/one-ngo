@@ -1,1 +1,1 @@
-{ "key": "beneficiaries", "label": "Beneficiaries", "order": 90, "recordTypes": ["beneficiary", "beneficiaryConsent", "caseNote"] }
+{ "key": "beneficiaries", "hidden": false, "label": "Beneficiaries", "order": 90, "recordTypes": ["beneficiary", "beneficiaryConsent", "caseNote"] }

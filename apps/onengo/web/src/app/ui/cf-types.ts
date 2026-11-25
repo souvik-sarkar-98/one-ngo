@@ -54,6 +54,8 @@ export interface CfFieldDef {
   typedCoordinates?: false;
   /** Signature fields: show the signer's name box. */
   typedName?: true;
+  /** Person pickers: a link that opens Add a person in a new tab. */
+  addPersonHref?: string;
 }
 
 const TYPES: Record<FieldModel['kind'], CfFieldType> = {
@@ -90,6 +92,7 @@ export function cfField(f: FieldModel): CfFieldDef {
     ...(f.upload ? { upload: f.upload } : {}),
     ...(f.typedCoordinates === false ? { typedCoordinates: false as const } : {}),
     ...(f.typedName ? { typedName: true as const } : {}),
+    ...(f.addPersonHref ? { addPersonHref: f.addPersonHref } : {}),
   };
 }
 

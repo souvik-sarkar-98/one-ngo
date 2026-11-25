@@ -1,3 +1,4 @@
+import { offeredWorkflows, shownRecordTypes } from '../hidden';
 import { formatDate, intlLocale, currentTranslator, t } from '../i18n/i18n';
 import type { ApprovalRow, ApprovalSortField, InboxNotification, RuntimeDefinitions, RuntimeWorkflow } from '../models';
 import type { ChipSpec } from '../records/spec';
@@ -134,9 +135,9 @@ const FILTER_LABELS: Record<ApprovalFilter, string> = { type: 'ui.inbox.type', s
 export function approvalFilters(defs: RuntimeDefinitions | null, requesters: ReadonlyMap<string, string>, chosen: InboxAddress): ApprovalFilterSpec[] {
   const types = new Map<string, string>();
   const steps = new Map<string, string>();
-  for (const type of defs?.recordTypes ?? []) {
+  for (const type of shownRecordTypes(defs)) {
     const flows: RuntimeWorkflow[] = defs?.workflowSets?.[type.key] ?? (defs?.workflows[type.key] ? [defs.workflows[type.key]!] : []);
-    for (const step of flows.flatMap((w) => w.transitions).filter((x) => x.approval)) {
+    for (const step of offeredWorkflows(flows).flatMap((w) => w.transitions).filter((x) => x.approval)) {
       types.set(type.key, type.label);
       if (!steps.has(step.key)) steps.set(step.key, step.label);
     }

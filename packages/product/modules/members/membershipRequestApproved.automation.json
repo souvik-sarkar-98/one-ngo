@@ -1,0 +1,9 @@
+{
+  "key": "membershipRequestApproved",
+  "label": "Tell the applicant when a request is approved",
+  "recordType": "membershipRequest",
+  "trigger": { "event": "statusChanged", "to": "approved" },
+  "actions": [
+    { "type": "notify", "template": "membershipRequestApproved", "to": { "email": "record.email" }, "channels": ["email"] }
+  ]
+}

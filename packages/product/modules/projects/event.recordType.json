@@ -1,5 +1,6 @@
 {
   "key": "event",
+  "hidden": false,
   "label": "Event",
   "pluralLabel": "Events",
   "description": "Events the organisation holds, with the venue, the date and the attendee list.",

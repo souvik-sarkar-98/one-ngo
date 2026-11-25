@@ -298,6 +298,11 @@ function moneyText(v: unknown): string {
   return `${sign}${grouped}.${frac}`;
 }
 
+/** The words of a text, split on any run of spaces; empty for anything that is not text. */
+function nameWords(v: unknown): string[] {
+  return typeof v === 'string' ? v.split(/\s+/).filter(Boolean) : [];
+}
+
 const FUNCTIONS: Record<string, (...args: unknown[]) => unknown> = {
   len: (v) => (typeof v === 'string' || Array.isArray(v) ? v.length : 0),
   isEmpty: (v) => v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0),
@@ -306,6 +311,12 @@ const FUNCTIONS: Record<string, (...args: unknown[]) => unknown> = {
   lower: (v) => (typeof v === 'string' ? v.toLowerCase() : v),
   upper: (v) => (typeof v === 'string' ? v.toUpperCase() : v),
   trim: (v) => (typeof v === 'string' ? v.trim() : v),
+  firstWord: (v) => nameWords(v)[0] ?? '',
+  lastWord: (v) => {
+    const parts = nameWords(v);
+    return parts.length > 1 ? parts[parts.length - 1]! : '';
+  },
+  middleWords: (v) => nameWords(v).slice(1, -1).join(' '),
   round: (v, d = 0) => {
     const f = 10 ** num(d, 'round');
     return Math.round(num(v, 'round') * f) / f;
@@ -473,6 +484,9 @@ const RETURNS: Record<string, ValueType> = {
   lower: 'text',
   upper: 'text',
   trim: 'text',
+  firstWord: 'text',
+  lastWord: 'text',
+  middleWords: 'text',
   round: 'number',
   abs: 'number',
   min: 'number',

@@ -1,5 +1,6 @@
 {
   "key": "memberRegister",
+  "hidden": false,
   "label": "Member register",
   "datasets": [
     {
@@ -9,7 +10,7 @@
       "recordType": "member",
       "statusIn": ["active", "inactive"],
       "sort": { "field": "joinedOn", "dir": "asc" },
-      "fields": ["name", "category", "email", "phone", "city", "joinedOn"]
+      "fields": ["name", "designation", "email", "phone", "city", "joinedOn"]
     }
   ],
   "outputs": {
@@ -19,7 +20,7 @@
           "dataset": "members",
           "columns": [
             { "field": "name", "header": "Name", "format": "text" },
-            { "field": "category", "header": "Category", "format": "text" },
+            { "field": "designation", "header": "Designation", "format": "text" },
             { "field": "email", "header": "Email", "format": "text" },
             { "field": "phone", "header": "Phone", "format": "text" },
             { "field": "city", "header": "City", "format": "text" },

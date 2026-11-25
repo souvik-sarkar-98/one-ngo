@@ -5,7 +5,7 @@ import { Btn } from '@onengo/web-kit';
 
 const REFUSED: Record<string, string> = {
   unknown: 'This login is not an operator on this console. Copy the provider and subject below for the person who manages operators.',
-  mfa: 'The identity provider did not complete a fresh two-factor check.',
+  reauth: 'Sign in again to confirm this action.',
   provider: 'The identity provider did not complete sign-in. Try again in a moment.',
   ended: 'Your session has ended. Sign in again.',
 };
@@ -14,7 +14,7 @@ const REFUSED: Record<string, string> = {
   imports: [Btn],
   standalone: true,
   template: `<section class="card"><h1>Sign in</h1>
-    <p>Two-factor authentication is required. The account must already be an operator on this console.</p>
+    <p>Sign in with your identity provider. The account must already be an operator on this console.</p>
     @if (notice(); as text) { <p class="notice error">{{ text }}</p> }
     @if (issuer || subject) {
       <div class="kv">
@@ -37,5 +37,5 @@ export class SignInPage {
 @Component({ standalone: true, template: `<section class="card"><h1>Completing sign-in</h1><p>The console is checking the identity provider response.</p></section>` })
 export class CallbackPage {}
 
-@Component({ standalone: true, template: `<section class="card"><h1>Additional verification</h1><p>Go back to the action and complete a fresh two-factor check. It can be used once, within five minutes.</p></section>` })
+@Component({ standalone: true, template: `<section class="card"><h1>Additional verification</h1><p>Go back to the action and sign in again to confirm it. It can be used once, within five minutes.</p></section>` })
 export class StepUpPage {}

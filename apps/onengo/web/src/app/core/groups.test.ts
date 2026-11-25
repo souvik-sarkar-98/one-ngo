@@ -46,6 +46,13 @@ describe('record groups on Home', () => {
     expect(homeGroups(withEmpty).map((g) => g.label)).toEqual(['Fundraising', 'Other']);
   });
 
+  it('leave out a hidden record type, not even under Other', async () => {
+    const defs = many(await definitions(), 1);
+    const off = { ...defs, recordTypes: defs.recordTypes.map((t) => (t.key === 'type0' ? { ...t, hidden: true } : t)) };
+    expect(homeGroups(off).map((g) => g.label)).toEqual(['Fundraising']);
+    expect(recordsModel(off, '', new Set()).sections.map((s) => s.label)).toEqual(['Fundraising']);
+  });
+
   it('leave out groups kept off Home, which stay on the Records screen', async () => {
     const defs = many(await definitions(), 1);
     const hidden = { ...defs, recordGroups: [...defs.recordGroups!, { key: 'assets', label: 'Assets', onHome: false, recordTypes: ['type0'] }] };

@@ -11,7 +11,7 @@ export const PAGE_SIZE = 30;
 const MAX_SHOW = 300;
 
 /** Parameters the People screen owns. */
-export const PEOPLE_PARAMS = ['status', 'role', 'q', 'sort', 'show', 'person', 'add'] as const;
+export const PEOPLE_PARAMS = ['status', 'role', 'q', 'sort', 'show', 'person', 'add', 'email', 'name'] as const;
 
 /**
  * The People address on `/admin/people`: role, search, sort, and the open person,
@@ -25,6 +25,9 @@ export interface PeopleAddress {
   show: number;
   person?: string;
   add: boolean;
+  /** With Add: the email and name to start the form with, for example from a request. */
+  email?: string;
+  name?: string;
 }
 
 export type PeopleChange = Partial<PeopleAddress>;
@@ -34,12 +37,17 @@ const Q = text();
 const LIST = list();
 const SHOW = depth(PAGE_SIZE, MAX_SHOW);
 const PERSON = text();
+const EMAIL = text();
+const NAME = text();
 const sorter = (v: PeopleVariant) => sort(v === 'directory' ? DIRECTORY_SORTS : MANAGEMENT_SORTS);
 
 /** Reads the address. Management owns status and Add; the directory ignores them. */
 export function parsePeopleAddress(get: ParamReader, variant: PeopleVariant): PeopleAddress {
   const s = sorter(variant).read(get, 'sort');
   const person = PERSON.read(get, 'person');
+  const add = variant === 'management' && get('add') !== null;
+  const email = add ? EMAIL.read(get, 'email') : undefined;
+  const name = add ? NAME.read(get, 'name') : undefined;
   return {
     status: variant === 'management' ? (STATUS.read(get, 'status') ?? 'active') : 'active',
     q: Q.read(get, 'q') ?? '',
@@ -47,7 +55,9 @@ export function parsePeopleAddress(get: ParamReader, variant: PeopleVariant): Pe
     ...(s && { sort: s }),
     show: SHOW.read(get, 'show') ?? PAGE_SIZE,
     ...(person && { person }),
-    add: variant === 'management' && get('add') !== null,
+    add,
+    ...(email ? { email } : {}),
+    ...(name ? { name } : {}),
   };
 }
 
@@ -61,7 +71,14 @@ export function patchPeople(current: PeopleAddress, change: PeopleChange): Peopl
 /** Every parameter the screen owns, with null for those to remove. */
 export function peopleParams(a: PeopleAddress, variant: PeopleVariant): Params {
   return {
-    ...(variant === 'management' ? { status: a.status === 'active' ? null : a.status, add: a.add ? '' : null } : {}),
+    ...(variant === 'management'
+      ? {
+          status: a.status === 'active' ? null : a.status,
+          add: a.add ? '' : null,
+          ...EMAIL.write('email', a.add ? a.email : undefined),
+          ...NAME.write('name', a.add ? a.name : undefined),
+        }
+      : {}),
     ...Q.write('q', a.q || undefined),
     ...LIST.write('role', a.role),
     ...sorter(variant).write('sort', a.sort),

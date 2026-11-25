@@ -10,7 +10,7 @@ import { LOCALE_PATTERN, SHIPPED_LOCALES, type MessageCatalogue } from './messag
 import type { LocaleStore } from './ports/locale-store.js';
 import { resolveRecordGroups } from './record-groups.js';
 import { translateBody } from './translate.js';
-import type { ActionDef, ListViewDef, PageDef, Widget, WorkflowDef } from './types.js';
+import type { ActionDef, ListViewDef, PageDef, PageLink, Widget, WorkflowDef } from './types.js';
 import { isPrimary, workflowsOf } from './workflows.js';
 
 const OTHER_GROUP = 'ui.records.otherGroup';
@@ -76,6 +76,18 @@ export class RuntimeService {
     const types = (await this.defs.list(ctx.tenantId, 'recordType')).filter((t) => can(ctx.actor, `record:${t.key}:read`));
     const readable = new Set(types.map((t) => t.key));
     const allWorkflows = await this.defs.list(ctx.tenantId, 'workflow');
+    const allGroups = await this.defs.list(ctx.tenantId, 'recordGroup');
+    const hiddenPages = new Set((await this.defs.list(ctx.tenantId, 'page')).filter((p) => p.body.hidden).map((p) => p.key));
+    // Hidden types keep their forms, so records that point at them still open; menus, lists and pages leave them out.
+    const hiddenTypes = new Set(types.filter((t) => t.body.hidden).map((t) => t.key));
+    const inShownGroup = new Set(allGroups.filter((g) => !g.body.hidden).flatMap((g) => g.body.recordTypes));
+    for (const g of allGroups) if (g.body.hidden) for (const t of g.body.recordTypes) if (!inShownGroup.has(t)) hiddenTypes.add(t);
+    const shown = new Set([...readable].filter((k) => !hiddenTypes.has(k)));
+    const listTypes = new Map((await this.defs.list(ctx.tenantId, 'listView')).filter((v) => !v.body.hidden).map((v) => [v.key, v.body.recordType]));
+    const linkShown = (l: PageLink) => {
+      const [, area, key] = /^\/(pages|records)\/([^/?#]+)/.exec(l.to) ?? [];
+      return !(area === 'pages' && hiddenPages.has(key!)) && !(area === 'records' && hiddenTypes.has(key!));
+    };
 
     const themes = await this.defs.list(ctx.tenantId, 'theme');
     const theme = (themes.find((t) => t.key === 'organisation') ?? themes[0])?.body ?? null;
@@ -85,14 +97,17 @@ export class RuntimeService {
     const restricted = new Set(types.filter((t) => t.body.visibility === 'restricted').map((t) => t.key));
     const listViews: Record<string, ListViewDef> = {};
     for (const v of (await this.defs.list(ctx.tenantId, 'listView')).sort((a, b) => a.key.localeCompare(b.key))) {
-      if (!readable.has(v.body.recordType) || listViews[v.body.recordType]) continue;
+      if (v.body.hidden || !readable.has(v.body.recordType) || listViews[v.body.recordType]) continue;
       const view = translateBody('listView', v.body, entries);
       // Chips the person cannot use are dropped here; the query API still enforces read access.
       const chips = view.chips?.filter((c) => !c.permission || can(ctx.actor, c.permission)) ?? [];
       if (restricted.has(v.body.recordType) && !chips.some((c) => c.shared || c.id === SHARED_CHIP)) {
         chips.push({ id: SHARED_CHIP, label: ui[SHARED_LABEL] ?? 'Shared with me', shared: true });
       }
-      const detail = view.detail && { ...view.detail, sections: view.detail.sections.filter((s) => allowed(s.permission)) };
+      const detail = view.detail && {
+        ...view.detail,
+        sections: view.detail.sections.filter((s) => allowed(s.permission) && !('related' in s && hiddenTypes.has(s.related.recordType))),
+      };
       listViews[v.body.recordType] = { ...view, chips: chips.length || view.chips ? chips : undefined, ...(detail ? { detail } : {}) };
     }
 
@@ -107,15 +122,15 @@ export class RuntimeService {
         .filter(([, w]) => !!w),
     );
 
-    const groups = (await this.defs.list(ctx.tenantId, 'recordGroup')).map((g) => translateBody('recordGroup', g.body, entries));
-    const listed = types.map((t) => t.key);
+    const groups = allGroups.filter((g) => !g.body.hidden).map((g) => translateBody('recordGroup', g.body, entries));
+    const listed = types.map((t) => t.key).filter((k) => shown.has(k));
     const recordGroups = resolveRecordGroups(groups, listed).map((g) =>
       g.key === 'other' && !groups.some((x) => x.key === 'other') ? { ...g, label: ui[OTHER_GROUP] ?? g.label } : g,
     );
 
     const actions: Record<string, (Omit<ActionDef, 'steps'> & { steps: { type: string }[]; allowed: boolean })[]> = {};
     for (const a of (await this.defs.list(ctx.tenantId, 'action')).sort((x, y) => x.key.localeCompare(y.key))) {
-      if (!readable.has(a.body.recordType)) continue;
+      if (a.body.hidden || !shown.has(a.body.recordType)) continue;
       const t = translateBody('action', a.body, entries);
       // Step settings (connectors, accounts) stay on the server; the app only needs to know what kind each step is.
       (actions[a.body.recordType] ??= []).push({
@@ -126,27 +141,27 @@ export class RuntimeService {
     }
 
     const pages: PageDef[] = [];
-    const listTypes = new Map((await this.defs.list(ctx.tenantId, 'listView')).map((v) => [v.key, v.body.recordType]));
     for (const p of await this.defs.list(ctx.tenantId, 'page')) {
-      if (!inAudience(ctx, p.body)) continue;
+      if (p.body.hidden || !inAudience(ctx, p.body)) continue;
       const t = translateBody('page', p.body, entries);
       pages.push({
         ...t,
         // `index` is the widget's place in the published page, which names it when asking for its counts.
         widgets: t.widgets
           .map((w, index) => ({ ...w, index }))
-          .filter((w) => widgetVisible(ctx, w, readable, listTypes))
-          .map((w) => (w.type === 'links' ? { ...w, items: w.items.filter((i) => allowed(i.permission)) } : w))
+          .filter((w) => widgetVisible(ctx, w, shown, listTypes))
+          .map((w) => (w.type === 'links' ? { ...w, items: w.items.filter((i) => allowed(i.permission) && linkShown(i)) } : w))
           .filter((w) => w.type !== 'links' || w.items.length > 0),
       });
     }
+    const navItems = layout?.items.filter((i) => !(i.startsWith('page:') && hiddenPages.has(i.slice(5))) && !(i.startsWith('record:') && hiddenTypes.has(i.slice(7))));
 
     return {
       locale,
       theme,
       ...(layout
         ? {
-            navigation: { items: layout.items, ...(layout.icons ? { icons: layout.icons } : {}) },
+            navigation: { items: navItems!, ...(layout.icons ? { icons: layout.icons } : {}) },
             listLayout: layout.listLayout,
           }
         : {}),
@@ -164,6 +179,8 @@ export class RuntimeService {
           version: t.version,
           canCreate: can(ctx.actor, `record:${t.key}:create`),
           canUpdate: can(ctx.actor, `record:${t.key}:update`),
+          // Also true for a type only in hidden groups: the app keeps it out of menus, not even under "Other".
+          hidden: hiddenTypes.has(t.key),
         };
       }),
       workflows,
@@ -181,9 +198,9 @@ export class RuntimeService {
     const page = await this.defs.get(ctx.tenantId, 'page', pageKey);
     const widget = page?.body.widgets[index];
     if (!page || !widget) throw notFound('Widget not found.');
-    const readable = new Set((await this.defs.list(ctx.tenantId, 'recordType')).filter((t) => can(ctx.actor, `record:${t.key}:read`)).map((t) => t.key));
-    const listTypes = new Map((await this.defs.list(ctx.tenantId, 'listView')).map((v) => [v.key, v.body.recordType]));
-    if (!inAudience(ctx, page.body) || !widgetVisible(ctx, widget, readable, listTypes)) throw forbidden('You cannot see this widget.');
+    const shown = new Set((await this.defs.list(ctx.tenantId, 'recordType')).filter((t) => !t.body.hidden && can(ctx.actor, `record:${t.key}:read`)).map((t) => t.key));
+    const listTypes = new Map((await this.defs.list(ctx.tenantId, 'listView')).filter((v) => !v.body.hidden).map((v) => [v.key, v.body.recordType]));
+    if (page.body.hidden || !inAudience(ctx, page.body) || !widgetVisible(ctx, widget, shown, listTypes)) throw forbidden('You cannot see this widget.');
   }
 }
 

@@ -1,5 +1,6 @@
 {
   "key": "beneficiaryConsent",
+  "hidden": false,
   "label": "Consent",
   "pluralLabel": "Consents",
   "description": "What a beneficiary agreed to, and when they agreed or withdrew. Each purpose is recorded separately.",

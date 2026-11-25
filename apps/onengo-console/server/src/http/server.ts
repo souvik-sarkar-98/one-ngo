@@ -40,7 +40,7 @@ const clearCookie = (reply: FastifyReply) => setCookie(reply, '', 0);
 function principal(session: Session): OperatorPrincipal {
   return verifiedOperatorPrincipal({
     operatorId: session.operatorId, issuer: session.issuer, subject: session.subject, display: session.display,
-    authTime: session.authTime, amr: session.amr, acr: session.acr, assurance: 'mfa', sessionId: session.id,
+    authTime: session.authTime, amr: session.amr, acr: session.acr, assurance: session.amr.includes('mfa') ? 'mfa' : 'single_factor', sessionId: session.id,
     actions: session.actions,
   });
 }
@@ -95,7 +95,11 @@ export function buildOperatorServer(deps: OperatorServerDeps) {
       verified = await deps.provider.callback(code, login);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
-      if (/multi-factor|assurance|Fresh operator/i.test(message)) return reply.redirect('/sign-in?refused=mfa');
+      if (/Fresh operator/i.test(message)) {
+        // The step-up needs a login in the last five minutes; the browser only sees "refused=reauth".
+        console.warn(`Operator sign-in refused: ${message}`);
+        return reply.redirect('/sign-in?refused=reauth');
+      }
       if (/provider/i.test(message)) return reply.redirect('/sign-in?refused=provider');
       throw error;
     }

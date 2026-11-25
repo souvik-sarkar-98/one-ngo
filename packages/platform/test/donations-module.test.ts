@@ -14,7 +14,7 @@ const world = async (donations = true) => {
   return w;
 };
 
-describe('Donations module 0.2.3', () => {
+describe('Donations module 0.4.1', () => {
   it('installs donors, the Fundraising group, three actions and the rollups', async () => {
     const w = await world();
     const keys = async (kind: Parameters<TestWorld['platform']['definitions']['list']>[1]) =>
@@ -23,7 +23,7 @@ describe('Donations module 0.2.3', () => {
     expect(await keys('listView')).toEqual(['donations', 'donors']);
     expect(await keys('recordGroup')).toEqual(['fundraising']);
     expect(await keys('action')).toEqual(['payNow', 'printReceipt', 'sendReminder']);
-    expect(await keys('template')).toEqual(['donationReminder', 'donationSummary', 'donationThanks']);
+    expect(await keys('template')).toEqual(['donationReminder', 'donationSummary', 'donationThanks', 'donorMonthlyDonation']);
     expect(await keys('report')).toEqual(['donationRegister', 'donationSummary']);
     expect(await keys('reportGroup')).toEqual(['fundraising']);
     const donor = (await w.platform.definitions.get(w.ngoA, 'recordType', 'donor'))!.body;
@@ -129,7 +129,7 @@ describe('Donations module 0.2.3', () => {
     await w.platform.definitions.setExtensionPatch(w.as(w.ngoA), 'listView', 'donations', { label: 'Gifts' });
 
     const pkg = await w.platform.publishShippedModule('donations');
-    expect(pkg.manifest.version).toBe('0.2.3');
+    expect(pkg.manifest.version).toBe('0.4.1');
     const { materialised } = await w.platform.definitions.enableModule(w.as(w.ngoA), pkg.manifest);
     expect(materialised).toEqual(expect.arrayContaining(['recordType|donor', 'recordType|donation', 'listView|donations', 'action|payNow']));
 
@@ -147,7 +147,7 @@ describe('Donations module 0.2.3', () => {
       ),
     );
     expect(finance!.permissions).toContain('record:donor:*');
-    expect(finance!.version).toBe('0.2.3');
+    expect(finance!.version).toBe('0.4.1');
 
     const edited = await w.platform.records.update(w.as(w.ngoA, clerk), before.record.id, { expectedVersion: 1, data: { notes: 'Still editable' } });
     expect(edited.record.data.donorName).toBe('Typed In');
@@ -165,7 +165,7 @@ describe('Donations module 0.2.3', () => {
     await w.platform.db.withTenant(w.ngoB, (tx) => tx.query(`update role set permissions = '{record:donation:read}', customised = true where key = 'viewer'`));
 
     const pkg = await w.platform.publishShippedModule('donations');
-    expect(pkg.manifest.version).toBe('0.2.3');
+    expect(pkg.manifest.version).toBe('0.4.1');
     for (const tenant of [w.ngoA, w.ngoB]) await w.platform.definitions.enableModule(w.as(tenant), pkg.manifest);
 
     const a = await rolesOf(w.ngoA);

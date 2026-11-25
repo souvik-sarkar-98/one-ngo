@@ -1,5 +1,6 @@
 import { moveItem } from '../ui-logic/reorder';
 import { isIconName } from '@onengo/platform/icons';
+import { shownRecordTypes } from '../hidden';
 import { defaultNavigationKeys, defaultNavIcon } from '../shell/shell';
 import type { Me, RuntimeDefinitions } from '../models';
 
@@ -33,7 +34,7 @@ export function startingLayout(me: Me | null, defs: RuntimeDefinitions | null): 
   for (const key of base) {
     if (key.startsWith('record:')) {
       const typeKey = key.slice('record:'.length);
-      if (defs && !defs.recordTypes.some((type) => type.key === typeKey)) continue;
+      if (defs && !shownRecordTypes(defs).some((type) => type.key === typeKey)) continue;
     }
     push(key);
   }

@@ -69,8 +69,19 @@ export interface ModuleRow {
   installedVersion: string | null;
   enabled: boolean;
   dependsOn: string[];
-  definitions: { kind: DefinitionKind; key: string }[];
+  definitions: ModuleDefinition[];
   updateAvailable: boolean;
+}
+
+/** One definition a module adds. `hideable` kinds can be kept out of menus from the Modules screen. */
+export interface ModuleDefinition {
+  kind: DefinitionKind;
+  key: string;
+  label: string | null;
+  hidden: boolean;
+  hideable: boolean;
+  /** Why the choice cannot change right now. */
+  blocked: 'disabled' | 'draft' | 'update' | null;
 }
 
 /** What updating a module would change, and the organisation's changes that no longer fit. */
@@ -98,6 +109,8 @@ export interface AccessGateway {
   /** Turns a module on, or brings it up to the shipped version. */
   enableModule(key: string): Promise<void>;
   disableModule(key: string): Promise<void>;
+  /** Keeps one definition of a module that is on out of menus, lists and pages, or shows it again. */
+  setDefinitionHidden(key: string, kind: DefinitionKind, defKey: string, hidden: boolean): Promise<void>;
   moduleUpdate(key: string): Promise<ModuleReview>;
 }
 
@@ -123,6 +136,8 @@ export function httpAccess(http: HttpLike): AccessGateway {
     modules: () => http.get<ModuleRow[]>('/api/builder/modules'),
     enableModule: (key) => http.post(`${mod(key)}/enable`),
     disableModule: (key) => http.post(`${mod(key)}/disable`),
+    setDefinitionHidden: (key, kind, defKey, hidden) =>
+      http.put(`${mod(key)}/definitions/${encodeURIComponent(kind)}/${encodeURIComponent(defKey)}/hidden`, { hidden }),
     moduleUpdate: (key) => http.get<ModuleReview>(`${mod(key)}/update`),
   };
 }

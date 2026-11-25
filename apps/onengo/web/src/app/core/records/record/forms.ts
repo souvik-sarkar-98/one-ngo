@@ -56,6 +56,27 @@ export interface FieldModel {
   typedCoordinates?: false;
   /** Signature fields: the signer's name is asked for. */
   typedName?: true;
+  /** Person fields that look people up by email: where Add a person opens, with the email and name filled in. */
+  addPersonHref?: string;
+}
+
+/**
+ * Where Add a person opens for a person field that looks people up by an email
+ * field, with that email and the record's name filled in. Nothing is created
+ * until the person is added there.
+ */
+export function addPersonHref(f: Pick<FieldDef, 'type' | 'emailFrom'>, record: Record<string, unknown>): string | undefined {
+  if (f.type !== 'person' || !f.emailFrom) return undefined;
+  const text = (key: string) => {
+    const v = record[key];
+    return typeof v === 'string' ? v.trim() : '';
+  };
+  const query = new URLSearchParams({ add: '' });
+  const email = text(f.emailFrom);
+  const name = text('name');
+  if (email) query.set('email', email);
+  if (name) query.set('name', name);
+  return `/admin/people?${query.toString()}`;
 }
 
 /** Calculated and rollup fields are kept by the server and never sent. */
@@ -122,8 +143,10 @@ export function fieldModels(
     const f = type.fields.find((x) => x.key === key);
     if (!f || (isComputed(f) && !opts.calculated) || !conditionHolds(f.visibleWhen, record, status, viewer)) continue;
     const connector = filledBy.get(f.key);
-    const m = model(f, !!opts.readOnly || isComputed(f) || connector !== undefined || !conditionHolds(f.editableWhen, record, status, viewer), type.key);
-    out.push(connector === undefined ? m : { ...m, help: [f.help, t('ui.records.lookupFilled', { connector })].filter(Boolean).join(' ') });
+    const m = model(f, !!opts.readOnly || isComputed(f) || !!f.follow || connector !== undefined || !conditionHolds(f.editableWhen, record, status, viewer), type.key);
+    const href = m.readOnly ? undefined : addPersonHref(f, record);
+    const shown = href ? { ...m, addPersonHref: href } : m;
+    out.push(connector === undefined ? shown : { ...shown, help: [f.help, t('ui.records.lookupFilled', { connector })].filter(Boolean).join(' ') });
   }
   return out;
 }
@@ -204,11 +227,18 @@ export function toFormValues(type: FieldSet, data: Record<string, unknown>): For
   return out;
 }
 
+/** The values a new record's form starts with: empty, except boolean fields that start ticked or unticked. */
+export function newRecordValues(type: FieldSet): FormValues {
+  const start: Record<string, unknown> = {};
+  for (const f of type.fields) if (f.type === 'boolean' && f.defaultValue !== undefined) start[f.key] = f.defaultValue;
+  return toFormValues(type, start);
+}
+
 /** Turns form values into API data: blanks become null, numbers become numbers. */
 export function fromFormValues(type: FieldSet, values: FormValues, keys?: string[]): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const f of type.fields) {
-    if (isComputed(f) || !(f.key in values) || (keys && !keys.includes(f.key))) continue;
+    if (isComputed(f) || f.follow || !(f.key in values) || (keys && !keys.includes(f.key))) continue;
     const v = values[f.key];
     if (STRUCTURED.has(f.type)) {
       const sent = fromStructured(f, v ?? null);
@@ -220,6 +250,49 @@ export function fromFormValues(type: FieldSet, values: FormValues, keys?: string
       out[f.key] = Number.isFinite(n) ? n : v.trim();
     } else if (typeof v === 'string') out[f.key] = v.trim();
     else out[f.key] = v;
+  }
+  return out;
+}
+
+/** The record the values describe, with followed fields included (they are not sent, but suggestions may read them). */
+function recordOf(type: FieldSet, values: FormValues): Record<string, unknown> {
+  const out = fromFormValues(type, values);
+  for (const f of type.fields) {
+    const v = values[f.key];
+    if (f.follow && typeof v === 'string' && v) out[f.key] = v;
+  }
+  return out;
+}
+
+/** A suggestion as text, the way the server writes it; blank when the expression gives nothing or cannot be read here. */
+function suggestion(source: string, record: Record<string, unknown>, viewer: Viewer): string {
+  try {
+    const v = compileExpression(source).evaluate({ record, status: null, previous: {}, previousStatus: null, user: viewer });
+    return v === null || v === undefined ? '' : String(v);
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * The form values after a change, with each field that has a `defaultFrom` suggestion brought up to date the way the
+ * server does it: when the fields it reads changed, and the field is blank or still holds the previous suggestion.
+ * A value the person typed is kept.
+ */
+export function withDefaults(type: FieldSet, before: FormValues, after: FormValues, viewer: Viewer): FormValues {
+  const targets = type.fields.filter((f) => f.defaultFrom);
+  if (!targets.length) return after;
+  const now = recordOf(type, after);
+  const was = recordOf(type, before);
+  const out: FormValues = { ...after };
+  for (const f of targets) {
+    const next = suggestion(f.defaultFrom!, now, viewer);
+    const old = suggestion(f.defaultFrom!, was, viewer);
+    if (next === old) continue;
+    const current = out[f.key];
+    const blank = current === undefined || current === null || (typeof current === 'string' && current.trim() === '');
+    if (!blank && current !== old) continue;
+    out[f.key] = next;
   }
   return out;
 }

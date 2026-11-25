@@ -3,7 +3,7 @@ import type { OrganisationProfileRequest, RegistrationRequest, SettingsRequest }
 export type { OrganisationProfileRequest, RegistrationRequest };
 
 /** The fixed product name: sign-in, the app bar and every browser title. It is not part of an organisation's identity. */
-export const PRODUCT = 'OneNGO';
+export const PRODUCT = '';
 
 /** A browser title: `<screen or organisation> | OneNGO`, or the product alone. */
 export const browserTitle = (screen?: string | null): string => (screen?.trim() ? `${screen.trim()} | ${PRODUCT}` : PRODUCT);

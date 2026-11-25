@@ -1,0 +1,20 @@
+{
+  "key": "donorMonthlyDonation",
+  "label": "Raise the monthly donation on the 1st of each month",
+  "recordType": "donor",
+  "trigger": { "event": "schedule", "cron": "0 3 1 * *" },
+  "condition": "not isEmpty(record.monthlyDonation)",
+  "actions": [
+    {
+      "type": "createRecord",
+      "recordType": "donation",
+      "values": {
+        "donor": "record.id",
+        "donorName": "record.name",
+        "donorEmail": "record.email",
+        "donorPhone": "record.phone",
+        "amount": "record.monthlyDonation"
+      }
+    }
+  ]
+}

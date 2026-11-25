@@ -246,6 +246,7 @@
   "ui.records.removeFilter": "Remove filter: {filter}",
   "ui.records.required": "{field} is required.",
   "ui.records.lookupFilled": "Filled from the {connector} lookup.",
+  "ui.records.addPerson": "Add a new person",
   "ui.records.saveChanges": "Save changes",
   "ui.records.savedMessage": "Your changes have been saved.",
   "ui.records.searchList": "Search list",

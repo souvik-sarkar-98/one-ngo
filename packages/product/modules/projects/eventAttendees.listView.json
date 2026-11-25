@@ -1,5 +1,6 @@
 {
   "key": "eventAttendees",
+  "hidden": false,
   "recordType": "eventAttendee",
   "label": "Attendees",
   "pageSize": 20,

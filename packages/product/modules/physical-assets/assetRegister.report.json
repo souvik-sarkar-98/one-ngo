@@ -1,5 +1,6 @@
 {
   "key": "assetRegister",
+  "hidden": false,
   "label": "Asset register",
   "datasets": [
     {

@@ -1,5 +1,6 @@
 {
   "key": "milestoneStatus",
+  "hidden": false,
   "recordType": "milestone",
   "initial": "open",
   "states": [

@@ -1,0 +1,6 @@
+{
+  "key": "membershipRequestStaff",
+  "label": "New membership request for staff",
+  "subject": "New membership request {{ record.number }} from {{ record.name }}",
+  "body": "{{ record.name }} has applied to join (request {{ record.number }}). Please review it under Membership requests."
+}

@@ -1,5 +1,6 @@
 {
   "key": "membershipFee",
+  "hidden": false,
   "label": "Membership fee",
   "pluralLabel": "Membership fees",
   "description": "A one-time membership fee paid by a member. A paid fee posts to the books and issues a numbered receipt.",

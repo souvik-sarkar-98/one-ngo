@@ -1,5 +1,6 @@
 {
   "key": "memberNotices",
+  "hidden": false,
   "recordType": "memberNotice",
   "label": "Notices to members",
   "pageSize": 20,

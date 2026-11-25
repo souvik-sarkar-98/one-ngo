@@ -47,6 +47,12 @@ function fromDate(d: Date | null): string {
   ],
   styleUrl: './styles/cf-field.css',
   styles: `
+    .cf-field-link {
+      display: inline-block;
+      margin-top: 0.25rem;
+      font-size: 0.875rem;
+      color: var(--primary-700, #3730a3);
+    }
     .cf-pills {
       display: flex;
       flex-wrap: wrap;
@@ -97,7 +103,7 @@ function fromDate(d: Date | null): string {
               rows="4"
               [placeholder]="f.placeholder ?? ''"
               [ngModel]="textValue()"
-              [readonly]="f.readOnly"
+              [disabled]="f.readOnly"
               (ngModelChange)="emit($event)"
             ></textarea>
             @if (f.hint) {
@@ -198,6 +204,9 @@ function fromDate(d: Date | null): string {
       }
       @case ('picker') {
         <app-record-picker [field]="f" [value]="textValue()" [error]="error()" />
+        @if (f.addPersonHref) {
+          <a class="cf-field-link" [href]="f.addPersonHref" target="_blank" rel="noopener noreferrer">{{ 'ui.records.addPerson' | t }} ↗</a>
+        }
       }
       @case ('date_range') {
         <div class="cf-field-block" [attr.data-cf-field]="f.key" [attr.data-cf-type]="f.type">
@@ -271,7 +280,7 @@ function fromDate(d: Date | null): string {
               [type]="f.type"
               [placeholder]="f.placeholder ?? ''"
               [ngModel]="textValue()"
-              [readonly]="f.readOnly"
+              [disabled]="f.readOnly"
               (ngModelChange)="emit($event)"
             />
             @if (f.hint) {

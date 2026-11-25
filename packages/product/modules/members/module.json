@@ -1,8 +1,8 @@
 {
   "key": "members",
-  "version": "1.0.0",
+  "version": "1.17.1",
   "label": "Members",
-  "description": "Member profiles with category and contact details, and one-time membership fees. Paid fees post to the books and issue a numbered receipt.",
+  "description": "Member profiles with designation and contact details, membership requests from applicants or staff that create the member and donor profiles, and one-time membership fees. Paid fees post to the books and issue a numbered receipt.",
   "engine": "0.1.0",
   "dependsOn": ["donations"],
   "definitions": [
@@ -14,9 +14,23 @@
     "membershipFees.listView.json",
     "membershipFeePaid.postingRule.json",
     "membershipFeePaidReceipt.receiptRule.json",
+    "membershipFeeOnJoin.automation.json",
     "memberRegister.report.json",
     "membershipFeeRegister.report.json",
-    "membership.recordGroup.json"
+    "membership.recordGroup.json",
+    "membershipRequest.recordType.json",
+    "membershipRequestStatus.workflow.json",
+    "membershipRequests.listView.json",
+    "membershipRequestReceived.template.json",
+    "membershipRequestStaff.template.json",
+    "membershipRequestApproved.template.json",
+    "membershipRequestNotApproved.template.json",
+    "membershipRequestReceived.automation.json",
+    "membershipRequestStaff.automation.json",
+    "membershipRequestApproved.automation.json",
+    "membershipRequestNotApproved.automation.json",
+    "memberFromRequest.automation.json",
+    "donorFromRequest.automation.json"
   ],
   "setup": {
     "roles": [
@@ -24,10 +38,14 @@
         "key": "membership-manager",
         "label": "Membership manager",
         "permissions": [
-          "record:member:*",
+          "record:member:read",
+          "record:member:update",
+          "record:member:export",
           "record:member:transition:*",
           "record:membershipFee:*",
           "record:membershipFee:transition:*",
+          "record:membershipRequest:*",
+          "record:donor:read",
           "people:read",
           "report:memberRegister:run",
           "report:membershipFeeRegister:run"

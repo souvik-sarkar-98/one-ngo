@@ -1,5 +1,6 @@
 {
   "key": "printReceipt",
+  "hidden": false,
   "recordType": "donation",
   "label": "Print receipt",
   "placement": ["panel", "row"],

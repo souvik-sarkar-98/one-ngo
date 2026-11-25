@@ -18,6 +18,12 @@ export const DEFINITION_KINDS = [
 ] as const;
 export type DefinitionKind = (typeof DEFINITION_KINDS)[number];
 
+/** Kinds the app shows to people, which an organisation may keep out of menus with `hidden`. */
+export const HIDEABLE_KINDS = ['recordType', 'recordGroup', 'listView', 'workflow', 'action', 'page', 'report', 'reportGroup'] as const satisfies readonly DefinitionKind[];
+export type HideableKind = (typeof HIDEABLE_KINDS)[number];
+
+export const isHideable = (kind: DefinitionKind): kind is HideableKind => (HIDEABLE_KINDS as readonly string[]).includes(kind);
+
 export type FieldType =
   | 'text'
   | 'longText'
@@ -63,6 +69,16 @@ export interface FieldDef {
   max?: number;
   maxLength?: number;
   calculated?: string;
+  /**
+   * Expression that suggests a value for an editable text field from other fields. It fills the field when
+   * the fields it reads change, and only while the field is still blank or still holds the last suggestion;
+   * a value the person typed is kept.
+   */
+  defaultFrom?: string;
+  /** A boolean field's starting value on a new record, for example true for a box that starts ticked. Existing records keep what they hold. */
+  defaultValue?: boolean;
+  /** Filled in on save when empty, from a pattern of {yymm:<date field>}, {initial:<text field>} and one {seq:N} counter last. Read-only. */
+  generated?: { pattern: string };
   /** Same as readPermission record:<type>:sensitive, unless readPermission is set. */
   sensitive?: boolean;
   /** Whether erasing the record's data subject clears this field; by default text, contact, location, signature, file and sensitive fields. */
@@ -83,9 +99,14 @@ export interface FieldDef {
   copyFrom?: { reference: string; field: string };
   /**
    * Kept equal to a source. `via` is a reference or person field on this record type.
-   * A reference follows a field of the chosen record. A person follows an account field: `id`, `name` or `email`.
+   * A reference follows a field of the chosen record. A person follows an account field: `id`, `name`, `email`, or `joinedAt` (the day they joined, for a date field).
    */
   follow?: { via: string; field: string };
+  /**
+   * A person field only: the picker finds people whose email is exactly the value of this email field on the
+   * same record, and includes invited people who have not signed in yet.
+   */
+  emailFrom?: string;
   /** No two records of the organisation may share a value. Blanks are allowed more than once. */
   unique?: boolean;
   /** Regular expression the whole value must match. */
@@ -120,6 +141,8 @@ export type ListViewSection =
 /** A named group of record types for menus and the home page. */
 export interface RecordGroupDef {
   key: string;
+  /** Kept out of menus, lists and pages; records and permissions stay. Set on the Modules screen. */
+  hidden?: boolean;
   label: string;
   /** Lower comes first. */
   order?: number;
@@ -131,6 +154,8 @@ export interface RecordGroupDef {
 /** A named group of reports on the Reports screen. A report in several groups shows in the first. */
 export interface ReportGroupDef {
   key: string;
+  /** Kept out of menus, lists and pages; records and permissions stay. Set on the Modules screen. */
+  hidden?: boolean;
   label: string;
   /** Lower comes first. */
   order?: number;
@@ -140,6 +165,8 @@ export interface ReportGroupDef {
 /** Configures the list dashboard (chips, filters, rows, detail, create, edit) for a record type. */
 export interface ListViewDef {
   key: string;
+  /** Kept out of menus, lists and pages; records and permissions stay. Set on the Modules screen. */
+  hidden?: boolean;
   recordType: string;
   label?: string;
   pageSize?: number;
@@ -210,6 +237,8 @@ export interface PublicAccessDef {
 
 export interface RecordTypeDef {
   key: string;
+  /** Kept out of menus, lists and pages; records and permissions stay. Set on the Modules screen. */
+  hidden?: boolean;
   label: string;
   pluralLabel?: string;
   description?: string;
@@ -235,6 +264,8 @@ export interface RecordTypeDef {
 
 export interface WorkflowDef {
   key: string;
+  /** Kept out of menus, lists and pages; records and permissions stay. Set on the Modules screen. */
+  hidden?: boolean;
   recordType: string;
   /** Primary workflows hold the record's status; parallel ones run beside it. Default primary. */
   role?: 'primary' | 'parallel';
@@ -459,6 +490,8 @@ export type ActionStep =
 /** A button on the record panel, the row menu, or the bulk bar that runs steps on a record. */
 export interface ActionDef {
   key: string;
+  /** Kept out of menus, lists and pages; records and permissions stay. Set on the Modules screen. */
+  hidden?: boolean;
   recordType: string;
   label: string;
   placement: ('panel' | 'row' | 'bulk')[];
@@ -515,6 +548,8 @@ export type Widget = { permission?: string } & (
 /** A screen of widgets. The page whose key is `home` is the Home screen; every other page opens from the navigation. */
 export interface PageDef {
   key: string;
+  /** Kept out of menus, lists and pages; records and permissions stay. Set on the Modules screen. */
+  hidden?: boolean;
   label: string;
   /** Roles; empty means everyone. */
   audience?: string[];
@@ -596,6 +631,8 @@ export interface ReportColumn {
 /** A report: parameters, datasets, calculations, an optional custom step, and PDF and Excel output. */
 export interface ReportDef {
   key: string;
+  /** Kept out of menus, lists and pages; records and permissions stay. Set on the Modules screen. */
+  hidden?: boolean;
   label: string;
   /** Roles that may run it, besides holding `report:<key>:run`. Empty means anyone with that permission. */
   audience?: string[];

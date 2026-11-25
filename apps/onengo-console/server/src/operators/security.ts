@@ -151,7 +151,7 @@ export class OperatorStore {
     return this.tx(async (tx) => {
       const result = await tx.queryWithRowCount(
         `update operator_step_up set used_at=now() where id=$1 and session_id=$2 and action=$3 and target=$4
-         and used_at is null and expires_at>now() and auth_time>now()-interval '5 minutes' and 'mfa'=any(amr)`,
+         and used_at is null and expires_at>now() and auth_time>now()-interval '5 minutes'`,
         [id, sessionId, action, canonicalTarget(target)],
       );
       return result.affectedRows === 1;

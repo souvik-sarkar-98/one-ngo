@@ -40,7 +40,7 @@ const squash = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 
 /** Fields a column can fill: not calculated, not kept from other records, not files. */
 export function importable(f: FieldDef): boolean {
-  return !f.calculated && !f.rollup && f.type !== 'file' && f.type !== 'signature';
+  return !f.calculated && !f.rollup && !f.generated && f.type !== 'file' && f.type !== 'signature';
 }
 
 /** Each column matched to an unused importable field with the same label or key, ignoring case, spaces and punctuation. */

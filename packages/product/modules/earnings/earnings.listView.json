@@ -1,5 +1,6 @@
 {
   "key": "earnings",
+  "hidden": false,
   "recordType": "earning",
   "label": "Earnings",
   "pageSize": 20,
