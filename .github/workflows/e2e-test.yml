@@ -74,10 +74,15 @@ jobs:
           CONSOLE_INPUT: ${{ inputs.console_url }}
           APP_VAR: ${{ vars.PUBLIC_BASE_URL }}
           CONSOLE_VAR: ${{ vars.CONSOLE_PUBLIC_BASE_URL }}
+          HAS_PASSWORD: ${{ secrets.E2E_PASSWORD != '' && 'yes' || '' }}
         run: |
           set -euo pipefail
           if [ "$TARGET" = prod ] && [ "$SUITE" = full ]; then
             echo "::error::The full suite signs in and writes records. It is not allowed on prod. Choose suite 'selected'."
+            exit 1
+          fi
+          if [ "$SUITE" = full ] && [ -z "${HAS_PASSWORD:-}" ]; then
+            echo "::error::The full suite needs the E2E_PASSWORD secret on the $TARGET environment."
             exit 1
           fi
           app="${APP_INPUT:-$APP_VAR}"
@@ -98,8 +103,8 @@ jobs:
             echo "- Console: ${console:-not used}"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
@@ -121,7 +126,7 @@ jobs:
           API_BASE_URL: ${{ steps.where.outputs.app }}
           CONSOLE_BASE_URL: ${{ steps.where.outputs.console }}
           E2E_ORG: ${{ vars.E2E_ORG || 'riverbank' }}
-          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD || 'Password@01' }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
           CONSOLE_E2E_URL: ${{ inputs.suite == 'full' && vars.E2E_CONSOLE == 'true' && steps.where.outputs.console || '' }}
           CONSOLE_E2E_OPERATOR: ${{ vars.CONSOLE_E2E_OPERATOR || 'operator.full@onengo.local' }}
         run: |
@@ -133,7 +138,7 @@ jobs:
 
       - name: Upload the Playwright report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: playwright-${{ inputs.suite }}-${{ inputs.target }}-${{ github.run_id }}
           path: |

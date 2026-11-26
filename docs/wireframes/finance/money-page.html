@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Money page - wireframe</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<nav class="topnav"><a href="index.html">Finance wireframes</a><span>/</span><b>Money page</b></nav>
+<header class="page">
+  <h1>Money page <span class="ws">WS3</span><span class="ws">WS4</span><span class="ws">WS5</span></h1>
+  <p>The existing page at <code>/accounts</code> lists each money account. It gains a balances card with an "as on" date, new row actions (Statement, Reconcile, Transfer), a Transfer dialog, and an overdraft default of "not allowed". All figures are made up.</p>
+  <div class="legend">
+    <span class="key"><i class="k-new"></i> New</span>
+    <span class="key"><i class="k-chg"></i> Changed</span>
+    <span class="key"><i class="k-old"></i> Existing, unchanged</span>
+  </div>
+</header>
+
+<main class="page">
+
+<h2 class="sec">1. Money page, desktop</h2>
+<p class="sub">Shown to people with <code>money:accounts:read</code>. Statement needs the same permission. Reconcile needs <code>money:reconcile</code> and Transfer needs <code>money:transfer</code>, so each button is hidden for people without it.</p>
+
+<div class="row2">
+<div>
+<div class="browser">
+  <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.onengo.example/accounts</span></div>
+  <div class="scr" style="min-height:760px">
+    <div class="appbar"><span class="brand">OneNGO</span><span class="org">Asha Trust</span><span class="sp"></span><span class="av">SS</span></div>
+    <div class="body">
+      <nav class="rail">
+        <div class="nv"><span class="g">&#8962;</span>Home</div>
+        <div class="nv"><span class="g">&#9776;</span>Records</div>
+        <div class="nv on"><span class="g">&#8377;</span>Money</div>
+        <div class="nv"><span class="g">&#9638;</span>Reports</div>
+        <div class="nv"><span class="g">&#9993;</span>Inbox</div>
+      </nav>
+      <div class="main">
+        <div class="crumbs"><a href="#">Home</a><span class="sep">&rsaquo;</span>Money</div>
+        <div class="pagehead">
+          <h1>Money accounts</h1>
+          <span class="btn is-new"><a href="trial-balance.html" style="color:inherit">Trial balance</a></span>
+          <span class="btn is-new">Transfer <span class="pin n">1</span></span>
+          <span class="btn primary">Open account</span>
+        </div>
+
+        <div class="card is-new" style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+            <h3 style="margin:0;flex:1">Balances as on <span class="pin n">2</span></h3>
+            <div class="inp" style="width:170px">26 Nov 2026 <span>&#128197;</span></div>
+            <span class="btn sm">Export CSV</span>
+          </div>
+          <div class="kpis">
+            <div class="kpi total"><span>Total</span><b>&#8377;3,42,500.00</b></div>
+            <div class="kpi"><span>Main bank (SBI)</span><b>&#8377;2,10,400.00</b></div>
+            <div class="kpi"><span>Project bank (HDFC)</span><b>&#8377;1,02,100.00</b></div>
+            <div class="kpi"><span>Cash in hand</span><b>&#8377;30,000.00</b></div>
+          </div>
+          <p class="hint">Changing the date recalculates every account as on that day. Closed accounts are left out.</p>
+        </div>
+
+        <table class="t">
+          <thead><tr>
+            <th>Name</th><th>Kind</th><th>Ledger account</th><th>UPI ID</th><th class="n">Balance</th>
+            <th class="is-new">Overdraft <span class="pin n">3</span></th><th>Status</th><th>Actions <span class="pin">4</span></th>
+          </tr></thead>
+          <tbody>
+            <tr>
+              <td><b>Main bank account (SBI)</b></td><td>Bank</td><td><code>BANK</code></td><td>asha.bank@sbi</td>
+              <td class="n">&#8377;2,10,400.00</td><td><span class="badge off">Not allowed</span></td><td><span class="badge ok">Active</span></td>
+              <td><div class="acts"><span class="btn link is-new">Statement</span><span class="btn link is-new">Reconcile</span><span class="btn link is-new">Transfer</span><span class="btn link">Edit</span></div></td>
+            </tr>
+            <tr>
+              <td><b>Project bank account (HDFC)</b></td><td>Bank</td><td><code>BANK_HDFC</code></td><td>project@hdfcbank</td>
+              <td class="n">&#8377;1,02,100.00</td><td><span class="badge off">Not allowed</span></td><td><span class="badge ok">Active</span></td>
+              <td><div class="acts"><span class="btn link">Statement</span><span class="btn link">Reconcile</span><span class="btn link">Transfer</span><span class="btn link">Edit</span></div></td>
+            </tr>
+            <tr>
+              <td><b>Cash in hand</b></td><td>Cash</td><td><code>CASH</code></td><td class="mini">none</td>
+              <td class="n">&#8377;30,000.00</td><td><span class="badge off">Not allowed</span></td><td><span class="badge ok">Active</span></td>
+              <td><div class="acts"><span class="btn link">Statement</span><span class="btn link">Transfer</span><span class="btn link">Edit</span></div></td>
+            </tr>
+            <tr style="opacity:.6">
+              <td><b>Old savings account</b></td><td>Bank</td><td><code>BANK_OLD</code></td><td class="mini">none</td>
+              <td class="n">&#8377;0.00</td><td><span class="badge off">Not allowed</span></td><td><span class="badge off">Closed</span></td>
+              <td><div class="acts"><span class="btn link">Statement</span></div></td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="hint">Reconcile is not offered for cash accounts, because there is no bank statement to compare with.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <h3>What changes</h3>
+  <ol>
+    <li><b>Transfer button</b> (new). Opens the Transfer dialog below. Today there is a server route but no screen. <span class="ws">WS5</span></li>
+    <li><b>Balances card</b> (new). Calls <code>GET /api/money/balances?asOf=</code>. Shows a total and each active account. <span class="ws">WS4</span><span class="ws">WS5</span></li>
+    <li><b>Overdraft column</b> (new). Shows whether the account may go below zero. Editing it stays in the existing Edit dialog.</li>
+    <li><b>Row actions</b> (changed). Statement, Reconcile and Transfer join Edit. Cash accounts have no Reconcile. Closed accounts keep only Statement.</li>
+    <li><b>Trial balance button</b> (new, not pinned on the screen). Opens the <a href="trial-balance.html">Trial balance</a>. Shown with <code>ledger:read</code>. <span class="ws">WS7</span></li>
+  </ol>
+</div>
+</div>
+
+<div>
+  <p class="cap">Mobile, same page</p>
+  <div class="phone">
+    <div class="scr">
+      <div class="appbar"><span class="brand">OneNGO</span><span class="org">Asha Trust</span><span class="sp"></span><span class="av">SS</span></div>
+      <div class="main">
+        <div class="pagehead" style="margin-bottom:8px"><h1 style="font-size:1.05rem;min-width:0">Money accounts</h1><span class="btn sm primary">Open</span></div>
+        <div class="card is-new" style="margin-bottom:10px;padding:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+            <h3 style="margin:0;font-size:13px">Balances as on</h3>
+            <div class="inp" style="width:130px;min-height:30px;padding:4px 8px;font-size:12px">26 Nov 2026</div>
+          </div>
+          <div class="kpi total" style="margin-top:8px"><span>Total</span><b>&#8377;3,42,500.00</b></div>
+        </div>
+        <div class="mcard">
+          <div class="top"><div><b>Main bank account (SBI)</b><div class="meta">Bank &middot; BANK &middot; asha.bank@sbi</div></div><span class="badge ok">Active</span></div>
+          <div class="bal">&#8377;2,10,400.00</div>
+          <div class="acts" style="margin-top:6px"><span class="btn sm is-new">Statement</span><span class="btn sm is-new">Reconcile</span><span class="btn sm is-new">Transfer</span><span class="btn sm">Edit</span></div>
+        </div>
+        <div class="mcard">
+          <div class="top"><div><b>Project bank account (HDFC)</b><div class="meta">Bank &middot; BANK_HDFC &middot; project@hdfcbank</div></div><span class="badge ok">Active</span></div>
+          <div class="bal">&#8377;1,02,100.00</div>
+          <div class="acts" style="margin-top:6px"><span class="btn sm">Statement</span><span class="btn sm">Reconcile</span><span class="btn sm">Transfer</span><span class="btn sm">Edit</span></div>
+        </div>
+        <div class="mcard">
+          <div class="top"><div><b>Cash in hand</b><div class="meta">Cash &middot; CASH</div></div><span class="badge ok">Active</span></div>
+          <div class="bal">&#8377;30,000.00</div>
+        </div>
+      </div>
+      <div class="navbar">
+        <div class="nv"><span class="g">&#8962;</span>Home</div>
+        <div class="nv"><span class="g">&#9776;</span>Records</div>
+        <div class="nv on"><span class="g">&#8377;</span>Money</div>
+        <div class="nv"><span class="g">&#9993;</span>Inbox</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<h2 class="sec">2. Transfer dialog <span class="ws">WS3</span><span class="ws">WS5</span></h2>
+<p class="sub">New. Moving money between two of the organisation's accounts. A transfer is never counted as income or expense. The second state shows the overdraft rule: the person can proceed only by giving a reason, which is logged.</p>
+
+<div class="grid2">
+  <div>
+    <p class="cap">State A: normal transfer</p>
+    <div class="stage">
+      <div class="dialog is-new">
+        <div class="dlg-h"><h2>Transfer money</h2><span class="x">&#10005;</span></div>
+        <div class="dlg-b">
+          <div class="two">
+            <div class="field"><label>From <span class="req">*</span></label><div class="sel">Main bank account (SBI)</div><p class="help">Balance &#8377;2,10,400.00</p></div>
+            <div class="field"><label>To <span class="req">*</span></label><div class="sel">Cash in hand</div><p class="help">Balance &#8377;30,000.00</p></div>
+          </div>
+          <div class="two">
+            <div class="field"><label>Amount <span class="req">*</span></label><div class="inp">&#8377; 25,000.00</div></div>
+            <div class="field"><label>Date <span class="req">*</span></label><div class="inp">26 Nov 2026 <span>&#128197;</span></div></div>
+          </div>
+          <div class="field"><label>Reference</label><div class="inp"><span class="ph">Cheque or UTR number (optional)</span></div></div>
+          <p class="hint">After the transfer: Main bank &#8377;1,85,400.00, Cash &#8377;55,000.00.</p>
+        </div>
+        <div class="dlg-f"><span class="btn">Cancel</span><span class="btn primary">Transfer</span></div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <p class="cap">State B: would go below zero</p>
+    <div class="stage">
+      <div class="dialog is-new">
+        <div class="dlg-h"><h2>Transfer money</h2><span class="x">&#10005;</span></div>
+        <div class="dlg-b">
+          <div class="banner err"><span>&#9888;</span><span><b>Main bank account (SBI)</b> would go below zero (&#8377;-39,600.00). This account does not allow a negative balance.</span></div>
+          <div class="two">
+            <div class="field"><label>From <span class="req">*</span></label><div class="sel">Main bank account (SBI)</div></div>
+            <div class="field"><label>To <span class="req">*</span></label><div class="sel">Cash in hand</div></div>
+          </div>
+          <div class="two">
+            <div class="field"><label>Amount <span class="req">*</span></label><div class="inp bad">&#8377; 2,50,000.00</div></div>
+            <div class="field"><label>Date <span class="req">*</span></label><div class="inp">26 Nov 2026</div></div>
+          </div>
+          <div class="field"><label>Reason to go below zero <span class="req">*</span></label><div class="inp bad"><span class="ph">For example: cheque deposit clears tomorrow</span></div>
+            <p class="err">Enter a reason to continue. It is saved in the audit log.</p></div>
+        </div>
+        <div class="dlg-f"><span class="btn">Cancel</span><span class="btn primary">Transfer with reason</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="notes">
+  <h3>Behaviour</h3>
+  <ul>
+    <li>From and To list active accounts only, and cannot be the same account.</li>
+    <li>The "after the transfer" line is calculated in the browser from the balances already loaded; the server decides.</li>
+    <li>If the server refuses with the overdraft message, the reason field appears. Sending a reason repeats the request with <code>overrideReason</code>.</li>
+    <li>If the organisation has set a transfer matrix that forbids the pair, the dialog shows the server's message.</li>
+  </ul>
+</div>
+
+<h2 class="sec">3. Open account dialog <span class="ws">WS3</span></h2>
+<p class="sub">Existing dialog. The overdraft box is now unticked by default for bank accounts, with a short explanation. Leaving the ledger code empty creates a new ledger account for a second bank.</p>
+<div class="grid2">
+  <div class="stage">
+    <div class="dialog">
+      <div class="dlg-h"><h2>Open account</h2><span class="x">&#10005;</span></div>
+      <div class="dlg-b">
+        <div class="two">
+          <div class="field"><label>Key <span class="req">*</span></label><div class="inp">hdfc</div><p class="help">Lowercase letters, digits and dashes.</p></div>
+          <div class="field"><label>Kind <span class="req">*</span></label><div class="sel">Bank</div></div>
+        </div>
+        <div class="field"><label>Name <span class="req">*</span></label><div class="inp">Project bank account (HDFC)</div></div>
+        <div class="field"><label>UPI ID</label><div class="inp">project@hdfcbank</div></div>
+        <div class="field"><label>Custodian</label><div class="inp">Treasurer</div></div>
+        <div class="field"><label>Ledger account code</label><div class="inp"><span class="ph">Leave empty for a new account</span></div>
+          <p class="help">Empty creates <code>BANK_HDFC</code>. To use an existing one such as <code>BANK</code>, type its code.</p></div>
+        <div class="chk is-chg"><i></i> Allow a negative balance <span class="pin">1</span></div>
+        <p class="help">Default is off. Turn on only if the bank gives an overdraft facility.</p>
+      </div>
+      <div class="dlg-f"><span class="btn">Cancel</span><span class="btn primary">Open account</span></div>
+    </div>
+  </div>
+  <div class="notes" style="margin-top:0">
+    <h3>What changes</h3>
+    <ol>
+      <li><b>Overdraft default</b> (changed). The box starts unticked. Today <code>openAccountDefaults</code> in <code>core/money/money.ts</code> starts it ticked. The help line is new text.</li>
+    </ol>
+    <p class="mini" style="margin-top:10px">Edit account is unchanged: name, UPI ID, custodian and the overdraft box. Turning the overdraft off is refused while the balance is negative, as today.</p>
+  </div>
+</div>
+
+</main>
+</body>
+</html>

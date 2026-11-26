@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { Btn, Icon, PageFrame } from '@onengo/web-kit';
-import { MIGRATION_STEPS, ROLE_SEPARATORS, type MigrationStep, type ProfileStatus } from '../../core/admin/migration';
+import { MIGRATION_STEPS, ROLE_SEPARATORS, type ImportKind, type MigrationStep, type ProfileStatus } from '../../core/admin/migration';
 import { TranslatePipe } from '../../services/i18n';
 import { DialogFocus } from '../../ui/dialog';
 import { ScreenHeading } from '../../ui/screen-heading';
@@ -82,6 +82,31 @@ import { MigrationStore } from './migration-store';
 
           @switch (store.step()) {
             @case ('files') {
+              <label class="migration__field migration__import">
+                <span>{{ 'ui.admin.migration.importType' | t }}</span>
+                <select [disabled]="off" [attr.aria-label]="'ui.admin.migration.importType' | t" aria-describedby="migration-import-hint" (change)="pickKind($any($event.target))">
+                  @for (o of store.kindChoices(); track o.kind) {
+                    <option [value]="o.kind" [selected]="o.kind === store.importKind()" [disabled]="o.disabled">{{ o.option | t }}</option>
+                  }
+                </select>
+                <span class="migration__hint" id="migration-import-hint">{{ store.importOption().hint | t }}</span>
+              </label>
+              @if (store.confirmKind()) {
+                <div class="migration__shade" data-dialog-shade role="presentation">
+                  <div class="card migration__dialog" appDialog role="dialog" aria-labelledby="migration-reset-title" (escape)="store.confirmKind.set(null)">
+                    <h2 id="migration-reset-title">{{ 'ui.admin.migration.reset.title' | t }}</h2>
+                    <p>{{ 'ui.admin.migration.reset.body' | t: { count: p.sources.length, files: store.attachTotals().count } }}</p>
+                    <div class="admin__line">
+                      <button appBtn type="button" (click)="store.confirmKind.set(null)">{{ 'ui.common.cancel' | t }}</button>
+                      <button appBtn="danger" type="button" (click)="store.applyKind()">{{ 'ui.admin.migration.reset.confirm' | t }}</button>
+                    </div>
+                  </div>
+                </div>
+              }
+              @if (store.importKind() === 'files') {
+                <h3 class="migration__section">{{ 'ui.admin.migration.filesKind.csvTitle' | t }}</h3>
+                <p class="migration__hint">{{ 'ui.admin.migration.filesKind.csvHint' | t }}</p>
+              }
               <label
                 class="migration__drop"
                 [class.migration__drop--over]="over()"
@@ -104,6 +129,7 @@ import { MigrationStore } from './migration-store';
                         <strong>{{ src.fileName }}</strong>
                         <span class="muted">{{ 'ui.admin.migration.fileFacts' | t: { columns: src.columns.length, rows: src.rowCount } }}</span>
                       </span>
+                      <span class="badge">{{ store.kindLabelOf(src) | t }}</span>
                       @if (src.purgedAt) {
                         <span class="badge warn">{{ 'ui.admin.migration.sourceDeleted' | t }}</span>
                       }
@@ -113,8 +139,8 @@ import { MigrationStore } from './migration-store';
                   }
                 </ul>
               }
-              @if (showAttachments) {
-              <h3 class="migration__section">{{ 'ui.admin.migration.attach.title' | t }} <span class="badge">{{ 'ui.admin.migration.attach.optional' | t }}</span></h3>
+              @if (store.importKind() === 'files') {
+              <h3 class="migration__section">{{ 'ui.admin.migration.filesKind.filesTitle' | t }}</h3>
               @if (store.purged()) {
                 <div class="notice warn" role="status">{{ 'ui.admin.migration.attach.deleted' | t }}</div>
               }
@@ -213,24 +239,30 @@ import { MigrationStore } from './migration-store';
                   <span>{{ 'ui.admin.migration.noFiles' | t }}</span>
                 </div>
               } @else {
-                <div class="migration__files" role="group" [attr.aria-label]="'ui.admin.migration.group.title' | t">
-                  @for (g of store.groups(); track g.key) {
-                    <button type="button" class="migration__chip" [class.migration__chip--on]="g.key === store.group()" [attr.aria-pressed]="g.key === store.group()" (click)="store.openGroupOf(g.key)">
-                      <span>{{ 'ui.admin.migration.group.chip' | t: { group: store.groupLabel(g.key), count: g.files.length } }}</span>
-                    </button>
-                  }
-                  <select class="migration__add-group" [attr.aria-label]="'ui.admin.migration.group.add' | t" (change)="store.addGroup($any($event.target).value); $any($event.target).value = ''">
-                    <option value="">{{ 'ui.admin.migration.group.add' | t }}</option>
-                    @if (!store.hasPeopleGroup()) {
-                      <option [value]="store.peopleGroup" [disabled]="store.peopleOption().disabled">{{ store.peopleOption().label | t }}</option>
+                @if (store.kindsPresent().length > 1) {
+                  <label class="migration__field migration__import">
+                    <span>{{ 'ui.admin.migration.mapKind' | t }}</span>
+                    <select (change)="store.setMapKind($any($event.target).value)">
+                      @for (k of store.kindsPresent(); track k) {
+                        <option [value]="k" [selected]="k === store.mapKind()">{{ store.kindLabel(k) | t }}</option>
+                      }
+                    </select>
+                  </label>
+                }
+                @if (store.mapKind() === 'records') {
+                  <div class="migration__files" role="group" [attr.aria-label]="'ui.admin.migration.group.title' | t">
+                    @for (g of store.recordGroups(); track g.key) {
+                      <button type="button" class="migration__chip" [class.migration__chip--on]="g.key === store.group()" [attr.aria-pressed]="g.key === store.group()" (click)="store.openGroupOf(g.key)">
+                        <span>{{ 'ui.admin.migration.group.chip' | t: { group: store.groupLabel(g.key), count: g.files.length } }}</span>
+                      </button>
                     }
-                    @for (type of store.groupChoices(); track type.key) {
-                      <option [value]="type.key">{{ type.label }}</option>
-                    }
-                  </select>
-                </div>
-                @if (!store.peopleAllowed() && !store.hasPeopleGroup()) {
-                  <p class="migration__hint">{{ 'ui.admin.migration.kindNoPeople' | t }}</p>
+                    <select class="migration__add-group" [attr.aria-label]="'ui.admin.migration.group.add' | t" (change)="store.addGroup($any($event.target).value); $any($event.target).value = ''">
+                      <option value="">{{ 'ui.admin.migration.group.add' | t }}</option>
+                      @for (type of store.groupChoices(); track type.key) {
+                        <option [value]="type.key">{{ type.label }}</option>
+                      }
+                    </select>
+                  </div>
                 }
                 @if (!store.types().length) {
                   <div class="notice warn" role="status">{{ 'ui.admin.migration.noTypes' | t }}</div>
@@ -238,7 +270,93 @@ import { MigrationStore } from './migration-store';
                 @if (store.ungrouped().length) {
                   <div class="notice warn" role="status">{{ 'ui.admin.migration.group.ungrouped' | t: { count: store.ungrouped().length, files: ungroupedNames() } }}</div>
                 }
-                @if (store.openGroup(); as g) {
+                @if (store.mapKind() === 'files') {
+                  <section class="migration__target" aria-labelledby="migration-files-title">
+                    <div class="migration__target-head">
+                      <strong id="migration-files-title">{{ 'ui.admin.migration.kindFiles' | t }}</strong>
+                    </div>
+                    <div class="migration__target-body">
+                      <p class="migration__hint">{{ 'ui.admin.migration.filesKind.mapHint' | t }}</p>
+                      @if (!store.fileTypes().length) {
+                        <div class="notice warn" role="status">{{ 'ui.admin.migration.filesKind.noTypes' | t }}</div>
+                      }
+                      @for (src of store.filesSources(); track src.id) {
+                        @let tg = store.filesTarget(src.id);
+                        <fieldset class="migration__kind">
+                          <legend>{{ src.fileName }}</legend>
+                          <span class="migration__hint">{{ 'ui.admin.migration.fileFacts' | t: { columns: src.columns.length, rows: src.rowCount } }}</span>
+                          <div class="migration__strip">
+                            <label class="migration__field">
+                              <span>{{ 'ui.admin.migration.filesKind.recordType' | t }}</span>
+                              <select (change)="store.setFilesType(src.id, $any($event.target).value)">
+                                <option value="" [selected]="!tg" [disabled]="!!src.mapping">{{ 'ui.admin.migration.filesKind.chooseType' | t }}</option>
+                                @for (type of store.fileTypes(); track type.key) {
+                                  <option [value]="type.key" [selected]="type.key === store.filesTypeOf(src.id)">{{ type.label }}</option>
+                                }
+                              </select>
+                            </label>
+                          </div>
+                          @if (tg) {
+                            <div class="migration__strip">
+                              <label class="migration__field">
+                                <span>{{ 'ui.admin.migration.oldId' | t }}</span>
+                                <select (change)="store.setFilesOldId(src.id, $any($event.target).value)">
+                                  @for (col of src.columns; track col.name) {
+                                    <option [value]="col.name" [selected]="col.name === tg.oldId">{{ col.name }}</option>
+                                  }
+                                </select>
+                                <span class="migration__hint">{{ 'ui.admin.migration.filesKind.oldIdHint' | t }}</span>
+                                @if (store.filesIssue(src.id, '/oldId'); as e) {
+                                  <span class="migration__issue">{{ e }}</span>
+                                }
+                              </label>
+                            </div>
+                            @for (c of store.filesChoices(src.id); track c.field.key) {
+                              <div class="migration__strip">
+                                <label class="migration__field">
+                                  <span>{{ c.field.label }}</span>
+                                  <select (change)="store.setFilesColumn(src.id, c, $any($event.target).value)">
+                                    <option value="" [selected]="!c.column">{{ 'ui.admin.migration.notImported' | t }}</option>
+                                    @for (col of src.columns; track col.name) {
+                                      <option [value]="col.name" [selected]="c.column === col.name">{{ store.columnLabel(col) }}</option>
+                                    }
+                                  </select>
+                                  <span class="migration__hint">{{ 'ui.admin.migration.file.columnHint' | t }}</span>
+                                  @if (store.filesIssue(src.id, '/files/' + c.field.key + '/column') || store.filesIssue(src.id, '/files/' + c.field.key); as e) {
+                                    <span class="migration__issue">{{ e }}</span>
+                                  }
+                                </label>
+                                @if (c.column) {
+                                  <label class="migration__field">
+                                    <span>{{ 'ui.admin.migration.file.onMissing' | t }}</span>
+                                    <select (change)="store.setFilesOption(src.id, c, 'onMissing', $any($event.target).value)">
+                                      <option value="fail" [selected]="c.onMissing === 'fail'">{{ 'ui.admin.migration.file.fail' | t }}</option>
+                                      <option value="skip" [selected]="c.onMissing === 'skip'">{{ 'ui.admin.migration.file.skip' | t }}</option>
+                                    </select>
+                                  </label>
+                                  @if (c.field.multiple) {
+                                    <label class="migration__field">
+                                      <span>{{ 'ui.admin.migration.file.separator' | t }}</span>
+                                      <select (change)="store.setFilesOption(src.id, c, 'separator', $any($event.target).value)">
+                                        <option value=";" [selected]="c.separator === ';'">{{ 'ui.admin.migration.separator.semicolon' | t }}</option>
+                                        <option value="," [selected]="c.separator === ','">{{ 'ui.admin.migration.separator.comma' | t }}</option>
+                                      </select>
+                                    </label>
+                                  }
+                                }
+                              </div>
+                            }
+                            @if (store.filesIssue(src.id, '/fields'); as e) {
+                              <div class="migration__issue">{{ e }}</div>
+                            }
+                          }
+                        </fieldset>
+                      } @empty {
+                        <p class="migration__hint">{{ 'ui.admin.migration.filesKind.none' | t }}</p>
+                      }
+                    </div>
+                  </section>
+                } @else if (store.openGroup(); as g) {
                   <section class="migration__target" aria-labelledby="migration-group-title">
                     <div class="migration__target-head">
                       <strong id="migration-group-title">{{ store.groupLabel(g.key) }}</strong>
@@ -249,7 +367,7 @@ import { MigrationStore } from './migration-store';
                     <div class="migration__target-body">
                       <fieldset class="migration__kind">
                         <legend>{{ (g.key === store.peopleGroup ? 'ui.admin.migration.group.linkPeople' : 'ui.admin.migration.group.linkRecords') | t: { group: store.groupLabel(g.key) } }}</legend>
-                        @for (src of p.sources; track src.id) {
+                        @for (src of store.linkable(); track src.id) {
                           @let l = store.linkOf(src);
                           <label class="migration__option" [class.migration__option--on]="l.linked" [class.migration__option--off]="!!l.refusal">
                             <input type="checkbox" [checked]="l.linked" [disabled]="!!l.refusal" [attr.aria-describedby]="l.refusal ? 'link-' + src.id : null" (change)="store.setLinked(src, $any($event.target).checked)" />
@@ -260,6 +378,11 @@ import { MigrationStore } from './migration-store';
                                 <span class="migration__hint" [id]="'link-' + src.id">{{ l.refusal | t }}</span>
                               }
                             </span>
+                            @if (l.linked && g.key !== store.peopleGroup) {
+                              <button type="button" class="migration__link migration__file-link" [attr.aria-expanded]="isOpen(src.id)" [attr.aria-controls]="'file-fields-' + src.id" (click)="toggleFile(src.id)">
+                                {{ 'ui.admin.migration.group.moreOptions' | t }}
+                              </button>
+                            }
                           </label>
                           @if (l.linked && g.key === store.peopleGroup && !store.peopleReady(src.id)) {
                             <div class="migration__strip">
@@ -268,8 +391,8 @@ import { MigrationStore } from './migration-store';
                           }
                           @if (l.linked && g.key !== store.peopleGroup) {
                             @let tg = store.targetIn(src.id);
-                            @if (tg) {
-                              <div class="migration__strip">
+                            @if (tg && isOpen(src.id)) {
+                              <div class="migration__strip" [id]="'file-fields-' + src.id">
                                 <label class="migration__field">
                                   <span>{{ 'ui.admin.migration.oldId' | t }}</span>
                                   <select (change)="store.setOldId(src.id, $any($event.target).value)">
@@ -288,6 +411,73 @@ import { MigrationStore } from './migration-store';
                                   <span class="migration__hint">{{ 'ui.admin.migration.group.noFields' | t }}</span>
                                 }
                               </div>
+                              <div class="migration__strip">
+                                <label class="migration__field">
+                                  <span>{{ 'ui.admin.migration.dates.createdAt' | t }}</span>
+                                  <select (change)="store.setDate(src.id, 'createdAt', $any($event.target).value)">
+                                    <option value="" [selected]="!tg.dates?.createdAt">{{ 'ui.admin.migration.dates.none' | t }}</option>
+                                    @for (col of src.columns; track col.name) {
+                                      <option [value]="col.name" [selected]="col.name === tg.dates?.createdAt">{{ col.name }}</option>
+                                    }
+                                  </select>
+                                  @if (store.issueIn(src.id, '/dates/createdAt'); as e) {
+                                    <span class="migration__issue">{{ e }}</span>
+                                  }
+                                </label>
+                                <label class="migration__field">
+                                  <span>{{ 'ui.admin.migration.dates.updatedAt' | t }}</span>
+                                  <select (change)="store.setDate(src.id, 'updatedAt', $any($event.target).value)">
+                                    <option value="" [selected]="!tg.dates?.updatedAt">{{ 'ui.admin.migration.dates.none' | t }}</option>
+                                    @for (col of src.columns; track col.name) {
+                                      <option [value]="col.name" [selected]="col.name === tg.dates?.updatedAt">{{ col.name }}</option>
+                                    }
+                                  </select>
+                                  @if (store.issueIn(src.id, '/dates/updatedAt'); as e) {
+                                    <span class="migration__issue">{{ e }}</span>
+                                  }
+                                </label>
+                                <span class="migration__hint">{{ 'ui.admin.migration.dates.hint' | t }}</span>
+                              </div>
+                              @if (store.stateAllowed() && store.openStates().length) {
+                                <div class="migration__strip">
+                                  <label class="migration__field">
+                                    <span>{{ 'ui.admin.migration.state.column' | t }}</span>
+                                    <select (change)="store.setStateColumn(src.id, $any($event.target).value)">
+                                      <option value="" [selected]="!tg.state">{{ 'ui.admin.migration.dates.none' | t }}</option>
+                                      @for (col of src.columns; track col.name) {
+                                        <option [value]="col.name" [selected]="col.name === tg.state?.column">{{ col.name }}</option>
+                                      }
+                                    </select>
+                                    @if (store.issueIn(src.id, '/state/column'); as e) {
+                                      <span class="migration__issue">{{ e }}</span>
+                                    }
+                                  </label>
+                                  <span class="migration__hint">{{ 'ui.admin.migration.state.hint' | t }}</span>
+                                </div>
+                                @if (tg.state) {
+                                  <div class="migration__strip">
+                                    @for (row of store.stateRows(src.id); track row.value) {
+                                      <label class="migration__field">
+                                        <span>{{ row.value }}</span>
+                                        <select (change)="store.setStateValue(src.id, row.value, $any($event.target).value)">
+                                          <option value="" [selected]="!row.state">{{ 'ui.admin.migration.state.choose' | t }}</option>
+                                          @for (s of store.openStates(); track s.key) {
+                                            <option [value]="s.key" [selected]="s.key === row.state">{{ s.label }}</option>
+                                          }
+                                        </select>
+                                      </label>
+                                    }
+                                    <label class="migration__field">
+                                      <span>{{ 'ui.admin.migration.state.addValue' | t }}</span>
+                                      <input type="text" #typedValue />
+                                    </label>
+                                    <button appBtn size="sm" type="button" (click)="store.addStateValue(src.id, typedValue.value); typedValue.value = ''">{{ 'ui.admin.migration.state.add' | t }}</button>
+                                    @if (store.issueIn(src.id, '/state/map'); as e) {
+                                      <span class="migration__issue">{{ e }}</span>
+                                    }
+                                  </div>
+                                }
+                              }
                             }
                           }
                         }
@@ -933,9 +1123,22 @@ export class MigrationScreen {
   readonly over = signal(false);
   /** Attachments are being dragged over their drop area. */
   readonly overFiles = signal(false);
-  /** Temporarily hidden: set to true to show the attachment upload section again. */
-  readonly showAttachments = false;
   readonly separators = ROLE_SEPARATORS.map((value, i) => ({ value, key: ['semicolon', 'comma', 'bar'][i]! }));
+
+  /** The files whose old-id, date and status settings are shown, by file id. */
+  readonly openFiles = signal<ReadonlySet<string>>(new Set());
+
+  isOpen(id: string): boolean {
+    return this.openFiles().has(id);
+  }
+
+  toggleFile(id: string): void {
+    this.openFiles.update((s) => {
+      const next = new Set(s);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  }
 
   /** The files no group holds, by name, for the notice that they are left out. */
   ungroupedNames(): string {
@@ -950,6 +1153,12 @@ export class MigrationScreen {
   /** The badge colour of a status. */
   tone(status: ProfileStatus): string {
     return status === 'done' ? 'ok' : status === 'failed' ? 'bad' : status === 'checked' ? 'warn' : '';
+  }
+
+  /** The dropdown changed. When files are held the change waits for the dialog, so the select shows the kind still in force. */
+  pickKind(select: HTMLSelectElement): void {
+    this.store.requestKind(select.value as ImportKind);
+    if (this.store.confirmKind()) select.value = this.store.importKind();
   }
 
   drop(e: DragEvent, off: boolean): void {

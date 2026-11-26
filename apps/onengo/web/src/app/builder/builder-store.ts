@@ -169,6 +169,14 @@ export class BuilderStore {
     if (await this.draft?.turnOff()) await this.session.reload();
   }
 
+  /** Deletes the definition, then goes back to its kind's list. */
+  async deleteDefinition(): Promise<void> {
+    const kind = this.state()?.kind;
+    if (!(await this.draft?.deleteDefinition())) return;
+    await this.session.reload();
+    await this.router.navigate(['/builder'], { queryParams: { kind } });
+  }
+
   async turnOn(): Promise<void> {
     if (await this.draft?.turnOn()) await this.session.reload();
   }

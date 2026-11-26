@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bank reconciliation - wireframe</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<nav class="topnav"><a href="index.html">Finance wireframes</a><span>/</span><b>Bank reconciliation</b></nav>
+<header class="page">
+  <h1>Bank reconciliation <span class="ws">WS4</span><span class="ws">WS5</span></h1>
+  <p>A new three-step screen at <code>/accounts/:key/reconcile</code>. It compares one bank account's books with the bank's statement. The server already does the work (import, auto-match, match, book, ignore, report, sign-off); only the screen is new. Needs <code>money:reconcile</code>. All figures are made up.</p>
+  <div class="legend">
+    <span class="key"><i class="k-new"></i> New</span>
+    <span class="key"><i class="k-chg"></i> Changed</span>
+    <span class="key"><i class="k-old"></i> Existing, unchanged</span>
+  </div>
+</header>
+
+<main class="page">
+
+<h2 class="sec">Step 1. Import the statement</h2>
+<p class="sub">Pick a CSV file from the bank, tell the app which column is which, check the preview, then import. Re-importing an overlapping file is safe: lines already held are skipped.</p>
+
+<div class="browser">
+  <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.onengo.example/accounts/upi/reconcile</span></div>
+  <div class="scr" style="min-height:820px">
+    <div class="appbar"><span class="brand">OneNGO</span><span class="org">Asha Trust</span><span class="sp"></span><span class="av">SS</span></div>
+    <div class="body">
+      <nav class="rail">
+        <div class="nv"><span class="g">&#8962;</span>Home</div>
+        <div class="nv"><span class="g">&#9776;</span>Records</div>
+        <div class="nv on"><span class="g">&#8377;</span>Money</div>
+        <div class="nv"><span class="g">&#9638;</span>Reports</div>
+        <div class="nv"><span class="g">&#9993;</span>Inbox</div>
+      </nav>
+      <div class="main">
+        <div class="crumbs"><a href="#">Home</a><span class="sep">&rsaquo;</span><a href="#">Money</a><span class="sep">&rsaquo;</span><a href="#">Main bank account (SBI)</a><span class="sep">&rsaquo;</span>Reconcile</div>
+        <div class="pagehead"><h1>Reconcile: Main bank account (SBI)</h1><span class="badge ok">Last signed off 31 Oct 2026</span></div>
+        <div class="stepper is-new">
+          <div class="step on"><b>1</b> Import statement</div>
+          <div class="step"><b>2</b> Review lines</div>
+          <div class="step"><b>3</b> Reconcile and sign off</div>
+        </div>
+
+        <div class="drop" style="margin-bottom:12px">
+          <b>sbi_statement_nov_2026.csv</b> &middot; 214 lines &middot; 38 KB<br />
+          <span class="mini">Drop a different file here, or choose one</span> <span class="btn sm" style="margin-left:6px">Choose file</span>
+        </div>
+
+        <div class="split">
+          <div class="card">
+            <h3>Match the columns <span class="pin n">1</span></h3>
+            <table class="t" style="font-size:12.5px">
+              <thead><tr><th>Column in your file</th><th>Means</th></tr></thead>
+              <tbody>
+                <tr><td><code>Txn Date</code></td><td><div class="sel" style="min-height:30px;padding:4px 8px">Date</div></td></tr>
+                <tr><td><code>Narration</code></td><td><div class="sel" style="min-height:30px;padding:4px 8px">Description</div></td></tr>
+                <tr><td><code>Debit</code></td><td><div class="sel" style="min-height:30px;padding:4px 8px">Money out</div></td></tr>
+                <tr><td><code>Credit</code></td><td><div class="sel" style="min-height:30px;padding:4px 8px">Money in</div></td></tr>
+                <tr><td><code>Chq/Ref No</code></td><td><div class="sel" style="min-height:30px;padding:4px 8px">Reference</div></td></tr>
+                <tr><td><code>Balance</code></td><td><div class="sel" style="min-height:30px;padding:4px 8px">Ignore this column</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card">
+            <h3>Format</h3>
+            <div class="field"><label>Date format</label><div class="sel">dd/mm/yyyy</div></div>
+            <div class="radio"><i></i> One amount column; negative means money out</div>
+            <div class="radio"><i class="on"></i> Separate Money out and Money in columns</div>
+            <div class="chk" style="margin-top:10px"><i class="on"></i> Remember this setup for this account <span class="pin n">2</span></div>
+            <p class="help">Saved in this browser for next time.</p>
+          </div>
+        </div>
+
+        <div class="card is-new" style="margin-top:12px">
+          <h3>Preview <span class="pin n">3</span> <span class="mini" style="font-weight:400">first 5 of 214 lines</span></h3>
+          <table class="t" style="font-size:12.5px">
+            <thead><tr><th>Date</th><th>Description</th><th>Reference</th><th class="n">Amount</th><th>Check</th></tr></thead>
+            <tbody>
+              <tr><td>03 Nov 2026</td><td>UPI/CR/NGO7K2M9QXA/Donor</td><td></td><td class="n">+5,000.00</td><td><span class="badge ok">OK</span></td></tr>
+              <tr><td>05 Nov 2026</td><td>SMS CHARGES</td><td></td><td class="n">-23.60</td><td><span class="badge ok">OK</span></td></tr>
+              <tr><td>12 Nov 2026</td><td>NEFT-ABCD-Teacher salary</td><td>N311224</td><td class="n">-18,000.00</td><td><span class="badge ok">OK</span></td></tr>
+              <tr class="hl"><td>31/02/2026</td><td>CHQ DEP 004499</td><td>004499</td><td class="n">+2,500.00</td><td><span class="badge bad">Not a date</span></td></tr>
+              <tr><td>19 Nov 2026</td><td>INT.PD 01-10-2026 to 31-10-2026</td><td></td><td class="n">+1,240.00</td><td><span class="badge ok">OK</span></td></tr>
+            </tbody>
+          </table>
+          <div class="banner warn" style="margin:10px 0 0"><span>&#9888;</span><span><b>1 line</b> has a problem and will be left out. Fix the file and import again, or continue without it.</span></div>
+        </div>
+
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+          <span class="btn">Cancel</span><span class="btn primary">Import 213 lines</span>
+        </div>
+
+        <div class="banner ok is-new" style="margin:14px 0 0"><span>&#10003;</span><span><b>Imported.</b> 190 added, 23 already held and skipped, 171 matched automatically. <b>19 lines</b> need a decision. <a href="#">Review lines</a> <span class="pin n">4</span></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <h3>What changes</h3>
+  <ol>
+    <li><b>Column mapping</b> (new). The parser reads the CSV in the browser, so no file is sent to the server until the person confirms. Banks differ, so every column is mapped by the person. <span class="ws">WS5</span></li>
+    <li><b>Remember the setup</b> (new). Stored per account in the browser. A later version could keep it on the server for all devices.</li>
+    <li><b>Preview and checks</b> (new). Rows with a bad date or amount are flagged and left out. The server also refuses zero amounts and over-long text.</li>
+    <li><b>Result and next step</b> (new). Shows the server's counts (<code>added</code>, <code>duplicates</code>, <code>matched</code>). Files over 1,000 lines go in several requests; the counts are added up.</li>
+  </ol>
+  <h3 style="margin-top:12px">Rules from the server</h3>
+  <ul>
+    <li>New lines dated on or before the last sign-off (31 Oct 2026) are refused with a message that names that date.</li>
+    <li>Auto-match pairs a line with the nearest open book entry of the same amount within 3 days.</li>
+  </ul>
+</div>
+
+<h2 class="sec">Step 2. Review the lines</h2>
+<p class="sub">Every statement line must end up matched to a book entry, booked as a new entry, or ignored with a note. Nothing is left unmatched at sign-off.</p>
+
+<div class="row2">
+<div class="browser">
+  <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.onengo.example/accounts/upi/reconcile</span></div>
+  <div class="scr" style="min-height:640px">
+    <div class="appbar"><span class="brand">OneNGO</span><span class="org">Asha Trust</span><span class="sp"></span><span class="av">SS</span></div>
+    <div class="body">
+      <nav class="rail">
+        <div class="nv"><span class="g">&#8962;</span>Home</div>
+        <div class="nv"><span class="g">&#9776;</span>Records</div>
+        <div class="nv on"><span class="g">&#8377;</span>Money</div>
+        <div class="nv"><span class="g">&#9638;</span>Reports</div>
+      </nav>
+      <div class="main">
+        <div class="crumbs"><a href="#">Money</a><span class="sep">&rsaquo;</span><a href="#">Main bank account (SBI)</a><span class="sep">&rsaquo;</span>Reconcile</div>
+        <div class="stepper">
+          <div class="step done"><b>&#10003;</b> Import statement</div>
+          <div class="step on"><b>2</b> Review lines</div>
+          <div class="step"><b>3</b> Reconcile and sign off</div>
+        </div>
+        <div class="tabs is-new">
+          <div class="tab on">Unmatched<em>19</em></div><div class="tab">Matched<em>171</em></div><div class="tab">Ignored<em>0</em></div>
+        </div>
+        <table class="t">
+          <thead><tr><th>Date</th><th>Description</th><th class="n">Amount</th><th>Do <span class="pin n">1</span></th></tr></thead>
+          <tbody>
+            <tr><td>03 Nov</td><td>UPI/CR/NGO7K2M9QXA/Donor</td><td class="n">+5,000.00</td><td><div class="acts"><span class="btn sm primary">Match</span><span class="btn sm">Book</span><span class="btn sm">Ignore</span></div></td></tr>
+            <tr><td>05 Nov</td><td>SMS CHARGES</td><td class="n">-23.60</td><td><div class="acts"><span class="btn sm">Match</span><span class="btn sm primary">Book</span><span class="btn sm">Ignore</span></div></td></tr>
+            <tr><td>12 Nov</td><td>NEFT-ABCD-Teacher salary</td><td class="n">-18,000.00</td><td><div class="acts"><span class="btn sm">Match</span><span class="btn sm">Book</span><span class="btn sm">Ignore</span></div></td></tr>
+            <tr><td>19 Nov</td><td>INT.PD 01-10-2026 to 31-10-2026</td><td class="n">+1,240.00</td><td><div class="acts"><span class="btn sm">Match</span><span class="btn sm primary">Book</span><span class="btn sm">Ignore</span></div></td></tr>
+          </tbody>
+        </table>
+        <p class="hint">The highlighted button is the likely choice: Match when a book entry of the same amount exists, Book when none does. 19 lines in all; 4 shown.</p>
+        <div style="display:flex;gap:8px;justify-content:space-between;margin-top:12px;align-items:center">
+          <span class="btn">Back to import</span>
+          <span class="btn primary">Next: reconcile</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div>
+  <p class="cap">Mobile, same tab</p>
+  <div class="phone">
+    <div class="scr">
+      <div class="appbar"><span class="brand">OneNGO</span><span class="org">Asha Trust</span><span class="sp"></span><span class="av">SS</span></div>
+      <div class="main">
+        <div class="stepper" style="font-size:11px"><div class="step done" style="padding:6px"><b>&#10003;</b></div><div class="step on" style="padding:6px"><b>2</b> Review</div><div class="step" style="padding:6px"><b>3</b></div></div>
+        <div class="tabs"><div class="tab on" style="padding:6px 8px">Unmatched<em>19</em></div><div class="tab" style="padding:6px 8px">Matched<em>171</em></div><div class="tab" style="padding:6px 8px">Ignored</div></div>
+        <div class="mcard"><div class="top"><div><b>UPI/CR/NGO7K2M9QXA/Donor</b><div class="meta">03 Nov</div></div><b style="color:var(--ok)">+5,000.00</b></div><div class="acts"><span class="btn sm primary">Match</span><span class="btn sm">Book</span><span class="btn sm">Ignore</span></div></div>
+        <div class="mcard"><div class="top"><div><b>SMS CHARGES</b><div class="meta">05 Nov</div></div><b style="color:var(--bad)">-23.60</b></div><div class="acts"><span class="btn sm">Match</span><span class="btn sm primary">Book</span><span class="btn sm">Ignore</span></div></div>
+        <div class="mcard"><div class="top"><div><b>NEFT-ABCD-Teacher salary</b><div class="meta">12 Nov</div></div><b style="color:var(--bad)">-18,000.00</b></div><div class="acts"><span class="btn sm">Match</span><span class="btn sm">Book</span><span class="btn sm">Ignore</span></div></div>
+      </div>
+      <div class="navbar">
+        <div class="nv"><span class="g">&#8962;</span>Home</div><div class="nv"><span class="g">&#9776;</span>Records</div><div class="nv on"><span class="g">&#8377;</span>Money</div><div class="nv"><span class="g">&#9993;</span>Inbox</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="notes">
+  <h3>What changes</h3>
+  <ol>
+    <li><b>Review tabs and the Do column</b> (new). Three actions per line, and Reopen on matched or ignored lines. <span class="ws">WS5</span></li>
+  </ol>
+  <h3 style="margin-top:12px">Rules from the server</h3>
+  <ul>
+    <li>Match, Book and Ignore are refused on lines dated on or before the last sign-off.</li>
+    <li>A line already matched or ignored must be reopened first.</li>
+    <li>Ignore needs a note. Book cannot use the bank account itself or another money account as the other side.</li>
+  </ul>
+</div>
+
+<p class="cap" style="margin-top:20px">The three action dialogs</p>
+<div class="grid3">
+  <div class="stage">
+    <div class="dialog is-new">
+      <div class="dlg-h"><h2>Match to a book entry</h2><span class="x">&#10005;</span></div>
+      <div class="dlg-b">
+        <p class="mini" style="margin:0 0 8px">Statement line: 03 Nov, <b>+5,000.00</b>, UPI/CR/NGO7K2M9QXA/Donor</p>
+        <div class="list">
+          <div class="li sel"><span>06 Nov &middot; Donation DON/2026-27/00041 from Asha Verma</span><b>+5,000.00</b></div>
+          <div class="li"><span>09 Nov &middot; Donation DON/2026-27/00044 from Kiran Shah</span><b>+5,000.00</b></div>
+        </div>
+        <p class="help">Only unreconciled entries of exactly the same amount are listed. <span class="pin n">1</span></p>
+      </div>
+      <div class="dlg-f"><span class="btn">Cancel</span><span class="btn primary">Match</span></div>
+    </div>
+  </div>
+  <div class="stage">
+    <div class="dialog is-new">
+      <div class="dlg-h"><h2>Book this line</h2><span class="x">&#10005;</span></div>
+      <div class="dlg-b">
+        <p class="mini" style="margin:0 0 8px">Statement line: 05 Nov, <b>-23.60</b>, SMS CHARGES</p>
+        <div class="field"><label>Other side of the entry <span class="req">*</span></label><div class="sel">Administration expenses (EXP_ADMIN)</div>
+          <p class="help">From the ledger accounts list. Expense accounts for money out, income accounts for money in.</p></div>
+        <div class="field"><label>Memo</label><div class="inp">Bank SMS charges, Nov</div></div>
+        <p class="hint">Posts a journal entry dated 05 Nov: expense up, bank down by 23.60. <span class="pin n">2</span></p>
+      </div>
+      <div class="dlg-f"><span class="btn">Cancel</span><span class="btn primary">Book</span></div>
+    </div>
+  </div>
+  <div class="stage">
+    <div class="dialog is-new">
+      <div class="dlg-h"><h2>Ignore this line</h2><span class="x">&#10005;</span></div>
+      <div class="dlg-b">
+        <p class="mini" style="margin:0 0 8px">Statement line: 12 Nov, <b>-18,000.00</b>, NEFT-ABCD-Teacher salary</p>
+        <div class="field"><label>Why is this line ignored? <span class="req">*</span></label><div class="inp bad"><span class="ph">A note is required</span></div><p class="err">Enter a note.</p></div>
+        <p class="hint">Use this only for lines that are not the organisation's money, for example a personal transfer reversed by the bank. <span class="pin n">3</span></p>
+      </div>
+      <div class="dlg-f"><span class="btn">Cancel</span><span class="btn primary disabled">Ignore</span></div>
+    </div>
+  </div>
+</div>
+<div class="notes">
+  <ol>
+    <li><b>Match</b> lists unreconciled book entries from the new <code>book-lines</code> route. The server checks the amount is equal and the entry is on this account.</li>
+    <li><b>Book</b> needs the new ledger accounts list so the person can choose the other side. It is the main way to record bank charges and interest nobody entered.</li>
+    <li><b>Ignore</b> needs a note, which is kept with the line and visible under the Ignored tab.</li>
+  </ol>
+</div>
+
+<h2 class="sec">Step 3. Reconcile and sign off</h2>
+<p class="sub">Enter the closing balance printed on the statement. The app shows how the books and the statement compare. Sign-off is possible only when the difference is zero and no line is left unmatched.</p>
+
+<div class="grid2">
+  <div>
+    <p class="cap">State A: reconciled</p>
+    <div class="browser">
+      <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.onengo.example/accounts/upi/reconcile</span></div>
+      <div class="scr" style="min-height:660px">
+        <div class="main">
+          <div class="stepper">
+            <div class="step done"><b>&#10003;</b> Import</div><div class="step done"><b>&#10003;</b> Review</div><div class="step on"><b>3</b> Reconcile</div>
+          </div>
+          <div class="two" style="margin-bottom:10px">
+            <div class="field is-new"><label>As on <span class="pin n">1</span></label><div class="inp">25 Nov 2026 <span>&#128197;</span></div></div>
+            <div class="field is-new"><label>Statement closing balance <span class="pin n">1</span></label><div class="inp">&#8377; 2,12,400.00</div></div>
+          </div>
+          <div class="card is-new">
+            <h3>How the books compare <span class="pin n">2</span></h3>
+            <div class="eq">
+              <div>Statement closing balance</div><div class="v">2,12,400.00</div>
+              <div>Books balance</div><div class="v">&minus; 2,10,400.00</div>
+              <div>Entries in the books not yet on the statement<br /><span class="mini">Cheque 004512, 22 Nov, Travel claim</span></div><div class="v">&minus; 2,000.00</div>
+              <div>Statement lines not yet booked</div><div class="v">&minus; 0.00</div>
+              <div class="sum">Difference</div><div class="v sum" style="color:var(--ok)">0.00</div>
+            </div>
+            <div class="banner ok" style="margin:12px 0 0"><span>&#10003;</span><span><b>Reconciled.</b> Every statement line is matched, booked or ignored, and the difference is zero.</span></div>
+          </div>
+          <div class="field" style="margin-top:12px"><label>Note (optional)</label><div class="inp"><span class="ph">For example: cheque 004512 outstanding</span></div></div>
+          <div style="display:flex;gap:8px;justify-content:space-between;margin-top:8px">
+            <span class="btn">Back</span><span class="btn primary">Sign off as on 25 Nov <span class="pin n">3</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <p class="cap">State B: not yet</p>
+    <div class="browser">
+      <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.onengo.example/accounts/upi/reconcile</span></div>
+      <div class="scr" style="min-height:660px">
+        <div class="main">
+          <div class="stepper">
+            <div class="step done"><b>&#10003;</b> Import</div><div class="step done"><b>&#10003;</b> Review</div><div class="step on"><b>3</b> Reconcile</div>
+          </div>
+          <div class="two" style="margin-bottom:10px">
+            <div class="field"><label>As on</label><div class="inp">25 Nov 2026</div></div>
+            <div class="field"><label>Statement closing balance</label><div class="inp">&#8377; 2,12,400.00</div></div>
+          </div>
+          <div class="card">
+            <h3>How the books compare</h3>
+            <div class="eq">
+              <div>Statement closing balance</div><div class="v">2,12,400.00</div>
+              <div>Books balance</div><div class="v">&minus; 2,09,183.60</div>
+              <div>Entries in the books not yet on the statement</div><div class="v">&minus; 2,000.00</div>
+              <div>Statement lines not yet booked<br /><span class="mini">2 lines: SMS charges (-23.60), INT.PD (+1,240.00)</span></div><div class="v">&minus; 1,216.40</div>
+              <div class="sum">Difference</div><div class="v sum">0.00</div>
+            </div>
+            <div class="banner warn" style="margin:12px 0 0"><span>&#9888;</span><span><b>Not reconciled.</b> The figures add up, but 2 statement lines are still unmatched. Book or ignore them first. <a href="#">Go to review</a></span></div>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:space-between;margin-top:12px">
+            <span class="btn">Back</span><span class="btn primary disabled">Sign off</span>
+          </div>
+          <p class="hint" style="margin-top:8px">Sign off stays disabled until the difference is zero and no line is unmatched. A zero difference alone is not enough, because unmatched lines are already counted in the sum.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card is-new" style="margin-top:16px">
+  <h3>Past sign-offs <span class="pin n">4</span></h3>
+  <table class="t">
+    <thead><tr><th>As on</th><th class="n">Statement balance</th><th class="n">Books balance</th><th class="n">Outstanding in books</th><th>Signed off by</th><th>Note</th></tr></thead>
+    <tbody>
+      <tr><td>31 Oct 2026</td><td class="n">1,98,200.00</td><td class="n">1,98,200.00</td><td class="n">0.00</td><td>Treasurer, 01 Nov 2026</td><td></td></tr>
+      <tr><td>30 Sep 2026</td><td class="n">1,76,450.00</td><td class="n">1,77,450.00</td><td class="n">-1,000.00</td><td>Treasurer, 01 Oct 2026</td><td>Cheque 004480 outstanding</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="notes">
+  <h3>What changes</h3>
+  <ol>
+    <li><b>As on and statement balance</b> (new). Both are required. The server refuses a date on or before the last sign-off.</li>
+    <li><b>The comparison</b> (new) shows the server's report: books balance, entries not yet on the statement, statement lines not yet booked, and the difference. Reconciled means the difference is zero and no line is unmatched.</li>
+    <li><b>Sign off</b> (new). Stores the figures, writes an audit entry, and freezes lines on or before that date. Entries still outstanding in the books may remain.</li>
+    <li><b>Past sign-offs</b> (new). Newest first, from the list route.</li>
+  </ol>
+  <h3 style="margin-top:12px">Known limit</h3>
+  <ul>
+    <li>Sign-off locks statement lines, but it does not stop a back-dated ledger entry into a signed-off month. Only closing the financial year does. The screen should say so near the Sign off button.</li>
+  </ul>
+</div>
+
+</main>
+</body>
+</html>

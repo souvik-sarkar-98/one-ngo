@@ -2,11 +2,11 @@ import { sql } from 'kysely';
 import type { Database } from './db.js';
 import { typed } from './kysely.js';
 
-export const SCHEMA_LEVEL = 11;
+export const SCHEMA_LEVEL = 13;
 
 /** Oldest schema each independently deployed server may safely use. */
 export const SERVER_SCHEMA_MINIMUMS = {
-  main: 11,
+  main: 13,
   operator: 6,
 } as const;
 

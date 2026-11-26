@@ -109,16 +109,19 @@ export class ActionService {
       for (const [i, step] of def.steps.entries()) {
         const where = `action ${def.key} step ${i + 1}`;
         switch (step.type) {
-          case 'createPayment':
+          case 'createPayment': {
+            // The person's choice when the step asks for one; the step's own account when they left it empty.
+            const chosen = step.accountFrom ? evaluate(step.accountFrom, scope(), `${where} account`) : undefined;
             out.payment = await this.payments.within(joinTx(ctx.tenantId, tx), records).createIntent(asAction, {
               recordId: id,
               amount: evaluate(step.amount, scope(), `${where} amount`) as number,
               provider: PAYMENT_PROVIDERS[step.provider],
-              upiAccountKey: step.account,
+              upiAccountKey: typeof chosen === 'string' && chosen.trim() ? chosen.trim() : step.account,
               onPaid: step.onPaid,
             });
             out.open = out.payment.upiLink ?? `/payments/${out.payment.id}`;
             break;
+          }
           case 'openReceipt': {
             const latest = (await this.receipts.forRecord(tx, id)).filter((r) => r.status === 'issued').at(-1);
             if (!latest) throw ruleViolation('This record has no receipt to print yet.');

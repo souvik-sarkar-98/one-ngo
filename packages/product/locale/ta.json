@@ -376,7 +376,7 @@
   "ui.fields.richText.link": "இணைப்பு",
   "ui.fields.richText.linkInvalid": "வலை மற்றும் மின்னஞ்சல் இணைப்புகள் மட்டும்.",
   "ui.fields.richText.tooLong": "இதை {max} எழுத்துகளுக்குள் வையுங்கள்.",
-  "ui.pins.yours": "உங்கள் பொருத்தம்",
+  "ui.pins.yours": "நீங்கள் பொருத்தியது",
   "ui.pins.pinMine": "என் முகப்பில் பொருத்து",
   "ui.pins.pinEveryone": "அனைவரின் முகப்பிலும் பொருத்து",
   "ui.pins.pinned": "உங்கள் முகப்பில் “{label}” என்று பொருத்தப்பட்டது.",

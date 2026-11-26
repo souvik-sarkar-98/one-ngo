@@ -162,6 +162,10 @@
             }
           }
         },
+        "choicesFrom": {
+          "enum": ["moneyAccounts"],
+          "description": "Choice fields only: offer the organisation's active money accounts instead of a fixed list. The stored value is the account's ledger code (for example BANK or CASH) and the label is its name. Leave `choices` out"
+        },
         "referenceType": { "type": "string", "description": "Record type chosen in a reference field", "x-ref": "recordType" },
         "min": { "type": "number", "description": "Smallest number allowed" },
         "max": { "type": "number", "description": "Largest number allowed" },

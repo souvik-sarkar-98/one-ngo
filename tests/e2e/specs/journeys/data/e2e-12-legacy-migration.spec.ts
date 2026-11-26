@@ -49,7 +49,10 @@ const ui = {
   unresolved: label('ui.admin.migration.warningGroup.unresolvedLegacyUsers'),
   missingFiles: label('ui.admin.migration.warningGroup.missingAttachments'),
   kindPeople: label('ui.admin.migration.kindPeople'),
-  noPeople: label('ui.admin.migration.kindNoPeople'),
+  importType: label('ui.admin.migration.importType'),
+  importRecords: label('ui.admin.migration.importAs.records'),
+  importPeople: label('ui.admin.migration.importAs.people'),
+  importFiles: label('ui.admin.migration.importAs.files'),
   addGroup: label('ui.admin.migration.group.add'),
   saveMapping: label('ui.admin.migration.saveMapping'),
   invited: label('ui.people.status.invited'),
@@ -316,10 +319,17 @@ test.describe.serial('FT-E2E-12 Legacy data migration', () => {
     await upload(limited.api, own.id, 'donor-names.csv', csv([['DonorId', 'Name'], ['D-9', donorName(9)]]));
     await upload(limited.api, own.id, 'donor-extra.csv', csv([['DonorId', 'Name', 'Notes'], ['D-9', donorName(9), 'from the second file']]));
 
+    // On the Files step, Import People is refused with the others open.
+    await other.goto(`/admin/migration/${own.id}/files`);
+    const importAs = other.getByRole('combobox', { name: ui.importType });
+    await expect(importAs.locator('option', { hasText: ui.importPeople })).toBeDisabled();
+    await expect(importAs.locator('option', { hasText: ui.importRecords })).toBeEnabled();
+    await expect(importAs.locator('option', { hasText: ui.importFiles })).toBeEnabled();
+
+    // Only Records have groups: the list of groups to add has no People.
     await other.goto(`/admin/migration/${own.id}/map`);
     const addGroup = other.getByRole('combobox', { name: ui.addGroup });
-    await expect(addGroup.locator('option', { hasText: ui.kindPeople })).toBeDisabled();
-    await expect(other.getByText(ui.noPeople)).toBeVisible();
+    await expect(addGroup.locator('option', { hasText: ui.kindPeople })).toHaveCount(0);
 
     await addGroup.selectOption({ label: 'Legacy donor' });
     await other.getByRole('checkbox', { name: /donor-names\.csv/ }).check();

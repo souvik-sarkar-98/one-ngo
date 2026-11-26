@@ -319,9 +319,9 @@ function orderBody() {
     <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p${hit(true)}">Next</span></div>`;
 }
 function booksBody() {
-  return `${steps('Books')}<p class="intro">These are not a CSV. They set the books at the cutover date after the files succeed.</p>
+  return `${steps('Books')}<p class="intro">These are not a CSV. They set the books at the cutover date, before any row loads.</p>
     <div class="card">
-      ${field('Cutover date', '01/04/2026', { req: true, hint: 'The opening journal is dated this day; its financial year must be open.' })}
+      ${field('Cutover date', '01/04/2026', { req: true, hint: 'The first day of a financial year. The opening journal is dated this day, and that year must be open.' })}
     </div>
     <p class="cap">Opening journal</p>
     <div class="panel">
@@ -407,7 +407,7 @@ const STEPS = [
   { id: 'order', t: 'Order', act: 'Next', url: '/admin/migration/legacy/order', title: 'Load order', back: true, crumbs: ['Administration', 'Migration', 'Order'], body: orderBody,
     note: 'Donors load before donations because the donation map looks up Donor. A file with no record type is absent here. Saving a mapping moves a file below the files it looks up; moving donations above donors by hand is refused while that lookup remains.' },
   { id: 'books', t: 'Books', act: 'Next', url: '/admin/migration/legacy/books', title: 'Books', back: true, crumbs: ['Administration', 'Migration', 'Books'], body: booksBody,
-    note: 'An opening journal that must balance, and the next receipt number for each series. They need their own permission and apply once, in one transaction, after every file has loaded; if the ledger refuses them (for example the year is not open), the run still finishes and Apply books can be pressed again. The old transfer table is not a file on this profile.' },
+    note: 'An opening journal that must balance, and the next receipt number for each series. They need their own permission and apply once, in one transaction, before the rows load; changing them sends Check back to be run again. If the ledger refuses them, the run does not start and the books stay unapplied until the cause is fixed. The old transfer table is not a file on this profile.' },
   { id: 'check', t: 'Check', act: 'Next', url: '/admin/migration/legacy/check', title: 'Check', back: true, crumbs: ['Administration', 'Migration', 'Check'], body: checkBody,
     note: 'The check counts creates and problems per file and does not write. Run is allowed with problems: the bad rows are skipped and downloaded afterwards. The button counts only ready rows.' },
   { id: 'run', t: 'Run', act: 'Tap <kbd>Run</kbd>', url: '/admin/migration/legacy/run', title: 'Running', back: true, crumbs: ['Administration', 'Migration', 'Run'], body: runBody,

@@ -16,10 +16,9 @@ const SAVE_HOOKS = new Set(['beforeSave', 'afterSave']);
 /**
  * Safety guards for each of the given record types, read from the published definitions.
  *
- * Blocking: a new record starts in the `initial` state of its workflow, and a posting or receipt
- * rule fires when a record enters its `whenStatus` (`save/effects.ts`). A rule on that state would
- * post a journal entry or issue a receipt for every migrated row, and `quiet` does not stop it.
- * A parallel workflow without `startsWhen` also starts on create, so its initial state counts too.
+ * Posting rules are not guarded: a migrated save posts the entries its rules make, and Check predicts them
+ * row by row (`ledger.checkPlanned`). Receipt rules are not guarded either: a migrated save issues no
+ * receipt (`save/effects.ts`), and the legacy receipt number stays on the row.
  *
  * Scripts (enabled, on a save hook, allowed an effect): `notify` and `connector.call` are skipped
  * by a quiet save (`save/script-run.ts`, block M0), so they only warn. `ledger.propose` is applied
@@ -30,23 +29,10 @@ export async function typeGuards(defs: DefinitionReader, tenantId: string, types
   const wanted = new Set(keys);
   const out = new Map<string, TypeGuard>();
   if (!wanted.size) return out;
-  const [posting, receipt, scripts] = await Promise.all([defs.list(tenantId, 'postingRule'), defs.list(tenantId, 'receiptRule'), defs.list(tenantId, 'script')]);
+  const scripts = await defs.list(tenantId, 'script');
   for (const key of wanted) {
     const label = types.get(key)?.label ?? key;
     const guard: TypeGuard = { blocking: [], warnings: [] };
-    const starts = (await defs.workflowsFor(tenantId, key)).map((w) => w.body).filter((w) => isPrimary(w) || w.startsWhen === undefined);
-    const fires = (r: { whenStatus: string; workflow?: string }) =>
-      starts.some((w) => (r.workflow ? r.workflow === w.key : isPrimary(w)) && w.initial === r.whenStatus);
-    for (const d of posting) {
-      if (d.body.recordType === key && fires(d.body)) {
-        guard.blocking.push(`${label}: saving these records would post a journal entry (posting rule '${d.key}' fires on the starting state '${d.body.whenStatus}').`);
-      }
-    }
-    for (const d of receipt) {
-      if (d.body.recordType === key && fires(d.body)) {
-        guard.blocking.push(`${label}: saving these records would issue a receipt (receipt rule '${d.key}' fires on the starting state '${d.body.whenStatus}').`);
-      }
-    }
     for (const d of scripts) {
       const s = d.body;
       if (s.recordType !== key || s.enabled === false || !SAVE_HOOKS.has(s.hook)) continue;
@@ -59,6 +45,16 @@ export async function typeGuards(defs: DefinitionReader, tenantId: string, types
       }
     }
     out.set(key, guard);
+  }
+  return out;
+}
+
+/** The state keys of each given record type's primary workflow; a type without one has no entry. */
+export async function primaryStates(defs: DefinitionReader, tenantId: string, keys: Iterable<string>): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  for (const key of new Set(keys)) {
+    const primary = (await defs.workflowsFor(tenantId, key)).map((w) => w.body).find((w) => isPrimary(w));
+    if (primary) out.set(key, primary.states.map((s) => s.key));
   }
   return out;
 }

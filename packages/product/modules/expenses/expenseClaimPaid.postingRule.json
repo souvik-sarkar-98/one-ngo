@@ -4,6 +4,7 @@
   "whenStatus": "paid",
   "date": "record.paidOn",
   "memo": "'Expense ' + record.number + ' ' + record.title",
+  "overdraftReason": "record.overdraftReason",
   "lines": [
     {
       "side": "debit",

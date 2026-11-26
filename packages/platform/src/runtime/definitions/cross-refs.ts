@@ -201,8 +201,12 @@ function checkRecordType(def: RecordTypeDef, issues: FieldIssue[], lookup: Defin
   def.fields.forEach((f, i) => {
     if (seen.has(f.key)) issues.push({ path: `/fields/${i}/key`, message: `duplicate field '${f.key}'` });
     seen.add(f.key);
-    if ((f.type === 'choice' || f.type === 'multiChoice') && !f.choices?.length) {
+    if ((f.type === 'choice' || f.type === 'multiChoice') && !f.choices?.length && !f.choicesFrom) {
       issues.push({ path: `/fields/${i}/choices`, message: 'choice fields need at least one choice' });
+    }
+    if (f.choicesFrom !== undefined) {
+      if (f.type !== 'choice') issues.push({ path: `/fields/${i}/choicesFrom`, message: 'only choice fields can take their choices from money accounts' });
+      else if (f.choices?.length) issues.push({ path: `/fields/${i}/choices`, message: 'a field that takes its choices from money accounts has no list of its own' });
     }
     if (f.unique && !UNIQUE_FIELD_TYPES.has(f.type)) {
       issues.push({ path: `/fields/${i}/unique`, message: 'only text, email, phone and number fields can be unique' });
@@ -536,7 +540,8 @@ function checkSteps(
       }
       case 'createPayment':
         if (!a.provider) issues.push({ path: `${at}/provider`, message: 'choose a payment provider' });
-        if (!a.account) issues.push({ path: `${at}/account`, message: 'choose the account that receives the payment' });
+        if (!a.account && !a.accountFrom) issues.push({ path: `${at}/account`, message: 'choose the account that receives the payment' });
+        expr(issues, `${at}/accountFrom`, a.accountFrom);
         if (!a.amount) issues.push({ path: `${at}/amount`, message: 'say how much to ask for' });
         expr(issues, `${at}/amount`, a.amount);
         if (!a.onPaid?.transition) issues.push({ path: `${at}/onPaid`, message: 'choose the step to run when the payment arrives' });
@@ -642,7 +647,11 @@ function checkAction(def: ActionDef, issues: FieldIssue[], lookup: DefinitionLoo
     const at = `/form/fields/${i}`;
     if (keys.has(f.key)) issues.push({ path: `${at}/key`, message: `duplicate field '${f.key}'` });
     keys.add(f.key);
-    if (f.type === 'choice' && !f.choices?.length) issues.push({ path: `${at}/choices`, message: 'choice fields need at least one choice' });
+    if (f.type === 'choice' && !f.choices?.length && !f.choicesFrom) issues.push({ path: `${at}/choices`, message: 'choice fields need at least one choice' });
+    if (f.choicesFrom !== undefined) {
+      if (f.type !== 'choice') issues.push({ path: `${at}/choicesFrom`, message: 'only choice fields can take their choices from money accounts' });
+      else if (f.choices?.length) issues.push({ path: `${at}/choices`, message: 'a field that takes its choices from money accounts has no list of its own' });
+    }
     if (f.placeholder !== undefined && NO_PLACEHOLDER_TYPES.has(f.type)) issues.push({ path: `${at}/placeholder`, message: `${f.type} fields cannot have a placeholder` });
     if (f.type === 'reference' && !lookup.recordType(f.referenceType ?? '')) {
       issues.push({ path: `${at}/referenceType`, message: `record type '${f.referenceType ?? ''}' is not published` });
@@ -716,6 +725,7 @@ function checkPage(def: PageDef, issues: FieldIssue[], lookup: DefinitionLookup)
         break;
       }
       case 'links':
+      case 'wizards':
       case 'groups':
         break;
     }
@@ -797,6 +807,7 @@ function checkPostingRule(def: PostingRuleDef, issues: FieldIssue[], lookup: Def
   expr(issues, '/condition', def.condition);
   expr(issues, '/date', def.date);
   expr(issues, '/memo', def.memo);
+  expr(issues, '/overdraftReason', def.overdraftReason);
   if (!def.lines.some((l) => l.side === 'debit') || !def.lines.some((l) => l.side === 'credit')) {
     issues.push({ path: '/lines', message: 'needs at least one debit and one credit line' });
   }

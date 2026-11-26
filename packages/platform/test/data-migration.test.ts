@@ -59,6 +59,9 @@ const byOldId = async (type: string, oldId: string) =>
   (await w.platform.db.asSystem((tx) => tx.query<{ record_id: string }>(`select record_id from migration_key where tenant_id = $1 and type_key = $2 and old_id = $3`, [w.ngoA, type, oldId])))[0]
     ?.record_id;
 
+/** The first day of the financial year holding today: the cutover date of a migration's books. */
+const yearStart = async () => (await w.platform.db.withTenant(w.ngoA, (tx) => w.platform.ledger.fiscalYearOf(asTx(tx), today()))).startsOn;
+
 const SUPPORTERS = ['DonorId,Full Name,Mail,Legacy code', 'D-1,Asha Rao,asha@example.org,X19', 'D-2,Ravi Kumar,,X20', 'D-3,,nobody@example.org,X21'].join('\r\n');
 const GIFTS = ['TxnNo,DonorId,Amount', 'T-1,D-1,"1,000"', 'T-2,D-2,50', 'T-3,D-9,10'].join('\r\n');
 const COMBINED = ['Donor code,Name,Txn,Gift amount', 'D-4,Meena,T-4,25', 'D-5,Kiran,,', 'D-6,,T-6,30'].join('\n');
@@ -175,18 +178,23 @@ describe('data migration', () => {
   });
 
   it('keeps the books balanced and needs their own permission', async () => {
+    const start = await yearStart();
     const unbalanced = await call(migrator, 'PUT', `/api/migrations/${id}/books`, {
-      cutoverDate: today(),
+      cutoverDate: start,
       lines: [
         { accountCode: 'BANK', debit: '100' },
         { accountCode: 'DONATION_INCOME', credit: '99' },
       ],
     });
     expect(unbalanced.statusCode).toBe(422);
-    expect((await call(noBooks, 'PUT', `/api/migrations/${id}/books`, { cutoverDate: today() })).statusCode).toBe(403);
+    expect((await call(noBooks, 'PUT', `/api/migrations/${id}/books`, { cutoverDate: start })).statusCode).toBe(403);
+    // The cutover is the first day of a financial year: the migrated entries post from there.
+    const midYear = await call(migrator, 'PUT', `/api/migrations/${id}/books`, { cutoverDate: today(), lines: [{ accountCode: 'BANK', debit: '1' }, { accountCode: 'DONATION_INCOME', credit: '1' }] });
+    expect(midYear.statusCode).toBe(422);
+    expect(midYear.json().issues).toEqual([{ path: '/cutoverDate', message: `Use ${start}` }]);
     const view = await ok(
       await call(migrator, 'PUT', `/api/migrations/${id}/books`, {
-        cutoverDate: today(),
+        cutoverDate: start,
         lines: [
           { accountCode: 'BANK', debit: '4,80,000'.replace(/,/g, '') },
           { accountCode: 'DONATION_INCOME', credit: '480000' },
@@ -195,14 +203,18 @@ describe('data migration', () => {
       }),
     );
     expect(view.books).toEqual({
-      cutoverDate: today(),
+      cutoverDate: start,
       lines: [
         { accountCode: 'BANK', debit: '480000.00' },
         { accountCode: 'DONATION_INCOME', credit: '480000.00' },
       ],
       receipts: [{ series: 'donation-receipt', next: 2045 }],
     });
-    expect(view.status).toBe('checked');
+    // Changing the books makes the check out of date: it is made again before the run.
+    expect(view.status).toBe('draft');
+    const rechecked = await checkNow(migrator, id);
+    expect(rechecked.status).toBe('checked');
+    expect(rechecked.check).toMatchObject({ rows: 9, ready: 6, invalid: 3 });
   });
 
   it('runs quietly in order, one transaction per row, then applies the books once', async () => {

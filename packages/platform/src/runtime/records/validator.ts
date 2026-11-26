@@ -59,7 +59,8 @@ export function fieldSchema(f: FieldDef): Record<string, unknown> {
     case 'boolean':
       return { type: 'boolean' };
     case 'choice':
-      return { type: 'string', enum: (f.choices ?? []).map((c) => c.value) };
+      // A money account choice is checked against the live accounts when the record is saved.
+      return f.choicesFrom ? { type: 'string', maxLength: 100 } : { type: 'string', enum: (f.choices ?? []).map((c) => c.value) };
     case 'email':
       return { type: 'string', format: 'email', maxLength: 254 };
     case 'phone':

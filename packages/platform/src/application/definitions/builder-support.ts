@@ -113,6 +113,15 @@ const KIND_NOUN: Record<DefinitionKind, string> = {
   dataFeed: 'data feed',
 };
 
+/**
+ * The kinds an organisation can delete once published. Each has a usage check in `findUsages`.
+ * Record types and workflows hold records and states, so they are turned off instead.
+ * The web catalogue keeps a copy (`DELETABLE_KINDS` in `core/builder/catalogue.ts`).
+ */
+const DELETABLE_KINDS: readonly DefinitionKind[] = ['page', 'template', 'report', 'listView'];
+const DELETABLE_LIST = 'pages, message templates, reports and lists';
+const HOME_PAGE = 'home';
+
 function distance(a: string, b: string): number {
   const row = Array.from({ length: b.length + 1 }, (_v, i) => i);
   for (let i = 1; i <= a.length; i++) {
@@ -834,6 +843,28 @@ export class BuilderSupport {
     }
     await this.p.definitions.disableDefinition(ctx, kind, key);
     return { kind, key, disabled: true };
+  }
+
+  /**
+   * Deletes a definition the organisation made, unless another published definition still uses it.
+   * Only the kinds in DELETABLE_KINDS; record types and workflows are turned off instead.
+   */
+  async deleteDefinition(ctx: TenantContext, kind: DefinitionKind, key: string) {
+    demand(ctx.actor, kind === 'script' ? 'config:script:publish' : 'config:publish');
+    if (!DELETABLE_KINDS.includes(kind)) throw definitionInvalid(`A ${KIND_NOUN[kind]} cannot be deleted. Only ${DELETABLE_LIST} can.`);
+    if (kind === 'page' && key === HOME_PAGE) throw definitionInvalid('The home page cannot be deleted. Change it instead.');
+    const others = (await this.published(ctx.tenantId)).filter((d) => !(d.kind === kind && d.key === key));
+    const issues: FieldIssue[] = findUsages(others, { kind, key }).map((u) => ({
+      path: `${u.kind}:${u.key}${u.path}`,
+      message: `the ${KIND_NOUN[u.kind]} '${u.label ?? u.key}' uses the ${KIND_NOUN[kind]} '${key}' (${u.what})`,
+    }));
+    if (issues.length) {
+      const shown = issues.slice(0, 3).map((i) => i.message).join('; ');
+      const more = issues.length > 3 ? `; and ${issues.length - 3} more` : '';
+      throw definitionInvalid(`Cannot delete the ${KIND_NOUN[kind]} '${key}' while it is in use: ${shown}${more}. Change or remove those first.`, issues);
+    }
+    await this.p.definitions.deleteDefinition(ctx, kind, key);
+    return { kind, key, deleted: true };
   }
 
   /** Turns a definition that came with a module back on. */

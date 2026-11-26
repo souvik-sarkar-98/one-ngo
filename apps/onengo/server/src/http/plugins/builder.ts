@@ -81,6 +81,9 @@ export async function builderRoutes(api: FastifyInstance, { deps, schemaDir }: {
   api.post<DefParams>('/api/builder/definitions/:kind/:key/disable', async (req) =>
     builder.disableDefinition(contextOf(req), definitionKindOf(req.params.kind), req.params.key),
   );
+  api.post<DefParams>('/api/builder/definitions/:kind/:key/delete', async (req) =>
+    builder.deleteDefinition(contextOf(req), definitionKindOf(req.params.kind), req.params.key),
+  );
   api.post<DefParams>('/api/builder/definitions/:kind/:key/enable', async (req) =>
     builder.enableDefinition(contextOf(req), definitionKindOf(req.params.kind), req.params.key),
   );

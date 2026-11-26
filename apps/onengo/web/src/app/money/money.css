@@ -1,0 +1,73 @@
+.money-balances {
+  margin: 0 0 16px;
+  padding: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.money-balances__head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.money-balances__title {
+  flex: 1;
+  margin: 0;
+  font-size: 1rem;
+}
+.money-balances__date {
+  margin: 0; /* the global label margin would lift the date field above the Export button */
+}
+.money-balances__head > button {
+  min-height: var(--field-height, 40px);
+}
+.money-balances__date input {
+  width: auto;
+  min-height: var(--field-height, 40px);
+  margin: 0;
+  font: inherit;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: inherit;
+}
+.money-balances__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+}
+.money-balances__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.money-balances__item span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.money-balances__item b {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+.money-balances__item--total {
+  border-color: var(--brand);
+}
+.money-balances__actions {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

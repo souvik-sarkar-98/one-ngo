@@ -1,7 +1,7 @@
 {
   "$id": "page",
   "title": "Page",
-  "description": "The Home screen (key home) or another page opened from the navigation: counts, totals, charts, pinned lists, links and the record groups, top to bottom.",
+  "description": "The Home screen (key home) or another page opened from the navigation: counts, totals, charts, pinned lists, links, task cards and the record groups, top to bottom.",
   "type": "object",
   "additionalProperties": false,
   "required": ["key", "label", "widgets"],
@@ -123,6 +123,39 @@
                       "minLength": 1,
                       "maxLength": 200,
                       "description": "Link shown only to people with this permission",
+                      "x-ref": "permission"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "label", "items"],
+            "description": "Task cards: each link opens a form or screen as a card. The label is the area, shown as a filter pill. Works on Home and on any page",
+            "properties": {
+              "type": { "const": "wizards", "description": "Task cards" },
+              "label": { "$ref": "#/definitions/label" },
+              "permission": { "$ref": "#/definitions/permission" },
+              "items": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 12,
+                "description": "Tasks, top to bottom",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["label", "to"],
+                  "properties": {
+                    "label": { "type": "string", "minLength": 1, "description": "Task name" },
+                    "to": { "type": "string", "pattern": "^/(?!/)[^\\s]*$", "maxLength": 500, "description": "An address inside the app, for example /records/donation?create=new" },
+                    "permission": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "description": "Task shown only to people with this permission",
                       "x-ref": "permission"
                     }
                   }

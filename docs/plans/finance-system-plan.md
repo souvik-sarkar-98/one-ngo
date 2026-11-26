@@ -26,8 +26,13 @@ Rules that stay as they are: every entry balances, posted entries are immutable,
 | Donations creates the `upi` money account on `BANK` when the module is installed (A2) | Built (`setup.moneyAccounts` in the module manifest). Only for new installs: the module version was not raised, so an organisation that already installed Donations does not get it |
 | `bank-accounts` module (`BANK_2`, `BANK_3`, bank balances report) | Removed. Forms offer `BANK` and `CASH` only |
 | Migrations | Decided (H1): `001` to `006` are a squash of the old chain. `007_bank_reconciliation.sql` adds the statement tables. Schema level 7 |
-| Bank reconciliation (B1, B3, B4 in part) | Built as API and tested: import statement lines (duplicates skipped), auto-match by amount within 3 days, match, ignore with a reason, book an unmatched line, report the difference, sign off. Permission `money:reconcile`. **No screen yet** |
-| Overdraft guard (A6) | A bank account that does not allow negative refuses a transfer or payment that takes it below zero. Edits cannot turn that off while the balance is negative |
+| Bank reconciliation (B1, B3, B4 in part) | Built, with a screen (`/accounts/:key/reconcile`): upload a CSV (columns guessed and remembered per account, Indian dates and amounts read), review, auto-match by amount within 3 days, match, ignore with a reason, book an unmatched line, compare book lines with the statement, report the difference, sign off. Permission `money:reconcile`. Migration `007_bank_reconciliation.sql` |
+| Overdraft guard (A6) | Decided: refuse, with an override reason that is recorded. Every account refuses a posting that takes it below zero unless the person gives a reason (audit action `ledger.overdraft_override`). New bank accounts default to not allowing negative; migration `012` switches existing bank accounts. Edits cannot turn it on or off while the balance is negative |
+| Forms offer the organisation's real accounts (A4) | Built. A record field with `choicesFrom: moneyAccounts` lists the open money accounts and saves the ledger code; `expenses`, `earnings` and `members` use it, so a second bank needs no module change. Action forms use `choicesFrom: moneyAccounts` or `upiAccounts` (accounts with a UPI ID) and save the account key |
+| Pay now account choice (A3) | Decided: the stored key stays `upi`. The donations Pay now action asks which UPI account to use (`accountFrom: input.account`, falling back to `upi`); the choice is kept on the payment (migration `013_payment_intent_account.sql`) and the receiving ledger account follows it. Schema level 13 |
+| Balances as on a date (A5), account statement (A7) | Built. `GET /api/money/balances?asOf=` and the Money page balance date; `GET /api/money/accounts/:key/ledger` and the statement screen (`/accounts/:key/statement`) with running balance, source links and CSV |
+| Trial balance (new) | Built. `GET /api/ledger/trial-balance?asOf=` with permission `ledger:read`, and the screen `/accounts/trial-balance`. Money, debts and funds carry forward; income and expenses are those of the financial year holding the date. Earlier years' income less expenses shows as one line, `Surplus from earlier years`, so the two columns always agree |
+| Expense approval (F1) | Built. The expense claim workflow has Approve and Pay steps, and the person who submitted a claim cannot approve or pay it |
 | Eight modules publish together (H5) | Permanent test `shipped-modules.test.ts` |
 | Receipt layout test (H3) | Fixed (the test now completes the organisation identity first) |
 
@@ -35,7 +40,7 @@ Not closed by sign-off: a ledger entry can still be posted back-dated into a mon
 
 ## 3. Work items
 
-Status as of the last update: **done** H1, H3, H5, A1, A2, A6. **Done as API only** B1 (statement import is a JSON list, no CSV upload or column mapping), B3 (no screen), B4 (unmatched lines must be booked or ignored before sign-off, which does the job of a suspense account; no suspense ledger account). **Open**: everything else. The rows below keep their original wording.
+Status as of the last update: **done** H1, H3, H5, A1 to A7, B1, B3, F1 and the trial balance. **Done with a difference** B4 (unmatched lines must be booked or ignored before sign-off, which does the job of a suspense account; no suspense ledger account). **Open**: everything else. The rows below keep their original wording.
 
 ### Phase 0: repo and launch blockers
 

@@ -21,7 +21,10 @@ export interface BooksReceipt {
   next: number;
 }
 
-/** Balances and numbering at the cutover date, applied once after every file has loaded. */
+/**
+ * Balances and numbering at the cutover date, the first day of a financial year. Applied once, before the
+ * rows of the run post, so the migrated entries are checked against them.
+ */
 export interface BooksInput {
   cutoverDate?: string;
   lines?: BooksLine[];
@@ -128,7 +131,7 @@ export async function applyBooks(
   const date = books.cutoverDate!;
   const out: BooksResult = {};
   if (books.lines?.length) {
-    out.journalEntryId = await ledger.post(tx, actor, { date, memo: 'Opening balances (data migration)', lines: books.lines });
+    out.journalEntryId = await ledger.post(tx, actor, { date, memo: 'Opening balances (data migration)', overdraftReason: 'Opening balances (data migration)', lines: books.lines });
   }
   if (books.receipts?.length) {
     out.receipts = [];

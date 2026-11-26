@@ -131,13 +131,15 @@ export interface TransferRequest {
   amount: number | string;
   date: string;
   reference?: string;
+  /** Why the sending account may go below zero; needed only when it does not allow that and lacks the money. */
+  overrideReason?: string;
 }
 
 export const transferRequest = schemaOf<TransferRequest>({
   type: 'object',
   required: ['from', 'to', 'amount', 'date'],
   additionalProperties: false,
-  properties: { from: text, to: text, amount, date: text, reference: optionalText },
+  properties: { from: text, to: text, amount, date: text, reference: optionalText, overrideReason: optionalText },
 });
 
 /**

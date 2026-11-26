@@ -10,6 +10,7 @@ import {
   type PermissionDefs,
 } from '../server';
 import type { AuthGateway, SignInResult } from '../auth/http-auth';
+import { DELETABLE_KINDS } from '../builder/catalogue';
 import { localCheck, valueTypeOf } from '../builder/expression-catalogue';
 import type { AccessGateway, AccessMapElement, CatalogueEntry, CatalogueGroup, ModuleRow, RoleView } from '../builder/http-access';
 import type { BuilderGateway, Usage } from '../builder/http-builder';
@@ -769,6 +770,22 @@ export function memoryGateway(seed: SampleSeed = sampleSeed()): MemoryGateways {
       for (const h of d.history) if (h.status === 'published') h.status = 'superseded';
       d.disabled = true;
       if (kind === 'recordType') s.definitions.recordTypes = s.definitions.recordTypes.filter((t) => t.key !== key);
+    },
+    async remove(kind, key) {
+      log('builder', 'remove', [kind, key]);
+      canPublish(kind);
+      if (!DELETABLE_KINDS.includes(kind as DefinitionKind)) throw fail('definition_invalid', `A ${kind} cannot be deleted.`);
+      if (kind === 'page' && key === 'home') throw fail('definition_invalid', 'The home page cannot be deleted. Change it instead.');
+      const d = definitions.get(defKey(kind, key));
+      if (d?.owner === 'base') throw fail('definition_invalid', `The ${kind} '${key}' came with a module. Turn it off instead of deleting it.`);
+      // The server checks every kind's uses; this double only knows about page links.
+      const links = (body: Record<string, unknown> | undefined) =>
+        ((body?.['widgets'] ?? []) as { items?: { to: string }[] }[]).some((w) => w.items?.some((i) => i.to === `/pages/${key}`));
+      const linked = [...definitions.values()].some((o) => o.kind === 'page' && o.key !== key && links(published(o)?.body));
+      if (linked) throw fail('definition_invalid', `The page '${key}' is still in use. Remove those links first.`);
+      if (!d && !s.definitions.pages?.some((p) => p.key === key)) throw fail('not_found', 'This definition does not exist yet.');
+      definitions.delete(defKey(kind, key));
+      if (kind === 'page') s.definitions.pages = (s.definitions.pages ?? []).filter((p) => p.key !== key);
     },
     async enable(kind, key) {
       log('builder', 'enable', [kind, key]);

@@ -94,6 +94,8 @@ export class PgRecordStore implements RecordStore {
         owner_id: r.actorId,
         created_by: r.actorId,
         updated_by: r.actorId,
+        ...(r.createdAt ? { created_at: r.createdAt } : {}),
+        ...(r.updatedAt ? { updated_at: r.updatedAt } : {}),
       })
       .returning(RECORD_COLUMNS)
       .$castTo<RecordRow>()
@@ -126,7 +128,7 @@ export class PgRecordStore implements RecordStore {
         search_text: c.searchText,
         version: eb('version', '+', 1),
         updated_by: c.actorId,
-        updated_at: sql<Date>`now()`,
+        updated_at: c.updatedAt ?? sql<Date>`now()`,
       }))
       .where('tenant_id', '=', TENANT)
       .where('id', '=', id)
@@ -306,6 +308,17 @@ export class PgRecordStore implements RecordStore {
       .where(sql<string>`data->>${referenceKey}`, '=', parentId)
       .$castTo<{ status: string | null; data: Record<string, unknown> }>()
       .execute();
+  }
+
+  async moneyAccountCodes(tx: Tx): Promise<Set<string>> {
+    const rows = await pg(tx)
+      .selectFrom('money_account as m')
+      .innerJoin('ledger_account as a', 'a.id', 'm.ledger_account_id')
+      .select('a.code')
+      .where('m.tenant_id', '=', TENANT)
+      .where('m.status', '=', 'active')
+      .execute();
+    return new Set(rows.map((r) => r.code));
   }
 
   async idsByHash(tx: Tx, typeKey: string, fieldKey: string, hashes: string[], exceptId: string | null, limit: number): Promise<string[]> {

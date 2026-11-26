@@ -380,6 +380,11 @@
   border-radius: 10px;
   cursor: pointer;
 }
+.migration__option > .migration__file-link {
+  margin-left: auto;
+  align-self: center;
+  white-space: nowrap;
+}
 .migration__option > span {
   display: flex;
   flex-direction: column;

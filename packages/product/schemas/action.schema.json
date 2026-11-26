@@ -58,6 +58,10 @@
                 "description": "Kind of value"
               },
               "required": { "type": "boolean", "description": "Must be filled in" },
+              "choicesFrom": {
+                "enum": ["moneyAccounts", "upiAccounts"],
+                "description": "Take the options from the organisation's money accounts (all, or only those with a UPI ID) instead of listing them; the value is the account's key"
+              },
               "choices": {
                 "type": "array",
                 "description": "Options for a choice field",
@@ -135,7 +139,8 @@
           },
           "provider": { "enum": ["upi", "razorpay", "cashfree"], "description": "Payment provider" },
           "amount": { "type": "string", "description": "Amount to ask for, as an expression", "x-expression": { "recordType": "/recordType" } },
-          "account": { "type": "string", "description": "Money account that receives the payment" },
+          "account": { "type": "string", "description": "Money account (its key) that receives the payment; used when the account below is not chosen" },
+          "accountFrom": { "type": "string", "description": "Expression for the account's key, such as input.account, so the person running the action chooses where the money goes", "x-expression": { "recordType": "/recordType" } },
           "onPaid": {
             "type": "object",
             "additionalProperties": false,
@@ -150,7 +155,8 @@
                 "properties": {
                   "paidOn": { "type": "string", "description": "Date field for the day it was paid" },
                   "reference": { "type": "string", "description": "Text field for the payment reference" },
-                  "method": { "type": "string", "description": "Choice field for the payment method" }
+                  "method": { "type": "string", "description": "Choice field for the payment method" },
+                  "account": { "type": "string", "description": "Choice field for the money account (its ledger code) the payment went into" }
                 }
               },
               "methodValue": { "type": "string", "description": "Value put in the method field" }

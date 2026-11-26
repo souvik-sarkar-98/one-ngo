@@ -52,7 +52,7 @@ describe('the bank statement against the books', () => {
     const [charge, neft] = open;
     await expectCode(w.platform.bankReconciliation.book(ctx, 'upi', charge!.id, { accountCode: 'NO_SUCH' }), 'rule_violation');
     await expectCode(w.platform.bankReconciliation.book(ctx, 'upi', charge!.id, { accountCode: 'BANK' }), 'rule_violation');
-    await w.platform.moneyAccounts.open(ctx, { key: 'petty', name: 'Petty cash', kind: 'cash', ledgerCode: 'CASH' });
+    // CASH is a money account too (the module opens it), so it is not a ledger account to book a bank line to.
     await expectCode(w.platform.bankReconciliation.book(ctx, 'upi', charge!.id, { accountCode: 'CASH' }), 'rule_violation');
 
     const booked = await w.platform.bankReconciliation.book(ctx, 'upi', charge!.id, { accountCode: 'BANK_CHARGES', memo: 'April' });

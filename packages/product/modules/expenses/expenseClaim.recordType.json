@@ -39,12 +39,18 @@
       "label": "Paid from",
       "type": "choice",
       "visibleWhen": "status == 'approved' or status == 'paid'",
-      "choices": [
-        { "value": "BANK", "label": "Bank account" },
-        { "value": "CASH", "label": "Cash in hand" }
-      ]
+      "choicesFrom": "moneyAccounts",
+      "help": "The real account the money is paid from"
     },
     { "key": "paidOn", "label": "Paid on", "type": "date", "visibleWhen": "status == 'approved' or status == 'paid'" },
-    { "key": "reference", "label": "Payment reference", "type": "text", "maxLength": 100, "visibleWhen": "status == 'approved' or status == 'paid'" }
+    { "key": "reference", "label": "Payment reference", "type": "text", "maxLength": 100, "visibleWhen": "status == 'approved' or status == 'paid'" },
+    {
+      "key": "overdraftReason",
+      "label": "Reason for going below zero",
+      "type": "text",
+      "maxLength": 300,
+      "visibleWhen": "status == 'paid'",
+      "help": "Only needed when the account does not have enough money. The reason is kept on the audit trail"
+    }
   ]
 }

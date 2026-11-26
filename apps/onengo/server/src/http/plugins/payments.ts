@@ -63,6 +63,12 @@ export async function paymentRoutes(api: FastifyInstance, { deps }: { deps: Paym
   api.post<{ Body: OpenAccountRequest }>('/api/money/accounts', { schema: { body: openAccountRequest } }, async (req, reply) =>
     reply.status(201).send(await deps.moneyAccounts.open(contextOf(req), req.body)),
   );
+  api.get<{ Querystring: { asOf?: string } }>('/api/money/balances', async (req) => deps.moneyAccounts.balances(contextOf(req), req.query.asOf));
+  api.get<{ Params: { key: string }; Querystring: { from?: string; to?: string; limit?: string; offset?: string } }>('/api/money/accounts/:key/ledger', async (req) =>
+    deps.moneyAccounts.accountLedger(contextOf(req), req.params.key, req.query),
+  );
+  api.get('/api/ledger/accounts', async (req) => deps.moneyAccounts.ledgerAccounts(contextOf(req)));
+  api.get<{ Querystring: { asOf?: string; includeZero?: string } }>('/api/ledger/trial-balance', async (req) => deps.moneyAccounts.trialBalance(contextOf(req), req.query));
   api.patch<{ Params: { key: string }; Body: UpdateAccountRequest }>('/api/money/accounts/:key', { schema: { body: updateAccountRequest } }, async (req) =>
     deps.moneyAccounts.update(contextOf(req), req.params.key, req.body),
   );
@@ -73,6 +79,9 @@ export async function paymentRoutes(api: FastifyInstance, { deps }: { deps: Paym
   type Line = { Params: { key: string; lineId: string } };
   api.get<Account & { Querystring: { status?: string } }>('/api/money/accounts/:key/statement', async (req) =>
     bank.statement(contextOf(req), req.params.key, req.query.status),
+  );
+  api.get<Account & { Querystring: { from?: string; to?: string } }>('/api/money/accounts/:key/book-lines', async (req) =>
+    bank.bookLines(contextOf(req), req.params.key, req.query),
   );
   api.post<Account & { Body: StatementImportRequest }>('/api/money/accounts/:key/statement', { schema: { body: statementImportRequest } }, async (req, reply) =>
     reply.status(201).send(await bank.importStatement(contextOf(req), req.params.key, req.body.lines)),

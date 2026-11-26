@@ -2,9 +2,51 @@ import type { TenantContext } from '../ports/tenant-context.js';
 import { notFound, ruleViolation, validationFailed } from '@onengo/kernel/errors';
 import { demand } from '../permissions.js';
 import type { Tx, TransactionManager } from '../ports/transaction.js';
-import type { LedgerService } from '../ledger/ledger-service.js';
-import type { MoneyAccount, MoneyAccountChange, MoneyAccountKind, MoneyAccountStore } from './ports/money-account-store.js';
+import type { LedgerService, TrialBalance } from '../ledger/ledger-service.js';
+import type {
+  AccountBalance,
+  LedgerAccountSummary,
+  LedgerStatementPage,
+  MoneyAccount,
+  MoneyAccountChange,
+  MoneyAccountKind,
+  MoneyAccountStore,
+} from './ports/money-account-store.js';
 import { paiseToDecimal, toPaise } from '../money.js';
+import { organisationToday } from '../../shared/time/organisation-time.js';
+
+export type { AccountBalance, LedgerAccountSummary, LedgerLineKind, LedgerStatementLine } from './ports/money-account-store.js';
+
+/** Lines of an account's ledger returned in one request. */
+export const LEDGER_PAGE = 2000;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function checkDate(value: string, label: string): string {
+  const ok = typeof value === 'string' && ISO_DATE.test(value) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+  if (!ok) throw validationFailed(`${label} must be a date like 2026-04-30.`);
+  return value;
+}
+
+export interface AccountBalances {
+  asOf: string;
+  total: string;
+  accounts: AccountBalance[];
+}
+
+export interface LedgerQuery {
+  from?: string;
+  to?: string;
+  limit?: number | string;
+  offset?: number | string;
+}
+
+export interface AccountLedger extends LedgerStatementPage {
+  account: { key: string; name: string; kind: MoneyAccountKind; ledgerCode: string; status: 'active' | 'closed' };
+  from: string;
+  to: string;
+  offset: number;
+  limit: number;
+}
 
 /** Setting key for allowed transfer pairs, e.g. [["bank","cash"],["cash","bank"]]. Absent means all pairs are allowed. */
 export const TRANSFER_MATRIX_SETTING = 'money.transferMatrix';
@@ -36,6 +78,8 @@ export interface TransferInput {
   amount: number | string;
   date: string;
   reference?: string;
+  /** Why the sending account may go below zero although it does not allow that. Kept on the audit trail. */
+  overrideReason?: string;
 }
 
 /**
@@ -80,7 +124,7 @@ export class MoneyAccountService {
           holderUserId: input.holderUserId ?? null,
           custodian: input.custodian ?? null,
           upiId: input.upiId ?? null,
-          allowNegative: input.allowNegative ?? input.kind === 'bank',
+          allowNegative: input.allowNegative ?? false,
         },
         input,
       );
@@ -125,6 +169,57 @@ export class MoneyAccountService {
     return this.transactions.withTenant(ctx.tenantId, (tx) => this.store.list(tx));
   }
 
+  /** What each active account holds on a date (today when none is given), and the total of them. */
+  async balances(ctx: TenantContext, asOfInput?: string): Promise<AccountBalances> {
+    demand(ctx.actor, 'money:accounts:read');
+    const asOf = asOfInput ? checkDate(asOfInput, 'As-on date') : organisationToday();
+    return this.transactions.withTenant(ctx.tenantId, async (tx) => {
+      const accounts = await this.store.balancesAsOf(tx, asOf);
+      return { asOf, total: paiseToDecimal(accounts.reduce((sum, a) => sum + toPaise(a.balance), 0)), accounts };
+    });
+  }
+
+  /**
+   * Every entry on the account between two dates, oldest first, with a running balance, the opening and
+   * closing balance, and what each entry came from. The range is the current financial year unless given.
+   */
+  async accountLedger(ctx: TenantContext, key: string, query: LedgerQuery = {}): Promise<AccountLedger> {
+    demand(ctx.actor, 'money:accounts:read');
+    const limit = Math.min(Math.max(Math.trunc(Number(query.limit ?? LEDGER_PAGE)) || LEDGER_PAGE, 1), LEDGER_PAGE);
+    const offset = Math.max(Math.trunc(Number(query.offset ?? 0)) || 0, 0);
+    if (query.from) checkDate(query.from, 'From date');
+    if (query.to) checkDate(query.to, 'To date');
+    return this.transactions.withTenant(ctx.tenantId, async (tx) => {
+      const account = await this.byKey(tx, key);
+      const year = await this.ledger.fiscalYearOf(tx, organisationToday());
+      const from = query.from ?? year.startsOn;
+      const to = query.to ?? year.endsOn;
+      if (from > to) throw validationFailed('The from date is after the to date.');
+      const page = await this.store.ledgerStatement(tx, key, { from, to }, { limit, offset });
+      return {
+        account: { key: account.key, name: account.name, kind: account.kind, ledgerCode: account.ledgerCode, status: account.status },
+        from,
+        to,
+        offset,
+        limit,
+        ...page,
+      };
+    });
+  }
+
+  /** Every ledger account's balance on a date (today when none is given), in Debit and Credit columns that add up to the same total. */
+  async trialBalance(ctx: TenantContext, query: { asOf?: string; includeZero?: string | boolean } = {}): Promise<TrialBalance> {
+    demand(ctx.actor, 'ledger:read');
+    const includeZero = query.includeZero === true || query.includeZero === 'true' || query.includeZero === '1';
+    return this.transactions.withTenant(ctx.tenantId, (tx) => this.ledger.trialBalanceAsOn(tx, query.asOf || organisationToday(), { includeZero }), { readOnly: true });
+  }
+
+  /** Every ledger account, so a bank line can be booked against the other side. */
+  async ledgerAccounts(ctx: TenantContext): Promise<LedgerAccountSummary[]> {
+    demand(ctx.actor, 'money:reconcile');
+    return this.transactions.withTenant(ctx.tenantId, (tx) => this.store.ledgerAccounts(tx));
+  }
+
   async get(ctx: TenantContext, key: string): Promise<MoneyAccount> {
     demand(ctx.actor, 'money:accounts:read');
     return this.transactions.withTenant(ctx.tenantId, (tx) => this.byKey(tx, key));
@@ -142,11 +237,13 @@ export class MoneyAccountService {
       const to = await this.byKey(tx, input.to);
       if (from.status !== 'active' || to.status !== 'active') throw ruleViolation('Closed accounts cannot be used.');
       await this.checkMatrix(tx, from.kind, to.kind);
-      if (!from.allowNegative && toPaise(from.balance) < paise) {
+      const reason = input.overrideReason?.trim();
+      if (!from.allowNegative && toPaise(from.balance) < paise && !reason) {
         throw ruleViolation(`${from.name} has only ${from.balance} available.`);
       }
       const journalEntryId = await this.ledger.post(tx, ctx.actor, {
         date: input.date,
+        overdraftReason: reason,
         memo: `Transfer ${from.name} to ${to.name}${input.reference ? ` (${input.reference})` : ''}`,
         lines: [
           { accountCode: to.ledgerCode, debit: paiseToDecimal(paise) },

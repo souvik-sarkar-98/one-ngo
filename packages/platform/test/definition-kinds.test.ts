@@ -56,6 +56,7 @@ describe('schemas', () => {
           { type: 'chart', label: 'By month', recordType: 'donation', measure: 'count', groupBy: { period: 'month', dateField: 'createdAt' }, chart: 'bar' },
           { type: 'list', label: 'Mine', listView: 'donations', limit: 5, view: { owner: 'me' } },
           { type: 'links', label: 'Go', items: [{ label: 'Outstanding', to: '/records/donation?chip=outstanding' }] },
+          { type: 'wizards', label: 'Fundraising', items: [{ label: 'Record a donation', to: '/records/donation?create=new', permission: 'record:donation:create' }] },
         ],
       }),
     ).toEqual([]);
@@ -71,6 +72,8 @@ describe('schemas', () => {
     for (const to of ['https://example.org', '//example.org', 'records']) {
       expect(valid('page', { key: 'p', label: 'P', widgets: [{ type: 'links', label: 'L', items: [{ label: 'x', to }] }] })).not.toEqual([]);
     }
+    expect(valid('page', { key: 'p', label: 'P', widgets: [{ type: 'wizards', label: 'L', items: [] }] })).not.toEqual([]);
+    expect(valid('page', { key: 'p', label: 'P', widgets: [{ type: 'wizards', label: 'L', items: [{ label: 'x', to: 'https://example.org' }] }] })).not.toEqual([]);
     expect(valid('page', { key: 'p', label: 'P', placement: 'more', widgets: [{ type: 'groups' }] })).not.toEqual([]);
     expect(valid('page', { key: 'p', label: 'P', widgets: [{ type: 'stat', label: 'S', recordType: 'donation' }] })).not.toEqual([]);
   });

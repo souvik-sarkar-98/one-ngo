@@ -56,9 +56,15 @@ export interface NewRecord extends WrittenRecord {
   typeKey: string;
   number: string | null;
   workflowKey: string | null;
+  /** Legacy dates from a migration; absent means the database sets them to now. */
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-export type RecordChanges = WrittenRecord;
+export interface RecordChanges extends WrittenRecord {
+  /** A legacy date from a migration; absent means the update sets it to now. */
+  updatedAt?: string;
+}
 
 export interface ScriptRun {
   key: string;
@@ -154,6 +160,8 @@ export interface RecordStore {
   children(tx: Tx, typeKey: string, referenceKey: string, parentId: string): Promise<{ status: string | null; data: Record<string, unknown> }[]>;
   /** Live records of a type, other than `exceptId`, whose unique field has one of the keyed hashes, in id order. */
   idsByHash(tx: Tx, typeKey: string, fieldKey: string, hashes: string[], exceptId: string | null, limit: number): Promise<string[]>;
+  /** The ledger codes of the organisation's active money accounts: the values a `choicesFrom: moneyAccounts` field may hold. */
+  moneyAccountCodes(tx: Tx): Promise<Set<string>>;
 
   /** The best unexpired share of the record with the person or one of their roles. */
   shareAccess(tx: Tx, recordId: string, person: { id: string; roles: string[] }): Promise<'read' | 'edit' | undefined>;

@@ -1,0 +1,114 @@
+name: Rollback
+
+# Sends traffic back to an earlier release. Run it by hand from the Actions tab.
+# The deploy summary lists the previous version (production) or revision (stage)
+# names to use here.
+#
+# This moves traffic only. The database is not rolled back, so the earlier
+# release must work with the current schema (migrations are written to allow it).
+# The environment's required reviewers approve the run before any Google Cloud call.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Environment to roll back'
+        required: true
+        type: choice
+        options: [stage, prod]
+        default: prod
+      main_version:
+        description: 'Main service: App Engine version (prod) or Cloud Run revision (stage) to restore'
+        required: true
+        type: string
+      console_version:
+        description: 'Console service: App Engine version (prod) or Cloud Run revision (stage) to restore'
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ inputs.target == 'prod' && 'deploy-prod' || 'deploy-stage' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  rollback:
+    name: Roll back ${{ inputs.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.target }}
+    env:
+      PROJECT: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION || 'asia-south1' }}
+      TARGET: ${{ inputs.target }}
+      MAIN_VERSION: ${{ inputs.main_version }}
+      CONSOLE_VERSION: ${{ inputs.console_version }}
+    steps:
+      # Names reach the shell only through env. Only version-like names are accepted.
+      - name: Check the names
+        run: |
+          set -euo pipefail
+          for v in "$MAIN_VERSION" "$CONSOLE_VERSION"; do
+            [[ "$v" =~ ^[a-z0-9][a-z0-9-]{0,99}$ ]] || { echo "::error::'$v' is not a valid version or revision name."; exit 1; }
+          done
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - uses: google-github-actions/auth@7b53cdc2a387814ed14eec026287aac689ae8c9b # v2.1.9
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
+
+      - name: Check the target exists
+        run: |
+          set -euo pipefail
+          if [ "$TARGET" = prod ]; then
+            gcloud app versions describe "$MAIN_VERSION" --service=default --project "$PROJECT" >/dev/null
+            gcloud app versions describe "$CONSOLE_VERSION" --service=console --project "$PROJECT" >/dev/null
+          else
+            gcloud run revisions describe "$MAIN_VERSION" --project "$PROJECT" --region "$REGION" >/dev/null
+            gcloud run revisions describe "$CONSOLE_VERSION" --project "$PROJECT" --region "$REGION" >/dev/null
+          fi
+
+      - name: Move traffic
+        run: |
+          set -euo pipefail
+          if [ "$TARGET" = prod ]; then
+            gcloud app services set-traffic default --splits="$MAIN_VERSION=1" --project "$PROJECT" --quiet
+            gcloud app services set-traffic console --splits="$CONSOLE_VERSION=1" --project "$PROJECT" --quiet
+          else
+            gcloud run services update-traffic ngo --project "$PROJECT" --region "$REGION" --to-revisions "$MAIN_VERSION=100" --quiet
+            gcloud run services update-traffic ngo-console --project "$PROJECT" --region "$REGION" --to-revisions "$CONSOLE_VERSION=100" --quiet
+          fi
+
+      - name: Curl /health on the public addresses
+        env:
+          PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
+          CONSOLE_PUBLIC_BASE_URL: ${{ vars.CONSOLE_PUBLIC_BASE_URL }}
+        run: |
+          set -euo pipefail
+          main="$PUBLIC_BASE_URL"
+          console="$CONSOLE_PUBLIC_BASE_URL"
+          if [ "$TARGET" = stage ]; then
+            # Stage may run without custom addresses; fall back to the Cloud Run ones.
+            [ -n "$main" ] || main="$(gcloud run services describe ngo --project "$PROJECT" --region "$REGION" --format='value(status.url)')"
+            [ -n "$console" ] || console="$(gcloud run services describe ngo-console --project "$PROJECT" --region "$REGION" --format='value(status.url)')"
+          fi
+          node .github/scripts/smoke-test.mjs main "$main"
+          node .github/scripts/smoke-test.mjs console "$console"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Rollback ($TARGET)"
+            echo "- Main restored to: \`$MAIN_VERSION\`"
+            echo "- Console restored to: \`$CONSOLE_VERSION\`"
+            echo "- The database was not changed."
+          } >> "$GITHUB_STEP_SUMMARY"

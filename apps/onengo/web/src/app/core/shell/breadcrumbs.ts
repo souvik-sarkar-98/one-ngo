@@ -94,6 +94,18 @@ function reports(parts: string[], params: Params, named: Named): Crumb[] {
   return directoryTrail({ label: t('ui.nav.reports'), href: '/reports' }, named['reportGroup'] ? { label: named['reportGroup'], href: '/reports' } : null, rest);
 }
 
+/** The money page, then an account's Statement or Reconcile (the account's name once the screen has it), or the Trial balance. */
+function accounts(parts: string[], named: Named): Crumb[] {
+  const [, key, screen] = parts;
+  if (!key) return directoryTrail({ label: t('ui.money.title') }, null, []);
+  const home = { label: t('ui.money.title'), href: '/accounts' };
+  if (key === 'trial-balance') return directoryTrail(home, null, [{ label: t('ui.crumbs.trialBalance') }]);
+  const rest: TrailStep[] = [{ label: named['account'] ?? key, href: `/accounts/${encodeURIComponent(key)}/statement` }];
+  if (screen === 'reconcile') rest.push({ label: t('ui.crumbs.reconcile') });
+  else rest.push({ label: t('ui.crumbs.statement') });
+  return directoryTrail(home, null, rest);
+}
+
 function inbox(params: Params): Crumb[] {
   return directoryTrail({ label: t('ui.nav.inbox'), href: '/inbox' }, null, [
     { label: t(params['tab'] === 'notifications' ? 'ui.inbox.notifications' : 'ui.inbox.approvals') },
@@ -207,7 +219,7 @@ export function trail(path: string, params: Params, defs: RuntimeDefinitions | n
       out = reports(parts, params, named);
       break;
     case 'accounts':
-      out = directoryTrail({ label: t('ui.money.title') }, null, []);
+      out = accounts(parts, named);
       break;
     case 'settings':
       out = settingsCrumb(params);

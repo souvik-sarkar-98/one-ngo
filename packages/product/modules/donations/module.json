@@ -1,6 +1,6 @@
 {
   "key": "donations",
-  "version": "0.4.1",
+  "version": "0.4.4",
   "label": "Donations",
   "description": "Keep donors, record donations from raised to paid, post them to the books, and issue numbered receipts.",
   "engine": "0.1.0",
@@ -41,6 +41,7 @@
           "payments:confirm",
           "money:accounts:read",
           "money:reconcile",
+          "ledger:read",
           "people:read",
           "report:donationSummary:run",
           "report:donationRegister:run"
@@ -51,10 +52,12 @@
     "accounts": [
       { "code": "BANK", "name": "Bank account", "type": "asset" },
       { "code": "CASH", "name": "Cash in hand", "type": "asset" },
-      { "code": "DONATION_INCOME", "name": "Donations received", "type": "income" }
+      { "code": "DONATION_INCOME", "name": "Donations received", "type": "income" },
+      { "code": "OPENING_FUNDS", "name": "Opening funds", "type": "equity" }
     ],
     "moneyAccounts": [
-      { "key": "upi", "name": "Main bank account", "kind": "bank", "ledgerCode": "BANK" }
+      { "key": "upi", "name": "Main bank account", "kind": "bank", "ledgerCode": "BANK" },
+      { "key": "cash", "name": "Cash in hand", "kind": "cash", "ledgerCode": "CASH" }
     ],
     "receiptSeries": [
       { "key": "donation-receipt", "prefix": "RCPT", "label": "Donation acknowledgement", "reset": "fiscal_year" }

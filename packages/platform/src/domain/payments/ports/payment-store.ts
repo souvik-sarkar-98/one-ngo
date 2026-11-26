@@ -7,7 +7,7 @@ export type IntentStatus = 'awaiting_payment' | 'paid' | 'failed' | 'cancelled';
 /** What happens to the record when the payment is confirmed. Field names map payment facts onto record fields. */
 export interface OnPaid {
   transition: string;
-  fields?: { paidOn?: string; reference?: string; method?: string };
+  fields?: { paidOn?: string; reference?: string; method?: string; account?: string };
   methodValue?: string;
 }
 
@@ -21,10 +21,14 @@ export interface StoredIntent {
   upiLink: string | null;
   onPaid: OnPaid;
   providerOrderId: string | null;
+  /** The money account (by key) the payment was asked to go into; null for requests made without one. */
+  accountKey: string | null;
 }
 
 /** A paid intent with its payment facts and the record as it is now. */
 export interface PaidIntent extends StoredIntent {
+  /** The ledger code of that account now; null when there was none or it no longer exists. */
+  accountLedgerCode: string | null;
   paidOn: string;
   providerPaymentId: string | null;
   recordType: string;
@@ -47,6 +51,7 @@ export interface NewIntent {
   onPaid: OnPaid;
   upiLink: string | null;
   providerOrderId: string | null;
+  accountKey: string | null;
 }
 
 /** Payment persistence. Writes are audited with the change. */
@@ -57,8 +62,7 @@ export interface PaymentStore {
   /** An enabled gateway's settings and encrypted secrets. */
   enabledGateway(tx: Tx, provider: GatewayName): Promise<{ config: { keyId: string; environment?: 'sandbox' | 'production' }; secretEnc: string | null } | undefined>;
   /** The UPI ID of an active money account and the organisation's name as payee. */
-  upiPayee(tx: Tx, accountKey: string): Promise<{ upiId: string | null; payeeName: string } | undefined>;
-  /** Undefined when the record already has a payment waiting. */
+  upiPayee(tx: Tx, accountKey: string): Promise<{ upiId: string | null; payeeName: string } | undefined>;  /** Undefined when the record already has a payment waiting. */
   createIntent(tx: Tx, actorId: string, intent: NewIntent): Promise<StoredIntent | undefined>;
   intent(tx: Tx, intentId: string): Promise<StoredIntent | undefined>;
   awaitingIntents(tx: Tx): Promise<StoredIntent[]>;

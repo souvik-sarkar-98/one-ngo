@@ -402,13 +402,14 @@ const describePostingRule: Describer<PostingRuleDef> = (b, a, labels, out) => {
   exprChange(out, b.condition, a.condition, (e) => `Posts only when ${e}`, 'Posts without a condition');
   if (b.date !== a.date) out.push(`Dates the entry ${a.date}`);
   if (b.memo !== a.memo) out.push('Changes the memo');
+  if (b.overdraftReason !== a.overdraftReason) out.push(a.overdraftReason ? 'Lets the entry overdraw an account when a reason is given' : 'Refuses an entry that overdraws an account');
   const before = b.lines.map(canonical);
   const after = a.lines.map(canonical);
   const added = a.lines.filter((_l, i) => !before.includes(after[i]!));
   const removed = b.lines.filter((_l, i) => !after.includes(before[i]!));
   for (const l of added) out.push(`Adds the ${lineText(l)} for ${l.amount}`);
   for (const l of removed) out.push(`Removes the ${lineText(l)}`);
-  return new Set(['key', 'recordType', 'whenStatus', 'workflow', 'condition', 'date', 'memo', 'lines']);
+  return new Set(['key', 'recordType', 'whenStatus', 'workflow', 'condition', 'date', 'memo', 'overdraftReason', 'lines']);
 };
 
 const describeReceiptRule: Describer<ReceiptRuleDef> = (b, a, labels, out) => {

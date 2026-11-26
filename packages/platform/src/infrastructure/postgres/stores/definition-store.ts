@@ -467,7 +467,7 @@ export class PgDefinitionStore implements DefinitionStore {
           name: m.name,
           kind: m.kind,
           ledger_account_id: ledger.id,
-          allow_negative: m.kind === 'bank',
+          allow_negative: false,
           created_by: `module:${manifest.key}`,
         })
         .onConflict((oc) => oc.columns(['tenant_id', 'key']).doNothing())

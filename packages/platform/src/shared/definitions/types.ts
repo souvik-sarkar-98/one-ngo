@@ -64,6 +64,13 @@ export interface FieldDef {
   type: FieldType;
   required?: boolean;
   choices?: { value: string; label: string }[];
+  /**
+   * A choice field whose options are the organisation's active money accounts, filled in by the server
+   * (value is the account's ledger code, label its name) instead of being listed in `choices`.
+   * An action's form may also ask for `upiAccounts`: the accounts that have a UPI ID, where the value is the
+   * account's own key (what a payment step's `accountFrom` needs). Record types allow `moneyAccounts` only.
+   */
+  choicesFrom?: 'moneyAccounts' | 'upiAccounts';
   referenceType?: string;
   min?: number;
   max?: number;
@@ -362,6 +369,8 @@ export interface PostingRuleDef {
   condition?: string;
   date: string;
   memo?: string;
+  /** Expression returning the reason this entry may take a money account below zero; empty when there is none. */
+  overdraftReason?: string;
   lines: { side: 'debit' | 'credit'; account?: string; accountExpr?: string; amount: string; fund?: string }[];
 }
 
@@ -468,7 +477,7 @@ export interface TranslationDef {
 /** A field on an action's small form; its value is available as `input.<key>`. */
 export type ActionField = Pick<
   FieldDef,
-  'key' | 'label' | 'type' | 'required' | 'choices' | 'referenceType' | 'min' | 'max' | 'maxLength' | 'help' | 'placeholder'
+  'key' | 'label' | 'type' | 'required' | 'choices' | 'choicesFrom' | 'referenceType' | 'min' | 'max' | 'maxLength' | 'help' | 'placeholder'
 >;
 
 export type ActionStep =
@@ -477,9 +486,12 @@ export type ActionStep =
       type: 'createPayment';
       provider: 'upi' | 'razorpay' | 'cashfree';
       amount: string;
-      account: string;
-      /** The workflow step run when the payment arrives, and the fields it fills. */
-      onPaid: { transition: string; fields?: { paidOn?: string; reference?: string; method?: string }; methodValue?: string };
+      /** The money account (by key) that receives the payment. Used when `accountFrom` is not set or gives nothing. */
+      account?: string;
+      /** An expression for the account key, such as `input.account`, so the person running the action chooses. */
+      accountFrom?: string;
+      /** The workflow step run when the payment arrives, and the fields it fills. `account` receives the account's ledger code. */
+      onPaid: { transition: string; fields?: { paidOn?: string; reference?: string; method?: string; account?: string }; methodValue?: string };
     }
   | { type: 'openReceipt' }
   /** Runs a custom-button script on the record and saves what it returns. */
@@ -543,6 +555,8 @@ export type Widget = { permission?: string } & (
     }
   | { type: 'list'; label: string; listView: string; view?: ViewRef; limit: number }
   | { type: 'links'; label: string; items: PageLink[] }
+  /** Task cards: each link opens a form or screen as a card, under this label as its area. Shown on Home and on any page. */
+  | { type: 'wizards'; label: string; items: PageLink[] }
 );
 
 /** A screen of widgets. The page whose key is `home` is the Home screen; every other page opens from the navigation. */

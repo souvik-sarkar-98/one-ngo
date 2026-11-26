@@ -37,6 +37,8 @@ export async function write(tx: Tx, s: SaveContext, expectedVersion: number | nu
       states: s.move.states,
       searchText: searchText(type, number, data),
       actorId: ctx.actor.id,
+      createdAt: s.history?.createdAt,
+      updatedAt: s.history?.updatedAt ?? s.history?.createdAt,
     });
   } else {
     await logScripts(store, tx, s.scripts, current.id);
@@ -50,6 +52,7 @@ export async function write(tx: Tx, s: SaveContext, expectedVersion: number | nu
       states: s.move.states,
       searchText: searchText(type, current.number, data),
       actorId: ctx.actor.id,
+      updatedAt: s.history?.updatedAt,
     });
     if (!row) throw conflict('This record was changed by someone else. Reload it and try again.');
   }

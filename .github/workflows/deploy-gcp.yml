@@ -1,25 +1,33 @@
-name: CD (production)
+name: Deploy GCP App Engine (production)
 
-# Called by ci.yml after "CI gate" passes on master. It is not started by a
+# Called by deploy.yml after "Test gate" passes on main. It is not started by a
 # push on its own, so it cannot run without the tests.
 #
 # Order, and what each stage protects:
 #   0. Wait for approval (GitHub environment "prod" required reviewers). The job
 #      does not start until a reviewer approves.
 #   1. Build both servers from this exact commit.
-#   2. Fill the app.yaml placeholders. A missing secret stops here, before
+#   2. Fill the non-secret app.yaml placeholders. Secret values are never written
+#      to app.yaml: they go to Secret Manager (step 3b), and each service's
+#      bootstrap reads them at start-up. A missing value stops here, before
 #      anything outside the runner changes.
 #   3. Migrate the database (npm run deploy:prepare).
+#   3b. Store each service's settings in Secret Manager, as a JSON secret.
 #   4. Deploy both services as new versions that get NO traffic.
 #   5. Curl GET /health on the new versions. Nothing else is checked here.
 #   6. Move traffic to the new versions.
 #   7. Curl GET /health on the public addresses. If that fails, move traffic back.
 #   8. Deploy cron.yaml.
-# The next job opens the deployed pages in Playwright. It does not run the
-# suite in tests/e2e/specs, which signs in and writes records.
+# Browser tests are not part of this workflow. Run them from the separate
+# "Browser tests" workflow (e2e-test.yml).
 
 on:
   workflow_call:
+    inputs:
+      version:
+        description: 'Release version being deployed, for example 1.2.0 (tagged after success)'
+        required: true
+        type: string
 
 concurrency:
   group: deploy-prod
@@ -35,20 +43,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: prod
-    outputs:
-      public_url: ${{ steps.urls.outputs.public_url }}
-      console_url: ${{ steps.urls.outputs.console_url }}
     env:
       PROJECT: ${{ vars.GCP_PROJECT_ID }}
     steps:
-      - name: Publish the addresses for the end-to-end job
-        id: urls
-        run: |
-          echo "public_url=${{ vars.PUBLIC_BASE_URL }}" >> "$GITHUB_OUTPUT"
-          echo "console_url=${{ vars.CONSOLE_PUBLIC_BASE_URL }}" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # The tested commit itself. The tag does not exist until this succeeds.
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
@@ -57,7 +59,9 @@ jobs:
       # One version name per run. Re-running the same commit gets a new name, so
       # a deploy can never overwrite the version that is serving traffic.
       - name: Name this release
-        run: echo "VERSION=g${GITHUB_SHA::10}-r${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+        env:
+          RELEASE_TAG: ${{ inputs.version }}
+        run: echo "VERSION=v$(echo "$RELEASE_TAG" | tr . -)-r${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
 
       - name: Build both servers
         run: |
@@ -68,33 +72,23 @@ jobs:
         env:
           REPLACE_WITH_SERVICE_ACCOUNT: ${{ vars.SERVICE_ACCOUNT }}
           REPLACE_WITH_PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
-          REPLACE_WITH_SYSTEM_DATABASE_SECRET: ${{ secrets.SYSTEM_DATABASE_URL }}
-          REPLACE_WITH_RUNTIME_DATABASE_SECRET: ${{ secrets.RUNTIME_DATABASE_URL }}
-          REPLACE_WITH_TOKEN_SECRET: ${{ secrets.TOKEN_SECRET }}
-          REPLACE_WITH_ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
         run: node .github/scripts/stage-app-engine.mjs apps/onengo/server .deploy/main
 
       - name: Fill the console service manifest
         env:
           REPLACE_WITH_CONSOLE_SERVICE_ACCOUNT: ${{ vars.CONSOLE_SERVICE_ACCOUNT }}
           REPLACE_WITH_CONSOLE_PUBLIC_BASE_URL: ${{ vars.CONSOLE_PUBLIC_BASE_URL }}
-          REPLACE_WITH_CONSOLE_SYSTEM_DATABASE_SECRET: ${{ secrets.CONSOLE_DATABASE_URL }}
-          REPLACE_WITH_CONSOLE_RUNTIME_DATABASE_SECRET: ${{ secrets.CONSOLE_RUNTIME_URL }}
-          REPLACE_WITH_CONSOLE_ENCRYPTION_KEY: ${{ secrets.CONSOLE_ENCRYPTION_KEY }}
-          REPLACE_WITH_ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
-          REPLACE_WITH_CONSOLE_INTERNAL_TOKEN_SECRET: ${{ secrets.CONSOLE_INTERNAL_TOKEN_SECRET }}
           REPLACE_WITH_CONSOLE_OIDC_ISSUER: ${{ vars.CONSOLE_OIDC_ISSUER }}
           REPLACE_WITH_CONSOLE_OIDC_CLIENT_ID: ${{ vars.CONSOLE_OIDC_CLIENT_ID }}
-          REPLACE_WITH_CONSOLE_OIDC_CLIENT_SECRET: ${{ secrets.CONSOLE_OIDC_CLIENT_SECRET }}
           REPLACE_WITH_CONSOLE_OIDC_AUDIENCE: ${{ vars.CONSOLE_OIDC_AUDIENCE }}
           REPLACE_WITH_CONSOLE_IAP_AUDIENCE: ${{ vars.CONSOLE_IAP_AUDIENCE }}
         run: node .github/scripts/stage-app-engine.mjs apps/onengo-console/server .deploy/console
 
-      - uses: google-github-actions/auth@v2
+      - uses: google-github-actions/auth@7b53cdc2a387814ed14eec026287aac689ae8c9b # v2.1.9
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
-      - uses: google-github-actions/setup-gcloud@v2
+      - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
 
       - name: Require an existing App Engine app
         run: |
@@ -108,8 +102,9 @@ jobs:
       - name: Record the versions now serving
         run: |
           serving() {
+            # The version with the largest share of traffic, if traffic is split.
             gcloud app versions list --service="$1" --project "$PROJECT" \
-              --filter="traffic_split>0" --format="value(version.id)" 2>/dev/null | head -n 1 || true
+              --filter="traffic_split>0" --sort-by="~traffic_split" --format="value(version.id)" 2>/dev/null | head -n 1 || true
           }
           echo "PREVIOUS_MAIN=$(serving default)" >> "$GITHUB_ENV"
           echo "PREVIOUS_CONSOLE=$(serving console)" >> "$GITHUB_ENV"
@@ -120,6 +115,34 @@ jobs:
         env:
           DATABASE_OWNER_URL: ${{ secrets.DATABASE_OWNER_URL }}
         run: npm run deploy:prepare
+
+      # Secret values go from GitHub secrets to Secret Manager, never into app.yaml. Each service's
+      # bootstrap reads its own secret at start-up. The new versions read the newest values, so this
+      # runs before the deploy. The previous versions keep their own copies until they are deleted.
+      - name: Store the main service settings in Secret Manager
+        env:
+          RUNTIME_SA: ${{ vars.SERVICE_ACCOUNT }}
+          SECRET_ID: ngo-prod-config
+          CONFIG_NAMES: DATABASE_SYSTEM_URL,DATABASE_RUNTIME_URL,TOKEN_SECRET,ENCRYPTION_KEY
+          DATABASE_SYSTEM_URL: ${{ secrets.SYSTEM_DATABASE_URL }}
+          DATABASE_RUNTIME_URL: ${{ secrets.RUNTIME_DATABASE_URL }}
+          TOKEN_SECRET: ${{ secrets.TOKEN_SECRET }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+        run: node .github/scripts/store-prod-config.mjs
+
+      - name: Store the console settings in Secret Manager
+        env:
+          RUNTIME_SA: ${{ vars.CONSOLE_SERVICE_ACCOUNT }}
+          SECRET_ID: ngo-console-prod-config
+          CONFIG_NAMES: OPERATOR_DATABASE_URL,OPERATOR_RUNTIME_URL,OPERATOR_ENCRYPTION_KEY,ENCRYPTION_KEY,OPERATOR_INTERNAL_TOKEN_SECRET
+          CONFIG_OPTIONAL: OPERATOR_OIDC_CLIENT_SECRET
+          OPERATOR_DATABASE_URL: ${{ secrets.CONSOLE_DATABASE_URL }}
+          OPERATOR_RUNTIME_URL: ${{ secrets.CONSOLE_RUNTIME_URL }}
+          OPERATOR_ENCRYPTION_KEY: ${{ secrets.CONSOLE_ENCRYPTION_KEY }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+          OPERATOR_INTERNAL_TOKEN_SECRET: ${{ secrets.CONSOLE_INTERNAL_TOKEN_SECRET }}
+          OPERATOR_OIDC_CLIENT_SECRET: ${{ secrets.CONSOLE_OIDC_CLIENT_SECRET }}
+        run: node .github/scripts/store-prod-config.mjs
 
       - name: Deploy the new versions without traffic
         run: |
@@ -169,47 +192,20 @@ jobs:
       - name: Deploy the scheduler
         run: gcloud app deploy apps/onengo/server/cron.yaml --project "$PROJECT" --quiet
 
+      # GitHub secrets are the secret store. The filled manifests hold their
+      # values, so they are removed from the runner whether the deploy passed or not.
+      - name: Remove the filled manifests
+        if: always()
+        run: rm -rf .deploy
+
       - name: Summary
         if: always()
         run: |
           {
             echo "### Production deploy"
-            echo "- Release: \`$VERSION\` from \`${GITHUB_SHA::10}\`"
+            echo "- Release version: \`${{ inputs.version }}\` (commit \`${GITHUB_SHA::10}\`)"
+            echo "- App Engine version: \`$VERSION\`"
             echo "- Previous main version: \`${PREVIOUS_MAIN:-none}\`"
             echo "- Previous console version: \`${PREVIOUS_CONSOLE:-none}\`"
-            echo "- To go back later, run the Rollback workflow with the previous version name."
+            echo "- To go back later, run the Rollback workflow (target prod) with the two previous version names."
           } >> "$GITHUB_STEP_SUMMARY"
-
-  e2e:
-    name: Post-deploy end-to-end
-    needs: deploy
-    if: needs.deploy.result == 'success'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: tests/e2e/package-lock.json
-      - name: Install Playwright
-        working-directory: tests/e2e
-        run: npm ci
-      - name: Install Chromium
-        working-directory: tests/e2e
-        run: npx playwright install --with-deps chromium
-      - name: Open the deployed sign-in pages
-        working-directory: tests/e2e
-        env:
-          CI: true
-          APP_BASE_URL: ${{ needs.deploy.outputs.public_url }}
-          CONSOLE_BASE_URL: ${{ needs.deploy.outputs.console_url }}
-        run: npx playwright test --config=playwright.post-deploy.config.ts
-      - name: Upload the Playwright report
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: post-deploy-playwright-${{ github.run_id }}
-          path: tests/e2e/playwright-report
-          retention-days: 7

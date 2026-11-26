@@ -110,6 +110,8 @@ export function parseCell(f: FieldDef, raw: string): { value: unknown } | { erro
       return YES.has(t) ? { value: true } : NO.has(t) ? { value: false } : { error: 'must be yes or no' };
     }
     case 'choice': {
+      // The accounts are checked when the record is saved.
+      if (f.choicesFrom) return { value: s };
       const v = choice(s);
       return v === undefined ? { error: `is not one of the choices (${(f.choices ?? []).map((c) => c.label).join(', ')})` } : { value: v };
     }

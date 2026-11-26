@@ -187,6 +187,7 @@ import { Btn } from '@onengo/web-kit';
                     type="button"
                     [appBtn]="s.primary ? 'primary' : ''"
                     [disabled]="!!r.pending || r.busy"
+                    [attr.title]="s.approval ? ('ui.records.stepNeedsApproval' | t) : null"
                     (click)="store.intents.setPanel({ kind: 'step', step: s.key })">
                     {{ s.label }}
                   </button>
@@ -234,6 +235,9 @@ import { Btn } from '@onengo/web-kit';
             (saved)="rec.session.step(s, models())">
             @if (r.record) {
               <div listCreatePrefix class="record-panel__summary">
+                @if (s.approval) {
+                  <p class="record-panel__confirm" data-testid="step-approval-hint">{{ 'ui.records.stepNeedsApproval' | t }}</p>
+                }
                 @for (row of stepSummary(spec, r.record, s.key); track row.label) {
                   <div class="record-panel__summary-row">
                     <span class="record-panel__summary-label">{{ row.label }}</span>

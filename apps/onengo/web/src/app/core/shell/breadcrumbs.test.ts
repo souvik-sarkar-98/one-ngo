@@ -28,6 +28,22 @@ afterEach(() => {
   useMessages('en', ENGLISH);
 });
 
+describe('breadcrumb trail on the money screens', () => {
+  it('is the page title alone on the money page', () => {
+    expect(at('/accounts')).toEqual([{ label: 'Accounts' }]);
+  });
+
+  it('goes from Accounts to the account and its statement, naming the account once the screen has it', () => {
+    expect(at('/accounts/upi/statement', { named: { account: 'Main bank' } })).toEqual([{ label: 'Accounts', href: '/accounts' }, { label: 'Main bank', href: '/accounts/upi/statement' }, { label: 'Statement' }]);
+    expect(labels('/accounts/upi/statement')).toEqual(['Accounts', 'upi', 'Statement']);
+  });
+
+  it('ends in Reconcile on the reconcile screen, and goes straight from Accounts to the trial balance', () => {
+    expect(labels('/accounts/upi/reconcile', { named: { account: 'Main bank' } })).toEqual(['Accounts', 'Main bank', 'Reconcile']);
+    expect(at('/accounts/trial-balance')).toEqual([{ label: 'Accounts', href: '/accounts' }, { label: 'Trial balance' }]);
+  });
+});
+
 describe('breadcrumb trail', () => {
   it('starts at the destination, with no leading Home', () => {
     expect(at('/')).toEqual([{ label: 'Home' }]);

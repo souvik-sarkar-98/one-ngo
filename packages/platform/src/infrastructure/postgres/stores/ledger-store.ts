@@ -65,6 +65,32 @@ export const pgLedgerStore = (sequences: PostgresSequenceStore): LedgerStore => 
     return pg(tx).selectFrom('fiscal_period').select(['id', 'status']).where('tenant_id', '=', TENANT).where('key', '=', key).executeTakeFirst();
   },
 
+  async lockMoneyBalances(tx, accountIds) {
+    // Locked in id order, so two postings that touch the same accounts wait for each other without deadlocking.
+    await pg(tx)
+      .selectFrom('money_account')
+      .select('id')
+      .where('tenant_id', '=', TENANT)
+      .where('ledger_account_id', '=', sql<string>`any(${accountIds}::uuid[])`)
+      .orderBy('id')
+      .forUpdate()
+      .execute();
+    const rows = await pg(tx)
+      .selectFrom('money_account as m')
+      .innerJoin('ledger_account as a', 'a.id', 'm.ledger_account_id')
+      .select([
+        'a.id as accountId',
+        'a.code',
+        'm.name',
+        'm.allow_negative as allowNegative',
+        sql<string>`coalesce((select sum(l.debit - l.credit) from journal_line l where l.account_id = a.id), 0)::numeric(20,2)::text`.as('balance'),
+      ])
+      .where('m.tenant_id', '=', TENANT)
+      .where('m.ledger_account_id', '=', sql<string>`any(${accountIds}::uuid[])`)
+      .execute();
+    return rows.map((r) => ({ accountId: r.accountId, code: r.code, name: r.name, balance: r.balance, allowNegative: r.allowNegative }));
+  },
+
   async insertEntry(tx, actorId, entry) {
     const k = pg(tx);
     const row = await k
@@ -94,6 +120,15 @@ export const pgLedgerStore = (sequences: PostgresSequenceStore): LedgerStore => 
       entityId: row!.id,
       after: { date: entry.date, total: entry.total, source: entry.sourceRule },
     });
+    if (entry.overdraft) {
+      await writeAudit(executorOf(tx), {
+        actorId,
+        action: 'ledger.overdraft_override',
+        entity: 'journal_entry',
+        entityId: row!.id,
+        after: { reason: entry.overdraft.reason, accounts: entry.overdraft.accounts },
+      });
+    }
     return row!.id;
   },
 
@@ -141,4 +176,23 @@ export const pgLedgerStore = (sequences: PostgresSequenceStore): LedgerStore => 
       .orderBy('a.code')
       .execute();
   },
-});
+
+  async balancesAsOn(tx, { asOf, yearStart }) {
+    const { rows } = await sql<{ code: string; name: string; type: string; active: boolean; money_key: string | null; debit: string; credit: string; prior_debit: string; prior_credit: string }>`
+      select a.code, a.name, a.type, a.active, m.key as money_key,
+             coalesce(sum(x.debit) filter (where a.type in ('asset', 'liability', 'equity') or x.entry_date >= ${yearStart}::date), 0)::numeric(20, 2)::text as debit,
+             coalesce(sum(x.credit) filter (where a.type in ('asset', 'liability', 'equity') or x.entry_date >= ${yearStart}::date), 0)::numeric(20, 2)::text as credit,
+             coalesce(sum(x.debit) filter (where a.type not in ('asset', 'liability', 'equity') and x.entry_date < ${yearStart}::date), 0)::numeric(20, 2)::text as prior_debit,
+             coalesce(sum(x.credit) filter (where a.type not in ('asset', 'liability', 'equity') and x.entry_date < ${yearStart}::date), 0)::numeric(20, 2)::text as prior_credit
+        from ledger_account a
+        left join money_account m on m.ledger_account_id = a.id and m.tenant_id = a.tenant_id
+        left join (
+          select l.account_id, l.debit, l.credit, e.entry_date
+            from journal_line l join journal_entry e on e.id = l.entry_id
+           where e.entry_date <= ${asOf}::date
+        ) x on x.account_id = a.id
+       where a.tenant_id = app_tenant()
+       group by a.code, a.name, a.type, a.active, m.key
+       order by a.code`.execute(pg(tx));
+    return rows.map((r) => ({ code: r.code, name: r.name, type: r.type, active: r.active, moneyKey: r.money_key, debit: r.debit, credit: r.credit, priorDebit: r.prior_debit, priorCredit: r.prior_credit }));
+  },});

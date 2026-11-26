@@ -50,7 +50,23 @@ export interface MigrationTarget {
   persons?: Record<string, PersonMapping>;
   /** File fields filled by attachment path. Missing in older mappings. */
   files?: Record<string, FileMapping>;
+  /** The columns holding the records' original created and updated dates. Missing in older mappings. */
+  dates?: MigrationDates;
+  /** The column holding each record's status, and the status each of its values becomes. Missing in older mappings. */
+  state?: MigrationState;
   required: boolean;
+}
+
+/** The legacy date columns of a target: a date-only cell is midnight UTC, a cell with a time keeps it. */
+export interface MigrationDates {
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** A status column: each value (compared ignoring case and spaces) is the key of the status the record takes. */
+export interface MigrationState {
+  column: string;
+  map: Record<string, string>;
 }
 
 export const ROLE_SEPARATORS = [';', ',', '|'] as const;
@@ -441,6 +457,40 @@ export function setPerson(target: MigrationTarget, fieldKey: string, column: str
   return { ...target, persons };
 }
 
+/** The target with one original date taken from `column`, or left out when `column` is empty. */
+export function setDate(target: MigrationTarget, which: keyof MigrationDates, column: string): MigrationTarget {
+  const dates: MigrationDates = { ...(target.dates ?? {}) };
+  if (column) dates[which] = column;
+  else delete dates[which];
+  const next = { ...target };
+  delete next.dates;
+  return Object.keys(dates).length ? { ...next, dates } : next;
+}
+
+/** The target with its status taken from `column`, each value given the status in `map` (an empty status leaves the value out); an empty column removes the status. */
+export function setState(target: MigrationTarget, column: string, map: Readonly<Record<string, string>>): MigrationTarget {
+  const next = { ...target };
+  delete next.state;
+  if (!column) return next;
+  return { ...next, state: { column, map: Object.fromEntries(Object.entries(map).filter(([v, s]) => v.trim() !== '' && s !== '')) } };
+}
+
+/** The status a value of a status column takes, comparing ignoring case and spaces; empty when no status is given. */
+export const stateOfValue = (map: Readonly<Record<string, string>>, value: string): string => {
+  const v = value.trim().toLowerCase();
+  return Object.entries(map).find(([k]) => k.trim().toLowerCase() === v)?.[1] ?? '';
+};
+
+/** The rows of a status column's table: each distinct sample value (ignoring case and spaces), then values already mapped, with the status each takes. */
+export function stateRowsOf(samples: readonly string[], map: Readonly<Record<string, string>>): { value: string; state: string }[] {
+  const seen = new Map<string, string>();
+  for (const v of [...samples, ...Object.keys(map)]) {
+    const t = v.trim();
+    if (t && !seen.has(t.toLowerCase())) seen.set(t.toLowerCase(), t);
+  }
+  return [...seen.values()].map((value) => ({ value, state: stateOfValue(map, value) }));
+}
+
 /** The file fields of a type a column of attachment paths can fill. */
 export const fileFields = (type: RecordTypeBody): FieldDef[] => type.fields.filter((f) => f.type === 'file' && !f.calculated && !f.rollup);
 
@@ -630,19 +680,74 @@ export function planAttachments(files: readonly { body: Blob; name: string }[], 
 
 // ------------------------------------------------------------------ people
 
+/** What a CSV added on the Files step is for: record types, people, or the files (photos, scans) that records hold. */
+export type ImportKind = 'records' | 'people' | 'files';
+export const IMPORT_KINDS: readonly ImportKind[] = ['records', 'people', 'files'];
+
 export interface KindOption {
-  kind: 'records' | 'people';
+  kind: ImportKind;
   label: string;
+  /** The catalogue key of the dropdown's option: "Import Records". */
+  option: string;
   /** The catalogue key of the line under the label: what it is, or why it is disabled. */
   hint: string;
   disabled: boolean;
 }
 
-/** The answers to "What is in this file?". People needs the session flag `migrationPeople` (Migrate people and Manage people). */
+/** The choices of the "What are you importing?" dropdown. People needs the session flag `migrationPeople` (Migrate people and Manage people). */
 export const kindOptions = (peopleAllowed: boolean): KindOption[] => [
-  { kind: 'records', label: 'ui.admin.migration.kindRecords', hint: 'ui.admin.migration.kindRecordsHint', disabled: false },
-  { kind: 'people', label: 'ui.admin.migration.kindPeople', hint: peopleAllowed ? 'ui.admin.migration.kindPeopleHint' : 'ui.admin.migration.kindPeopleDenied', disabled: !peopleAllowed },
+  { kind: 'records', label: 'ui.admin.migration.kindRecords', option: 'ui.admin.migration.importAs.records', hint: 'ui.admin.migration.kindRecordsHint', disabled: false },
+  { kind: 'people', label: 'ui.admin.migration.kindPeople', option: 'ui.admin.migration.importAs.people', hint: peopleAllowed ? 'ui.admin.migration.kindPeopleHint' : 'ui.admin.migration.kindPeopleDenied', disabled: !peopleAllowed },
+  { kind: 'files', label: 'ui.admin.migration.kindFiles', option: 'ui.admin.migration.importAs.files', hint: 'ui.admin.migration.kindFilesHint', disabled: false },
 ];
+
+/**
+ * What a file was added as. The choice is the person's, kept on this device; a file with no choice
+ * (added elsewhere, or before the choice existed) is People when it is mapped as people, else Records.
+ */
+export const importKindOf = (s: Pick<MigrationSource, 'id' | 'kind'>, chosen: Readonly<Record<string, ImportKind>>): ImportKind => chosen[s.id] ?? (s.kind === 'people' ? 'people' : 'records');
+
+/** Where the choices of one profile are kept on this device. */
+export const kindsKey = (tenant: string, profileId: string): string => `ngo.migration.kinds.${tenant}.${profileId}`;
+
+/** The kept choices, by file id; anything unreadable or unknown is dropped. */
+export function readKinds(store: Pick<Storage, 'getItem'>, key: string): Record<string, ImportKind> {
+  try {
+    const raw: unknown = JSON.parse(store.getItem(key) ?? '{}');
+    if (!raw || typeof raw !== 'object') return {};
+    return Object.fromEntries(Object.entries(raw).filter(([, v]) => (IMPORT_KINDS as readonly unknown[]).includes(v))) as Record<string, ImportKind>;
+  } catch {
+    return {};
+  }
+}
+
+/** Keeps the choices; a store that refuses (full, or private browsing) loses them, and the files fall back to what they were mapped as. */
+export function rememberKinds(store: Pick<Storage, 'setItem'>, key: string, kinds: Readonly<Record<string, ImportKind>>): void {
+  try {
+    store.setItem(key, JSON.stringify(kinds));
+  } catch {
+    // Nothing to do: the choice only decides where a file shows on the Map step.
+  }
+}
+
+/**
+ * The groups the Map step shows as chips: record types only. People and Files have none. A record type
+ * that only a Files CSV fills is not a group of its own; a group nothing fills yet (just added) is.
+ */
+export const recordGroups = (groups: readonly MapGroup[], kinds: Readonly<Record<string, ImportKind>>, added: readonly string[] = []): MapGroup[] =>
+  groups.filter((g) => g.key !== PEOPLE_GROUP && (added.includes(g.key) || !g.files.length || g.files.some((id) => kinds[id] !== 'files')));
+
+/** The record types a Files CSV can attach files to: those with a file field. */
+export const typesWithFiles = <T extends RecordTypeBody>(types: readonly T[]): T[] => types.filter((x) => fileFields(x).length > 0);
+
+/**
+ * A Files CSV's draft: one record type named by the CSV's old id column, filled by nothing but its file
+ * fields (they are mapped next). The columns' guess for other fields is dropped. No type leaves the file out.
+ */
+export function filesDraft(d: FileDraft, type: RecordTypeBody | undefined, columns: readonly string[]): FileDraft {
+  if (!type) return { ...d, targets: [] };
+  return { ...d, targets: [{ ...suggestTarget(type, columns, []), fields: {} }] };
+}
 
 /** A people mapping as the form edits it: text and choices only. */
 export interface PeopleDraft {
@@ -950,6 +1055,28 @@ export class MigrationSession {
   /** Deletes the source files, attachments and failed-row data. */
   async purge(): Promise<void> {
     if (await this.withProfile((id) => this.gateway.purge(id), t('ui.admin.migration.purged'))) await this.loadAttachments();
+  }
+
+  /**
+   * Starts the profile over: removes every CSV, and every attachment held, one after another. The
+   * mappings go with their files. Stops at the first one the server refuses, and says why.
+   */
+  async clearAll(): Promise<boolean> {
+    const first = this.state.value.profile;
+    if (!first) return false;
+    this.state.set({ busy: true, error: '', issues: [], message: '', refused: [] });
+    try {
+      let profile = first;
+      for (const s of first.sources) profile = await this.gateway.removeSource(first.id, s.id);
+      if (profile.attachments?.count) await this.gateway.clearAttachments(first.id);
+      this.state.set({ profile: await this.gateway.get(first.id), busy: false, message: t('ui.admin.migration.reset.done') });
+    } catch (e) {
+      this.state.set({ busy: false, error: asGatewayError(e, t('ui.common.somethingWentWrong')).message });
+      await this.reload(first.id, '');
+      return false;
+    }
+    await this.loadAttachments();
+    return true;
   }
 
   removeSource(sourceId: string): Promise<unknown> {

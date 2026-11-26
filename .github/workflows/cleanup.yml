@@ -4,15 +4,12 @@ name: Cleanup (production)
 # A release never deletes versions. This workflow does, and only when a person
 # asks it to.
 #
-# Monday, Wednesday and Friday at 17:00 UTC it reports and deletes nothing.
-# Run it by hand and untick dry run to delete. The prod environment's required
-# reviewers approve either kind of run before any Google Cloud call.
-#
-# The schedule runs the workflow on the repository's default branch.
+# It is manual only, so no reviewer is paged by a timer. Dry run is ticked by
+# default; untick it to delete. The prod environment's required reviewers
+# approve every run before any Google Cloud call. Run it now and then, because
+# App Engine caps the number of versions per project.
 
 on:
-  schedule:
-    - cron: '0 17 * * 1,3,5'
   workflow_dispatch:
     inputs:
       keep_versions:
@@ -42,7 +39,7 @@ jobs:
     timeout-minutes: 30
     environment: prod
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # A scheduled run is always a dry run. A manual run deletes only when
       # dry run is unticked. A false input cannot be written as
@@ -66,11 +63,11 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "keep=$INPUT_KEEP days=$INPUT_DAYS dry_run=$INPUT_DRY"
 
-      - uses: google-github-actions/auth@v2
+      - uses: google-github-actions/auth@7b53cdc2a387814ed14eec026287aac689ae8c9b # v2.1.9
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
-      - uses: google-github-actions/setup-gcloud@v2
+      - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
 
       - name: Prune old App Engine versions
         id: gae
@@ -98,7 +95,7 @@ jobs:
 
       - name: Upload the report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: cleanup-report-${{ github.run_id }}
           path: cleanup-summary.md

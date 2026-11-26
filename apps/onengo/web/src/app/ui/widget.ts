@@ -24,6 +24,8 @@ export type WidgetModel =
   | { kind: 'chart'; label: string; chart: 'bar' | 'line'; buckets: Bucket[] }
   | { kind: 'list'; label: string; rows: RowView[]; link?: string }
   | { kind: 'links'; label: string; items: WidgetLink[] }
+  /** Task cards. Home and pages draw them as cards; this plain list is what the Builder's preview shows. */
+  | { kind: 'wizards'; label: string; items: WidgetLink[] }
   | { kind: 'groups'; groups: WidgetGroup[] };
 
 const LABELS = () => ({
@@ -167,6 +169,18 @@ const BOX = { width: 320, height: 150, left: 40, bottom: 22 };
                 }
               </ul>
             }
+            @case ('wizards') {
+              <ul class="widget__links">
+                @for (i of w.items; track i.to) {
+                  <li class="widget__link-row">
+                    <a class="widget__link" [attr.href]="i.to" (click)="follow($event, i.to)">
+                      <span class="widget__link-label">{{ i.label }}</span>
+                      <app-icon name="add" />
+                    </a>
+                  </li>
+                }
+              </ul>
+            }
           }
         }
       </section>
@@ -180,7 +194,7 @@ export class Widget {
   /** How numbers are written on the chart axis and in its text alternative. */
   readonly format = input<(n: number) => string>((n) => n.toLocaleString());
   readonly labels = input(LABELS(), { transform: withDefaults(LABELS) });
-  /** A small badge after the title, such as "Your pin". */
+  /** A small badge after the title, such as "Pinned by you". */
   readonly tag = input<string>('');
   /** Entries of the widget's own ⋮ menu; none draws no menu. */
   readonly menu = input<{ id: string; label: string; divider?: boolean }[]>([]);

@@ -95,11 +95,13 @@ export interface PaidStep {
 /** The record fields a paid intent fills, mapped from the payment facts by `onPaid.fields`. */
 export function paidFacts(
   onPaid: OnPaid,
-  payment: { provider: ProviderName; paidOn: string; reference: string; providerPaymentId: string | null },
+  payment: { provider: ProviderName; paidOn: string; reference: string; providerPaymentId: string | null; accountLedgerCode?: string | null },
 ): Record<string, unknown> {
   const f = onPaid.fields ?? {};
   const data: Record<string, unknown> = {};
   if (f.paidOn) data[f.paidOn] = payment.paidOn;
+  // The account the payment was asked to go into, as the ledger code the record's "received in" field holds.
+  if (f.account && payment.accountLedgerCode) data[f.account] = payment.accountLedgerCode;
   if (f.reference) data[f.reference] = payment.providerPaymentId ?? payment.reference;
   if (f.method) data[f.method] = onPaid.methodValue ?? (payment.provider === 'upi_direct' ? 'upi' : 'online');
   return data;
@@ -212,8 +214,9 @@ export class PaymentService {
     let upiLink: string | null = null;
     let orderId: string | null = null;
     let checkout: Record<string, unknown> | null = null;
+    // The account the money is for. A UPI request must name one with a UPI ID; a gateway request keeps it only if it is a real, active account.
+    const account = input.upiAccountKey ? await this.transactions.withTenant(ctx.tenantId, (tx) => this.store.upiPayee(tx, input.upiAccountKey!)) : undefined;
     if (input.provider === 'upi_direct') {
-      const account = await this.transactions.withTenant(ctx.tenantId, (tx) => this.store.upiPayee(tx, input.upiAccountKey ?? ''));
       if (!account?.upiId) throw ruleViolation('Choose an account that has a UPI ID.');
       upiLink = buildUpiLink({ vpa: account.upiId, payeeName: account.payeeName, amountPaise: paise, reference });
     } else {
@@ -237,6 +240,7 @@ export class PaymentService {
         onPaid: input.onPaid,
         upiLink,
         providerOrderId: orderId,
+        accountKey: account ? input.upiAccountKey! : null,
       });
       if (!created) throw ruleViolation('This record already has a payment waiting.');
       return created;

@@ -161,6 +161,19 @@ describe('Builder catalogue', () => {
     expect(catalogueRow(off, true).badge).toEqual({ label: 'Turned off', tone: 'neutral' });
   });
 
+  it('lets a published page, template, report or list of the organisation be deleted, and nothing else', () => {
+    const ids = (i: CatalogueItem, canPublish = true) => rowActions(i, canPublish).map((a) => a.id);
+    for (const kind of ['page', 'template', 'report', 'listView'] as const) {
+      expect(ids(item(kind, 'mine', { publishedVersion: 2 }))).toContain('delete');
+      expect(ids(item(kind, 'mine', { publishedVersion: 2 }), false)).not.toContain('delete');
+    }
+    expect(ids(item('page', 'volunteers', { publishedVersion: null, draftVersion: 1 }))).not.toContain('delete');
+    expect(ids(item('page', 'home', { publishedVersion: 1 }))).not.toContain('delete');
+    expect(ids(item('page', 'donors', { owner: 'base', moduleKey: 'donations', publishedVersion: 1 }))).not.toContain('delete');
+    expect(ids(item('recordType', 'donation', { publishedVersion: 1 }))).not.toContain('delete');
+    expect(ids(item('workflow', 'donation', { publishedVersion: 1 }))).not.toContain('delete');
+  });
+
   it('starts new definitions from the kind\'s starter or a ready-made record type', () => {
     expect(newDefinitionBody('page', 'reports', 'Reports')).toEqual({ key: 'reports', label: 'Reports', widgets: [{ type: 'groups' }] });
     expect(newDefinitionBody('listView', 'shifts', 'Shifts', { recordType: 'shift' })).toEqual({ key: 'shifts', recordType: 'shift', label: 'Shifts' });

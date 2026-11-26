@@ -130,6 +130,13 @@
   .counts span { font-size: .62rem; color: #64748b; }
   .bar { height: 8px; border-radius: 99px; background: #e6ebf1; overflow: hidden; margin: 6px 0; }
   .bar i { display: block; height: 100%; background: var(--brand); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 10px; }
+  .chip { font: 600 .72rem var(--font); border: 1px solid var(--line); background: #fff; color: #475569; border-radius: 999px; padding: 5px 10px; }
+  .chip.on { background: var(--b100); color: var(--brand); border-color: var(--b200); }
+  .chips select { font: 600 .72rem var(--font); border: 1px dashed #9aafc2; border-radius: 999px; background: #fff; padding: 5px 8px; color: var(--brand); }
+  .kind { font-size: .56rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: #64748b; background: #e8edf3; border-radius: 4px; padding: 2px 5px; margin-right: 4px; }
+  .sec { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 8px; }
+  .sec .cap b { color: var(--brand); }
   select.map { max-width: 132px; min-height: 28px; font: 12px var(--font); border: 1px solid #79747e; border-radius: 4px; background: #fff; }
 </style>
 </head>
@@ -138,6 +145,7 @@
   <h1>Data migrator</h1>
   <p>Asha brings the old system’s tables into this organisation from CSV files. Any file is accepted: any name, any columns, any number of files. Each file keeps the header row it arrived with. She maps those columns onto a record type that already exists in the Builder, then runs the whole set in order. The screen lives in the core app at <code>/admin/migration</code>. The operator console does not load records.</p>
   <div class="rules">
+    <div><b>Choose what you import</b>The Files step has one dropdown: Import Records, Import People or Import Files. Records take CSVs and are grouped by record type on the next step. People take one CSV. Files take two uploads, a CSV that describes the files and the files themselves. Only Records show groups.</div>
     <div><b>Any CSV</b>There is no template and no required header. A donors file, a volunteers file and a ward-visits file can sit in one profile even when none of their columns match. A column she does not need stays on Not imported.</div>
     <div><b>Map, then load</b>She chooses the record types each file fills (one row can make a supporter and their donation), which column is the old id, and which column fills each field. A donation’s donor column looks up the donor loaded earlier by that old id. The map is saved with the profile and reused on the next run.</div>
     <div><b>The type comes first</b>The file does not create a record type or a field. If nothing in the Builder can hold the table, she leaves that file out and adds the type in the Builder, then comes back. Calculated fields, rollups, files and signatures are not in the field list.</div>
@@ -204,6 +212,16 @@ function frame(k, s) {
     : `<div class="browser"><div class="chrome"><div class="url">${s.url}</div></div><div class="scr">${appbar()}${crumbs(s)}<div class="frame-body">${nav('desk')}${body}</div></div></div>`;
 }
 const field = (l, v, o = {}) => `<div class="mf"><div class="l">${l}${o.req ? ' <i>*</i>' : ''}</div><div class="o"><span>${v}</span>${o.icon ? `<span>${o.icon}</span>` : ''}</div>${o.hint ? `<div class="h">${o.hint}</div>` : ''}</div>`;
+const KINDS = [['records', 'Records'], ['people', 'People'], ['files', 'Files']];
+const KIND_HINT = {
+  records: 'CSV files that fill record types such as donors or donations. The next step groups them by record type.',
+  people: 'A CSV that adds people to this organisation, with roles. There are no record types to choose.',
+  files: 'Two uploads: a CSV that describes the files, and the files themselves. There are no record types to group by.',
+};
+/* The import type picker: the only new control on the Files step. */
+const importPicker = (sel, on) => `<div class="mf${hit(on)}"><div class="l">What are you importing? <i>*</i></div><select aria-label="Import type">${KINDS.map(([k, l]) => `<option${k === sel ? ' selected' : ''}>Import ${l}</option>`).join('')}</select><div class="h">${KIND_HINT[sel]}</div></div>`;
+/* Group chips are for Records only. People and Files never show them. */
+const groupChips = (active) => `<p class="cap">Record types ${NEW}</p><div class="chips">${['Donor', 'Donation', 'Volunteer', 'Asset'].map((g) => `<span class="chip${g === active ? ' on' : ''}">${g}</span>`).join('')}<select aria-label="Add a record type"><option>+ Add record type</option></select></div>`;
 const steps = (on) => `<div class="stepper">${['Files', 'Map', 'Order', 'Books', 'Check', 'Run'].map((n) => `<span class="${n === on ? 'on' : ''}">${n}</span>`).join('')}</div>`;
 function row(title, sub, extra) {
   return `<div class="listrow"><div><b>${title}</b><div class="cs">${sub}</div></div>${extra || '<span class="cs">›</span>'}</div>`;
@@ -232,22 +250,37 @@ function emptyList() {
 }
 function filesBody() {
   return `${steps('Files')}
+    ${importPicker('records', true)}
     <p class="intro">Add every table you exported. The columns can be different on every file.</p>
-    <div class="drop${hit(true)}"><b>Drop CSV files here</b><span class="cs">Or choose files. Any header row is kept. Up to 10 MB and 20,000 rows each.</span></div>
+    <div class="drop"><b>Drop CSV files here</b><span class="cs">Or choose files. Any header row is kept. Up to 10 MB and 20,000 rows each.</span></div>
     <div class="panel">
-      ${row('donors.csv', '7 columns · 840 rows · Donor · old id DonorId', '<span class="bdg s">Mapped</span>')}
-      ${row('donations.csv', '6 columns · 2,140 rows · Donation · old id TxnNo', '<span class="bdg s">Mapped</span>')}
-      ${row('volunteers.csv', '5 columns · 36 rows · Volunteer · old id VolCode', '<span class="bdg s">Mapped</span>')}
-      ${row('assets.csv', '6 columns · 18 rows · Asset · old id Asset tag', '<span class="bdg p">Mapped</span>')}
-      ${row('ward-visits.csv', '4 columns · 120 rows · no record type yet', '<span class="bdg w">Left out</span>')}
+      ${row('donors.csv', '<span class="kind">Records</span>7 columns · 840 rows · Donor · old id DonorId', '<span class="bdg s">Mapped</span>')}
+      ${row('donations.csv', '<span class="kind">Records</span>6 columns · 2,140 rows · Donation · old id TxnNo', '<span class="bdg s">Mapped</span>')}
+      ${row('volunteers.csv', '<span class="kind">Records</span>5 columns · 36 rows · Volunteer · old id VolCode', '<span class="bdg s">Mapped</span>')}
+      ${row('assets.csv', '<span class="kind">Records</span>6 columns · 18 rows · Asset · old id Asset tag', '<span class="bdg p">Mapped</span>')}
+      ${row('ward-visits.csv', '<span class="kind">Records</span>4 columns · 120 rows · no record type yet', '<span class="bdg w">Left out</span>')}
+      ${row('people.csv', '<span class="kind">People</span>6 columns · 212 rows', '<span class="bdg s">Mapped</span>')}
+      ${row('file-details.csv', '<span class="kind">Files</span>5 columns · 412 rows', '<span class="bdg s">Mapped</span>')}
     </div>
+    <p class="cs">Every file added so far is listed here with the import type it was added under. Change the dropdown to add another kind.</p>
+    <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p">Next</span></div>`;
+}
+function filesPeople() {
+  return `${steps('Files')}
+    ${importPicker('people', true)}
+    <p class="intro">Add the CSV of people. They are added as Invited, with the roles you map next. No passwords and no emails are sent.</p>
+    <div class="drop"><b>Drop the people CSV here</b><span class="cs">Or choose a file. Any header row is kept. Up to 10 MB and 20,000 rows.</span></div>
+    <div class="panel">
+      ${row('people.csv', '<span class="kind">People</span>6 columns · 212 rows', '<span class="bdg w">Not mapped</span>')}
+    </div>
+    <div class="note">People need two permissions: Migrate people and Manage people. Without them this choice is disabled, with the reason shown.</div>
     <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p">Next</span></div>`;
 }
 function mapRows(pairs) {
   return `<div class="panel">${pairs.map(([col, sample, badge, kind]) => `<div class="listrow"><div><b>${col}</b><div class="cs">${sample}</div></div><span class="bdg ${kind}">${badge}</span></div>`).join('')}</div>`;
 }
 function mapDonors() {
-  return `${steps('Map')}<p class="intro">donors.csv · 840 rows. Match each column to a Donor field, or leave it out.</p>
+  return `${steps('Map')}${groupChips('Donor')}<p class="intro">donors.csv · 840 rows. Match each column to a Donor field, or leave it out.</p>
     ${field('Record type', 'Donor', { icon: '▾' })}
     ${field('Column that holds the old id', 'DonorId', { icon: '▾', hint: 'A later file can point at this donor with D-1042.' })}
     ${mapRows([
@@ -262,7 +295,7 @@ function mapDonors() {
     <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p${hit(true)}">Save map</span></div>`;
 }
 function mapDonations() {
-  return `${steps('Map')}<p class="intro">donations.csv · 2,140 rows. DonorId is not an email. It finds the donor loaded from donors.csv.</p>
+  return `${steps('Map')}${groupChips('Donation')}<p class="intro">donations.csv · 2,140 rows. DonorId is not an email. It finds the donor loaded from donors.csv.</p>
     ${field('Record type', 'Donation', { icon: '▾' })}
     ${field('Column that holds the old id', 'TxnNo', { icon: '▾' })}
     ${mapRows([
@@ -278,12 +311,7 @@ function mapDonations() {
 }
 const NEW = '<span class="bdg p">New</span>';
 function mapPeople() {
-  return `${steps('Map')}<p class="intro"><b>people.csv</b> · 212 rows. The six steps are unchanged. This file is asked about first.</p>
-    <p class="cap">What is in this file? ${NEW}</p>
-    <div class="panel">
-      ${row('Records', 'Fill record types such as donors or donations.', '<span class="cs">○</span>')}
-      ${row('People', 'Add people to this organisation, with roles. No passwords and no emails.', '<span class="cs">●</span>')}
-    </div>
+  return `${steps('Map')}<p class="intro"><b>people.csv</b> · 212 rows. Added on the Files step as Import People, so there are no record-type groups here and nothing to choose about what the file holds.</p>
     <p class="cs">People need two permissions: Migrate people and Manage people. They are added as Invited.</p>
     ${field('Legacy user id column', 'UserId', { icon: '▾', req: true, hint: 'Any format. Used to link records to people.' })}
     ${field('Email', 'Email', { icon: '▾', req: true })}
@@ -304,7 +332,7 @@ function mapPeople() {
     <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p${hit(true)}">Save mapping</span></div>`;
 }
 function mapDonorsPerson() {
-  return `${steps('Map')}<p class="intro">donors.csv · 840 rows. A Donor field of type Person can name someone who works here.</p>
+  return `${steps('Map')}${groupChips('Donor')}<p class="intro">donors.csv · 840 rows. A Donor field of type Person can name someone who works here.</p>
     ${field('Record type', 'Donor', { icon: '▾' })}
     ${field('Column that holds the old id', 'DonorId', { icon: '▾' })}
     <div class="card">
@@ -326,14 +354,15 @@ function filesAttachments(k) {
     <div class="row"><span class="btn">Previous page</span><span class="sp"></span><span class="cs">1–50 of 412</span><span class="sp"></span><span class="btn">Next page</span></div>`
     : `${row('scans/D-1042.pdf', '220 kB · Rows using it: 1', '<span class="cs">✕</span>')}${row('photos/ravi.jpg', '1.4 MB · Not used', '<span class="cs">✕</span>')}`;
   return `${steps('Files')}
-    <p class="intro">Add every table you exported. The columns can be different on every file.</p>
-    <div class="drop"><b>Drop CSV files here</b><span class="cs">Or choose files. Any header row is kept. Up to 10 MB and 20,000 rows each.</span></div>
+    ${importPicker('files', true)}
+    <div class="sec"><p class="cap"><b>1 · CSV</b> that describes the files ${NEW}</p>
+    <p class="cs">One row per file: its name or path, and the old id of the record that holds it. Any header row is kept.</p>
+    <div class="drop${hit(true)}"><b>Drop the file-details CSV here</b><span class="cs">Or choose a file. Up to 10 MB and 20,000 rows.</span></div>
     <div class="panel">
-      ${row('donors.csv', '7 columns · 840 rows · Donor · old id DonorId', '<span class="bdg s">Mapped</span>')}
-      ${row('donations.csv', '6 columns · 2,140 rows · Donation · old id TxnNo', '<span class="bdg s">Mapped</span>')}
-    </div>
-    <p class="cap">Attachments <span class="bdg n">Optional</span> ${NEW}</p>
-    <p class="cs">Photos, scans and documents that your records point at by file name. Each file can be used by one row.</p>
+      ${row('file-details.csv', '<span class="kind">Files</span>5 columns · 412 rows', '<span class="bdg w">Not mapped</span>')}
+    </div></div>
+    <div class="sec"><p class="cap"><b>2 · The files</b> themselves ${NEW}</p>
+    <p class="cs">Photos, scans and documents. Each is matched to a CSV row by its name or path. Each file can be used by one row.</p>
     <div class="drop${hit(true)}"><b>Drop a folder or files here</b><span class="cs">A folder keeps its folder names, such as scans/D-1042.pdf, so the names in your CSV must match.</span>
       <div class="row" style="margin-top:8px"><span class="btn">Choose a folder</span><span class="btn">Choose files</span></div></div>
     <div class="card"><div class="row"><b>412 of 5,000 files · 186 MB</b></div><div class="bar"><i style="width:8%"></i></div>
@@ -341,15 +370,32 @@ function filesAttachments(k) {
     <div class="card"><b>Uploading 120 of 412</b><div class="bar"><i style="width:29%"></i></div></div>
     <div class="note bad"><b>Files not added: 2</b><br>scans/d-1042.PDF: The attachment scans/d-1042.PDF is already there.<br>big/video.mov: The file is larger than 25 MB.</div>
     <div class="row" style="margin:8px 0"><span class="btn">🔍 Search file names</span><span class="sp"></span><span class="btn">Clear all</span></div>
-    ${list}`;
+    ${list}</div>`;
+}
+function mapFiles() {
+  return `${steps('Map')}<p class="intro"><b>file-details.csv</b> · 412 rows. Each row names one uploaded file and the record that holds it. This is a Files import, so there are no record-type groups.</p>
+    ${field('Record type', 'Donation', { icon: '▾', req: true, hint: 'Only record types with a file field are listed. Load the records’ own CSV first.' })}
+    ${field('Column that holds the old id', 'RecordId', { icon: '▾', req: true, hint: 'Finds the record each file belongs to.' })}
+    <div class="card${hit(true)}">
+      <div class="row"><b>Receipt scan</b><span class="sp"></span><span class="cs">file field · several files</span> ${NEW}</div>
+      ${field('Column with the file names', 'FilePath', { icon: '▾', hint: 'Names must match files uploaded under Import Files, such as scans/D-1042.pdf.' })}
+      ${field('If a file is missing', 'Fail the row', { icon: '▾', hint: 'Other choice: skip the file and warn.' })}
+      ${field('Separator between file names', '; (semicolon)', { icon: '▾', hint: 'Only for fields that hold several files.' })}
+    </div>
+    <div class="card">
+      <div class="row"><b>Photo</b><span class="sp"></span><span class="cs">file field</span></div>
+      ${field('Column with the file names', 'Not imported', { icon: '▾' })}
+    </div>
+    <div class="note">A Files CSV maps file fields and nothing else. A record no file has loaded is created with only its files, and fails if it needs other fields.</div>
+    <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p${hit(true)}">Save mapping</span></div>`;
 }
 function mapDonorsFile() {
-  return `${steps('Map')}<p class="intro">donations.csv · 2,140 rows. A Donation field of type File names the attachments uploaded on the Files step.</p>
+  return `${steps('Map')}${groupChips('Donation')}<p class="intro">donations.csv · 2,140 rows. A Donation field of type File names the files imported with Import Files.</p>
     ${field('Record type', 'Donation', { icon: '▾' })}
     ${field('Column that holds the old id', 'TxnNo', { icon: '▾' })}
     <div class="card${hit(true)}">
       <div class="row"><b>Receipt scan</b><span class="sp"></span><span class="cs">file field · several files</span> ${NEW}</div>
-      ${field('File name column for Receipt scan', 'ScanFile', { icon: '▾', hint: 'Names must match files on the Files step, such as scans/D-1042.pdf. A blank cell leaves the field empty.' })}
+      ${field('File name column for Receipt scan', 'ScanFile', { icon: '▾', hint: 'Names must match files uploaded under Import Files, such as scans/D-1042.pdf. A blank cell leaves the field empty.' })}
       ${field('If a file is missing', 'Fail the row', { icon: '▾', hint: 'Other choice: skip the file and warn.' })}
       ${field('Separator between file names', '; (semicolon)', { icon: '▾', hint: 'Only for fields that hold several files. Other choice: , (comma).' })}
     </div>
@@ -419,7 +465,7 @@ function checkWarnings() {
     <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn">Check again</span><span class="btn p off">Run 1,085 rows</span></div>`;
 }
 function mapCombined() {
-  return `${steps('Map')}<p class="intro">combined.csv · 64 rows. Each row holds a supporter and, sometimes, their first gift.</p>
+  return `${steps('Map')}${groupChips('Donor')}<p class="intro">combined.csv · 64 rows. Each row holds a supporter and, sometimes, their first gift.</p>
     <div class="card"><div class="row"><b>Supporter</b><span class="sp"></span><span class="bdg p">Required</span></div>
       ${field('Column with the old id', 'Donor code', { icon: '▾' })}
       ${mapRows([
@@ -438,7 +484,7 @@ function mapCombined() {
     <div class="row"><span class="btn">Fill another record type ▾</span><span class="sp"></span><span class="btn p${hit(true)}">Save mapping</span></div>`;
 }
 function mapUnknown() {
-  return `${steps('Map')}<p class="intro">ward-visits.csv · 120 rows. These columns are kept as they arrived. Nothing in the Builder is selected yet.</p>
+  return `${steps('Map')}${groupChips('')}<p class="intro">ward-visits.csv · 120 rows. These columns are kept as they arrived. Nothing in the Builder is selected yet.</p>
     ${field('Record type', 'Choose a record type', { icon: '▾' })}
     <div class="note warn">This file stays out of the run until it has a record type. Add a Ward visit type in the Builder if you need these rows.</div>
     ${mapRows([
@@ -461,9 +507,9 @@ function orderBody() {
     <div class="row"><span class="btn">Back</span><span class="sp"></span><span class="btn p${hit(true)}">Next</span></div>`;
 }
 function booksBody() {
-  return `${steps('Books')}<p class="intro">These are not a CSV. They set the books at the cutover date after the files succeed.</p>
+  return `${steps('Books')}<p class="intro">These are not a CSV. They set the books at the cutover date, before any row loads.</p>
     <div class="card">
-      ${field('Cutover date', '01/04/2026', { req: true, hint: 'The opening journal is dated this day; its financial year must be open.' })}
+      ${field('Cutover date', '01/04/2026', { req: true, hint: 'The first day of a financial year. The opening journal is dated this day, and that year must be open.' })}
     </div>
     <p class="cap">Opening journal</p>
     <div class="panel">
@@ -536,16 +582,20 @@ const STEPS = [
     note: 'One profile holds the files, the column map, the order and the books figures. A later run of the same profile updates by old id.' },
   { id: 'empty', t: 'Nothing yet', act: 'First visit', url: '/admin/migration', title: 'Migration', back: true, crumbs: ['Administration', 'Migration'], body: emptyList,
     note: 'An organisation with no profile sees this. New migration starts an empty profile. There is no sample file to download, because the columns come from the old database.' },
-  { id: 'files', t: 'Any files', act: 'Drop the export', url: '/admin/migration/legacy/files', title: 'Legacy extract', back: true, crumbs: ['Administration', 'Migration', 'Files'], body: filesBody,
-    note: 'Five files, five shapes. Donors, donations, volunteers and assets each keep their own headers. ward-visits.csv is accepted and marked left out until it has a record type. A file the old database named differently would appear the same way.' },
-  { id: 'files-attachments', t: 'Attachments', act: 'Drop a folder of scans', url: '/admin/migration/legacy/files', title: 'Legacy extract', back: true, crumbs: ['Administration', 'Migration', 'Files'], body: filesAttachments,
-    note: 'Below the CSV drop area, an optional Attachments panel takes a folder or many files. Files go up one after another with progress; a refused file is listed with its reason and the rest carry on. The list is searchable and paged, shows how many rows use each file, and Clear all asks first. Adding or removing a file sends the profile back to draft. Each file can be used by one row.' },
+  { id: 'files', t: 'Import Records', act: 'Choose <kbd>Import Records</kbd>, drop the export', url: '/admin/migration/legacy/files', title: 'Legacy extract', back: true, crumbs: ['Administration', 'Migration', 'Files'], body: filesBody,
+    note: 'The only new control on this step is the dropdown: Import Records, Import People or Import Files. With Records there is one upload area for CSVs. Donors, donations, volunteers and assets each keep their own headers. ward-visits.csv is accepted and marked left out until it has a record type. Each row in the list is tagged with the type it was added under.' },
+  { id: 'files-people', t: 'Import People', act: 'Choose <kbd>Import People</kbd>', url: '/admin/migration/legacy/files', title: 'Legacy extract', back: true, crumbs: ['Administration', 'Migration', 'Files'], body: filesPeople,
+    note: 'With People there is one CSV upload area and nothing else. The choice is disabled, with its reason, for someone without Migrate people and Manage people. The next step shows no record-type groups for this file.' },
+  { id: 'files-files', t: 'Import Files', act: 'Choose <kbd>Import Files</kbd>, drop the CSV, then the folder', url: '/admin/migration/legacy/files', title: 'Legacy extract', back: true, crumbs: ['Administration', 'Migration', 'Files'], body: filesAttachments,
+    note: 'With Files the step shows two upload areas. 1 · a CSV that describes the files (the file name or path, and the old id of the record that holds it). 2 · the files themselves, as a folder or many files. Files go up one after another with progress; a refused file is listed with its reason and the rest carry on. The list is searchable and paged, shows how many rows use each file, and Clear all asks first. Adding or removing a file sends the profile back to draft. Each file can be used by one row.' },
   { id: 'map-donors', t: 'Map donors', act: 'Open <kbd>donors.csv</kbd>', url: '/admin/migration/legacy/map/donors.csv', title: 'Map columns', back: true, crumbs: ['Administration', 'Migration', 'Map'], body: mapDonors,
-    note: 'Full Name fills Name even though the words differ. InternalCode has no Donor field, so it stays Not imported and is not rejected. DonorId is the old id used by later files.' },
+    note: 'Record types appear as groups (chips) only for Records. Each chip is one record type with its files; the last control adds another. People and Files imports never show groups. Full Name fills Name even though the words differ. InternalCode has no Donor field, so it stays Not imported and is not rejected. DonorId is the old id used by later files.' },
   { id: 'map-donations', t: 'Map donations', act: 'Open <kbd>donations.csv</kbd>', url: '/admin/migration/legacy/map/donations.csv', title: 'Map columns', back: true, crumbs: ['Administration', 'Migration', 'Map'], body: mapDonations,
     note: 'The donor column looks up by old id, not by email or name. Receipt numbers already issued are data on the row. They do not advance the sequence; Books does that.' },
   { id: 'map-people', t: 'Map people', act: 'Open <kbd>people.csv</kbd>', url: '/admin/migration/legacy/map/people.csv', title: 'Map columns', back: true, crumbs: ['Administration', 'Migration', 'Map'], body: mapPeople,
-    note: 'Opening a file asks what is in it. People is disabled with its reason for someone without Migrate people and Manage people. The six steps stay as they are. Hidden columns (id, email, name) show no sample values on purpose. Roles that need two-step sign-in cannot be chosen.' },
+    note: 'The file is already known to be People from the dropdown on the Files step, so there is no “what is in this file” question and no record-type groups. The six steps stay as they are. Hidden columns (id, email, name) show no sample values on purpose. Roles that need two-step sign-in cannot be chosen.' },
+  { id: 'map-files', t: 'Map files', act: 'Open <kbd>file-details.csv</kbd>', url: '/admin/migration/legacy/map/file-details.csv', title: 'Map columns', back: true, crumbs: ['Administration', 'Migration', 'Map'], body: mapFiles,
+    note: 'A Files import is mapped on one screen with no groups. For each CSV she chooses the record type the files belong to (only types with a file field), the column of old ids that finds each record, and, for each file field of the type, the column of file names, what to do when a name matches no upload, and the separator for fields that hold several files. It is saved like any other mapping, so a row for a record another file loaded only adds its files.' },
   { id: 'map-donors-person', t: 'Person field', act: 'Open <kbd>donors.csv</kbd> again', url: '/admin/migration/legacy/map/donors.csv', title: 'Map columns', back: true, crumbs: ['Administration', 'Migration', 'Map'], body: mapDonorsPerson,
     note: 'A person field keeps its email-or-id column and gains a Legacy user id column with “if not found: leave blank / fail the row”. People files load before any file that links to them. File fields are in the next steps.' },
   { id: 'map-donors-file', t: 'File field', act: 'Open <kbd>donations.csv</kbd> again', url: '/admin/migration/legacy/map/donations.csv', title: 'Map columns', back: true, crumbs: ['Administration', 'Migration', 'Map'], body: mapDonorsFile,
@@ -557,7 +607,7 @@ const STEPS = [
   { id: 'order', t: 'Order', act: 'Next', url: '/admin/migration/legacy/order', title: 'Load order', back: true, crumbs: ['Administration', 'Migration', 'Order'], body: orderBody,
     note: 'Donors load before donations because the donation map looks up Donor. A file with no record type is absent here. Saving a mapping moves a file below the files it looks up; moving donations above donors by hand is refused while that lookup remains.' },
   { id: 'books', t: 'Books', act: 'Next', url: '/admin/migration/legacy/books', title: 'Books', back: true, crumbs: ['Administration', 'Migration', 'Books'], body: booksBody,
-    note: 'An opening journal that must balance, and the next receipt number for each series. They need their own permission and apply once, in one transaction, after every file has loaded; if the ledger refuses them (for example the year is not open), the run still finishes and Apply books can be pressed again. The old transfer table is not a file on this profile.' },
+    note: 'An opening journal that must balance, and the next receipt number for each series. They need their own permission and apply once, in one transaction, before the rows load; changing them sends Check back to be run again. If the ledger refuses them, the run does not start and the books stay unapplied until the cause is fixed. The old transfer table is not a file on this profile.' },
   { id: 'check', t: 'Check', act: 'Next', url: '/admin/migration/legacy/check', title: 'Check', back: true, crumbs: ['Administration', 'Migration', 'Check'], body: checkBody,
     note: 'The check counts creates and problems per file and does not write. Run is allowed with problems: the bad rows are skipped and downloaded afterwards. The button counts only ready rows.' },
   { id: 'check-warnings', t: 'Check with warnings', act: 'Next', url: '/admin/migration/legacy/check', title: 'Check', back: true, crumbs: ['Administration', 'Migration', 'Check'], body: checkWarnings,

@@ -42,11 +42,14 @@ const names: WidgetNames = {
 
 describe('page widget operations', () => {
   it('adds widgets the page rules accept as they are', () => {
-    for (const type of ['stat', 'chart', 'list', 'links'] as const) {
+    for (const type of ['stat', 'chart', 'list', 'links', 'wizards'] as const) {
       const w = newWidget(type) as { label: string };
       expect(w.label.length, type).toBeGreaterThan(0);
     }
     expect(newWidget('links')).toMatchObject({ items: [{ to: '/' }] });
+    expect(newWidget('wizards')).toMatchObject({ type: 'wizards', items: [{ to: '/' }] });
+    // Links and task cards are the same list of links, so changing one into the other keeps the links.
+    expect(changeWidgetType(page(), 1, 'wizards').widgets[1]).toEqual({ type: 'wizards', label: 'Quick links', items: [{ label: 'Donors', to: '/records/donor' }] });
     const p = addWidget(page(), 'chart');
     expect(p.widgets).toHaveLength(4);
     expect(p.widgets[3]).toMatchObject({ type: 'chart', measure: 'count', chart: 'bar', groupBy: { period: 'month', dateField: 'createdAt' } });

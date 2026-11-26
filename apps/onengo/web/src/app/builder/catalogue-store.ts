@@ -185,6 +185,7 @@ export class CatalogueStore {
     if (action === 'duplicate') return this.startNew({ kind: item.kind, copyOf: item });
     await this.act(async () => {
       if (action === 'deleteDraft') await this.gateway.discard(item.kind, item.key);
+      if (action === 'delete') await this.gateway.remove(item.kind, item.key);
       if (action === 'disable') await this.gateway.disable(item.kind, item.key);
       if (action === 'enable') await this.gateway.enable(item.kind, item.key);
       if (action === 'revert') {

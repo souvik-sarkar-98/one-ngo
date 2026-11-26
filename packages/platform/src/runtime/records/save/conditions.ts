@@ -6,13 +6,16 @@ import { evalTest, sameFieldValue, scope } from './scope.js';
 /**
  * editableWhen is judged against the record as it is stored now (on create:
  * empty, at the starting status); visibleWhen against the record being saved,
- * and a hidden field keeps its stored value.
+ * and a hidden field keeps its stored value. A migrated create (history) is
+ * judged at its workflow's starting status too: its legacy status is written
+ * as the record starts, so a field that is only editable while raised still fills.
  */
 export async function conditions(_tx: Tx, s: SaveContext): Promise<void> {
   const { ctx, type, previous, previousStatus, status, move, patch, data } = s;
   const fields = new Map(type.fields.map((f) => [f.key, f]));
   const issues: FieldIssue[] = [];
-  const storedScope = scope(ctx, previous ?? {}, previous ? previousStatus : status, previous, previousStatus, move);
+  const startStatus = s.history && !previous ? (s.loaded.workflows.find((w) => w.key === move.workflow)?.body.initial ?? status) : status;
+  const storedScope = scope(ctx, previous ?? {}, previous ? previousStatus : startStatus, previous, previousStatus, move);
   for (const k of Object.keys(patch)) {
     const f = fields.get(k)!;
     if (!f.editableWhen || sameFieldValue(previous?.[k], patch[k])) continue;

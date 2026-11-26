@@ -692,6 +692,7 @@ export interface PaymentEvent {
 }
 
 export interface PaymentIntent {
+  account_key: string | null;
   amount: Numeric;
   confirmed_by: string | null;
   created_at: Generated<Timestamp>;

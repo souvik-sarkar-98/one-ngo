@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Record forms - wireframe</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<nav class="topnav"><a href="index.html">Finance wireframes</a><span>/</span><b>Record forms and approvals</b></nav>
+<header class="page">
+  <h1>Record forms and approvals <span class="ws">WS1</span><span class="ws">WS2</span><span class="ws">WS3</span></h1>
+  <p>No new pages here. The existing record panel and step dialogs change in three ways: an expense claim's Approve and Pay steps need a second person, the account fields offer the organisation's real accounts, and a payment that would overdraw an account asks for a reason. All figures are made up.</p>
+  <div class="legend">
+    <span class="key"><i class="k-new"></i> New</span>
+    <span class="key"><i class="k-chg"></i> Changed</span>
+    <span class="key"><i class="k-old"></i> Existing, unchanged</span>
+  </div>
+</header>
+
+<main class="page">
+
+<h2 class="sec">1. Expense claim: second-person approval <span class="ws">WS1</span></h2>
+<p class="sub">Approve and Pay become requests that another expense approver decides. The button still opens the same form; what changes is the hint and what happens after.</p>
+
+<div class="grid2">
+  <div>
+    <p class="cap">Claim submitted: the Approve step</p>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><b>EXP/2026-27/00031</b><span class="badge info">Submitted</span></div>
+      <dl class="dl">
+        <dt>Purpose</dt><dd>Travel to Pune site visit</dd>
+        <dt>Category</dt><dd>Travel</dd>
+        <dt>Amount</dt><dd>&#8377;4,200.00</dd>
+        <dt>Claimant</dt><dd>Ravi Nair</dd>
+        <dt>Bill</dt><dd><a href="#">pune-train-ticket.pdf</a></dd>
+      </dl>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:flex-start">
+        <div>
+          <span class="btn primary is-chg">Approve <span class="pin">1</span></span>
+          <div class="hint is-chg" style="margin-top:6px;padding:2px 4px">Needs approval by another person</div>
+        </div>
+        <span class="btn danger">Do not approve</span>
+      </div>
+    </div>
+  </div>
+  <div>
+    <p class="cap">Claim approved: the Pay step</p>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><b>EXP/2026-27/00031</b><span class="badge ok">Approved</span></div>
+      <dl class="dl">
+        <dt>Purpose</dt><dd>Travel to Pune site visit</dd>
+        <dt>Amount</dt><dd>&#8377;4,200.00</dd>
+        <dt>Approved by</dt><dd>Meera Iyer</dd>
+      </dl>
+      <div style="margin-top:12px">
+        <span class="btn primary is-chg">Mark as paid <span class="pin">1</span></span>
+        <div class="hint is-chg" style="margin-top:6px;padding:2px 4px">Needs approval by another person</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="cap" style="margin-top:20px">After pressing a step that needs approval: three views</p>
+<div class="grid3">
+  <div>
+    <p class="mini"><b>The requester</b> (existing text)</p>
+    <div class="banner info"><span>&#9202;</span><span>Waiting for approval to "Mark as paid" &mdash; requested by Prakash Rao, 0 of 1 approvals.<br /><a href="#">Withdraw request</a></span></div>
+    <div class="banner ok"><span>&#10003;</span><span>"Mark as paid" has been sent for approval.</span></div>
+  </div>
+  <div>
+    <p class="mini"><b>Another expense approver</b> (existing)</p>
+    <div class="banner info"><span>&#9202;</span><span>Waiting for approval to "Mark as paid" &mdash; requested by Prakash Rao, 0 of 1 approvals.</span></div>
+    <div style="display:flex;gap:8px"><span class="btn primary">Approve</span><span class="btn danger">Reject</span></div>
+    <p class="hint">Also shown in the Inbox, under Approvals, and notified as "Approval needed".</p>
+  </div>
+  <div>
+    <p class="mini"><b>The same person trying to decide</b> (existing server message)</p>
+    <div class="banner err"><span>&#9888;</span><span>You cannot approve your own request.</span></div>
+    <p class="hint">Raised by the server, so it holds even if the button were reached another way.</p>
+  </div>
+</div>
+
+<div class="notes">
+  <h3>What changes</h3>
+  <ol>
+    <li><b>Hint under the step button</b> (changed). The record panel already knows which steps need approval (the <code>approval</code> flag in <code>actions.ts</code>) but does not show it. New line of text, "Needs approval by another person", with its locale key. <span class="ws">WS1</span></li>
+  </ol>
+  <h3 style="margin-top:12px">Behaviour</h3>
+  <ul>
+    <li>Pressing Approve or Mark as paid opens the same form as today. After it is sent, all step buttons are disabled while the request is pending (existing).</li>
+    <li>The claim posts to the books only after the second person approves Pay.</li>
+    <li>An organisation with only one expense approver cannot move claims past Submitted. The Modules page and the setup guide should say two people must hold the role.</li>
+  </ul>
+</div>
+
+<h2 class="sec">2. Pay form: real account and overdraft reason <span class="ws">WS2</span><span class="ws">WS3</span></h2>
+<p class="sub">The "Paid from" list is filled from the organisation's active money accounts, so a second bank appears with no module edit. If the payment would take the chosen account below zero, the form asks for a reason.</p>
+
+<div class="grid2">
+  <div>
+    <p class="cap">State A: choosing the account</p>
+    <div class="stage">
+      <div class="dialog">
+        <div class="dlg-h"><h2>Mark as paid</h2><span class="x">&#10005;</span></div>
+        <div class="dlg-b">
+          <div class="field is-chg"><label>Paid from <span class="req">*</span> <span class="pin">2</span></label><div class="sel">Project bank account (HDFC)</div></div>
+          <div class="list" style="margin:-6px 0 12px">
+            <div class="li"><span>Main bank account (SBI)</span></div>
+            <div class="li sel"><span>Project bank account (HDFC)</span><span>&#10003;</span></div>
+            <div class="li"><span>Cash in hand</span></div>
+          </div>
+          <div class="field"><label>Paid on <span class="req">*</span></label><div class="inp">26 Nov 2026 <span>&#128197;</span></div></div>
+          <div class="field"><label>Payment reference</label><div class="inp">UTR 331122</div></div>
+        </div>
+        <div class="dlg-f"><span class="btn">Cancel</span><span class="btn primary">Send for approval</span></div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <p class="cap">State B: payment would overdraw the account</p>
+    <div class="stage">
+      <div class="dialog">
+        <div class="dlg-h"><h2>Mark as paid</h2><span class="x">&#10005;</span></div>
+        <div class="dlg-b">
+          <div class="banner err"><span>&#9888;</span><span><b>Project bank account (HDFC)</b> would go below zero (&#8377;-1,350.00). Enter a reason in the field below to continue, or choose another account.</span></div>
+          <div class="field"><label>Paid from <span class="req">*</span></label><div class="sel">Project bank account (HDFC)</div></div>
+          <div class="field"><label>Paid on <span class="req">*</span></label><div class="inp">26 Nov 2026</div></div>
+          <div class="field is-new"><label>Reason to go below zero <span class="req">*</span> <span class="pin n">3</span></label><div class="inp bad"><span class="ph">For example: grant instalment arrives tomorrow</span></div>
+            <p class="err">Enter a reason to continue. It is saved in the audit log.</p></div>
+        </div>
+        <div class="dlg-f"><span class="btn">Cancel</span><span class="btn primary">Send for approval</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <h3>What changes</h3>
+  <ol>
+    <li><b>Account lists</b> (changed). "Paid from" on expense claims, "Received in" on earnings, "Received in" on membership fees, and a new "Received in" on donations are filled from the organisation's active money accounts. The stored value is the ledger code (<code>BANK</code>, <code>BANK_HDFC</code>, <code>CASH</code>), so existing records stay valid. <span class="ws">WS2</span></li>
+    <li><b>Reason field</b> (new). Appears on the expense claim once approved, and is read by the posting rule. A server message pointing at the field shows it in place. <span class="ws">WS3</span></li>
+    <li><b>Two checks, not one</b> (needs a plan change). The books are only written when the second person approves, but the reason must be asked of the requester. So the server must check the balance when the request is sent, as well as when it is applied, using the reason that travels with the request. Without the early check, the approver's decision would fail with nowhere to enter a reason and the request would go stale.</li>
+  </ol>
+  <h3 style="margin-top:12px">Behaviour</h3>
+  <ul>
+    <li>The list shows account names only, with no balances, so people without <code>money:accounts:read</code> can still pick one.</li>
+    <li>If no account is active for a form, the list is empty and the message says to open one on the Money page.</li>
+    <li>An old record whose account has since been closed shows its stored value and cannot be saved until another account is chosen.</li>
+  </ul>
+</div>
+
+<h2 class="sec">3. Income forms: account choice <span class="ws">WS2</span></h2>
+<p class="sub">Same list, different labels. Donations gain a field; the other two replace their two-item list.</p>
+
+<div class="grid3">
+  <div class="stage">
+    <div class="dialog">
+      <div class="dlg-h"><h2>Mark donation as paid</h2><span class="x">&#10005;</span></div>
+      <div class="dlg-b">
+        <div class="field"><label>Payment method <span class="req">*</span></label><div class="sel">Cheque</div></div>
+        <div class="field is-new"><label>Received in <span class="pin n">1</span></label><div class="sel">Project bank account (HDFC)</div>
+          <p class="help">Empty keeps the old behaviour: cash goes to Cash, anything else to the main bank.</p></div>
+        <div class="field"><label>Paid on <span class="req">*</span></label><div class="inp">26 Nov 2026</div></div>
+        <div class="field"><label>Payment reference</label><div class="inp">Cheque 004521</div></div>
+      </div>
+      <div class="dlg-f"><span class="btn">Cancel</span><span class="btn primary">Mark as paid</span></div>
+    </div>
+  </div>
+  <div class="stage">
+    <div class="dialog">
+      <div class="dlg-h"><h2>Mark fee as paid</h2><span class="x">&#10005;</span></div>
+      <div class="dlg-b">
+        <div class="field is-chg"><label>Received in <span class="req">*</span> <span class="pin">2</span></label><div class="sel">Cash in hand</div></div>
+        <div class="field"><label>Payment method <span class="req">*</span></label><div class="sel">Cash</div></div>
+        <div class="field"><label>Paid on <span class="req">*</span></label><div class="inp">26 Nov 2026</div></div>
+      </div>
+      <div class="dlg-f"><span class="btn">Cancel</span><span class="btn primary">Mark as paid</span></div>
+    </div>
+  </div>
+  <div class="stage">
+    <div class="dialog">
+      <div class="dlg-h"><h2>Mark earning as received</h2><span class="x">&#10005;</span></div>
+      <div class="dlg-b">
+        <div class="field"><label>Received on <span class="req">*</span></label><div class="inp">26 Nov 2026</div></div>
+        <div class="field is-chg"><label>Received in <span class="req">*</span> <span class="pin">3</span></label><div class="sel">Main bank account (SBI)</div></div>
+      </div>
+      <div class="dlg-f"><span class="btn">Cancel</span><span class="btn primary">Mark as received</span></div>
+    </div>
+  </div>
+</div>
+<div class="notes">
+  <ol>
+    <li><b>Donations: Received in</b> (new, optional). Not required, so the automatic UPI confirmation keeps working. When a UPI payment is confirmed it fills this field with the account that was paid (see Pay now).</li>
+    <li><b>Membership fee: Received in</b> (changed). Was a fixed Bank or Cash list; the field's label is unchanged.</li>
+    <li><b>Earning: Received in</b> (changed). Same.</li>
+  </ol>
+</div>
+
+<h2 class="sec">4. Approver's inbox <span class="ws">WS1</span></h2>
+<p class="sub">Existing and unchanged. Shown here so the full path is clear: the second person finds the request here, opens the claim, and decides.</p>
+<div class="browser">
+  <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.onengo.example/inbox?tab=approvals</span></div>
+  <div class="scr">
+    <div class="appbar"><span class="brand">OneNGO</span><span class="org">Asha Trust</span><span class="sp"></span><span class="av">MI</span></div>
+    <div class="main">
+      <div class="pagehead"><h1>Inbox</h1></div>
+      <div class="tabs"><div class="tab on">Approvals<em>2</em></div><div class="tab">Notifications<em>5</em></div></div>
+      <table class="t">
+        <thead><tr><th>Record</th><th>Step</th><th>Requested by</th><th>Waiting</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><b>EXP/2026-27/00031</b> Travel to Pune site visit</td><td>Mark as paid</td><td>Prakash Rao</td><td>2 hours</td><td><span class="btn sm primary">Open</span></td></tr>
+          <tr><td><b>EXP/2026-27/00034</b> Printing for camp</td><td>Approve</td><td>Ravi Nair</td><td>1 day</td><td><span class="btn sm primary">Open</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</main>
+</body>
+</html>

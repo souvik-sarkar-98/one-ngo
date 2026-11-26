@@ -1,0 +1,447 @@
+/* ---------------------------------------------------------------- summary */
+
+.recon__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* ----------------------------------------------------------------- stepper */
+
+.recon__steps {
+  display: flex;
+  margin: 0 0 14px;
+  padding: 14px 8px 10px;
+  list-style: none;
+  background: var(--card);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
+  box-shadow: var(--card-shadow);
+  overflow-x: auto;
+}
+.recon__steps > li {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 80px;
+}
+.recon__steps > li + li::before {
+  content: '';
+  position: absolute;
+  top: 15px;
+  right: calc(50% + 20px);
+  left: calc(-50% + 20px);
+  height: 2px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.recon__steps > li.recon__done + li::before {
+  background: var(--ok);
+}
+.recon__step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+.recon__step:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.recon__step:disabled:hover .recon__dot {
+  border-color: var(--line-strong);
+  color: var(--muted);
+}
+.recon__step:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+.recon__dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+  --icon-size: 18px;
+}
+.recon__step:hover .recon__dot {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.recon__done .recon__dot {
+  border-color: var(--ok);
+  background: var(--ok);
+  color: var(--brand-fg);
+}
+.recon__step--on {
+  color: var(--fg);
+  font-weight: 700;
+}
+.recon__step--on .recon__dot,
+.recon__step--on:hover .recon__dot {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--brand-fg);
+  box-shadow: 0 0 0 4px var(--brand-tint-strong);
+}
+
+/* --------------------------------------------------------------- step card */
+
+.recon__page {
+  margin-bottom: 12px;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
+  box-shadow: var(--panel-shadow);
+}
+.recon__head {
+  margin-bottom: 14px;
+}
+.recon__eyebrow {
+  color: var(--brand);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.recon__head h2 {
+  margin: 2px 0 4px;
+  font-size: 1.05rem;
+}
+.recon__head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.recon__section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.recon__icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--brand-tint-strong);
+  color: var(--brand);
+  --icon-size: 20px;
+}
+.recon__icon[data-status='done'] {
+  background: var(--badge-ok-bg);
+  color: var(--ok);
+}
+.recon__btn-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  --icon-size: 16px;
+}
+.recon__nav {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--divider);
+}
+
+/* ---------------------------------------------------------------- dropzone */
+
+.recon__drop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 26px 16px;
+  border: 2px dashed var(--brand-tint-line);
+  border-radius: var(--card-radius);
+  background: var(--brand-tint);
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.recon__drop:hover,
+.recon__drop--over {
+  border-color: var(--brand);
+  background: var(--brand-tint-strong);
+}
+.recon__drop:focus-within {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.recon__drop strong {
+  color: var(--brand);
+  font-size: 0.9rem;
+}
+.recon__drop .recon__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: var(--card);
+  --icon-size: 26px;
+}
+.recon__drop input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.recon__file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--card-radius);
+}
+.recon__file-name {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recon__empty-cell {
+  padding: 0 !important;
+  border-bottom: 0 !important;
+}
+.recon__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 16px;
+  color: var(--muted);
+  text-align: center;
+}
+.recon__empty .recon__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--badge-ok-bg);
+  color: var(--ok);
+  --icon-size: 26px;
+}
+.recon__split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+.recon__card {
+  padding: 12px 14px;
+  border: 1px solid var(--panel-border);
+  border-left: 4px solid var(--brand);
+  border-radius: var(--card-radius);
+  background: var(--card);
+}
+.recon__card h3 {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.recon__scroll {
+  overflow-x: auto;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--card-radius);
+}
+.recon__card .recon__scroll {
+  border: 0;
+  border-radius: 0;
+}
+.recon__scroll .recon__table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.recon__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.recon__table th,
+.recon__table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.recon__table th {
+  color: var(--help-color, var(--muted));
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: var(--brand-tint);
+}
+.recon__num {
+  text-align: right !important;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.recon__in {
+  color: var(--ok, #1b7f3b);
+}
+.recon__out {
+  color: var(--danger, #b3261e);
+}
+.recon__bad td {
+  background: color-mix(in srgb, var(--danger, #b3261e) 10%, transparent);
+}
+.recon__ref,
+.recon__problem {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.recon__field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.recon__field input,
+.recon__field select,
+.recon__table select {
+  font: inherit;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: inherit;
+  min-height: 34px;
+}
+.recon__radio {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 6px 0;
+}
+.recon__buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.recon__buttons--between {
+  justify-content: space-between;
+}
+.recon__buttons--row {
+  justify-content: flex-start;
+}
+.recon__tabs {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.recon__tab {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.recon__tab:hover {
+  border-color: var(--brand-tint-line);
+  background: var(--brand-tint);
+}
+.recon__tab em {
+  font-style: normal;
+  margin-left: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--line);
+  font-size: 0.72rem;
+}
+.recon__tab--on,
+.recon__tab--on:hover {
+  border-color: var(--brand);
+  background: var(--brand-tint-strong);
+  color: var(--brand);
+  font-weight: 700;
+}
+.recon__tab--on em {
+  background: var(--card);
+}
+.recon__panel {
+  padding: 10px 12px;
+  border: 1px solid var(--panel-border);
+  border-left: 4px solid var(--brand);
+  border-radius: var(--card-radius);
+  background: var(--brand-tint);
+}
+.recon__panel h3 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+.recon__panel-row > td {
+  padding: 0 8px 12px;
+}
+.recon__figures {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.recon__figures .recon__field {
+  margin-bottom: 0;
+}
+.recon__figures .recon__field input,
+.recon__figures > button {
+  min-height: var(--field-height, 40px);
+}
+.recon__eq {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 16px;
+  margin: 0;
+}
+.recon__eq dt,
+.recon__eq dd {
+  margin: 0;
+}
+.recon__eq dd {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.recon__sum {
+  font-weight: 700;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}

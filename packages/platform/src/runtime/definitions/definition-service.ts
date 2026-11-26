@@ -519,6 +519,26 @@ export class DefinitionService {
     this.snapshots.delete(ctx.tenantId);
   }
 
+  /**
+   * Deletes a definition the organisation made: it stops being published and
+   * its open draft goes. Earlier versions stay in the history. One that came
+   * with a module is turned off instead. Callers check beforehand that nothing
+   * else published still uses it.
+   */
+  async deleteDefinition(ctx: TenantContext, kind: DefinitionKind, key: string): Promise<void> {
+    demand(ctx.actor, requiredPermission(kind));
+    await this.tm.withTenant(ctx.tenantId, async (tx) => {
+      if (await this.store.base(tx, kind, key)) throw definitionInvalid(`The ${kind} '${key}' came with a module. Turn it off instead of deleting it.`);
+      const published = await this.store.publishedState(tx, kind, key);
+      const drafted = await this.store.discardDraft(tx, kind, key);
+      if (!published && !drafted) throw notFound(`${kind} '${key}' does not exist.`);
+      if (published) await this.store.supersede(tx, kind, key);
+      await this.store.bumpConfigVersion(tx);
+      await this.audit.audit(tx, { actorId: ctx.actor.id, action: 'definition.deleted', entity: `definition:${kind}`, entityId: key, after: { published: !!published, draft: drafted } });
+    });
+    this.snapshots.delete(ctx.tenantId);
+  }
+
   /** Turns a definition that came with a module back on, as the module ships it with the organisation's patch. */
   async enableDefinition<K extends DefinitionKind>(ctx: TenantContext, kind: K, key: string): Promise<PublishedDefinition<K>> {
     demand(ctx.actor, requiredPermission(kind));

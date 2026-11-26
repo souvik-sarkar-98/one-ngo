@@ -2,14 +2,17 @@ name: Deploy
 
 # Runs once code is merged. Nothing here runs on a pull request.
 #
-#   develop -> test gate -> tag 1.2.0-develop.N -> Cloud Run (stage)
-#   main    -> test gate -> tag 1.2.0           -> App Engine (production)
+#   develop -> test gate -> version -> Cloud Run (stage)          -> tag 1.2.0-develop.N
+#   main    -> test gate -> version -> App Engine (production)   -> tag 1.2.0
 #
 # The gate is ci.yml, run again on the merged commit. Production then waits for
-# a reviewer on the "prod" environment before it touches Google Cloud.
+# a reviewer on the "prod" environment before it touches Google Cloud. The tag
+# is pushed only after the deploy succeeds. Production requires a stage tag
+# for the same version in the commit's history, so merge develop into main with
+# a merge commit or fast-forward, not a squash.
 #
 # Browser tests are not part of this pipeline. Run them on demand from the
-# "Browser tests" workflow (e2e.yml).
+# "Browser tests" workflow (e2e-test.yml).
 #
 # A manual run deploys whichever of the two branches you choose in
 # "Use workflow from".
@@ -33,24 +36,27 @@ jobs:
       contents: read
     uses: ./.github/workflows/ci.yml
 
-  # Creates the release tag for the merged commit, after the gate passes.
+  # Works out the release version for the merged commit, after the gate
+  # passes. It writes nothing: the tag is pushed by the "release" job below,
+  # only once the deploy has succeeded, so a failed deploy never leaves a tag
+  # that claims a release.
   # The version comes from "version" in the root package.json:
   #   develop -> <version>-develop.<n>   for example 1.2.0-develop.3
   #   main    -> <version>               for example 1.2.0
   # Bump package.json when you start the next release. A re-run on a commit
-  # that already has its tag reuses it. The deploy below runs from this tag.
-  tag:
-    name: Create release tag
+  # that already has its tag reuses it. The deploy runs from this commit.
+  version:
+    name: Work out the release version
     needs: ci
     if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
-      contents: write
+      contents: read
     outputs:
       version: ${{ steps.tag.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
       - id: tag
@@ -72,6 +78,17 @@ jobs:
               echo "::error::Release $base is already tagged on another commit. Raise the version in package.json before merging to main."
               exit 1
             fi
+            # Production only ships what already went through stage: some
+            # <version>-develop.N tag must be part of this commit's history.
+            staged=""
+            for t in $(git tag --list "$base-develop.*"); do
+              if git merge-base --is-ancestor "$t" HEAD 2>/dev/null; then staged="$t"; fi
+            done
+            if [ -z "$staged" ]; then
+              echo "::error::No $base-develop.N tag is in this commit's history, so $base has not been through stage. Deploy it from develop first."
+              exit 1
+            fi
+            echo "Stage release in history: $staged"
           else
             if released; then
               echo "::error::$base is already released. Raise the version in package.json before merging to develop."
@@ -84,35 +101,58 @@ jobs:
             fi
           fi
 
-          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
-            echo "Tag $tag already points at this commit; reusing it."
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git tag -a "$tag" -m "Release $tag" "$GITHUB_SHA"
-            git push origin "refs/tags/$tag"
-          fi
           echo "version=$tag" >> "$GITHUB_OUTPUT"
-          echo "### Release tag: \`$tag\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Release version: \`$tag\` (tagged after a successful deploy)" >> "$GITHUB_STEP_SUMMARY"
 
   deploy-stage:
     name: Stage (Cloud Run)
-    needs: tag
+    needs: version
     if: github.ref == 'refs/heads/develop'
     permissions:
       contents: read
       id-token: write
     uses: ./.github/workflows/deploy-cloudrun.yml
     with:
-      version: ${{ needs.tag.outputs.version }}
+      version: ${{ needs.version.outputs.version }}
 
   deploy-prod:
     name: Production (App Engine)
-    needs: tag
+    needs: version
     if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
       id-token: write
     uses: ./.github/workflows/deploy-gcp.yml
     with:
-      version: ${{ needs.tag.outputs.version }}
+      version: ${{ needs.version.outputs.version }}
+
+  # Pushes the release tag, and only when the deploy for this branch succeeded.
+  # Re-running a commit that already has its tag leaves the tag as it is.
+  release:
+    name: Create release tag
+    needs: [version, deploy-stage, deploy-prod]
+    if: always() && needs.version.result == 'success' && (needs.deploy-stage.result == 'success' || needs.deploy-prod.result == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - env:
+          TAG: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          git fetch --tags --force --quiet
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            if [ "$(git rev-parse "refs/tags/$TAG^{commit}")" != "$GITHUB_SHA" ]; then
+              echo "::error::Tag $TAG already exists on another commit."
+              exit 1
+            fi
+            echo "Tag $TAG already points at this commit; leaving it."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG" -m "Release $TAG" "$GITHUB_SHA"
+            git push origin "refs/tags/$TAG"
+          fi
+          echo "### Released: \`$TAG\`" >> "$GITHUB_STEP_SUMMARY"

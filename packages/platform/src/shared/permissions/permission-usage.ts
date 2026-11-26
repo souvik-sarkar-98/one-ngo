@@ -66,6 +66,7 @@ export const APP_AREAS: [string, string][] = [
   ['data:migrate', 'Administration: data migration'],
   ['data:migrate:books', 'Administration: data migration opening balances and receipt numbers'],
   ['data:migrate:people', 'Administration: data migration people files'],
+  ['data:migrate:state', 'Administration: data migration record statuses'],
   ['privacy:consent:read', 'Privacy: consent records (API only)'],
   ['privacy:consent:record', 'Privacy: record consent (API only)'],
   ['privacy:erase', 'Privacy: erase a person (API only)'],
@@ -73,6 +74,7 @@ export const APP_AREAS: [string, string][] = [
   ['money:accounts:manage', 'Money accounts: open and change (API only)'],
   ['money:transfer', 'Money: transfers (API only)'],
   ['money:reconcile', 'Money: bank statements, matching and sign-off (API only)'],
+  ['ledger:read', 'Money: trial balance'],
   ['payments:create', 'Payments: take payments (API only)'],
   ['payments:confirm', 'Payments: confirm (API only)'],
   ['payments:configure', 'Payments: providers (API only)'],
@@ -121,7 +123,7 @@ export function explicitPermissions<K extends DefinitionKind>(kind: K, body: Def
     case 'page':
       (body as PageDef).widgets.forEach((w, i) => {
         add(`/widgets/${i}/permission`, w.permission);
-        if (w.type === 'links') w.items.forEach((l, j) => add(`/widgets/${i}/items/${j}/permission`, l.permission));
+        if (w.type === 'links' || w.type === 'wizards') w.items.forEach((l, j) => add(`/widgets/${i}/items/${j}/permission`, l.permission));
       });
       break;
   }
@@ -291,7 +293,7 @@ export function accessElements(defs: PermissionDefs): AccessElement[] {
         explicit: !!w.permission,
         overridable: true,
       });
-      if (w.type !== 'links') return;
+      if (w.type !== 'links' && w.type !== 'wizards') return;
       w.items.forEach((l, j) =>
         out.push({
           area: 'pages',

@@ -358,7 +358,7 @@ describe('modules', () => {
   it('lists shipped modules with their state', async () => {
     const res = await get('/api/builder/modules');
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toContainEqual(expect.objectContaining({ key: 'donations', version: '0.4.1', installedVersion: '0.4.1', enabled: true, updateAvailable: false }));
+    expect(res.json()).toContainEqual(expect.objectContaining({ key: 'donations', version: '0.4.4', installedVersion: '0.4.4', enabled: true, updateAvailable: false }));
     expect((await get('/api/builder/modules', clerk)).statusCode).toBe(403);
   });
 
@@ -389,7 +389,7 @@ describe('modules', () => {
   it('reviews an update with nothing to change', async () => {
     const res = await get('/api/builder/modules/donations/update');
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ key: 'donations', version: '0.4.1', canUpdate: true, conflicts: [] });
+    expect(res.json()).toMatchObject({ key: 'donations', version: '0.4.4', canUpdate: true, conflicts: [] });
     expect((res.json().definitions as { status: string }[]).every((d) => d.status === 'unchanged')).toBe(true);
     expect((await get('/api/builder/modules/nothing/update')).statusCode).toBe(404);
   });
@@ -403,12 +403,12 @@ describe('modules', () => {
       type.fields = type.fields.filter((f) => f.key !== 'notes');
       writeFileSync(typeFile, JSON.stringify(type));
       const manifestFile = join(dir, 'donations', 'module.json');
-      writeFileSync(manifestFile, readFileSync(manifestFile, 'utf8').replace('"0.4.1"', '"0.5.0"'));
+      writeFileSync(manifestFile, readFileSync(manifestFile, 'utf8').replace('"0.4.4"', '"0.5.0"'));
 
       await w.platform.definitions.setExtensionPatch(w.as(w.ngoB), 'recordType', 'donation', { fields: [{ key: 'notes', required: true }] });
       const review = await w.platform.builderSupport(dir).updateReview(w.as(w.ngoB), 'donations');
       expect(review.version).toBe('0.5.0');
-      expect(review.installedVersion).toBe('0.4.1');
+      expect(review.installedVersion).toBe('0.4.4');
       expect(review.canUpdate).toBe(false);
       expect(review.conflicts).toContainEqual({
         kind: 'recordType',
@@ -450,7 +450,7 @@ describe('modules', () => {
 
     const on = await post('/api/builder/modules/donations/enable', {}, admin, w.ngoB);
     expect(on.statusCode).toBe(200);
-    expect(on.json()).toMatchObject({ key: 'donations', version: '0.4.1', enabled: true });
+    expect(on.json()).toMatchObject({ key: 'donations', version: '0.4.4', enabled: true });
     const donation = await w.platform.definitions.get(w.ngoB, 'recordType', 'donation');
     expect(donation?.body.fields.find((f) => f.key === 'notes')?.required).toBe(true);
     expect((await post('/api/builder/modules/nothing/enable')).statusCode).toBe(404);
@@ -514,6 +514,74 @@ describe('turning off one definition a module brought', () => {
     await w.platform.definitions.publish(w.as(w.ngoB), 'listView', 'own-list');
     expect((await post('/api/builder/definitions/listView/own-list/disable', {}, publisher, w.ngoB)).statusCode).toBe(404);
     expect((await post('/api/builder/definitions/listView/nothing/disable', {}, publisher, w.ngoB)).statusCode).toBe(404);
+  });
+});
+
+describe('deleting a definition the organisation made', () => {
+  const makePage = async (key: string, widgets: DefinitionBodies['page']['widgets'] = [{ type: 'groups' }]) => {
+    await w.platform.definitions.saveDraft(w.as(w.ngoB), 'page', { key, label: key, widgets });
+    await w.platform.definitions.publish(w.as(w.ngoB), 'page', key);
+  };
+  const catalogued = async (key: string) =>
+    ((await get('/api/builder/catalogue', admin, w.ngoB)).json() as { kind: string; key: string }[]).some((i) => i.kind === 'page' && i.key === key);
+
+  it('retires the published page and its draft, and lets the key be used again', async () => {
+    await makePage('del-me');
+    await w.platform.definitions.saveDraft(w.as(w.ngoB), 'page', { key: 'del-me', label: 'Changed', widgets: [{ type: 'groups' }] });
+    expect(await catalogued('del-me')).toBe(true);
+
+    const res = await post('/api/builder/definitions/page/del-me/delete', {}, publisher, w.ngoB);
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ kind: 'page', key: 'del-me', deleted: true });
+    expect(await w.platform.definitions.get(w.ngoB, 'page', 'del-me')).toBeUndefined();
+    expect(await catalogued('del-me')).toBe(false);
+    expect((await post('/api/builder/definitions/page/del-me/delete', {}, publisher, w.ngoB)).statusCode).toBe(404);
+
+    await makePage('del-me');
+    expect((await w.platform.definitions.get(w.ngoB, 'page', 'del-me'))?.body.label).toBe('del-me');
+    await post('/api/builder/definitions/page/del-me/delete', {}, publisher, w.ngoB);
+  });
+
+  it('refuses while another published page links to it, saying which', async () => {
+    await makePage('target-page');
+    await makePage('linker', [{ type: 'wizards', label: 'Start', items: [{ label: 'Open it', to: '/pages/target-page' }] }]);
+    const res = await post('/api/builder/definitions/page/target-page/delete', {}, publisher, w.ngoB);
+    expect(res.statusCode).toBe(422);
+    expect(res.json().message).toContain("Cannot delete the page 'target-page' while it is in use");
+    expect(res.json().message).toContain("the page 'linker' uses the page 'target-page'");
+    expect(await w.platform.definitions.get(w.ngoB, 'page', 'target-page')).toBeDefined();
+
+    expect((await post('/api/builder/definitions/page/linker/delete', {}, publisher, w.ngoB)).statusCode).toBe(200);
+    expect((await post('/api/builder/definitions/page/target-page/delete', {}, publisher, w.ngoB)).statusCode).toBe(200);
+  });
+
+  it('refuses while a published page shows the list, and deletes the list once nothing uses it', async () => {
+    await w.platform.definitions.saveDraft(w.as(w.ngoB), 'listView', { key: 'lv-del', recordType: 'donation' });
+    await w.platform.definitions.publish(w.as(w.ngoB), 'listView', 'lv-del');
+    await makePage('shows-list', [{ type: 'list', label: 'Gifts', listView: 'lv-del', limit: 5 }]);
+    const res = await post('/api/builder/definitions/listView/lv-del/delete', {}, publisher, w.ngoB);
+    expect(res.statusCode).toBe(422);
+    expect(res.json().message).toContain("Cannot delete the list 'lv-del' while it is in use");
+    expect((await post('/api/builder/definitions/page/shows-list/delete', {}, publisher, w.ngoB)).statusCode).toBe(200);
+    expect((await post('/api/builder/definitions/listView/lv-del/delete', {}, publisher, w.ngoB)).statusCode).toBe(200);
+    expect(await w.platform.definitions.get(w.ngoB, 'listView', 'lv-del')).toBeUndefined();
+  });
+
+  it('never deletes the home page, nor record types and workflows', async () => {
+    const home = await post('/api/builder/definitions/page/home/delete', {}, publisher, w.ngoB);
+    expect(home.statusCode).toBe(422);
+    expect(home.json().message).toContain('The home page cannot be deleted');
+    const recordType = await post('/api/builder/definitions/recordType/donation/delete', {}, publisher, w.ngoB);
+    expect(recordType.statusCode).toBe(422);
+    expect(recordType.json().message).toContain('A record type cannot be deleted');
+    expect(await w.platform.definitions.get(w.ngoB, 'recordType', 'donation')).toBeDefined();
+  });
+
+  it('needs permission to publish', async () => {
+    await makePage('guarded');
+    expect((await post('/api/builder/definitions/page/guarded/delete', {}, reader, w.ngoB)).statusCode).toBe(403);
+    expect(await w.platform.definitions.get(w.ngoB, 'page', 'guarded')).toBeDefined();
+    await post('/api/builder/definitions/page/guarded/delete', {}, publisher, w.ngoB);
   });
 });
 

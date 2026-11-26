@@ -5,6 +5,7 @@ import { shownRecordTypes } from '../../core/hidden';
 import {
   MIGRATION_STEPS,
   ATTACHMENT_LIMIT,
+  IMPORT_KINDS,
   MigrationSession,
   booksBalance,
   byteText,
@@ -19,11 +20,14 @@ import {
   emptyPeople,
   fillsField,
   fileDraftOf,
+  filesDraft,
   groupWarnings,
   importableFields,
+  importKindOf,
   inGroup,
   isMigrationStep,
   kindOptions,
+  kindsKey,
   legacyRoleValues,
   linkGroup,
   linkRefusal,
@@ -31,24 +35,32 @@ import {
   mappingOf,
   PEOPLE_GROUP,
   peopleOf,
+  readKinds,
+  recordGroups,
   refChoice,
   refOf,
+  rememberKinds,
   roleRows,
   canDerive,
   canTransform,
   setDerived,
   setField,
+  setDate,
   setPerson,
   setRef,
+  setState,
+  stateRowsOf,
   setDefault,
   setRules,
   templateColumns,
   templatePreview,
   targetsOf,
+  typesWithFiles,
   unlinkGroup,
   type BooksInput,
   type BooksLine,
   type FileDraft,
+  type ImportKind,
   type MigrationColumn,
   type MigrationSnapshot,
   type MigrationSource,
@@ -134,7 +146,6 @@ export interface PeopleRow {
 
 /** The choice of the column select that builds the field from several columns. */
 export const COMBINE = '@combine';
-
 /** Attachments shown per page of the list. */
 const ATTACHMENT_PAGE = 50;
 
@@ -163,11 +174,35 @@ export class MigrationStore extends AdminBase {
   readonly addedGroups = signal<string[]>([]);
   /** The open group: a record type's key, or People. */
   readonly group = signal<string | null>(null);
+  /** Every group the files make, People and record types, whatever they were added as. */
   readonly groups = computed(() => mapGroups(this.snap().profile?.sources ?? [], this.drafts(), this.addedGroups()));
-  readonly openGroup = computed(() => this.groups().find((g) => g.key === this.group()) ?? null);
-  /** Record types a group can still be added for; People can be added while there is no People group. */
-  readonly groupChoices = computed(() => this.types().filter((x) => !this.groups().some((g) => g.key === x.key)));
-  readonly hasPeopleGroup = computed(() => this.groups().some((g) => g.key === PEOPLE_GROUP));
+
+  /** What each file was added as on the Files step, by file id; kept on this device. A file with no entry is read from its mapping. */
+  readonly addedAs = signal<Readonly<Record<string, ImportKind>>>({});
+  /** What the Files step is adding now: its dropdown. */
+  readonly importKind = signal<ImportKind>('records');
+  readonly kindById = computed(() => Object.fromEntries((this.snap().profile?.sources ?? []).map((s) => [s.id, importKindOf(s, this.addedAs())])) as Record<string, ImportKind>);
+  /** The kinds of file the profile holds, in the dropdown's order: the Map step lists a part for each. */
+  readonly kindsPresent = computed(() => IMPORT_KINDS.filter((k) => (this.snap().profile?.sources ?? []).some((s) => this.showsIn(s, k))));
+  private readonly mapKindChoice = signal<ImportKind | null>(null);
+  /** The part of the Map step that is open: the person's choice, or the first kind the profile holds. */
+  readonly mapKind = computed<ImportKind>(() => {
+    const choice = this.mapKindChoice();
+    const present = this.kindsPresent();
+    return choice && present.includes(choice) ? choice : (present[0] ?? 'records');
+  });
+  /** The record-type groups: the chips of Records. People and Files have no groups. */
+  readonly recordGroups = computed(() => recordGroups(this.groups(), this.kindById(), this.addedGroups()));
+  /** The groups of the open part: record types for Records, People for People, none for Files. */
+  private readonly shownGroups = computed(() => (this.mapKind() === 'records' ? this.recordGroups() : this.mapKind() === 'people' ? this.groups().filter((g) => g.key === PEOPLE_GROUP) : []));
+  readonly openGroup = computed(() => this.shownGroups().find((g) => g.key === this.group()) ?? null);
+  /** Record types a group can still be added for. */
+  readonly groupChoices = computed(() => this.types().filter((x) => !this.recordGroups().some((g) => g.key === x.key)));
+  /** The files the open part lists for linking: the ones added as its kind. */
+  readonly linkable = computed(() => (this.snap().profile?.sources ?? []).filter((s) => this.showsIn(s, this.mapKind())));
+  /** The Files CSVs, and the record types with a file field that one can attach files to. */
+  readonly filesSources = computed(() => (this.snap().profile?.sources ?? []).filter((s) => this.kindById()[s.id] === 'files'));
+  readonly fileTypes = computed(() => typesWithFiles(this.types()));
   /** Files no group holds: they are left out of the run. */
   readonly ungrouped = computed(() => (this.snap().profile?.sources ?? []).filter((s) => draftEmpty(this.drafts()[s.id] ?? fileDraftOf(s))));
   /** Files the person chose for a field of the open group that no column fills yet, by field key. */
@@ -213,6 +248,14 @@ export class MigrationStore extends AdminBase {
 
   /** Whether this person may map and run people files (`data:migrate:people` and `members:manage`). */
   readonly peopleAllowed = computed(() => !!this.session.me()?.capabilities.migrationPeople);
+  /** Whether this person may set migrated records' statuses (`data:migrate:state`). */
+  readonly stateAllowed = computed(() => !!this.session.me()?.capabilities.migrationState);
+  /** The statuses of the open record type's primary workflow: what a status column can give a record. */
+  readonly openStates = computed(() => {
+    const g = this.openGroup();
+    if (!g || g.key === PEOPLE_GROUP) return [];
+    return this.session.workflows(g.key).find((w) => (w.role ?? 'primary') === 'primary')?.states ?? [];
+  });
   /** The files linked to the People group, each with what it holds as people. Each needs its own legacy id, email and name columns. */
   readonly peopleFiles = computed(() => {
     const g = this.openGroup();
@@ -252,8 +295,17 @@ export class MigrationStore extends AdminBase {
   setPeopleRowColumn(row: PeopleRow, column: string): void {
     if (row.sourceId) this.editPeople(row.sourceId, (d) => ({ ...d, [row.draftKey]: column }));
   }
-  /** People as a group to add: its label, and the line under it that says what it is or why it is disabled. */
-  readonly peopleOption = computed(() => kindOptions(this.peopleAllowed()).find((o) => o.kind === 'people')!);
+  /** The choices of the Files step's dropdown, each with its label and the line under it that says what it is or why it is disabled. */
+  readonly kindChoices = computed(() => kindOptions(this.peopleAllowed()));
+  readonly importOption = computed(() => this.kindChoices().find((o) => o.kind === this.importKind())!);
+  /** The catalogue key of a kind's name. */
+  kindLabel(kind: ImportKind): string {
+    return this.kindChoices().find((o) => o.kind === kind)!.label;
+  }
+  /** The catalogue key of the name of what a file was added as. */
+  kindLabelOf(s: MigrationSource): string {
+    return this.kindLabel(this.kindById()[s.id] ?? 'records');
+  }
   readonly peopleGroup = PEOPLE_GROUP;
   /** Roles a legacy role may become; empty when the list could not be read. */
   readonly roles = signal<RoleChoice[]>([]);
@@ -384,9 +436,64 @@ export class MigrationStore extends AdminBase {
 
   // ------------------------------------------------------------------ files
 
-  addFiles(list: FileList | null): void {
+  /** Adds CSVs under what the dropdown says is being imported; each file keeps that choice. */
+  async addFiles(list: FileList | null): Promise<void> {
     const files = Array.from(list ?? [], (f) => ({ body: f as Blob, name: f.name }));
-    if (files.length) void this.migration.addFiles(files);
+    const kind = this.importKind();
+    if (!files.length || (kind === 'people' && !this.peopleAllowed())) return;
+    const before = new Set((this.snap().profile?.sources ?? []).map((s) => s.id));
+    await this.migration.addFiles(files);
+    this.tag((this.snap().profile?.sources ?? []).filter((s) => !before.has(s.id)), kind);
+  }
+
+  /** The kind the dropdown was changed to while files were held: it waits for the person to confirm that everything is removed. */
+  readonly confirmKind = signal<ImportKind | null>(null);
+
+  /** Whether the profile holds anything the Files step added: CSVs or uploaded files. */
+  readonly holdsFiles = computed(() => !!this.snap().profile?.sources.length || !!this.snap().profile?.attachments?.count);
+
+  /** The dropdown changed: switches at once when nothing was added, else asks first, because switching starts the step over. */
+  requestKind(kind: ImportKind): void {
+    if (kind === this.importKind()) return;
+    if (this.holdsFiles()) this.confirmKind.set(kind);
+    else this.importKind.set(kind);
+  }
+
+  /** Confirmed: removes every file and uploaded file, forgets every mapping and choice, and switches. */
+  async applyKind(): Promise<void> {
+    const kind = this.confirmKind();
+    this.confirmKind.set(null);
+    if (!kind || !(await this.migration.clearAll())) return;
+    this.dirty.set(new Set());
+    this.addedGroups.set([]);
+    this.pendingFile.set({});
+    this.typedStateValues.set({});
+    this.openRules.set(null);
+    this.group.set(null);
+    this.mapKindChoice.set(null);
+    this.attachQuery.set('');
+    this.attachOffset.set(0);
+    this.addedAs.set({});
+    const profileId = this.snap().profile?.id;
+    if (profileId) rememberKinds(localStorage, kindsKey(this.session.me()?.tenant.key ?? '', profileId), {});
+    this.importKind.set(kind);
+  }
+
+  /** Whether a file belongs to a part of the Map step: what it was added as; a file that also holds people is in People too. */
+  showsIn(s: MigrationSource, kind: ImportKind): boolean {
+    return this.kindById()[s.id] === kind || (kind === 'people' && !!this.drafts()[s.id]?.peopleOn);
+  }
+
+  /** Remembers what new files were added as. People files start linked to People, so the Map step opens on their columns. */
+  private tag(added: readonly MigrationSource[], kind: ImportKind): void {
+    if (!added.length) return;
+    this.addedAs.update((all) => ({ ...all, ...Object.fromEntries(added.map((s) => [s.id, kind])) }));
+    const profileId = this.snap().profile?.id;
+    if (profileId) rememberKinds(localStorage, kindsKey(this.session.me()?.tenant.key ?? '', profileId), this.addedAs());
+    if (kind !== 'people') return;
+    this.drafts.update((all) => ({ ...all, ...Object.fromEntries(added.map((s) => [s.id, { ...(all[s.id] ?? fileDraftOf(s)), peopleOn: true }])) }));
+    this.dirty.update((set) => new Set([...set, ...added.map((s) => s.id)]));
+    this.settleGroup();
   }
 
   removeSource(id: string): void {
@@ -459,6 +566,9 @@ export class MigrationStore extends AdminBase {
       this.addedGroups.set([]);
       this.pendingFile.set({});
       this.group.set(null);
+      this.mapKindChoice.set(null);
+      this.importKind.set('records');
+      this.addedAs.set(profileId ? readKinds(localStorage, kindsKey(this.session.me()?.tenant.key ?? '', profileId)) : {});
     }
     const current = this.drafts();
     this.drafts.set(Object.fromEntries(sources.map((s) => [s.id, this.dirty().has(s.id) && current[s.id] ? current[s.id]! : fileDraftOf(s)])));
@@ -466,11 +576,19 @@ export class MigrationStore extends AdminBase {
   }
   private draftsOf: string | null = null;
 
-  /** Keeps the open group one that exists. */
+  /** Keeps the open group one the open part shows. */
   private settleGroup(): void {
-    const groups = this.groups();
+    const groups = this.shownGroups();
     if (!groups.some((g) => g.key === this.group())) this.group.set(groups[0]?.key ?? null);
     if (this.group() === PEOPLE_GROUP) void this.loadRoles();
+  }
+
+  /** Opens a part of the Map step: Records, People or Files. */
+  setMapKind(kind: ImportKind): void {
+    if (kind === this.mapKind()) return;
+    this.pendingFile.set({});
+    this.mapKindChoice.set(kind);
+    this.settleGroup();
   }
 
   /** Opens a group of the Map step. */
@@ -480,10 +598,10 @@ export class MigrationStore extends AdminBase {
     this.settleGroup();
   }
 
-  /** Adds a group for a record type or People (when this person may migrate people) and opens it. */
+  /** Adds a group for a record type and opens it. Only Records have groups. */
   addGroup(key: string): void {
-    if (!key || (key === PEOPLE_GROUP && !this.peopleAllowed())) return;
-    if (!this.groups().some((g) => g.key === key)) this.addedGroups.update((a) => [...a, key]);
+    if (!key || key === PEOPLE_GROUP || this.mapKind() !== 'records') return;
+    if (!this.addedGroups().includes(key)) this.addedGroups.update((a) => [...a, key]);
     this.openGroupOf(key);
   }
 
@@ -605,9 +723,93 @@ export class MigrationStore extends AdminBase {
     this.patch(sourceId, (x) => ({ ...x, required }));
   }
 
+  /** The file's column with a record's original created or updated date; empty leaves the date to the import. */
+  setDate(sourceId: string, which: 'createdAt' | 'updatedAt', column: string): void {
+    this.patch(sourceId, (x) => setDate(x, which, column));
+  }
+
+  /** The file's status column; another column forgets the statuses given to the old one. */
+  setStateColumn(sourceId: string, column: string): void {
+    this.patch(sourceId, (x) => setState(x, column, x.state?.column === column ? x.state.map : {}));
+  }
+
+  /** The status a value of the status column takes; an empty status leaves the value out. Any other spelling of the value is replaced, so no value is mapped twice. */
+  setStateValue(sourceId: string, value: string, state: string): void {
+    this.patch(sourceId, (x) => {
+      const v = value.trim().toLowerCase();
+      const map = Object.fromEntries(Object.entries(x.state?.map ?? {}).filter(([k]) => k.trim().toLowerCase() !== v));
+      return setState(x, x.state?.column ?? '', state ? { ...map, [value]: state } : map);
+    });
+  }
+
+  /** Status values typed in for a file, because its sample does not show them; each stays listed until it has a status. */
+  readonly typedStateValues = signal<Readonly<Record<string, string[]>>>({});
+
+  addStateValue(sourceId: string, value: string): void {
+    const v = value.trim();
+    if (!v) return;
+    this.typedStateValues.update((m) => ({ ...m, [sourceId]: [...(m[sourceId] ?? []), v] }));
+  }
+
+  /** The rows of the open type's status table for a file: its sample values and the ones typed in, each with the status it takes. */
+  stateRows(sourceId: string): { value: string; state: string }[] {
+    const tg = this.targetIn(sourceId);
+    const source = this.snap().profile?.sources.find((s) => s.id === sourceId);
+    if (!tg?.state || !source) return [];
+    const samples = source.columns.find((c) => c.name === tg.state!.column)?.samples ?? [];
+    return stateRowsOf([...samples, ...(this.typedStateValues()[sourceId] ?? [])], tg.state.map);
+  }
+
   /** The file's target of the open record type. */
   targetIn(sourceId: string): MigrationTarget | undefined {
     return this.linkedFiles().find((l) => l.source.id === sourceId)?.target;
+  }
+
+  // ------------------------------------------------------------- files CSVs
+
+  /** The target of a Files CSV: the one record type it attaches files to. */
+  filesTarget(sourceId: string): MigrationTarget | undefined {
+    return this.drafts()[sourceId]?.targets[0];
+  }
+
+  /** The record type a Files CSV attaches to, or empty until chosen. */
+  filesTypeOf(sourceId: string): string {
+    return this.filesTarget(sourceId)?.type ?? '';
+  }
+
+  /** Chooses the record type a Files CSV attaches to; the old id column is guessed, and the file columns start empty. Empty leaves the file out. */
+  setFilesType(sourceId: string, key: string): void {
+    const source = this.snap().profile?.sources.find((s) => s.id === sourceId);
+    if (!source || key === this.filesTypeOf(sourceId)) return;
+    this.edit(sourceId, (d) => filesDraft(d, this.typeOf(key), source.columns.map((c) => c.name)));
+  }
+
+  setFilesOldId(sourceId: string, column: string): void {
+    this.patchFiles(sourceId, (x) => ({ ...x, oldId: column }));
+  }
+
+  /** The file fields of the type a Files CSV attaches to, each with the column of file names that fills it. */
+  filesChoices(sourceId: string): FileChoice[] {
+    const x = this.filesTarget(sourceId);
+    return x ? this.fileChoices(x) : [];
+  }
+
+  /** Fills a file field from a column of file names (empty clears it), keeping its other options. */
+  setFilesColumn(sourceId: string, c: FileChoice, column: string): void {
+    this.patchFiles(sourceId, (x) => setFile(x, c.field, column, { separator: c.separator, onMissing: c.onMissing }));
+  }
+
+  setFilesOption(sourceId: string, c: FileChoice, key: 'separator' | 'onMissing', value: string): void {
+    this.patchFiles(sourceId, (x) => setFile(x, c.field, c.column, { separator: c.separator, onMissing: c.onMissing, [key]: value }));
+  }
+
+  /** The server's issue for a part of a Files CSV's target (`/oldId`, `/files/receipt/column`), if any. */
+  filesIssue(sourceId: string, suffix: string): string {
+    return this.filesTarget(sourceId) ? this.issue(`/targets/0${suffix}`) : '';
+  }
+
+  private patchFiles(sourceId: string, fn: (x: MigrationTarget) => MigrationTarget): void {
+    this.edit(sourceId, (d) => ({ ...d, targets: d.targets.map((x, i) => (i === 0 ? fn(x) : x)) }));
   }
 
   /** The server's issue for a part of the file's target of the open record type (`/oldId`, `/fields/name`), if any. */
@@ -811,7 +1013,11 @@ export class MigrationStore extends AdminBase {
         // Opens the group the server's first issue is about.
         const path = this.snap().issues[0]?.path ?? '';
         const target = /^\/targets\/(\d+)/.exec(path);
-        this.group.set(target ? (d.targets[Number(target[1])]?.type ?? this.group()) : d.peopleOn && (path.startsWith('/people') || !d.targets.length) ? PEOPLE_GROUP : (d.targets[0]?.type ?? this.group()));
+        const people = !target && d.peopleOn && (path.startsWith('/people') || !d.targets.length);
+        this.group.set(target ? (d.targets[Number(target[1])]?.type ?? this.group()) : people ? PEOPLE_GROUP : (d.targets[0]?.type ?? this.group()));
+        // The refused file's part opens, so its issues are in view.
+        this.mapKindChoice.set(people ? 'people' : (this.kindById()[s.id] ?? null));
+        this.settleGroup();
         return;
       }
       const saved = profile.sources.find((x) => x.id === s.id);

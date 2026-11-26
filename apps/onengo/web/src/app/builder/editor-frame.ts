@@ -2,7 +2,7 @@ import { NgComponentOutlet } from '@angular/common';
 import { Component, computed, effect, inject, input, untracked } from '@angular/core';
 import { Btn, PageFrame } from '@onengo/web-kit';
 import { EDITOR_TABS, frameTab, type EditorTab } from '../core/builder/address';
-import { canTurnOff } from '../core/builder/catalogue';
+import { canDelete, canTurnOff } from '../core/builder/catalogue';
 import { summarySections } from '../core/builder/summary';
 import { formatDate, t } from '../core/i18n/i18n';
 import { DEFINITION_KINDS, type DefinitionKind } from '../core/models';
@@ -228,6 +228,9 @@ export class EditorFrame {
       out.push({ id: 'turnOff', label: t('ui.builder.catalogue.turnOff') });
     }
     if (s?.hasDraft && this.store.canEdit()) out.push({ id: 'discard', label: t('ui.builder.discardDraft') });
+    if (s && this.store.canPublish() && canDelete({ kind: s.kind, key: s.key, owner: s.shipped ? 'base' : 'tenant', publishedVersion: s.detail?.published?.version ?? null })) {
+      out.push({ id: 'delete', label: t('ui.builder.catalogue.delete') });
+    }
     return out;
   });
   readonly summary = computed(() => {
@@ -270,6 +273,11 @@ export class EditorFrame {
     else if (id === 'revert') void this.revert();
     else if (id === 'discard') void this.discard();
     else if (id === 'turnOff') void this.turnOff();
+    else if (id === 'delete') void this.deleteDefinition();
+  }
+
+  async deleteDefinition(): Promise<void> {
+    if (confirm(t('ui.builder.catalogue.confirmDelete', { name: this.store.title() }))) await this.store.deleteDefinition();
   }
 
   async turnOff(): Promise<void> {

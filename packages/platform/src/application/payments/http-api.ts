@@ -5,10 +5,10 @@ import type { ConfirmPaymentManually, HandlePaymentWebhook, RequestPayment } fro
 
 /** Money accounts, transfers, payments and payment gateway set-up. */
 export interface PaymentsApi {
-  moneyAccounts: Pick<MoneyAccountService, 'list' | 'open' | 'update' | 'transfer'>;
+  moneyAccounts: Pick<MoneyAccountService, 'list' | 'open' | 'update' | 'transfer' | 'balances' | 'accountLedger' | 'ledgerAccounts' | 'trialBalance'>;
   bankReconciliation: Pick<
     BankReconciliationService,
-    'importStatement' | 'autoMatchAccount' | 'statement' | 'match' | 'ignore' | 'reopen' | 'book' | 'report' | 'signOff' | 'signOffs'
+    'importStatement' | 'autoMatchAccount' | 'statement' | 'bookLines' | 'match' | 'ignore' | 'reopen' | 'book' | 'report' | 'signOff' | 'signOffs'
   >;
   payments: Pick<PaymentService, 'get' | 'matchStatement' | 'gateways' | 'saveGatewayCredentials'>;
   requestPayment: RequestPayment;

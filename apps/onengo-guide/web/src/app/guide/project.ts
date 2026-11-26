@@ -78,6 +78,7 @@ export type GuideWidget =
   | { type: 'list'; label: string; listView: string }
   | { type: 'stat'; label: string }
   | { type: 'links'; label: string; items: { label: string }[] }
+  | { type: 'wizards'; label: string; items: { label: string }[] }
   | { type: 'groups' };
 
 export interface GuidePage {
@@ -379,7 +380,7 @@ function widgetLine(widget: GuideWidget, defs: GuideDefinitions): { name: string
     const view = Object.values(defs.listViews ?? {}).find((item) => item.key === widget.listView);
     return { name: widget.label, types: [`Short list from ${view?.label ?? widget.listView}`] };
   }
-  if (widget.type === 'links') return { name: widget.label, types: widget.items.map((item) => item.label) };
+  if (widget.type === 'links' || widget.type === 'wizards') return { name: widget.label, types: widget.items.map((item) => item.label) };
   return { name: widget.label, types: ['Count or total'] };
 }
 

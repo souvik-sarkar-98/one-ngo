@@ -158,6 +158,18 @@ export class BankReconciliationService {
     });
   }
 
+  /** Entries on the account's ledger that no statement line has taken yet, oldest first: what a statement line can be paired with. */
+  async bookLines(ctx: TenantContext, key: string, range: { from?: string; to?: string } = {}): Promise<BookLine[]> {
+    demand(ctx.actor, RECONCILE_PERMISSION);
+    const from = range.from ? checkDate(range.from, 'From date') : undefined;
+    const to = range.to ? checkDate(range.to, 'To date') : undefined;
+    if (from && to && from > to) throw validationFailed('The from date is after the to date.');
+    return this.transactions.withTenant(ctx.tenantId, async (tx) => {
+      const account = await this.account(tx, key);
+      return (await this.store.openBookLines(tx, account.ledgerAccountId, { ...(from && { from }), ...(to && { to }) })).slice(0, LIST_LIMIT);
+    });
+  }
+
   /** Pairs one statement line with a ledger line of the same amount, when the automatic pairing chose differently or found nothing. */
   async match(ctx: TenantContext, key: string, lineId: string, journalLineId: string): Promise<StatementLine> {
     demand(ctx.actor, RECONCILE_PERMISSION);
@@ -216,6 +228,8 @@ export class BankReconciliationService {
       const abs = paiseToDecimal(Math.abs(paise));
       const entryId = await this.ledger.post(tx, ctx.actor, {
         date: line.date,
+        // The bank has already paid it, so the books must show it even when the account is at or below zero.
+        overdraftReason: 'Booked from the bank statement',
         memo: `Bank: ${line.description}${input.memo?.trim() ? ` (${input.memo.trim()})` : ''}`.slice(0, 500),
         lines:
           paise > 0

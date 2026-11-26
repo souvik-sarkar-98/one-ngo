@@ -38,6 +38,7 @@ const apps: Record<AppName, AppConfig> = {
     artifactName: '@onengo/server-artifact',
     entries: {
       server: 'apps/onengo/server/src/main.ts',
+      bootstrap: 'apps/onengo/server/src/bootstrap.ts',
       deploy: 'apps/onengo/server/src/deploy.ts',
       'sandbox-worker': 'packages/platform/src/runtime/scripts/sandbox-worker.ts',
     },
@@ -49,6 +50,7 @@ const apps: Record<AppName, AppConfig> = {
     artifactName: '@onengo-console/server-artifact',
     entries: {
       server: 'apps/onengo-console/server/src/main.ts',
+      bootstrap: 'apps/onengo-console/server/src/bootstrap.ts',
     },
     platformExports: new Set(['operator', 'contracts']),
   },

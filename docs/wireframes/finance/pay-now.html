@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pay now - wireframe</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<nav class="topnav"><a href="index.html">Finance wireframes</a><span>/</span><b>Pay now</b></nav>
+<header class="page">
+  <h1>Pay now: choose the account <span class="ws">WS6</span></h1>
+  <p>The Pay now button on a donation creates a UPI payment link. Today it always targets the money account with key <code>upi</code>. The change lets the person choose which account receives the money, from the accounts that have a UPI ID, and records that account on the donation when payment is confirmed. All figures are made up.</p>
+  <div class="legend">
+    <span class="key"><i class="k-new"></i> New</span>
+    <span class="key"><i class="k-chg"></i> Changed</span>
+    <span class="key"><i class="k-old"></i> Existing, unchanged</span>
+  </div>
+</header>
+
+<main class="page">
+
+<h2 class="sec">1. The donation, before and after</h2>
+<div class="grid2">
+  <div>
+    <p class="cap">Raised: the Pay now button</p>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><b>DON/2026-27/00052</b><span class="badge info">Raised</span></div>
+      <dl class="dl">
+        <dt>Donor</dt><dd>Asha Verma</dd>
+        <dt>Amount</dt><dd>&#8377;10,000.00</dd>
+        <dt>Processing fee</dt><dd class="mini">none</dd>
+      </dl>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <span class="btn primary">Pay now</span><span class="btn">Send reminder</span><span class="btn">Mark as paid</span><span class="btn danger">Cancel</span>
+      </div>
+      <p class="hint">Needs <code>payments:create</code>. The button opens the dialog below.</p>
+    </div>
+  </div>
+  <div>
+    <p class="cap">Paid, after the UPI payment is confirmed</p>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><b>DON/2026-27/00052</b><span class="badge ok">Paid</span></div>
+      <dl class="dl">
+        <dt>Donor</dt><dd>Asha Verma</dd>
+        <dt>Amount</dt><dd>&#8377;10,000.00</dd>
+        <dt>Payment method</dt><dd>UPI</dd>
+        <dt>Paid on</dt><dd>26 Nov 2026</dd>
+        <dt>Payment reference</dt><dd>331122004455</dd>
+        <dt class="is-new" style="padding:0 4px">Received in <span class="pin n">1</span></dt><dd class="is-new" style="padding:0 4px">Project bank account (HDFC)</dd>
+        <dt>Receipt</dt><dd><a href="#">RCPT/2026-27/00018</a></dd>
+      </dl>
+      <p class="hint">Received in is filled in automatically with the account the link paid into, so the books debit that account.</p>
+    </div>
+  </div>
+</div>
+
+<h2 class="sec">2. Pay now dialog</h2>
+<p class="sub">Four states. The amount comes from the donation and cannot be edited. The server refuses a payment request that does not match a published action, and refuses an account the action does not allow.</p>
+
+<div class="grid2">
+  <div>
+    <p class="cap">State A: choose the account</p>
+    <div class="stage">
+      <div class="dialog">
+        <div class="dlg-h"><h2>Pay now</h2><span class="x">&#10005;</span></div>
+        <div class="dlg-b">
+          <div class="field"><label>Amount</label><div class="inp ro">&#8377; 10,000.00</div></div>
+          <div class="field is-new"><label>Receive into <span class="req">*</span> <span class="pin n">2</span></label><div class="sel">Project bank account (HDFC)</div>
+            <p class="help">Only accounts with a UPI ID are listed: Main bank account (SBI), Project bank account (HDFC).</p></div>
+          <p class="hint">Payee shown to the donor: Asha Trust, project@hdfcbank.</p>
+        </div>
+        <div class="dlg-f"><span class="btn">Cancel</span><span class="btn primary">Create payment link</span></div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <p class="cap">State B: account without a UPI ID</p>
+    <div class="stage">
+      <div class="dialog">
+        <div class="dlg-h"><h2>Pay now</h2><span class="x">&#10005;</span></div>
+        <div class="dlg-b">
+          <div class="banner err"><span>&#9888;</span><span>Choose an account that has a UPI ID.</span></div>
+          <div class="field"><label>Receive into <span class="req">*</span></label><div class="sel bad">Main bank account (SBI)</div>
+            <p class="help">No UPI ID is set on this account. Someone with <code>money:accounts:manage</code> can add one with Edit on the Money page.</p></div>
+        </div>
+        <div class="dlg-f"><span class="btn">Cancel</span><span class="btn primary disabled">Create payment link</span></div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <p class="cap">State C: link created, awaiting payment</p>
+    <div class="stage">
+      <div class="dialog">
+        <div class="dlg-h"><h2>Payment link ready</h2><span class="x">&#10005;</span></div>
+        <div class="dlg-b">
+          <div style="display:flex;gap:14px;align-items:flex-start">
+            <div style="width:110px;height:110px;border:2px solid #cbd5e1;border-radius:8px;display:grid;place-items:center;color:#94a3b8;font-size:12px;flex:0 0 auto">QR code</div>
+            <div style="min-width:0">
+              <dl class="dl" style="grid-template-columns:90px 1fr">
+                <dt>Pay to</dt><dd>project@hdfcbank</dd>
+                <dt>Amount</dt><dd>&#8377;10,000.00</dd>
+                <dt>Reference</dt><dd><b>NGO12AB34CD</b></dd>
+                <dt>Status</dt><dd><span class="badge warn">Awaiting payment</span></dd>
+              </dl>
+            </div>
+          </div>
+          <div class="field" style="margin-top:10px"><label>Link</label><div class="inp" style="font:12px var(--mono);overflow:hidden">upi://pay?pa=project@hdfcbank&amp;pn=Asha Trust&amp;am=10000.00&amp;cu=INR&amp;tn=NGO12AB34CD</div></div>
+          <p class="hint">Ask the donor to quote the reference in the payment note. A bank statement line with this reference and the exact amount confirms it automatically.</p>
+        </div>
+        <div class="dlg-f"><span class="btn">Copy link</span><span class="btn">Confirm manually</span><span class="btn primary">Done</span></div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <p class="cap">State D: confirm by hand</p>
+    <div class="stage">
+      <div class="dialog">
+        <div class="dlg-h"><h2>Confirm payment received</h2><span class="x">&#10005;</span></div>
+        <div class="dlg-b">
+          <p class="mini" style="margin:0 0 10px">Use this when the money is already in the account but no statement line matched.</p>
+          <div class="field"><label>Paid on <span class="req">*</span></label><div class="inp">26 Nov 2026 <span>&#128197;</span></div></div>
+          <div class="field"><label>Bank reference (UTR) <span class="req">*</span></label><div class="inp">331122004455</div><p class="help">A UPI donation needs its transaction reference.</p></div>
+        </div>
+        <div class="dlg-f"><span class="btn">Cancel</span><span class="btn primary">Confirm</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <h3>What changes</h3>
+  <ol>
+    <li><b>Received in is filled by the payment</b> (new). On confirmation the payment's account is written to the donation's Received in field, through a new <code>account</code> entry in the payment's <code>onPaid.fields</code>. The server must remember which account each payment request was for; it does not store that today, so this needs a new column on the payment request. <span class="ws">WS6</span></li>
+    <li><b>Receive into</b> (new). A choice list of money accounts that have a UPI ID, as a form field on the Pay now action. The action's account setting becomes an input instead of a fixed key. The list uses the account's key as its value, because payments look accounts up by key. <span class="ws">WS6</span></li>
+  </ol>
+  <h3 style="margin-top:12px">Behaviour</h3>
+  <ul>
+    <li>With only one UPI account, the list is pre-selected and the dialog looks as it does today.</li>
+    <li>States C and D are unchanged except that they show the chosen account's UPI ID.</li>
+    <li>Confirming a payment never changes which account the link paid into. Amount mismatches are still held for review, as today.</li>
+    <li>The stored key <code>upi</code> is not renamed. Screens show the account's name, not its key.</li>
+  </ul>
+</div>
+
+</main>
+</body>
+</html>

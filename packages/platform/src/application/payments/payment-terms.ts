@@ -6,6 +6,8 @@ import type { ActionStep } from '../../runtime/definitions/types.js';
 
 type PaymentStep = Extract<ActionStep, { type: 'createPayment' }>;
 
+// `fields.account` is left out on purpose: it only says where the account goes, so a request made before a module added it
+// is still matched by the updated action, and a payment already waiting is not stranded by the update.
 const sameOnPaid = (a: OnPaid, b: OnPaid): boolean => {
   const shape = (o: OnPaid) => {
     const f = o.fields ?? {};
@@ -17,7 +19,8 @@ const sameOnPaid = (a: OnPaid, b: OnPaid): boolean => {
 const asks = (step: PaymentStep, ask: PaymentAsk): boolean =>
   PAYMENT_PROVIDERS[step.provider] === ask.provider &&
   sameOnPaid(step.onPaid, ask.onPaid) &&
-  (ask.provider !== 'upi_direct' || ask.upiAccountKey === null || step.account === ask.upiAccountKey);
+  // A step that lets the person choose the account accepts any account; the payment service checks that it is a real one with a UPI ID.
+  (ask.provider !== 'upi_direct' || ask.upiAccountKey === null || !!step.accountFrom || step.account === ask.upiAccountKey);
 
 /** Payment terms from the organisation's published actions, workflows and receipt rules. */
 export class PublishedPaymentTerms implements PaymentTerms {

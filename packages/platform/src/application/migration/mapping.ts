@@ -112,8 +112,22 @@ export interface MigrationTarget {
    * they may also fill other fields. A field has a column or a template, not both. Missing in older mappings.
    */
   derived?: Record<string, DerivedMapping>;
+  /** The legacy dates of the record: the columns holding when it was created and last changed. Missing in older mappings. */
+  dates?: { createdAt?: string; updatedAt?: string };
+  /**
+   * The status a record is created in, read from a column: each value of the column names a state of the
+   * type's primary workflow (a blank cell is the workflow's starting state). No transition, approval or
+   * posting runs for it. Missing in older mappings.
+   */
+  state?: { column: string; map: Record<string, string> };
   /** A required target that fails fails the whole row; an optional one is left out. */
   required: boolean;
+}
+
+/** The state a cell's value maps to, ignoring case and surrounding spaces; undefined when no value of the map matches. */
+export function stateOf(map: Readonly<Record<string, string>>, raw: string): string | undefined {
+  const key = sameValue(raw);
+  return Object.entries(map).find(([from]) => sameValue(from) === key)?.[1];
 }
 
 /**
@@ -169,7 +183,7 @@ const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v =
  * The mapping a person sent for a file, checked against the file's columns and the
  * organisation's record types and returned in its stored shape. Throws with every issue found.
  */
-export function readMapping(input: unknown, columns: readonly string[], types: TypesByKey): RecordsMapping {
+export function readMapping(input: unknown, columns: readonly string[], types: TypesByKey, stateKeys: ReadonlyMap<string, readonly string[]> = new Map()): RecordsMapping {
   const issues: FieldIssue[] = [];
   const add = (path: string, message: string) => issues.push({ path, message });
 
@@ -361,7 +375,7 @@ export function readMapping(input: unknown, columns: readonly string[], types: T
       }
       const v = value.trim();
       if (v.length > MAX_TRANSFORM_TEXT) add(path, `a value may have at most ${MAX_TRANSFORM_TEXT} characters`);
-      else if (f.type === 'choice' && v && !f.choices?.some((ch) => ch.value === v)) add(path, `'${v}' is not one of the choices`);
+      else if (f.type === 'choice' && !f.choicesFrom && v && !f.choices?.some((ch) => ch.value === v)) add(path, `'${v}' is not one of the choices`);
       else if (v) defaults[f.key] = v;
     }
 
@@ -390,9 +404,48 @@ export function readMapping(input: unknown, columns: readonly string[], types: T
       else derived[f.key] = { template };
     }
 
+    // Legacy dates: a column of the file each. A date column may also fill a field, so it is not registered as used.
+    const dates: { createdAt?: string; updatedAt?: string } = {};
+    for (const which of ['createdAt', 'updatedAt'] as const) {
+      const column = isObject(t.dates) ? t.dates[which] : undefined;
+      if (column === undefined || column === null) continue;
+      const path = `${at}/dates/${which}`;
+      if (typeof column !== 'string' || !column) add(path, 'choose a column');
+      else if (!has.has(column)) add(path, `the file has no column '${column}'`);
+      else dates[which] = column;
+    }
+
+    // Status: a column whose values name states of the type's primary workflow. The column may also fill a field.
+    let state: MigrationTarget['state'];
+    if (t.state !== undefined && t.state !== null) {
+      const path = `${at}/state`;
+      const states = stateKeys.get(type.key);
+      if (!isObject(t.state)) add(path, 'must be an object');
+      else if (!states) add(path, `${type.label} has no workflow to take a status from`);
+      else {
+        const column = typeof t.state.column === 'string' ? t.state.column : '';
+        const map: Record<string, string> = {};
+        if (!column) add(`${path}/column`, 'choose the column that holds the status');
+        else if (!has.has(column)) add(`${path}/column`, `the file has no column '${column}'`);
+        const values = isObject(t.state.map) ? t.state.map : null;
+        if (!values || !Object.keys(values).length) add(`${path}/map`, 'map at least one value');
+        else {
+          for (const [legacy, to] of Object.entries(values)) {
+            const value = legacy.trim();
+            if (!value) add(`${path}/map`, 'a value cannot be blank');
+            else if (typeof to !== 'string' || !states.includes(to)) add(`${path}/map/${legacy}`, typeof to === 'string' && to ? `'${to}' is not a status of ${type.label}` : 'choose a status');
+            else if (Object.keys(map).some((k) => sameValue(k) === sameValue(value))) add(`${path}/map/${legacy}`, `'${value}' is mapped twice`);
+            else map[value] = to;
+          }
+        }
+        if (column && has.has(column) && Object.keys(map).length) state = { column, map };
+      }
+    }
+
     // A required field may stay unmapped: a row for a record an earlier file made only updates the fields it maps,
     // and a row that would create a record without it fails with the field's own message, in the check and the run.
-    if (!Object.keys(fields).length && !Object.keys(refs).length && !Object.keys(derived).length) add(`${at}/fields`, 'match at least one column to a field');
+    // A target that only attaches files to records loaded by another file (a Files CSV) maps file fields and nothing else.
+    if (![fields, refs, derived, persons, files].some((m) => Object.keys(m).length)) add(`${at}/fields`, 'match at least one column to a field');
 
     targets.push({
       key,
@@ -405,6 +458,8 @@ export function readMapping(input: unknown, columns: readonly string[], types: T
       ...(Object.keys(transforms).length ? { transforms } : {}),
       ...(Object.keys(defaults).length ? { defaults } : {}),
       ...(Object.keys(derived).length ? { derived } : {}),
+      ...(Object.keys(dates).length ? { dates } : {}),
+      ...(state ? { state } : {}),
       required: t.required !== false,
     });
   }
@@ -417,11 +472,11 @@ export function readMapping(input: unknown, columns: readonly string[], types: T
  * {@link readMapping}, and a `people` next to them makes the file hold people as well. Roles are the keys of the
  * organisation's roles. Throws with every issue found, with paths such as /people/roles/map/Admin.
  */
-export function readSourceMapping(input: unknown, columns: readonly string[], types: TypesByKey, roles: readonly string[]): SourceMapping {
+export function readSourceMapping(input: unknown, columns: readonly string[], types: TypesByKey, roles: readonly string[], stateKeys: ReadonlyMap<string, readonly string[]> = new Map()): SourceMapping {
   const kind = isObject(input) ? input.kind : undefined;
   if (kind === 'people') return readPeopleMapping(input as Record<string, unknown>, columns, roles);
   if (kind !== undefined && kind !== 'records') throw validationFailed('This mapping cannot be saved.', [{ path: '/kind', message: "must be 'records' or 'people'" }]);
-  const records = readMapping(input, columns, types);
+  const records = readMapping(input, columns, types, stateKeys);
   if (!isObject(input) || input.people === undefined || input.people === null) return records;
   return { ...records, people: readPeopleMapping({ kind: 'people', people: input.people }, columns, roles).people };
 }

@@ -14,6 +14,7 @@ interface IntentRow {
   upi_link: string | null;
   on_paid: OnPaid;
   provider_order_id: string | null;
+  account_key: string | null;
 }
 
 const TENANT = sql<string>`app_tenant()`;
@@ -28,6 +29,7 @@ const COLUMNS = [
   'upi_link',
   'on_paid',
   'provider_order_id',
+  'account_key',
 ] as const;
 
 const selectIntents = (tx: Tx) => pg(tx).selectFrom('payment_intent').select(COLUMNS).where('tenant_id', '=', TENANT).$castTo<IntentRow>();
@@ -42,6 +44,7 @@ const toIntent = (r: IntentRow): StoredIntent => ({
   upiLink: r.upi_link,
   onPaid: r.on_paid,
   providerOrderId: r.provider_order_id,
+  accountKey: r.account_key,
 });
 
 export const pgPaymentStore: PaymentStore = {
@@ -118,6 +121,7 @@ export const pgPaymentStore: PaymentStore = {
         on_paid: JSON.stringify(intent.onPaid),
         upi_link: intent.upiLink,
         provider_order_id: intent.providerOrderId,
+        account_key: intent.accountKey,
         created_by: actorId,
       })
       .returning(COLUMNS)
@@ -158,6 +162,8 @@ export const pgPaymentStore: PaymentStore = {
     const row = await pg(tx)
       .selectFrom('payment_intent as i')
       .innerJoin('record as r', 'r.id', 'i.record_id')
+      .leftJoin('money_account as m', (j) => j.onRef('m.tenant_id', '=', 'i.tenant_id').onRef('m.key', '=', 'i.account_key'))
+      .leftJoin('ledger_account as la', 'la.id', 'm.ledger_account_id')
       .select([
         'i.id',
         'i.record_id',
@@ -168,6 +174,8 @@ export const pgPaymentStore: PaymentStore = {
         'i.upi_link',
         'i.on_paid',
         'i.provider_order_id',
+        'i.account_key',
+        'la.code as account_ledger_code',
         sql<string>`i.paid_on::text`.as('paid_on'),
         'i.provider_payment_id',
         'r.type_key as record_type',
@@ -176,11 +184,12 @@ export const pgPaymentStore: PaymentStore = {
       ])
       .where('i.tenant_id', '=', TENANT)
       .where('i.id', '=', intentId)
-      .$castTo<IntentRow & { paid_on: string; provider_payment_id: string | null; record_type: string; record_version: number; record_status: string }>()
+      .$castTo<IntentRow & { account_ledger_code: string | null; paid_on: string; provider_payment_id: string | null; record_type: string; record_version: number; record_status: string }>()
       .executeTakeFirst();
     if (!row) return undefined;
     return {
       ...toIntent(row),
+      accountLedgerCode: row.account_ledger_code,
       paidOn: row.paid_on,
       providerPaymentId: row.provider_payment_id,
       recordType: row.record_type,

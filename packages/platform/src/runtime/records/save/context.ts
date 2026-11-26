@@ -48,6 +48,18 @@ export interface Move {
   states: Record<string, string>;
 }
 
+/**
+ * What a migration writes beside a record's values. `status` (on create only) starts the record in a
+ * state of its primary workflow without a transition; `createdAt` and `updatedAt` are the legacy dates.
+ * A save that carries one posts the entries of its posting rules but issues no receipt: the legacy receipt
+ * numbers stay on the row, and the migration's books carry the opening balances.
+ */
+export interface ImportHistory {
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface SaveServices {
   store: RecordStore;
   people: PersonDirectory;
@@ -113,6 +125,8 @@ export interface SaveContext {
   held: HeldEffects[];
   /** Shared with nested saves started by this save's effects. */
   budget: EffectBudget;
+  /** Set by a migration: the legacy dates and, on create, the status. */
+  history?: ImportHistory;
 }
 
 export function saveContext(
@@ -122,7 +136,7 @@ export function saveContext(
   current: RecordRow | null,
   input: Record<string, unknown>,
   move: Move,
-  opts: { requiredFields?: string[]; transition?: WorkflowDef['transitions'][number]; dryRun?: boolean; budget?: EffectBudget; held?: HeldEffects[] } = {},
+  opts: { requiredFields?: string[]; transition?: WorkflowDef['transitions'][number]; dryRun?: boolean; budget?: EffectBudget; held?: HeldEffects[]; history?: ImportHistory } = {},
 ): SaveContext {
   return {
     ctx,
@@ -143,5 +157,6 @@ export function saveContext(
     scripts: [],
     held: opts.held ?? [],
     budget: opts.budget ?? { used: 0 },
+    history: opts.history,
   };
 }

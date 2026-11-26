@@ -32,6 +32,8 @@ const administers: CanActivateFn = () => (hasAdministration(inject(Session).me()
 
 /** Money accounts need `money:accounts:read`; opening one is checked again on the screen and by the server. */
 const seesMoney: CanActivateFn = () => (inject(Session).me()?.capabilities.money ? true : refused());
+const canSeeLedger: CanActivateFn = () => (inject(Session).me()?.capabilities.ledger ? true : refused());
+const canReconcile: CanActivateFn = () => (inject(Session).me()?.capabilities.moneyReconcile ? true : refused());
 
 /**
  * An emailed link carries the language it was written in, so the page it opens
@@ -96,6 +98,9 @@ const inShell: Routes = [
   { path: 'reports', loadComponent: () => import('./reports/reports.screen').then((m) => m.ReportsScreen) },
   { path: 'reports/:key', loadComponent: () => import('./reports/report.screen').then((m) => m.ReportScreen) },
   { path: 'accounts', canActivate: [seesMoney], loadComponent: () => import('./money/money.screen').then((m) => m.MoneyScreen) },
+  { path: 'accounts/trial-balance', canActivate: [canSeeLedger], loadComponent: () => import('./money/trial-balance/trial-balance.screen').then((m) => m.TrialBalanceScreen) },
+  { path: 'accounts/:key/reconcile', canActivate: [canReconcile], loadComponent: () => import('./money/reconcile/reconcile.screen').then((m) => m.ReconcileScreen) },
+  { path: 'accounts/:key/statement', canActivate: [seesMoney], loadComponent: () => import('./money/statement/statement.screen').then((m) => m.AccountStatementScreen) },
   { path: 'money', redirectTo: '/accounts' },
   { path: 'more', redirectTo: '/' },
   { path: 'people', redirectTo: '/' },

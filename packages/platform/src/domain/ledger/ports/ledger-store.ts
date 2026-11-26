@@ -28,6 +28,18 @@ export interface NewJournalEntry {
   lines: { accountId: string; debit: string; credit: string; fund: string | null }[];
   /** Kept on the audit trail with the entry. */
   total: string;
+  /** Set when the entry takes a money account below zero on purpose: the reason and the accounts, for the audit trail. */
+  overdraft?: { reason: string; accounts: { code: string; before: string; after: string }[] };
+}
+
+/** A money account's ledger account with what it holds now, read with its row locked. */
+export interface MoneyAccountBalance {
+  accountId: string;
+  code: string;
+  name: string;
+  /** Debits less credits over every posted line, as a decimal. */
+  balance: string;
+  allowNegative: boolean;
 }
 
 export interface PostedLine {
@@ -58,10 +70,36 @@ export interface LedgerStore extends FiscalYearSettings {
   reopenPeriod(tx: Tx, actorId: string, key: string, reason: string): Promise<boolean>;
   accounts(tx: Tx, codes: string[]): Promise<LedgerAccountRef[]>;
   period(tx: Tx, key: string): Promise<PeriodRef | undefined>;
+  /**
+   * Which of the ledger accounts are money accounts, and what each holds now. The money account rows are
+   * locked until the transaction ends, so two postings cannot both spend the same balance.
+   */
+  lockMoneyBalances(tx: Tx, accountIds: string[]): Promise<MoneyAccountBalance[]>;
   /** Writes the entry and its lines; returns the entry id. */
   insertEntry(tx: Tx, actorId: string, entry: NewJournalEntry): Promise<string>;
   entryStatus(tx: Tx, entryId: string): Promise<string | undefined>;
   entryLines(tx: Tx, entryId: string): Promise<PostedLine[]>;
   markReversed(tx: Tx, entryId: string): Promise<void>;
   trialBalance(tx: Tx, fiscalYear: string): Promise<TrialBalanceRow[]>;
+  /**
+   * Debits and credits of every ledger account up to `asOf`. Assets, liabilities and equity count every entry
+   * since the books began, because they carry forward; income and expenses count only entries on or after
+   * `yearStart`, because they start again each financial year.
+   */
+  balancesAsOn(tx: Tx, range: { asOf: string; yearStart: string }): Promise<AsOnRow[]>;
+}
+
+export interface AsOnRow {
+  code: string;
+  name: string;
+  type: string;
+  active: boolean;
+  /** The money account this ledger account belongs to, if any. */
+  moneyKey: string | null;
+  /** For money, debts and funds: everything up to the date. For income and expenses: the current financial year only. */
+  debit: string;
+  credit: string;
+  /** Income and expenses from financial years before the current one, which the trial balance rolls into one surplus line. */
+  priorDebit: string;
+  priorCredit: string;
 }

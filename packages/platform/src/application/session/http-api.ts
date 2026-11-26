@@ -37,6 +37,9 @@ export class CurrentPerson {
         scripts: can(ctx.actor, 'config:script:publish'),
         money: can(ctx.actor, 'money:accounts:read'),
         moneyManage: can(ctx.actor, 'money:accounts:manage'),
+        moneyReconcile: can(ctx.actor, 'money:reconcile'),
+        moneyTransfer: can(ctx.actor, 'money:transfer'),
+        ledger: can(ctx.actor, 'ledger:read'),
         peopleDirectory: can(ctx.actor, 'people:read'),
         people: can(ctx.actor, 'members:manage'),
         roles: can(ctx.actor, 'admin:roles'),
@@ -49,6 +52,7 @@ export class CurrentPerson {
         migration: can(ctx.actor, 'data:migrate'),
         migrationBooks: can(ctx.actor, 'data:migrate:books'),
         migrationPeople: can(ctx.actor, 'data:migrate:people') && can(ctx.actor, 'members:manage'),
+        migrationState: can(ctx.actor, 'data:migrate:state'),
       },
     };
   }

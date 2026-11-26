@@ -20,7 +20,7 @@
     "sections": [
       { "id": "claim", "label": "Claim", "fields": ["number", "status", "title", "category", "amount", "claimedOn", "notes"] },
       { "id": "bill", "label": "Bill", "fields": ["billFile"] },
-      { "id": "payment", "label": "Payment", "fields": ["paidFrom", "paidOn", "reference"] }
+      { "id": "payment", "label": "Payment", "fields": ["paidFrom", "paidOn", "reference", "overdraftReason"] }
     ]
   },
   "create": { "fields": ["title", "category", "amount", "claimedOn", "billFile", "notes"], "chips": ["mine"] },

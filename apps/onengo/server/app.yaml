@@ -2,20 +2,20 @@ runtime: nodejs22
 service: default
 service_account: REPLACE_WITH_SERVICE_ACCOUNT
 instance_class: F1
-entrypoint: node --enable-source-maps dist/server.js
+# bootstrap.js loads the secrets from Secret Manager, then starts dist/server.js.
+entrypoint: node --enable-source-maps dist/bootstrap.js
 
 automatic_scaling:
   min_instances: 0
   max_instances: 1
   max_concurrent_requests: 40
 
+# Only non-secret settings belong here. Secret values are in the Secret Manager secret named by
+# SECRET_CONFIG_ID, which the deploy writes from GitHub secrets.
 env_variables:
   NODE_ENV: production
   PUBLIC_BASE_URL: REPLACE_WITH_PUBLIC_BASE_URL
-  DATABASE_SYSTEM_URL: REPLACE_WITH_SYSTEM_DATABASE_SECRET
-  DATABASE_RUNTIME_URL: REPLACE_WITH_RUNTIME_DATABASE_SECRET
-  TOKEN_SECRET: REPLACE_WITH_TOKEN_SECRET
-  ENCRYPTION_KEY: REPLACE_WITH_ENCRYPTION_KEY
+  SECRET_CONFIG_ID: ngo-prod-config
   INSTALLATION_MODE: one-ngo
   DATABASE_POOL_SIZE: "3"
   BREACHED_PASSWORD_CHECK: online

@@ -26,7 +26,8 @@ if (resolved.includes('REPLACE_WITH_')) {
   process.exit(1);
 }
 
-await writeFile(join(dest, 'app.yaml'), resolved);
+// The filled manifest holds every secret value, so only the runner user may read it.
+await writeFile(join(dest, 'app.yaml'), resolved, { mode: 0o600 });
 await writeFile(join(dest, 'package.json'), await readFile(join(src, 'dist', 'package.json')));
 await writeFile(join(dest, '.gcloudignore'), 'node_modules/\n.git/\n');
 console.log(`Staged ${src} with ${tokens.length} settings filled.`);

@@ -376,7 +376,7 @@
   "ui.fields.richText.link": "లింక్",
   "ui.fields.richText.linkInvalid": "వెబ్ మరియు ఇమెయిల్ లింక్‌లు మాత్రమే.",
   "ui.fields.richText.tooLong": "దీన్ని {max} అక్షరాలు లేదా అంతకంటే తక్కువగా ఉంచండి.",
-  "ui.pins.yours": "మీ పిన్",
+  "ui.pins.yours": "మీరు పిన్ చేసినది",
   "ui.pins.pinMine": "నా హోమ్‌కు పిన్ చేయండి",
   "ui.pins.pinEveryone": "అందరి హోమ్‌కు పిన్ చేయండి",
   "ui.pins.pinned": "\"{label}\"గా మీ హోమ్‌కు పిన్ చేయబడింది.",

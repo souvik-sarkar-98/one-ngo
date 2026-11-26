@@ -509,7 +509,7 @@ More is not a screen and not a backend concept. The server stores one ordered li
 | FT-HOME-010 | P1 | Pos | Page in More (`/pages/<key>`) with an audience role; open as a member outside the audience | "You do not have access to this page." |
 | FT-HOME-011 | P1 | Pos | Widget or link with a `permission` the viewer lacks | Hidden |
 | FT-HOME-012 | P2 | Sec | Link widget to an external address | Only in-app links are shown |
-| FT-HOME-013 [MT-NAV-07] | P1 | Pos | Pin a list to my Home; rename; move up and down; unpin | Message `Pinned to your Home as "{label}".`; tagged "Your pin" and first; 3 rows; changes only for this person |
+| FT-HOME-013 [MT-NAV-07] | P1 | Pos | Pin a list to my Home; rename; move up and down; unpin | Message `Pinned to your Home as "{label}".`; tagged "Pinned by you" and first; 3 rows; changes only for this person |
 | FT-HOME-014 | P2 | Bnd | Rename pin to 80 characters, 81, empty | 80 saved; 81 blocked by field; empty: record what happens (no client check, documented) |
 | FT-HOME-015 [MT-NAV-08] | P1 | Pos | Pin to everyone's Home | "Added to the Home page draft. Publish it in the Builder to show it to everyone." Others see it only after publish and only if allowed |
 | FT-HOME-016 | P2 | Neg | Pin to everyone's Home as a person without publish permission | Option absent |

@@ -205,7 +205,14 @@ export function filterCatalogue(items: CatalogueItem[], a: CatalogueAddress): Ca
   return [...kept].sort((x, y) => dir * cmp(x, y));
 }
 
-export type CatalogueAction = 'open' | 'history' | 'duplicate' | 'revert' | 'deleteDraft' | 'disable' | 'enable';
+export type CatalogueAction = 'open' | 'history' | 'duplicate' | 'revert' | 'deleteDraft' | 'delete' | 'disable' | 'enable';
+
+/** The kinds an organisation can delete once published. Mirrors DELETABLE_KINDS on the server; record types and workflows are turned off instead. */
+export const DELETABLE_KINDS: readonly DefinitionKind[] = ['page', 'template', 'report', 'listView'];
+
+/** Whether the organisation may delete this published definition: its own, of a deletable kind, and not the home page. */
+export const canDelete = (item: Pick<CatalogueItem, 'kind' | 'key' | 'owner' | 'publishedVersion'>): boolean =>
+  DELETABLE_KINDS.includes(item.kind) && item.owner !== 'base' && !!item.publishedVersion && !(item.kind === 'page' && item.key === 'home');
 
 /** The base layer's own definitions are part of the app; only a module's definitions can be turned off. */
 const PLATFORM_MODULE = 'platform';
@@ -229,6 +236,7 @@ export function rowActions(item: CatalogueItem, canPublish: boolean): { id: Cata
   if (item.owner === 'base') out.push({ id: 'revert', label: t('ui.builder.revertToModule') });
   if (canTurnOff(item)) out.push({ id: 'disable', label: t('ui.builder.catalogue.turnOff') });
   if (item.draftVersion && item.owner !== 'base') out.push({ id: 'deleteDraft', label: t('ui.builder.catalogue.deleteDraft') });
+  if (canDelete(item)) out.push({ id: 'delete', label: t('ui.builder.catalogue.delete') });
   return out;
 }
 

@@ -23,8 +23,8 @@ export async function unique(tx: Tx, s: SaveContext): Promise<void> {
 }
 
 /**
- * Unique values and format rules, checked only when a value changes so
- * records saved before a rule was added stay editable.
+ * Unique values, format rules and money account choices, checked only when a
+ * value changes so records saved before a rule was added stay editable.
  */
 export async function uniqueAndPatternIssues(
   lookup: UniqueLookup,
@@ -35,9 +35,16 @@ export async function uniqueAndPatternIssues(
   recordId: string | null,
 ): Promise<FieldIssue[]> {
   const issues: FieldIssue[] = [];
+  let accounts: Set<string> | undefined;
   for (const f of type.fields) {
     const v = data[f.key];
     if (v === undefined || v === null || v === '' || (previous && sameFieldValue(previous[f.key], v))) continue;
+    if (f.choicesFrom === 'moneyAccounts') {
+      // The list of real accounts changes as accounts open and close, so the value is checked here, in the saving transaction.
+      accounts ??= await lookup.store.moneyAccountCodes(tx);
+      if (typeof v !== 'string' || !accounts.has(v)) issues.push({ path: `/${f.key}`, message: 'is not one of the organisation’s active money accounts' });
+      continue;
+    }
     if (f.pattern && typeof v === 'string' && !matchesPattern(f.pattern, v)) {
       issues.push({ path: `/${f.key}`, message: f.patternMessage ?? 'is not in the expected format' });
       continue;

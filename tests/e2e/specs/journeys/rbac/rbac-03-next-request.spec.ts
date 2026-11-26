@@ -219,6 +219,39 @@ test.describe.serial('Role matrix 3: the same member’s next request follows th
     await expect.poll(async () => (await api.get('/api/money/accounts')).status(), { timeout: 10_000 }).toBe(403);
   });
 
+  test('FT-FIN-048 statement, reconcile and trial balance endpoints each follow their own permission', { tag: ['@e2e', '@rbac', '@P0'] }, async () => {
+    const { api, allow } = world;
+    const status = (url: string) => async () => (await api.get(url)).status();
+    const ledger = status('/api/money/accounts/upi/ledger');
+    const balances = status('/api/money/balances');
+    const bookLines = status('/api/money/accounts/upi/book-lines');
+    const ledgerAccounts = status('/api/ledger/accounts');
+    const trialBalance = status('/api/ledger/trial-balance');
+
+    await allow(baseline);
+    for (const read of [ledger, balances, bookLines, ledgerAccounts, trialBalance]) await expect.poll(read, { timeout: 10_000 }).toBe(403);
+
+    // Reading money accounts opens the balances and an account's statement, and nothing else.
+    await allow([...baseline, 'money:accounts:read']);
+    await expect.poll(ledger, { timeout: 10_000 }).toBe(200);
+    await expect.poll(balances, { timeout: 10_000 }).toBe(200);
+    for (const read of [bookLines, ledgerAccounts, trialBalance]) expect(await read()).toBe(403);
+
+    // Reconciling opens the lines waiting to be matched and the list of ledger accounts, but not the trial balance.
+    await allow([...baseline, 'money:accounts:read', 'money:reconcile']);
+    await expect.poll(bookLines, { timeout: 10_000 }).toBe(200);
+    await expect.poll(ledgerAccounts, { timeout: 10_000 }).toBe(200);
+    expect(await trialBalance()).toBe(403);
+
+    // The trial balance has its own permission, and does not need the others.
+    await allow([...baseline, 'ledger:read']);
+    await expect.poll(trialBalance, { timeout: 10_000 }).toBe(200);
+    for (const read of [ledger, balances, bookLines, ledgerAccounts]) expect(await read()).toBe(403);
+
+    await allow(baseline);
+    await expect.poll(trialBalance, { timeout: 10_000 }).toBe(403);
+  });
+
   test('FT-FIN-067 payments:create without the action permission cannot create a payment', { tag: ['@e2e', '@rbac', '@P1'] }, async () => {
     const { admin, api, allow } = world;
     const raised = (await query(admin, 'donation', { statusIn: ['raised'], limit: 1 })).items[0];

@@ -16,8 +16,8 @@ import { buildRecordQuery, onlyIds, referenceQueries, searchText, type RecordQue
 import { maintainRollups, rollupValue } from './rollups.js';
 import type { SensitiveFields } from './sensitive.js';
 import { auditAndOutbox } from './save/audit.js';
-import { saveContext, type EffectBudget, type Loaded, type Move, type SaveContext, type SaveServices } from './save/context.js';
-import { effects } from './save/effects.js';
+import { saveContext, type EffectBudget, type ImportHistory, type Loaded, type Move, type SaveContext, type SaveServices } from './save/context.js';
+import { checkPostingOverdraft, effects, previewPostings, type PlannedPosting } from './save/effects.js';
 import { moveOf, parallelOf, primaryOf } from './save/moves.js';
 import { prepare } from './save/pipeline.js';
 import { guard } from './save/rules.js';
@@ -385,7 +385,12 @@ export class RecordService {
 
   // ----------------------------------------------------------------- writes
 
-  async create(ctx: TenantContext, typeKey: string, input: Record<string, unknown>): Promise<SaveResult> {
+  /**
+   * Creates a record. A migration passes `history`: its legacy dates, and a `status` that starts the
+   * record in a state of its primary workflow (a state no transition leads to; no transition, approval
+   * or posting runs for it).
+   */
+  async create(ctx: TenantContext, typeKey: string, input: Record<string, unknown>, history?: ImportHistory): Promise<SaveResult> {
     demand(ctx.actor, `record:${typeKey}:create`);
     const loaded = await this.load(ctx.tenantId, typeKey);
     let data = input;
@@ -394,10 +399,13 @@ export class RecordService {
       else data = await this.lookUp(ctx.tenantId, loaded.type.body, input, null);
     }
     const primary = this.choosePrimary(ctx, loaded, data);
-    const status = primary?.initial ?? null;
+    if (history?.status && !primary?.states.some((s) => s.key === history.status)) {
+      throw ruleViolation(`'${history.status}' is not a status of ${loaded.type.body.label}.`);
+    }
+    const status = history?.status ?? primary?.initial ?? null;
     const start: Move = { workflow: primary?.key ?? null, status, states: {} };
 
-    return this.inSave(ctx, (tx) => this.run(tx, this.context(ctx, loaded, null, data, start), null, 'record.created'));
+    return this.inSave(ctx, (tx) => this.run(tx, this.context(ctx, loaded, null, data, start, { history }), null, 'record.created'));
   }
 
   /**
@@ -430,7 +438,7 @@ export class RecordService {
   async update(
     ctx: TenantContext,
     id: string,
-    input: { data: Record<string, unknown>; expectedVersion: number },
+    input: { data: Record<string, unknown>; expectedVersion: number; history?: ImportHistory },
   ): Promise<SaveResult> {
     const loadedOf = await this.loadAll(ctx.tenantId);
     let data = input.data;
@@ -445,7 +453,7 @@ export class RecordService {
     return this.inSave(ctx, async (tx) => {
       const { current, loaded } = await this.editable(tx, ctx, loadedOf, id);
       if (this.joined) refuseLookups(loaded.type.body, input.data, current.data);
-      return this.run(tx, this.context(ctx, loaded, current, data, moveOf(loaded, current)), expectedVersion, 'record.updated');
+      return this.run(tx, this.context(ctx, loaded, current, data, moveOf(loaded, current), { history: input.history }), expectedVersion, 'record.updated');
     });
   }
 
@@ -633,8 +641,19 @@ export class RecordService {
    * `planned` checks an update of a record that is not stored yet but would
    * hold that data (as an earlier `check` returned it), at its starting status:
    * a migration check of a later row for a record an earlier row creates.
+   *
+   * `history` (a migration's create) saves the record in its legacy status and
+   * also returns the journal entries its posting rules would make, as the run posts them.
    */
-  async check(ctx: TenantContext, typeKey: string, input: { data: Record<string, unknown>; id?: string; planned?: Record<string, unknown> }): Promise<{ data: Record<string, unknown> }> {
+  async check(
+    ctx: TenantContext,
+    typeKey: string,
+    input: { data: Record<string, unknown>; id?: string; planned?: Record<string, unknown>; history?: ImportHistory },
+  ): Promise<{ data: Record<string, unknown>; postings?: PlannedPosting[] }> {
+    const prepared = async (tx: Tx, s: SaveContext) => {
+      const out = await prepare(tx, s);
+      return input.history ? { ...out, postings: previewPostings(s) } : out;
+    };
     if (input.planned && !input.id) {
       demand(ctx.actor, `record:${typeKey}:update`);
       const loaded = await this.load(ctx.tenantId, typeKey);
@@ -655,7 +674,7 @@ export class RecordService {
         created_at: now,
         updated_at: now,
       };
-      return this.db.withTenant(ctx.tenantId, (tx) => prepare(tx, this.context(ctx, loaded, current, input.data, moveOf(loaded, current), { dryRun: true })));
+      return this.db.withTenant(ctx.tenantId, (tx) => prepared(tx, this.context(ctx, loaded, current, input.data, moveOf(loaded, current), { dryRun: true })));
     }
     if (input.id) {
       const id = input.id;
@@ -663,15 +682,15 @@ export class RecordService {
       return this.db.withTenant(ctx.tenantId, async (tx) => {
         const { current, loaded } = await this.editable(tx, ctx, loadedOf, id);
         if (current.type_key !== typeKey) throw notFound('Record not found.');
-        return prepare(tx, this.context(ctx, loaded, current, input.data, moveOf(loaded, current), { dryRun: true }));
+        return prepared(tx, this.context(ctx, loaded, current, input.data, moveOf(loaded, current), { dryRun: true }));
       });
     }
     demand(ctx.actor, `record:${typeKey}:create`);
     const loaded = await this.load(ctx.tenantId, typeKey);
     const primary = this.choosePrimary(ctx, loaded, input.data);
-    const status = primary?.initial ?? null;
+    const status = input.history?.status ?? primary?.initial ?? null;
     return this.db.withTenant(ctx.tenantId, (tx) =>
-      prepare(tx, this.context(ctx, loaded, null, input.data, { workflow: primary?.key ?? null, status, states: {} }, { dryRun: true })),
+      prepared(tx, this.context(ctx, loaded, null, input.data, { workflow: primary?.key ?? null, status, states: {} }, { dryRun: true, history: input.history })),
     );
   }
 
@@ -742,6 +761,8 @@ export class RecordService {
       await prepare(tx, s);
       guard(s);
       await guardScripts(tx, s);
+      // A payment the books would refuse is refused now, not after someone has spent time approving it.
+      await checkPostingOverdraft(tx, s);
       if (!t.approval.when || evalTest(t.approval.when, scope(ctx, s.data, move.status, current.data, current.status, move), `approval for ${t.key}`)) {
         return this.requestApproval(tx, ctx, loaded, current, t, input.data ?? {});
       }

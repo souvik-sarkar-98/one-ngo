@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Trial balance - wireframe</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<nav class="topnav"><a href="index.html">Finance wireframes</a><span>/</span><b>Trial balance</b></nav>
+<header class="page">
+  <h1>Trial balance <span class="ws">WS7</span></h1>
+  <p>A new screen at <code>/money/trial-balance</code>. It lists every ledger account with its balance on a chosen date, in a Debit column or a Credit column. The two totals must be equal: that is the proof that the books are in order. Opened from the Trial balance button on the Money page. All figures are made up.</p>
+  <div class="legend">
+    <span class="key"><i class="k-new"></i> New</span>
+    <span class="key"><i class="k-chg"></i> Changed</span>
+    <span class="key"><i class="k-old"></i> Existing, unchanged</span>
+  </div>
+</header>
+
+<main class="page">
+
+<h2 class="sec">1. Trial balance, desktop</h2>
+<p class="sub">Needs the new permission <code>ledger:read</code>. Data comes from <code>GET /api/ledger/trial-balance?asOf=</code>.</p>
+
+<div class="browser">
+  <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.onengo.example/money/trial-balance</span></div>
+  <div class="scr" style="min-height:820px">
+    <div class="appbar"><span class="brand">OneNGO</span><span class="org">Asha Trust</span><span class="sp"></span><span class="av">SS</span></div>
+    <div class="body">
+      <nav class="rail">
+        <div class="nv"><span class="g">&#8962;</span>Home</div>
+        <div class="nv"><span class="g">&#9776;</span>Records</div>
+        <div class="nv on"><span class="g">&#8377;</span>Money</div>
+        <div class="nv"><span class="g">&#9638;</span>Reports</div>
+        <div class="nv"><span class="g">&#9993;</span>Inbox</div>
+      </nav>
+      <div class="main is-new" style="outline-offset:-4px">
+        <div class="crumbs"><a href="#">Home</a><span class="sep">&rsaquo;</span><a href="#">Money</a><span class="sep">&rsaquo;</span>Trial balance</div>
+        <div class="pagehead">
+          <h1>Trial balance <span class="badge ok">Balanced</span></h1>
+          <span class="btn">Print</span>
+          <span class="btn">Export CSV <span class="pin n">5</span></span>
+        </div>
+
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+            <div class="field" style="margin:0"><label>Financial year</label><div class="inp" style="width:170px">2026-27 <span>&#9662;</span></div></div>
+            <div class="field" style="margin:0"><label>As on</label><div class="inp" style="width:150px">31 May 2026 <span>&#128197;</span></div></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span class="btn sm">Today</span><span class="btn sm">End of last month</span><span class="btn sm">Year end</span>
+            </div>
+            <span class="btn primary sm" style="margin-left:auto">Show</span>
+          </div>
+          <div class="chk" style="margin-top:10px"><i></i> Show accounts with no balance</div>
+          <p class="hint">Money, debts and funds (assets, liabilities, equity) carry forward from earlier years. Income and expenses start again at zero on 1 April.</p>
+        </div>
+
+        <table class="t">
+          <thead><tr>
+            <th>Code</th><th>Account</th><th class="n">Debit</th><th class="n">Credit</th>
+          </tr></thead>
+          <tbody>
+            <tr class="tot"><td colspan="4">Assets <span class="mini" style="font-weight:400">what the organisation holds</span></td></tr>
+            <tr><td>BANK</td><td class="desc"><a href="#">Main bank account (SBI)</a> <span class="pin">3</span></td><td class="n">1,37,540.00</td><td class="n"></td></tr>
+            <tr><td>BANK2</td><td class="desc"><a href="#">Project bank account (HDFC)</a></td><td class="n">50,000.00</td><td class="n"></td></tr>
+            <tr><td>CASH</td><td class="desc"><a href="#">Cash in hand</a></td><td class="n">8,500.00</td><td class="n"></td></tr>
+
+            <tr class="tot"><td colspan="4">Liabilities <span class="mini" style="font-weight:400">what the organisation owes</span></td></tr>
+            <tr><td>PAYABLE</td><td class="desc">Claims payable</td><td class="n"></td><td class="n">12,000.00</td></tr>
+
+            <tr class="tot"><td colspan="4">Equity <span class="mini" style="font-weight:400">the organisation's own funds</span></td></tr>
+            <tr><td>FUND</td><td class="desc">Opening fund balance</td><td class="n"></td><td class="n">1,80,000.00</td></tr>
+
+            <tr class="tot"><td colspan="4">Income <span class="mini" style="font-weight:400">this financial year</span></td></tr>
+            <tr><td>INC-DON</td><td class="desc">Donations</td><td class="n"></td><td class="n">21,800.00</td></tr>
+            <tr><td>INC-MEM</td><td class="desc">Membership fees</td><td class="n"></td><td class="n">500.00</td></tr>
+            <tr><td>INC-INT</td><td class="desc">Interest earned</td><td class="n"></td><td class="n">1,240.00</td></tr>
+
+            <tr class="tot"><td colspan="4">Expenses <span class="mini" style="font-weight:400">this financial year</span></td></tr>
+            <tr><td>EXP-TRAVEL</td><td class="desc">Travel</td><td class="n">4,200.00</td><td class="n"></td></tr>
+            <tr><td>EXP-OFFICE</td><td class="desc">Office supplies</td><td class="n">6,300.00</td><td class="n"></td></tr>
+            <tr><td>EXP-PROG</td><td class="desc">Programme costs</td><td class="n">9,000.00</td><td class="n"></td></tr>
+
+            <tr class="tot"><td colspan="2">Total</td><td class="n">2,15,540.00</td><td class="n">2,15,540.00</td></tr>
+          </tbody>
+        </table>
+        <div class="banner ok" style="margin-top:12px"><span>&#10003;</span><span><b>Debit and credit are equal.</b> Difference: &#8377;0.00. Every entry in the books has equal debit and credit lines, so this should always be so.</span></div>
+        <p class="hint">Money accounts total &#8377;1,96,040.00 here. It equals the total of the Money page balances on the same date.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <h3>What changes</h3>
+  <ol>
+    <li><b>Whole screen</b> is new. The server can already work out a trial balance for one financial year (<code>LedgerService.trialBalance</code>), but only tests use it: no route and no screen. <span class="ws">WS7</span></li>
+    <li><b>Pick a date, not only a year.</b> The existing query adds up one financial year's entries. That is wrong for money, debts and funds, which must carry forward from earlier years. The new query adds everything up to the date for those, and only the current year's entries for income and expenses. <span class="ws">WS7</span></li>
+    <li><b>Account name link.</b> Money accounts link to their <a href="account-statement.html">statement</a>. Other accounts have no statement yet, so they show plain text. <span class="pin">3</span></li>
+    <li><b>Balanced badge.</b> Compares the two totals. The ledger refuses unbalanced entries, so a red "Out of balance" state is a safety net, not an expected case.</li>
+    <li><b>Export CSV</b> and <b>Print</b> use the table as shown, for the accountant. <span class="pin n">5</span></li>
+  </ol>
+  <h3 style="margin-top:12px">Behaviour</h3>
+  <ul>
+    <li>A balance below zero on a normal-debit account moves to the Credit column (and the reverse), so each row has one number.</li>
+    <li>Entries that were reversed count as they stand: the original and its reversal cancel out.</li>
+    <li>Accounts with no balance are hidden unless the box is ticked.</li>
+    <li>This is a plain list of balances. It is not a balance sheet or an income statement: those need the organisation's accountant to decide how accounts are grouped, and are out of scope.</li>
+  </ul>
+</div>
+
+<h2 class="sec">2. Empty and warning states</h2>
+<p class="sub">Two small variants of the area under the filter card.</p>
+<div class="grid3" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
+  <div class="card">
+    <h3>Nothing posted yet</h3>
+    <div class="banner info"><span>&#8505;</span><span>No entries on or before 31 May 2026. Entries appear here once donations, claims or transfers are recorded.</span></div>
+  </div>
+  <div class="card">
+    <h3>Out of balance (safety net)</h3>
+    <div class="banner err"><span>&#9888;</span><span><b>Debit and credit differ by &#8377;250.00.</b> This should not happen. Do not rely on these figures. Contact support with the date shown.</span></div>
+  </div>
+</div>
+
+<h2 class="sec">3. Trial balance, mobile</h2>
+<p class="sub">Rows become cards. The totals stay pinned under the list.</p>
+<div class="phone" style="margin-top:6px">
+  <div class="scr">
+    <div class="appbar"><span class="brand">OneNGO</span><span class="org">Asha Trust</span><span class="sp"></span><span class="av">SS</span></div>
+    <div class="main">
+      <div class="crumbs"><a href="#">Money</a><span class="sep">&rsaquo;</span>Trial balance</div>
+      <div class="pagehead" style="margin-bottom:8px"><h1 style="font-size:1rem;min-width:0">Trial balance</h1><span class="badge ok">Balanced</span></div>
+      <div class="card" style="padding:10px;margin-bottom:10px">
+        <div class="two"><div class="inp" style="font-size:12px">2026-27</div><div class="inp" style="font-size:12px">31 May 2026</div></div>
+      </div>
+      <div class="mcard"><div class="top"><div><b>Main bank account (SBI)</b><div class="meta">BANK &middot; Asset</div></div><b>1,37,540.00 Dr</b></div></div>
+      <div class="mcard"><div class="top"><div><b>Claims payable</b><div class="meta">PAYABLE &middot; Liability</div></div><b>12,000.00 Cr</b></div></div>
+      <div class="mcard"><div class="top"><div><b>Donations</b><div class="meta">INC-DON &middot; Income</div></div><b>21,800.00 Cr</b></div></div>
+      <div class="mcard"><div class="top"><div><b>Travel</b><div class="meta">EXP-TRAVEL &middot; Expense</div></div><b>4,200.00 Dr</b></div></div>
+      <div class="kpi total" style="margin-top:8px"><span>Total debit = total credit</span><b>&#8377;2,15,540.00</b></div>
+    </div>
+    <div class="navbar">
+      <div class="nv"><span class="g">&#8962;</span>Home</div>
+      <div class="nv"><span class="g">&#9776;</span>Records</div>
+      <div class="nv on"><span class="g">&#8377;</span>Money</div>
+      <div class="nv"><span class="g">&#9993;</span>Inbox</div>
+    </div>
+  </div>
+</div>
+
+</main>
+</body>
+</html>

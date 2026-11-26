@@ -414,6 +414,19 @@ export class DraftSession {
     return this.switchModuleDefinition(false);
   }
 
+  /** Deletes a definition the organisation made, with its draft. Refused while something else still uses it. */
+  async deleteDefinition(): Promise<boolean> {
+    if (this.timer !== null) this.timers.clear(this.timer);
+    this.timer = null;
+    while (this.saving) await this.saving;
+    this.savedRevision = this.revision;
+    return this.run(async () => {
+      await this.gateway.remove(this.kind, this.key);
+      this.local.remove(this.localId);
+      return t('ui.builder.deleted');
+    });
+  }
+
   /** Turns a module definition that was turned off back on. */
   async turnOn(): Promise<boolean> {
     return this.switchModuleDefinition(true);

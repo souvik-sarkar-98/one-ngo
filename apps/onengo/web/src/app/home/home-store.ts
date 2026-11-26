@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
 import { shownRecordTypes } from '../core/hidden';
+import { filterGroups, filterTasks, taskAreas, taskCards } from '../core/home';
 import { httpPages } from '../core/http/http-pages';
 import { t } from '../core/i18n/i18n';
 import {
@@ -18,6 +19,7 @@ import {
   type WidgetContent,
 } from '../core/pages';
 import { httpGateway } from '../core/records/gateway/http-gateway';
+import type { ChipSpec } from '../core/records/spec';
 import type { RowView } from '../core/rows';
 import { Api, ApiError } from '../services/api';
 import { I18n } from '../services/i18n';
@@ -85,26 +87,59 @@ export class HomeStore {
 
   private readonly loaded = signal<Record<string, Loaded>>({});
 
+  /** What is typed in the Home search box. */
+  readonly query = signal('');
+  /** The area chosen among the task pills; null is all. */
+  readonly area = signal<string | null>(null);
+
+  /** The links of the page's task-card (wizards) widgets, on Home and on any other page; links widgets stay lists of links. */
+  private readonly allTasks = computed(() => taskCards(this.plan()?.widgets ?? []));
+  readonly areas = computed(() => taskAreas(this.allTasks()));
+  /** The task pills: All, then each area. */
+  readonly areaChips = computed<ChipSpec[]>(() => {
+    this.i18n.locale();
+    return [{ id: '', label: t('ui.home.allAreas') }, ...this.areas().map((a) => ({ id: a, label: a }))];
+  });
+  readonly tasks = computed(() => {
+    const area = this.area();
+    return filterTasks(this.allTasks(), area !== null && this.areas().includes(area) ? area : null, this.query());
+  });
+  readonly searching = computed(() => !!this.query().trim());
+
   readonly widgets = computed(() => {
     this.i18n.locale();
     const defs = this.session.defs();
     const loaded = this.loaded();
     const pins = this.pins();
+    const query = this.query();
     return (this.plan()?.widgets ?? []).map((w) => {
       const state = loaded[w.id];
       const content = state?.content && 'label' in state.content && 'label' in w ? { ...state.content, label: w.label } : state?.content;
       const pin = w.kind === 'list' ? w.pin : undefined;
+      const loadedModel = content ?? emptyContent(w, defs);
+      const model = loadedModel.kind === 'groups' ? { ...loadedModel, groups: filterGroups(loadedModel.groups, query) } : loadedModel;
       return {
         id: w.id,
-        model: content ?? emptyContent(w, defs),
+        model,
         loading: !!state?.loading,
         error: !!state?.error,
         full: w.kind === 'groups',
         tag: pin ? t('ui.pins.yours') : '',
         menu: pin ? pinMenu(pins, pin.id) : [],
+        pinned: !!pin,
+        task: w.kind === 'wizards',
       };
     });
   });
+  /**
+   * Top to bottom: the person's pins, the task cards, the other widgets, then on Home the record groups, folded
+   * away. A page from More keeps its record groups among its widgets.
+   */
+  readonly pinned = computed(() => this.widgets().filter((w) => w.pinned));
+  readonly others = computed(() => this.widgets().filter((w) => !w.pinned && !w.task && (!this.isHome() || w.model.kind !== 'groups')));
+  readonly groups = computed(() => (this.isHome() ? this.widgets().filter((w) => w.model.kind === 'groups' && w.model.groups.length) : []));
+  /** The record groups are folded away once there are pins or tasks above them, and open while searching. */
+  readonly browseOpen = computed(() => this.searching() || (!this.pinned().length && !this.allTasks().length));
   readonly format = compactNumber;
 
   constructor() {

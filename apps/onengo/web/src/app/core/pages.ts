@@ -66,7 +66,8 @@ export type PlannedWidget =
   | { id: string; kind: 'stat'; label: string; recordType: string; request: AggregateRequest; money: boolean }
   | { id: string; kind: 'chart'; label: string; chart: 'bar' | 'line'; recordType: string; request: AggregateRequest; money: boolean }
   | { id: string; kind: 'list'; label: string; spec: ListSpec; query: RecordQueryBody; link: string; pin?: Pin }
-  | { id: string; kind: 'links'; label: string; items: { label: string; to: string }[] };
+  | { id: string; kind: 'links'; label: string; items: { label: string; to: string }[] }
+  | { id: string; kind: 'wizards'; label: string; items: { label: string; to: string }[] };
 
 export interface PagePlan {
   key: string;
@@ -80,6 +81,7 @@ export type WidgetContent =
   | { kind: 'chart'; label: string; chart: 'bar' | 'line'; buckets: Bucket[] }
   | { kind: 'list'; label: string; rows: RowView[]; link: string }
   | { kind: 'links'; label: string; items: { label: string; to: string }[] }
+  | { kind: 'wizards'; label: string; items: { label: string; to: string }[] }
   | { kind: 'groups'; groups: GroupCard[] };
 
 const inApp = (to: string) => to.startsWith('/') && !to.startsWith('//') && !to.startsWith('/\\');
@@ -202,6 +204,10 @@ export function planWidget(defs: RuntimeDefinitions | null, page: string, w: Pag
       const items = w.items.filter((i) => inApp(i.to));
       return items.length ? { id, kind: 'links', label: w.label, items } : null;
     }
+    case 'wizards': {
+      const items = w.items.filter((i) => inApp(i.to));
+      return items.length ? { id, kind: 'wizards', label: w.label, items } : null;
+    }
   }
 }
 
@@ -253,6 +259,8 @@ export function emptyContent(w: PlannedWidget, defs: RuntimeDefinitions | null):
       return { kind: 'list', label: w.label, rows: [], link: w.link };
     case 'links':
       return { kind: 'links', label: w.label, items: w.items };
+    case 'wizards':
+      return { kind: 'wizards', label: w.label, items: w.items };
   }
 }
 

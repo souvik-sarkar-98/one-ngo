@@ -17,11 +17,13 @@ import type { IdentityService } from '../identity/identity-service.js';
 import type { RetentionScan } from '../files/ports/retention-scan.js';
 import type { CsvCodec } from '../records/ports/csv-codec.js';
 import { cleanFileName } from '../shared/file-name.js';
-import { csvTable, problemsOf, readCell, type CellProblem, type CsvRow } from '../shared/import-cells.js';
+import { csvTable, parseDate, problemsOf, readCell, type CellProblem, type CsvRow } from '../shared/import-cells.js';
 import { applyBooks, hasBooks, readBooks, type BooksInput, type BooksResult } from './books.js';
-import { checkOrder, deriveOrder, isPeople, MAX_SOURCES, peopleOf, placeholders, readSourceMapping, renderTemplate, targetsOf, transformValue, type MigrationTarget, type OrderedSource, type PeopleMapping, type RecordsMapping, type SourceMapping, type TypesByKey } from './mapping.js';
+import { checkOrder, deriveOrder, isPeople, MAX_SOURCES, peopleOf, placeholders, readSourceMapping, renderTemplate, stateOf, targetsOf, transformValue, type MigrationTarget, type OrderedSource, type PeopleMapping, type RecordsMapping, type SourceMapping, type TypesByKey } from './mapping.js';
 import { CANNOT_ADD, LINKED_ELSEWHERE, readPersonRow, type ParsedPerson, type ParsedSupplement, type PersonEnv, type PersonProblem, type RoleRule } from './people.js';
-import { typeGuards } from './guards.js';
+import { primaryStates, typeGuards } from './guards.js';
+import type { ImportHistory } from '../../runtime/records/save/context.js';
+import type { PlannedPosting } from '../../runtime/records/save/effects.js';
 import type { AttachmentInfo, AttachmentItem, LinkedPerson, MigrationStore, ProfileRow, SourceCounts, SourceRow } from './ports/migration-store.js';
 import { kindOfMime } from '../../runtime/records/file-kinds.js';
 
@@ -53,6 +55,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const MIGRATE = 'data:migrate';
 export const MIGRATE_BOOKS = 'data:migrate:books';
 export const MIGRATE_PEOPLE = 'data:migrate:people';
+/** Sets a migrated record's status without a transition: it skips guards and approvals, so it has its own permission. Its posting rules still post. */
+export const MIGRATE_STATE = 'data:migrate:state';
 const MEMBERS_MANAGE = 'members:manage';
 const DONE_READ_ONLY = 'This migration is done, so its files, mappings and order are read-only. Start a new migration to load more.';
 
@@ -188,6 +192,8 @@ interface Prepared {
   attached: { fileId: string; size: number; recordId: string | null; name: string; column: string; field: string }[];
   /** Names no attachment has, left out (`onMissing: 'skip'`). */
   skippedFiles: { column: string; name: string }[];
+  /** The legacy dates and the status the row's record is saved with; empty when the target has none of them. */
+  history: ImportHistory;
 }
 
 /** The attachments at the given lowercased paths. */
@@ -210,7 +216,8 @@ const reasonOf = (problems: CellProblem[]) => problems.map((p) => p.message).joi
  * Data migration: CSV files exported from another system, each mapped onto one or more record
  * types, checked without saving and run in order by a job. The old id of every record written is
  * kept, so a later file can point at it and a second run updates it. The opening journal and the
- * next receipt numbers are applied once, after every file has loaded.
+ * next receipt numbers are applied once, before the rows; a migrated row's posting rules post their
+ * entries at the row's dates, and no receipt is issued.
  */
 export class MigrationService {
   private readonly parsed = new Map<string, { header: string[]; rows: CsvRow[] }>();
@@ -223,7 +230,7 @@ export class MigrationService {
     private readonly files: FileService,
     private readonly jobs: JobRunner,
     private readonly csv: CsvCodec,
-    private readonly ledger: Pick<LedgerService, 'post'>,
+    private readonly ledger: Pick<LedgerService, 'post' | 'fiscalYearOf' | 'checkPlanned'>,
     private readonly receipts: Pick<ReceiptService, 'continueNumbering'>,
     private readonly audit: AuditTrail,
     private readonly retention: RetentionScan,
@@ -436,13 +443,14 @@ export class MigrationService {
   async setMapping(ctx: TenantContext, id: string, sourceId: string, input: unknown): Promise<ProfileView> {
     const profile = await this.editable(ctx, id);
     const types = await this.types(ctx);
+    const stateKeys = await primaryStates(this.defs, ctx.tenantId, types.keys());
     await this.tm.withTenant(ctx.tenantId, async (tx) => {
       const sources = await this.store.sources(tx, profile.id);
       const source = sources.find((s) => s.id === sourceId);
       if (!source) throw notFound('File not found.');
-      const mapping = readSourceMapping(input, source.columns.map((c) => c.name), types, (await this.roleStore.roles(tx)).map((r) => r.key));
+      const mapping = readSourceMapping(input, source.columns.map((c) => c.name), types, (await this.roleStore.roles(tx)).map((r) => r.key), stateKeys);
       if (peopleOf(mapping)) demandPeople(ctx);
-      for (const t of targetsOf(mapping)) demand(ctx.actor, `record:${t.type}:import`);
+      for (const t of targetsOf(mapping)) demandTarget(ctx, t);
       const next = sources.map((s) => (s.id === source.id ? { ...s, mapping } : s));
       const ordered = deriveOrder(next.map(ordering), types);
       if (ordered.some((s, i) => s.id !== next[i]!.id)) await this.store.setOrder(tx, profile.id, ordered.map((s) => s.id));
@@ -486,7 +494,18 @@ export class MigrationService {
     // A done migration changes its books only to fix a failed apply, which then applies them (see applyBooks).
     if (profile.status === 'done' && !profile.books_result?.error) throw conflict(DONE_READ_ONLY);
     const books = readBooks(input);
-    await this.tm.withTenant(ctx.tenantId, (tx) => this.store.saveBooks(tx, profile.id, books));
+    await this.tm.withTenant(ctx.tenantId, async (tx) => {
+      // The opening balances are the balances at the start of a financial year: the migrated entries post from there.
+      if (books.cutoverDate) {
+        const year = await this.ledger.fiscalYearOf(tx, books.cutoverDate);
+        if (year.startsOn !== books.cutoverDate) {
+          throw validationFailed(`The cutover date must be the first day of the financial year, ${year.startsOn}.`, [{ path: '/cutoverDate', message: `Use ${year.startsOn}` }]);
+        }
+      }
+      await this.store.saveBooks(tx, profile.id, books);
+      // The check's balances count these opening balances, so a check made before them is out of date (as after a mapping edit).
+      if (profile.status !== 'done') await this.store.reset(tx, profile.id);
+    });
     return this.get(ctx, profile.id);
   }
 
@@ -494,7 +513,7 @@ export class MigrationService {
   async applyBooks(ctx: TenantContext, id: string): Promise<ProfileView> {
     const profile = await this.load(ctx, id);
     demand(ctx.actor, MIGRATE_BOOKS);
-    if (profile.status !== 'done') throw conflict('The books apply after every file has loaded. Run the migration first.');
+    if (profile.status !== 'done') throw conflict('The books apply with the run, before its rows. Run the migration first.');
     if (profile.books_applied_at) throw conflict('The books of this migration have already been applied.');
     if (!hasBooks(profile.books)) throw validationFailed('This migration has no opening balances or receipt numbers to apply.');
     const outcome = await this.putBooks(ctx, profile.id);
@@ -538,7 +557,7 @@ export class MigrationService {
     checkOrder(sources.map(ordering), types);
     for (const s of mapped) {
       if (peopleOf(s.mapping)) demandPeople(ctx);
-      for (const t of targetsOf(s.mapping)) demand(ctx.actor, `record:${t.type}:import`);
+      for (const t of targetsOf(s.mapping)) demandTarget(ctx, t);
     }
     const total = mapped.reduce((n, s) => n + s.row_count, 0);
     await this.tm.withTenant(ctx.tenantId, async (tx) => {
@@ -585,6 +604,16 @@ export class MigrationService {
     const result: MigrationCheck = { rows: 0, ready: 0, invalid: 0, creates: 0, updates: 0, sources: [], problems: [], warnings: [], checkedAt: new Date().toISOString() };
     const guards = await typeGuards(this.defs, ctx.tenantId, types, mapped.flatMap((s) => targetsOf(s.mapping).map((t) => t.type)));
     const peopleEnv = mapped.some((s) => peopleOf(s.mapping)) ? await this.personEnv(ctx) : null;
+    // The money each ledger account moves by, in paise, as the rows checked so far would post it: the run posts the opening
+    // balances first, so they count from the start unless they were applied already (then the ledger holds them).
+    let pending = new Map<string, number>();
+    if (profile.books.lines?.length && !profile.books_applied_at) {
+      const books = profile.books;
+      const why = await this.tm.withTenant(ctx.tenantId, (tx) =>
+        this.ledger.checkPlanned(tx, [{ date: books.cutoverDate!, overdraftReason: 'Opening balances (data migration)', lines: books.lines! }], pending),
+      );
+      if (why) result.problems.push({ row: 0, message: `The books cannot be applied: ${why}`, sourceId: '', fileName: 'Books', severity: 'error' });
+    }
     const planned = new Map<string, Set<string>>();
     // The data each record an earlier ready row of this check creates or updates will hold, as its save would leave it: a later row for it is checked as an update of that.
     const plannedData = new Map<string, Record<string, unknown>>();
@@ -654,12 +683,11 @@ export class MigrationService {
       const warned = new Map<string, MigrationWarning>();
       for (const t of mapping.targets) {
         const guard = guards.get(t.type);
-        if (!guard) continue;
-        for (const message of guard.blocking) {
+        for (const message of guard?.blocking ?? []) {
           blocked.add(t.type);
           if (result.problems.length < PROBLEMS_SHOWN) result.problems.push({ row: 0, message, sourceId: source.id, fileName: source.file_name, target: t.key, severity: 'error' });
         }
-        for (const message of guard.warnings) {
+        for (const message of guard?.warnings ?? []) {
           const w = warned.get('script-effects-suppressed') ?? { kind: 'script-effects-suppressed', sourceId: source.id, fileName: source.file_name, count: 0, samples: [] };
           warned.set(w.kind, w);
           w.count++;
@@ -682,6 +710,8 @@ export class MigrationService {
         const rowSkipped: { column: string; name: string }[] = [];
         // Files this row's targets take, by file id to the record they are for; added to the profile-wide claims once the row is ready.
         const rowClaims = new Map<string, { key: string; size: number; free: boolean }>();
+        // The money the row's postings move by, on top of the rows checked before it; kept only when the row is ready.
+        let rowPending = new Map(pending);
         let guarded = false;
         for (const t of mapping.targets) {
           const type = types.get(t.type)!;
@@ -722,14 +752,28 @@ export class MigrationService {
             const supp = !existing && !prior ? supplement.get(recordKey) : undefined;
             const baseData = supp ? { ...supp, ...p.data } : p.data;
             const data = copyPlanned(type, baseData, p.waiting, prior ?? null, (w) => ('person' in w ? undefined : plannedOf('record' in w ? w.record : (rowKeys.get(w.target) ?? ''))), (w) => standIn(tokenOf(w)));
+            let postings: PlannedPosting[] = [];
             try {
-              const checked = await this.records.check(checkCtx, t.type, existing ? { data, id: existing.recordId } : prior ? { data, planned: prior } : { data });
+              // A new record is checked in its legacy status, with the entries its posting rules would make.
+              const history = Object.keys(p.history).length ? p.history : undefined;
+              const checked = await this.records.check(checkCtx, t.type, existing ? { data, id: existing.recordId } : prior ? { data, planned: prior } : { data, history });
               saved = { ...checked.data };
+              postings = checked.postings ?? [];
               for (const [fieldKey, w] of p.waiting) saved[fieldKey] = standIn(tokenOf(w));
               problems = sharedUnique(type, saved, recordKey, uniqueHolders).map((f) => ({ row: r.row, column: p.columnOf.get(f.key), field: f.key, message: `Another ${type.label.toLowerCase()} in this migration already has this ${f.label}.` }));
             } catch (e) {
               if (!(e instanceof PlatformError)) throw e;
               problems = problemsOf(e, r.row, type, p.columnOf).filter((x) => !x.field || !p.pending.has(x.field));
+            }
+            if (!problems.length && postings.length) {
+              // The run posts these inside the row's transaction, after the earlier targets of the row: a refusal fails the whole row.
+              const trial = new Map(rowPending);
+              const why = await this.tm.withTenant(ctx.tenantId, (tx) => this.ledger.checkPlanned(tx, postings, trial));
+              if (why) {
+                rowProblems.push(...tag([{ row: r.row, message: `The entry this row would post is refused: ${why}` }]));
+                break;
+              }
+              rowPending = trial;
             }
           }
           if (problems.length) {
@@ -756,6 +800,7 @@ export class MigrationService {
           for (const x of rowProblems) if (result.problems.length < PROBLEMS_SHOWN) result.problems.push(x);
           continue;
         }
+        pending = rowPending;
         for (const [typeKey, oldId, data] of toPlan) {
           plan(typeKey, oldId);
           const key = `${typeKey}:${oldId}`;
@@ -823,12 +868,19 @@ export class MigrationService {
     assertReadable(sources);
     for (const s of sources) {
       if (peopleOf(s.mapping)) demandPeople(ctx);
-      for (const t of targetsOf(s.mapping)) demand(ctx.actor, `record:${t.type}:import`);
+      for (const t of targetsOf(s.mapping)) demandTarget(ctx, t);
     }
     // The guards are read again: a rule published since the check must not slip through.
-    const guards = await typeGuards(this.defs, ctx.tenantId, await this.types(ctx), sources.flatMap((s) => targetsOf(s.mapping).map((t) => t.type)));
+    const types = await this.types(ctx);
+    const guards = await typeGuards(this.defs, ctx.tenantId, types, sources.flatMap((s) => targetsOf(s.mapping).map((t) => t.type)));
     const stop = [...guards.values()].flatMap((g) => g.blocking)[0];
     if (stop) throw conflict(`This migration cannot run: ${stop} Check it again.`);
+    // The opening balances are posted before any row, so the rows' entries are checked against them as the run makes them.
+    // If they cannot be posted the run does not start; the books stay unapplied and can be applied once the cause is fixed.
+    if (hasBooks(profile.books) && !profile.books_applied_at) {
+      const outcome = await this.putBooks(ctx, profile.id);
+      if ('error' in outcome) throw conflict(`The books could not be applied, so the migration did not start: ${outcome.error.message}`);
+    }
     const total = sources.filter((s) => s.mapping).reduce((n, s) => n + s.row_count, 0);
     // One transaction, and the runner starts only after it commits: the profile's foreign key to the job
     // locks the job row until then, and the runner's claim skips locked rows, leaving the job queued.
@@ -1106,8 +1158,8 @@ export class MigrationService {
           let recordId: string;
           try {
             const saved = existing
-              ? await rs.update(saveCtx, existing.recordId, { data, expectedVersion: existing.version })
-              : await rs.create(saveCtx, t.type, data);
+              ? await rs.update(saveCtx, existing.recordId, { data, expectedVersion: existing.version, history: p.history.updatedAt ? { updatedAt: p.history.updatedAt } : undefined })
+              : await rs.create(saveCtx, t.type, data, Object.keys(p.history).length ? p.history : undefined);
             recordId = saved.record.id;
           } catch (e) {
             if (e instanceof PlatformError) throw new RowFailure(problemsOf(e, r.row, type, p.columnOf));
@@ -1355,7 +1407,7 @@ export class MigrationService {
   ): Promise<Prepared> {
     const cell = (column: string) => (r.cells[at.get(column) ?? -1] ?? '').trim();
     const oldId = cell(t.oldId);
-    const out: Prepared = { blank: oldId === '', oldId, data: {}, problems: [], columnOf: new Map(), pending: new Set(), waiting: new Map(), unresolved: [], attached: [], skippedFiles: [] };
+    const out: Prepared = { blank: oldId === '', oldId, data: {}, problems: [], columnOf: new Map(), pending: new Set(), waiting: new Map(), unresolved: [], attached: [], skippedFiles: [], history: {} };
     if (out.blank) return out;
     if (oldId.length > 200) {
       out.problems.push({ row: r.row, column: t.oldId, message: `${t.oldId} is longer than 200 characters` });
@@ -1436,6 +1488,23 @@ export class MigrationService {
         out.attached.push({ fileId: a.fileId, size: a.size, recordId: a.recordId, name, column: m.column, field: f.key });
       }
       if (ids.length) out.data[f.key] = f.multiple ? ids : ids[0];
+    }
+    // Legacy dates and status: a value that is no date, or no status the mapping names, is a problem of the row.
+    for (const which of ['createdAt', 'updatedAt'] as const) {
+      const column = t.dates?.[which];
+      const raw = column ? cell(column) : '';
+      if (!column || !raw) continue;
+      const stamp = parseStamp(raw);
+      if (stamp === null) out.problems.push({ row: r.row, column, message: `${which === 'createdAt' ? 'Created date' : 'Updated date'} '${raw}' is not a date (use dd/mm/yyyy, yyyy-mm-dd or a date and time)` });
+      else out.history[which] = stamp;
+    }
+    if (t.state) {
+      const raw = cell(t.state.column);
+      if (raw) {
+        const to = stateOf(t.state.map, raw);
+        if (to === undefined) out.problems.push({ row: r.row, column: t.state.column, message: `Status '${raw}' is not one of the statuses the mapping names` });
+        else out.history.status = to;
+      }
     }
     return out;
   }
@@ -1766,6 +1835,27 @@ function assertReadable(sources: readonly SourceRow[]): void {
 function demandPeople(ctx: TenantContext): void {
   demand(ctx.actor, MIGRATE_PEOPLE);
   demand(ctx.actor, MEMBERS_MANAGE);
+}
+
+/**
+ * A legacy date as an ISO timestamp. A date and time keeps its time (taken as UTC when it names no zone);
+ * a date alone is midnight UTC, which keeps its calendar day in India. Null when the text is neither.
+ */
+function parseStamp(raw: string): string | null {
+  const s = raw.trim();
+  if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(s)) {
+    const text = s.replace(' ', 'T');
+    const ms = Date.parse(/(Z|[+-]\d{2}:?\d{2})$/.test(text) ? text : `${text}Z`);
+    return Number.isNaN(ms) ? null : new Date(ms).toISOString();
+  }
+  const day = parseDate(s);
+  return day ? `${day}T00:00:00.000Z` : null;
+}
+
+/** A target that takes its status from a column needs the state permission, on top of the import permission of its type. */
+function demandTarget(ctx: TenantContext, t: MigrationTarget): void {
+  demand(ctx.actor, `record:${t.type}:import`);
+  if (t.state) demand(ctx.actor, MIGRATE_STATE);
 }
 
 const ordering = (s: SourceRow): OrderedSource => ({ id: s.id, fileName: s.file_name, mapping: s.mapping });

@@ -376,7 +376,7 @@
   "ui.fields.richText.link": "दुवा",
   "ui.fields.richText.linkInvalid": "फक्त वेब आणि ईमेल दुवे.",
   "ui.fields.richText.tooLong": "हे {max} किंवा त्यापेक्षा कमी अक्षरांत ठेवा.",
-  "ui.pins.yours": "तुमचे पिन",
+  "ui.pins.yours": "तुम्ही पिन केले",
   "ui.pins.pinMine": "माझ्या मुख्यपृष्ठावर पिन करा",
   "ui.pins.pinEveryone": "सर्वांच्या मुख्यपृष्ठावर पिन करा",
   "ui.pins.pinned": "तुमच्या मुख्यपृष्ठावर “{label}” म्हणून पिन केले.",

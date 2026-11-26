@@ -376,7 +376,7 @@
   "ui.fields.richText.link": "লিঙ্ক",
   "ui.fields.richText.linkInvalid": "শুধু ওয়েব ও ইমেল লিঙ্ক।",
   "ui.fields.richText.tooLong": "এটি {max} অক্ষর বা তার কম রাখুন।",
-  "ui.pins.yours": "আপনার পিন",
+  "ui.pins.yours": "আপনি পিন করেছেন",
   "ui.pins.pinMine": "আমার হোমে পিন করুন",
   "ui.pins.pinEveryone": "সবার হোমে পিন করুন",
   "ui.pins.pinned": "আপনার হোমে \"{label}\" হিসেবে পিন করা হয়েছে।",

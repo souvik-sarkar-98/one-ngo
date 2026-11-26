@@ -55,6 +55,7 @@ const MONEY: [string, string][] = [
   ['money:accounts:manage', 'Open and change money accounts (API only)'],
   ['money:transfer', 'Move money between accounts (API only)'],
   ['money:reconcile', 'Import bank statements, match them to the books and sign off (API only)'],
+  ['ledger:read', 'See the trial balance'],
 ];
 
 const SETUP: [string, string][] = [
@@ -77,6 +78,7 @@ const SETUP: [string, string][] = [
   ['data:migrate', 'Bring in CSV files from another system'],
   ['data:migrate:books', 'Set opening balances and receipt numbers when migrating'],
   ['data:migrate:people', 'Add people from another system when migrating (also needs Manage people)'],
+  ['data:migrate:state', 'Set record statuses from another system when migrating (skips transitions, approvals and posting)'],
   ['privacy:consent:read', 'See consent records (API only)'],
   ['privacy:consent:record', 'Record consent given or withdrawn (API only)'],
   ['privacy:erase', 'Erase a person (pseudonymise their personal data) (API only)'],

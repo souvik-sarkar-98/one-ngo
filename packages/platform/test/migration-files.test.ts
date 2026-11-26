@@ -144,6 +144,12 @@ describe('mapping files', () => {
     expect(issues(target({}))).toEqual([]);
   });
 
+  it('accepts a target that maps only file fields (a Files CSV), and still wants at least one column', () => {
+    const only = readMapping(target({ fields: {}, files: { proof: { column: 'Proof' } } }), columns, types);
+    expect(only.targets[0]).toMatchObject({ oldId: 'Id', fields: {}, files: { proof: { column: 'Proof' } } });
+    expect(issues(target({ fields: {} }))).toContainEqual({ path: '/targets/0/fields', message: 'match at least one column to a field' });
+  });
+
   it('still reads an old mapping without files', () => {
     const plain = new Map([['plain', { key: 'plain', label: 'Plain', fields: [{ key: 'name', label: 'Name', type: 'text', required: true }] }]]) as unknown as TypesByKey;
     const old = readMapping({ targets: [{ key: 'd', type: 'plain', oldId: 'Id', fields: { name: 'Name' }, refs: {} }] }, columns, plain);

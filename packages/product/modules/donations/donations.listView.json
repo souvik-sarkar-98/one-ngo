@@ -17,7 +17,7 @@
   "row": { "title": "donorName", "subtitle": ["amount", "method"], "meta": "number", "badge": "status" },
   "detail": {
     "sections": [
-      { "id": "donation", "label": "Donation", "fields": ["number", "status", "amount", "fee", "netAmount", "method", "paidOn", "reference"] },
+      { "id": "donation", "label": "Donation", "fields": ["number", "status", "amount", "fee", "netAmount", "method", "paidOn", "receivedIn", "reference"] },
       { "id": "donor", "label": "Donor", "fields": ["donor", "donorName", "donorEmail", "donorPhone", "donorPan"] },
       { "id": "notes", "label": "Notes", "fields": ["notes"] }
     ]

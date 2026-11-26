@@ -119,20 +119,14 @@ afterAll(async () => {
 });
 
 describe('migration check guards and warnings', () => {
-  it('blocks a type whose initial state issues a receipt', async () => {
+  it('does not block a receipt rule on the initial state: a migrated row issues no receipt', async () => {
     const view = await checked('guardReceipt');
-    expect(view.check).toMatchObject({ rows: 2, ready: 0, invalid: 2, warnings: [] });
-    expect(view.check!.problems).toHaveLength(1);
-    expect(view.check!.problems[0]).toMatchObject({ row: 0, severity: 'error', fileName: 'guardReceipt.csv' });
-    expect(view.check!.problems[0]!.message).toContain('issue a receipt');
-    expect((await call('POST', `/api/migrations/${view.id}/run`)).statusCode).toBe(409);
+    expect(view.check).toMatchObject({ rows: 2, ready: 2, invalid: 0, problems: [], warnings: [] });
   });
 
-  it('blocks a type whose initial state posts a journal entry', async () => {
+  it('does not block a posting rule on the initial state: Check predicts its entries, and the run posts them', async () => {
     const view = await checked('guardPosting');
-    expect(view.check).toMatchObject({ ready: 0, invalid: 2 });
-    expect(view.check!.problems[0]!.message).toContain('post a journal entry');
-    expect((await call('POST', `/api/migrations/${view.id}/run`)).statusCode).toBe(409);
+    expect(view.check).toMatchObject({ rows: 2, ready: 2, invalid: 0, problems: [] });
   });
 
   it('blocks a script that may propose journal entries, which a quiet save does not suppress', async () => {

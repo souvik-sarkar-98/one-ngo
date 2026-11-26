@@ -3,7 +3,7 @@ import type { PageDef, PageWidget, WidgetView } from '../../models';
 import type { RowView } from '../../rows';
 import { moveItem } from '../../ui-logic/reorder';
 
-export const WIDGET_TYPES = ['stat', 'chart', 'list', 'links', 'groups'] as const;
+export const WIDGET_TYPES = ['stat', 'chart', 'list', 'links', 'wizards', 'groups'] as const;
 export type WidgetType = (typeof WIDGET_TYPES)[number];
 export type GroupBy = Extract<PageWidget, { type: 'chart' }>['groupBy'];
 export type PageLinkItem = Extract<PageWidget, { type: 'links' }>['items'][number];
@@ -23,6 +23,8 @@ export function newWidget(type: WidgetType, label = widgetTypeName(type)): PageW
       return { type, label, listView: '', limit: 5 };
     case 'links':
       return { type, label, items: [{ label: t('ui.builder.page.newLink'), to: '/' }] };
+    case 'wizards':
+      return { type, label, items: [{ label: t('ui.builder.page.newTask'), to: '/' }] };
     case 'groups':
       return { type };
   }
@@ -78,7 +80,12 @@ export function changeWidgetType(page: PageDef, index: number, type: WidgetType)
     if (w.type === type) return w;
     const old = w as Loose;
     const fresh = newWidget(type, typeof old['label'] === 'string' && old['label'] ? (old['label'] as string) : undefined) as Loose;
-    const keep = ['permission', ...(type === 'stat' || type === 'chart' ? ['recordType', 'measure', 'field', 'view'] : [])];
+    const keep = [
+      'permission',
+      ...(type === 'stat' || type === 'chart' ? ['recordType', 'measure', 'field', 'view'] : []),
+      // Links and task cards are the same list of links, so turning one into the other keeps them.
+      ...((type === 'links' || type === 'wizards') && (w.type === 'links' || w.type === 'wizards') ? ['items'] : []),
+    ];
     for (const k of keep) if (old[k] !== undefined) fresh[k] = old[k];
     if (fresh['measure'] !== 'sum') delete fresh['field'];
     return fresh as PageWidget;
@@ -106,7 +113,7 @@ export function setWidgetPermission(page: PageDef, index: number, permission: st
 }
 
 const updateLinks = (page: PageDef, index: number, fn: (items: PageLinkItem[]) => PageLinkItem[]): PageDef =>
-  update(page, index, (w) => (w.type === 'links' ? { ...w, items: fn(w.items.map((i) => ({ ...i }))) } : w));
+  update(page, index, (w) => (w.type === 'links' || w.type === 'wizards' ? { ...w, items: fn(w.items.map((i) => ({ ...i }))) } : w));
 
 export function addLink(page: PageDef, index: number): PageDef {
   return updateLinks(page, index, (items) => [...items, { label: t('ui.builder.page.newLink'), to: '/' }]);
@@ -152,6 +159,8 @@ export function widgetSummary(w: PageWidget, names: WidgetNames): string {
       return t('ui.builder.page.shows.groups');
     case 'links':
       return t('ui.builder.page.shows.links', { count: w.items.length });
+    case 'wizards':
+      return t('ui.builder.page.shows.wizards', { count: w.items.length });
     case 'list': {
       const listView = w.listView ? (names.listView(w.listView) ?? w.listView) : t('ui.builder.page.shows.none');
       return [t('ui.builder.page.shows.list', { view: listView, count: w.limit }), ...viewText(w, '', names)].join(' · ');

@@ -55,6 +55,13 @@ pre { white-space: pre-wrap; overflow: auto; }
   .app-btn { min-width: 44px; }
 }
 
+/* Printing a screen prints its content only: no app bar, rail, breadcrumb or bottom bar. */
+@media print {
+  .shell__bar, .shell__rail, .shell__bottom, .shell__main > :not(.shell__content) { display: none !important; }
+  .shell__body { display: block !important; min-height: 0 !important; }
+  .shell__content { padding: 0 !important; }
+}
+
 /* Form fields. A label either sits above a control inside .field, or wraps it. */
 label { display: block; font-size: var(--label-size); font-weight: 500; color: var(--label-color); margin-bottom: 5px; }
 label > :where(input:not([type='checkbox'], [type='radio']), select, textarea) { margin-top: 4px; }

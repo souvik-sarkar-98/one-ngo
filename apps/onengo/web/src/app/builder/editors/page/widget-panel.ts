@@ -112,7 +112,7 @@ const PERIODS = ['day', 'week', 'month', 'financialYear'] as const;
         @if (filterCount()) { <span class="help">{{ 'ui.builder.page.keepsFilters' | t: { count: filterCount() } }}</span> }
       }
 
-      @if (w.type === 'links') {
+      @if (w.type === 'links' || w.type === 'wizards') {
         <fieldset class="pg-links">
           <legend>{{ 'ui.builder.schema.prop.items' | t }}</legend>
           @for (link of w.items; track $index; let n = $index) {

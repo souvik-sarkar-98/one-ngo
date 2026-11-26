@@ -45,6 +45,14 @@
       ]
     },
     { "key": "paidOn", "label": "Paid on", "type": "date", "visibleWhen": "status == 'paid'" },
+    {
+      "key": "receivedIn",
+      "label": "Received in",
+      "type": "choice",
+      "visibleWhen": "status == 'paid'",
+      "choicesFrom": "moneyAccounts",
+      "help": "The real account the money reached. Leave empty to use the main bank account, or cash for a cash donation"
+    },
     { "key": "reference", "label": "Payment reference", "type": "text", "maxLength": 100, "visibleWhen": "status == 'paid'" },
     { "key": "fee", "label": "Processing fee", "type": "money", "min": 0, "editableWhen": "status == 'raised'" },
     { "key": "netAmount", "label": "Net amount", "type": "money", "calculated": "record.amount == null ? null : record.amount - coalesce(record.fee, 0)" },

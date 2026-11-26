@@ -1,0 +1,99 @@
+.statement__range {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 8px 0 14px;
+}
+.statement__range label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0; /* the global label margin would lift the date field above the buttons */
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.statement__range input {
+  width: auto;
+  min-height: var(--field-height, 40px);
+  margin: 0;
+  font: inherit;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: inherit;
+}
+.statement__range > button {
+  min-height: var(--field-height, 40px);
+}
+.statement__totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.statement__total {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+}
+.statement__total span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.statement__total b {
+  font-variant-numeric: tabular-nums;
+}
+.statement__scroll {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  margin-bottom: 12px;
+}
+.statement__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.statement__table th,
+.statement__table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.statement__table th {
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.statement__num {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.statement__negative {
+  color: var(--danger, #b3261e);
+}
+.statement__kind,
+.statement__source {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.statement__source {
+  color: var(--brand);
+}
+.statement__reversed td {
+  color: var(--muted);
+}
+.statement__reversed td:nth-child(2) span {
+  text-decoration: line-through;
+}

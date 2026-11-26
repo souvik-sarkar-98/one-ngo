@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -300,7 +300,10 @@
     <h3>What exists in the code</h3>
     <ul class="tight">
       <li><b>UPI link</b> built for the NGO's own UPI ID, with a reference the donor's bank carries in the narration.</li>
-      <li><b>Money accounts</b> opened on the Money page or through the API (<code>POST /api/money/accounts</code>). With a <code>ledgerCode</code> (API only, not on the page), one attaches to an existing asset account such as <code>BANK</code>, and its balance is that account's balance. A code that is missing, closed, not an asset, or already attached is refused. Transfers between accounts post journal entries.</li>
+      <li><b>Money accounts</b> opened on the Money page or through the API (<code>POST /api/money/accounts</code>). Each one has its own asset ledger account, or attaches to an existing one such as <code>BANK</code> by its <code>ledgerCode</code> (a field on the Money page). A code that is missing, closed, not an asset, or already attached is refused. A second real bank is a second money account: it appears in the &ldquo;Received in&rdquo; and &ldquo;Paid from&rdquo; lists and in the Pay now account choice. Transfers between accounts post journal entries.</li>
+      <li><b>Account statement</b> (<code>/accounts/:key/statement</code>): every ledger line of one account between two dates, with a running balance, the source record and a CSV export. <b>Balances</b> can be read as on any date.</li>
+      <li><b>Reconciliation screen</b> (<code>/accounts/:key/reconcile</code>): upload the bank's CSV, check how it was read, auto-match, match by hand, ignore with a reason, book a missing line (a bank charge, interest), compare with the books and sign off. Needs <code>money:reconcile</code>.</li>
+      <li><b>Trial balance</b> (<code>/accounts/trial-balance</code>, needs <code>ledger:read</code>): every ledger account on a date in a Debit or Credit column. The totals must be equal.</li>
       <li><b>Statement matching</b> (<code>matchStatement</code>): needs the reference in the line text and the same amount to the paisa. A line whose receipt would be for another amount stays unmatched.</li>
       <li><b>Manual confirmation</b> by someone holding <code>payments:confirm</code>, with the paid date and bank reference.</li>
       <li><b>Gateway webhooks</b> for Razorpay and Cashfree, tested only against a fake HTTP client. Verify against the provider sandboxes before going live.</li>
@@ -310,10 +313,9 @@
     <h3>What is not there</h3>
     <ul class="tight">
       <li>No bank API, bank feed or Account Aggregator link, and no read of the real balance.</li>
-      <li>No screen or file upload for statements. Matching is a server call that takes lines as data.</li>
       <li>No gateway settlement or payout tracking, and no fee posting.</li>
       <li>No outgoing payments. Expenses are recorded after the treasurer pays elsewhere.</li>
-      <li>Reconciliation exists in the API only (import, match, sign-off). There is no screen.</li>
+      <li>Sign-off is a record of review. It does not stop a back-dated ledger entry.</li>
     </ul>
   </div>
 </div>
@@ -371,7 +373,7 @@
       <tr><td class="dr">Debit</td><td><code>EXP_TRAVEL</code> · <code>EXP_PROGRAM</code> · <code>EXP_ADMIN</code> · <code>EXP_OTHER</code></td><td class="num">amount</td></tr>
       <tr><td class="cr exp">Credit</td><td>“Paid from” account</td><td class="num">amount</td></tr>
     </table>
-    <p>The bill must be attached before submitting. Nothing is posted until the claim is marked Paid. Not approved claims never touch the books.</p>
+    <p>The bill must be attached before submitting. Nothing is posted until the claim is marked Paid. Not approved claims never touch the books. The person who submitted a claim cannot approve or pay it; a second person must.</p>
   </div>
 
 </div>
@@ -404,6 +406,7 @@
     <h3>Rules the workflows enforce</h3>
     <ul class="tight">
       <li>A payment date cannot be in the future.</li>
+      <li>An account cannot go below zero (money out of a bank, cash or wallet) unless the person gives a reason, which is recorded in the audit log.</li>
       <li>A claim needs its bill to be submitted and a reason to be rejected.</li>
       <li>Only paid, received or settled states post. Raised, expected, draft, submitted and approved never move money.</li>
       <li>Permissions are per record type and per transition, for example the Finance and Expense approver roles.</li>
@@ -416,12 +419,11 @@
   <ul class="tight">
     <li><b>Processing fees are not posted.</b> A donation's fee and net amount are shown on the receipt and the record, but the journal uses the full amount.</li>
     <li><b>Physical assets do not post.</b> The asset register records cost and disposal but makes no journal and has no depreciation.</li>
-    <li><b>Bank reconciliation has no screen.</b> The API can import statement lines, match them to the books, book or ignore the rest, report the difference and sign off a month (permission <code>money:reconcile</code>). There is no CSV upload, no screen, and sign-off does not stop a back-dated ledger entry.</li>
+    <li><b>Bank reconciliation does not lock the ledger.</b> Sign-off records that the statement and books agreed on a date, but a back-dated ledger entry can still be posted into a signed-off month.</li>
     <li><b>No funds or restricted money.</b> Funds, statutory year-end features and the 80G register are planned, not built.</li>
-    <li><b>An approver can approve their own claim</b> (accepted for 1.0.0).</li>
     <li><b>The <code>upi</code> account needs its UPI ID.</b> Installing Donations now creates the money account <code>upi</code> on <code>BANK</code>; an organisation that installed Donations earlier does not get it. Someone with <code>money:accounts:manage</code> sets the UPI ID with Edit on the Money page before a UPI link can be built.</li>
-    <li><b>One bank ledger account.</b> One money account can attach to <code>BANK</code>, because each ledger account takes only one. A second real bank has no ledger account of its own until a module adds one. The <code>bank-accounts</code> module (<code>BANK_2</code>, <code>BANK_3</code>) was removed.</li>
-    <li><b>No bank balances report.</b> It came with the removed module. The Money page still shows each money account's balance.</li>
+    <li><b>The Pay now account key stays <code>upi</code>.</b> It is only a key, kept so that existing links and settings keep working. The account can be a bank of any name; the Pay now action lets the donor-facing team choose which UPI account to use.</li>
+    <li><b>No year-end closing entries.</b> Income and expenses restart on the first day of each financial year in reports. The trial balance shows earlier years' result as one line, <code>Surplus from earlier years</code>.</li>
     <li><b>Modules ship by configuration.</b> Only <code>donations</code> is on by default. Expenses, earnings and members go live when named in <code>SHIPPED_MODULES</code>.</li>
   </ul>
 </div>

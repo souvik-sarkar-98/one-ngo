@@ -381,7 +381,7 @@
   "ui.fields.richText.link": "लिंक",
   "ui.fields.richText.linkInvalid": "केवल वेब और ईमेल लिंक।",
   "ui.fields.richText.tooLong": "इसे {max} अक्षरों या उससे कम रखें।",
-  "ui.pins.yours": "आपकी पिन",
+  "ui.pins.yours": "आपने पिन किया",
   "ui.pins.pinMine": "मेरे होम पर पिन करें",
   "ui.pins.pinEveryone": "सबके होम पर पिन करें",
   "ui.pins.pinned": "आपके होम पर “{label}” के रूप में पिन किया गया।",

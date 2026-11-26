@@ -1,6 +1,7 @@
 import type { Database } from '../infrastructure/postgres/db.js';
 import { migrationStatus } from '../infrastructure/postgres/migrate.js';
 import { assertSchemaCompatibility, readSchemaCompatibility, SCHEMA_LEVEL } from '../infrastructure/postgres/schema-compatibility.js';
+import { pgAccountChoices } from '../infrastructure/postgres/stores/account-choices-store.js';
 import { PgBuilderStore } from '../infrastructure/postgres/stores/builder-store.js';
 import { postgresAdministrationStore } from '../infrastructure/postgres/stores/administration-store.js';
 import { PgDefinitionStore } from '../infrastructure/postgres/stores/definition-store.js';
@@ -44,6 +45,7 @@ export async function wireDefinitions(base: Base) {
       definitions,
       options.localeCatalogues ? new MessageCatalogue(undefined, options.localeCatalogues) : new MessageCatalogue(paths.locale),
       postgresAdministrationStore(base.sequences),
+      pgAccountChoices,
     ),
   };
 }

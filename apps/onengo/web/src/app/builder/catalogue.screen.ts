@@ -218,6 +218,7 @@ export class CatalogueScreen {
     }
     if (action === 'revert' && !confirm(t('ui.builder.confirmRevert'))) return;
     if (action === 'deleteDraft' && !confirm(t('ui.builder.confirmDiscard'))) return;
+    if (action === 'delete' && !confirm(t('ui.builder.catalogue.confirmDelete', { name: row.title }))) return;
     if (action === 'disable' && !confirm(t('ui.builder.catalogue.confirmTurnOff', { name: row.title }))) return;
     void this.store.runRowAction(row, action as CatalogueAction);
   }

@@ -39,6 +39,7 @@ import {
   refChoice,
   refOf,
   roleRows,
+  setDate,
   setDefault,
   setDerived,
   setField,
@@ -46,10 +47,20 @@ import {
   setPerson,
   setRef,
   setRules,
+  setState,
+  stateRowsOf,
   templateColumns,
   templatePreview,
   suggestTarget,
   targetsOf,
+  filesDraft,
+  importKindOf,
+  kindsKey,
+  readKinds,
+  recordGroups,
+  rememberKinds,
+  typesWithFiles,
+  type ImportKind,
   type MigrationCheck,
   type MigrationSource,
   type MigrationWarning,
@@ -386,6 +397,7 @@ describe('mapping a file of people', () => {
     expect(kindOptions(true).map((o) => [o.kind, o.disabled, o.hint])).toEqual([
       ['records', false, 'ui.admin.migration.kindRecordsHint'],
       ['people', false, 'ui.admin.migration.kindPeopleHint'],
+      ['files', false, 'ui.admin.migration.kindFilesHint'],
     ]);
     expect(kindOptions(false).find((o) => o.kind === 'people')).toMatchObject({ disabled: true, hint: 'ui.admin.migration.kindPeopleDenied' });
     expect(kindOptions(false).find((o) => o.kind === 'records')!.disabled).toBe(false);
@@ -472,6 +484,32 @@ describe('a person field filled by legacy user id', () => {
     const target = setPerson(suggestTarget(person, ['TxnNo', 'Amount', 'CreatedBy']), 'collector', 'CreatedBy', 'fail');
     await session.saveMapping('s2', { targets: [target] });
     expect(targetsOf(session.state.value.profile!.sources[0]!.mapping)[0]!.persons).toEqual({ collector: { column: 'CreatedBy', onMissing: 'fail' } });
+  });
+});
+
+describe('legacy dates and the status column', () => {
+  it('takes each original date from its column, and drops the date when its column is cleared', () => {
+    let x = suggestTarget(supporter, ['Name', 'Created', 'Updated']);
+    x = setDate(x, 'createdAt', 'Created');
+    x = setDate(x, 'updatedAt', 'Updated');
+    expect(x.dates).toEqual({ createdAt: 'Created', updatedAt: 'Updated' });
+    x = setDate(x, 'updatedAt', '');
+    expect(x.dates).toEqual({ createdAt: 'Created' });
+    expect(setDate(x, 'createdAt', '').dates).toBeUndefined();
+  });
+
+  it('gives each value of the status column the status it names, leaves out a value with no status, and drops the status when the column is cleared', () => {
+    const x = setState(suggestTarget(supporter, ['Name', 'Status']), 'Status', { Open: 'open', Paid: '', Cancelled: 'cancelled' });
+    expect(x.state).toEqual({ column: 'Status', map: { Open: 'open', Cancelled: 'cancelled' } });
+    expect(setState(x, '', {}).state).toBeUndefined();
+  });
+
+  it('lists each sample value once, ignoring case, then the values already mapped, each with the status it takes', () => {
+    expect(stateRowsOf(['Open', 'open ', 'Paid', ''], { Paid: 'paid', Lost: 'cancelled' })).toEqual([
+      { value: 'Open', state: '' },
+      { value: 'Paid', state: 'paid' },
+      { value: 'Lost', state: 'cancelled' },
+    ]);
   });
 });
 
@@ -712,5 +750,94 @@ describe('check warnings about attachments', () => {
       ['ui.admin.migration.warningGroup.missingAttachments', [3]],
       ['ui.admin.migration.warningGroup.storageOverQuota', [0]],
     ]);
+  });
+});
+
+describe('what a file was added as', () => {
+  const scans: RecordTypeBody = {
+    key: 'donation',
+    label: 'Donation',
+    fields: [
+      { key: 'amount', label: 'Amount', type: 'money' },
+      { key: 'receipt', label: 'Receipt scan', type: 'file', multiple: true },
+    ],
+  } as RecordTypeBody;
+  const plain: RecordTypeBody = { key: 'volunteer', label: 'Volunteer', fields: [{ key: 'name', label: 'Name', type: 'text' }] } as RecordTypeBody;
+
+  it('takes the choice made, else People for a people file and Records for any other', () => {
+    expect(importKindOf({ id: 'a', kind: 'records' }, { a: 'files' })).toBe('files');
+    expect(importKindOf({ id: 'a', kind: 'records' }, {})).toBe('records');
+    expect(importKindOf({ id: 'a' }, {})).toBe('records');
+    expect(importKindOf({ id: 'a', kind: 'people' }, {})).toBe('people');
+    expect(importKindOf({ id: 'a', kind: 'people' }, { a: 'records' })).toBe('records');
+  });
+
+  it('shows record types as groups, never People, and not a type only a Files CSV fills', () => {
+    const groups = [
+      { key: PEOPLE_GROUP, files: ['p'] },
+      { key: 'donation', files: ['r', 'f'] },
+      { key: 'volunteer', files: ['f'] },
+      { key: 'asset', files: [] },
+    ];
+    const kinds: Record<string, ImportKind> = { p: 'people', r: 'records', f: 'files' };
+    expect(recordGroups(groups, kinds).map((g) => g.key)).toEqual(['donation', 'asset']);
+  });
+
+  it('offers only record types with a file field to a Files CSV', () => {
+    expect(typesWithFiles([scans, plain]).map((x) => x.key)).toEqual(['donation']);
+  });
+
+  it('makes a Files CSV fill one type by old id and nothing else, which its file fields then fill', () => {
+    const empty = fileDraftOf({ mapping: null, columns: [{ name: 'RecordId', samples: [] }, { name: 'Amount', samples: [] }, { name: 'FilePath', samples: [] }] });
+    const d = filesDraft(empty, scans, ['RecordId', 'Amount', 'FilePath']);
+    expect(d.targets).toHaveLength(1);
+    expect(d.targets[0]).toMatchObject({ type: 'donation', oldId: 'RecordId', fields: {}, refs: {} });
+    const [receipt] = fileFields(scans) as [FieldDef];
+    const filled = setFile(d.targets[0]!, receipt, 'FilePath');
+    expect(filled.files).toEqual({ receipt: { column: 'FilePath' } });
+    expect(fillsField(filled, 'receipt')).toBe(true);
+    expect(filesDraft(d, undefined, []).targets).toEqual([]);
+  });
+
+  it('keeps the choices per profile on the device and ignores what it cannot read', () => {
+    const data = new Map<string, string>();
+    const store = { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => void data.set(k, v) };
+    const key = kindsKey('acme', 'p1');
+    expect(readKinds(store, key)).toEqual({});
+    rememberKinds(store, key, { a: 'files', b: 'people' });
+    expect(readKinds(store, key)).toEqual({ a: 'files', b: 'people' });
+    expect(readKinds(store, kindsKey('acme', 'p2'))).toEqual({});
+    data.set(key, JSON.stringify({ a: 'files', b: 'nonsense' }));
+    expect(readKinds(store, key)).toEqual({ a: 'files' });
+    data.set(key, 'not json');
+    expect(readKinds(store, key)).toEqual({});
+    expect(() => rememberKinds({ setItem: () => { throw new Error('full'); } }, key, {})).not.toThrow();
+  });
+});
+
+describe('starting the profile over', () => {
+  it('removes every CSV and every uploaded file, with the mappings, and says so', async () => {
+    const session = new MigrationSession(memoryMigrations(), (fn) => setTimeout(fn, 60_000));
+    await session.open((await session.create('Donations'))!);
+    await session.addFiles([
+      { body: new Blob(['A\n1\n']), name: 'a.csv' },
+      { body: new Blob(['B\n2\n']), name: 'b.csv' },
+    ]);
+    await session.addAttachments([{ body: new Blob(['x']), name: 'scans/a.pdf' }]);
+    expect(session.state.value.profile!.sources).toHaveLength(2);
+    expect(session.state.value.profile!.attachments?.count).toBe(1);
+
+    expect(await session.clearAll()).toBe(true);
+    const { profile, attachmentList, message, busy } = session.state.value;
+    expect(profile!.sources).toEqual([]);
+    expect(profile!.attachments?.count ?? 0).toBe(0);
+    expect(attachmentList?.items ?? []).toEqual([]);
+    expect(message).toBe('Everything was removed. Add the files again.');
+    expect(busy).toBe(false);
+    session.dispose();
+  });
+
+  it('does nothing without a profile', async () => {
+    expect(await new MigrationSession(memoryMigrations()).clearAll()).toBe(false);
   });
 });

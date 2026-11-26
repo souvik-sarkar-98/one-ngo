@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { RecordService } from '../src/runtime/records/record-service.js';
 import type { TenantContext } from '../src/domain/ports/tenant-context.js';
@@ -20,7 +22,7 @@ beforeAll(async () => {
   w = await createWorld({ paymentProviders: [new RazorpayProvider(fakePost), new CashfreeProvider(fakePost)] });
   const ctx = w.as(w.ngoA);
   await completeIdentity(w, w.ngoA);
-  await w.platform.moneyAccounts.open(ctx, { key: 'main', name: 'SBI current', kind: 'bank', upiId: 'asha.trust@sbi' });
+  await w.platform.moneyAccounts.open(ctx, { key: 'main', name: 'SBI current', kind: 'bank', upiId: 'asha.trust@sbi', allowNegative: true });
   await w.platform.moneyAccounts.open(ctx, { key: 'petty', name: 'Petty cash', kind: 'cash', custodian: 'Office' });
   await w.platform.moneyAccounts.open(ctx, { key: 'ravi', name: 'Ravi wallet', kind: 'wallet' });
   for (const [key, provider] of [['payByUpi', 'upi'], ['payByCard', 'razorpay']] as const) {
@@ -39,7 +41,7 @@ describe('money accounts', () => {
     await w.platform.moneyAccounts.transfer(ctx, { from: 'main', to: 'petty', amount: 2000, date: today(), reference: 'ATM' });
     await w.platform.moneyAccounts.transfer(ctx, { from: 'petty', to: 'ravi', amount: 500.25, date: today() });
     const balances = Object.fromEntries((await w.platform.moneyAccounts.list(ctx)).map((a) => [a.key, a.balance]));
-    expect(balances).toEqual({ upi: '0.00', main: '-2000.00', petty: '1499.75', ravi: '500.25' });
+    expect(balances).toEqual({ upi: '0.00', cash: '0.00', main: '-2000.00', petty: '1499.75', ravi: '500.25' });
   });
 
   it('does not let cash or wallets go below zero', async () => {
@@ -386,13 +388,17 @@ describe('a money account is the real account, attached to its ledger account', 
   it('opens with the module, attached to BANK, and shows the donations posted there', async () => {
     const ctx = w.as(w.ngoA);
     const bank = await w.platform.moneyAccounts.get(ctx, 'upi');
-    expect(bank).toMatchObject({ kind: 'bank', ledgerCode: 'BANK', upiId: null, allowNegative: true, status: 'active' });
+    expect(bank).toMatchObject({ kind: 'bank', ledgerCode: 'BANK', upiId: null, allowNegative: false, status: 'active' });
 
     await expectCode(w.platform.moneyAccounts.open(ctx, { key: 'second', name: 'Second', kind: 'bank', ledgerCode: 'BANK' }), 'rule_violation');
     await expectCode(w.platform.moneyAccounts.open(ctx, { key: 'ghost', name: 'Ghost', kind: 'bank', ledgerCode: 'NO_SUCH' }), 'rule_violation');
     await expectCode(w.platform.moneyAccounts.open(ctx, { key: 'upi', name: 'Duplicate', kind: 'bank' }), 'rule_violation');
-    const drawer = await w.platform.moneyAccounts.open(ctx, { key: 'drawer', name: 'Cash drawer', kind: 'cash', ledgerCode: 'CASH' });
-    expect(drawer).toMatchObject({ ledgerCode: 'CASH', allowNegative: false });
+    // The module opens CASH as the cash money account, so a second account cannot take it; one without a code gets its own.
+    await expectCode(w.platform.moneyAccounts.open(ctx, { key: 'drawer', name: 'Cash drawer', kind: 'cash', ledgerCode: 'CASH' }), 'rule_violation');
+    expect(await w.platform.moneyAccounts.get(ctx, 'cash')).toMatchObject({ kind: 'cash', ledgerCode: 'CASH', allowNegative: false });
+    const drawer = await w.platform.moneyAccounts.open(ctx, { key: 'drawer', name: 'Cash drawer', kind: 'cash' });
+    expect(drawer).toMatchObject({ allowNegative: false });
+    expect(drawer.ledgerCode).not.toBe('CASH');
 
     await expectCode(w.platform.moneyAccounts.update(ctx, 'upi', { upiId: 'not a upi id' }), 'validation_failed');
     const named = await w.platform.moneyAccounts.update(ctx, 'upi', { name: 'Asha Trust, SBI', upiId: 'asha.bank@sbi', custodian: 'Treasurer' });
@@ -409,9 +415,33 @@ describe('a money account is the real account, attached to its ledger account', 
     expect(Number(after) - Number(before)).toBe(250);
   });
 
+  it('starts a new account with the overdraft off, so a transfer cannot take it below zero', async () => {
+    const ctx = w.as(w.ngoA);
+    const opened = await w.platform.moneyAccounts.open(ctx, { key: 'fresh', name: 'Fresh bank', kind: 'bank' });
+    expect(opened.allowNegative).toBe(false);
+    const err = await expectCode(w.platform.moneyAccounts.transfer(ctx, { from: 'fresh', to: 'petty', amount: 10, date: today() }), 'rule_violation');
+    expect(err.message).toMatch(/only 0.00 available/);
+    await w.platform.moneyAccounts.close(ctx, 'fresh');
+  });
+
+  it('migration 012 turns the overdraft off for a bank account that holds zero or more, and leaves one below zero', async () => {
+    const ctx = w.as(w.ngoA);
+    await w.platform.moneyAccounts.open(ctx, { key: 'oldzero', name: 'Old zero', kind: 'bank', allowNegative: true });
+    await w.platform.moneyAccounts.open(ctx, { key: 'olddebt', name: 'Old debt', kind: 'bank', allowNegative: true });
+    await w.platform.moneyAccounts.open(ctx, { key: 'oldcash', name: 'Old cash', kind: 'cash', allowNegative: true });
+    await w.platform.moneyAccounts.transfer(ctx, { from: 'olddebt', to: 'petty', amount: 5, date: today() });
+    const sql = readFileSync(join(import.meta.dirname, '../migrations/012_overdraft_default_off.sql'), 'utf8');
+    const update = sql.slice(sql.indexOf('update money_account'), sql.indexOf('insert into schema_compatibility'));
+    const run = () => w.platform.db.asSystem((tx) => tx.query(update));
+    await run();
+    await run();
+    const flags = Object.fromEntries((await w.platform.moneyAccounts.list(ctx)).map((a) => [a.key, a.allowNegative]));
+    expect(flags).toMatchObject({ oldzero: false, olddebt: true, oldcash: true });
+  });
+
   it('refuses to turn the overdraft off while the account is below zero, and keeps closed accounts fixed', async () => {
     const ctx = w.as(w.ngoA);
-    await w.platform.moneyAccounts.open(ctx, { key: 'scratch2', name: 'Scratch 2', kind: 'bank' });
+    await w.platform.moneyAccounts.open(ctx, { key: 'scratch2', name: 'Scratch 2', kind: 'bank', allowNegative: true });
     await w.platform.moneyAccounts.transfer(ctx, { from: 'scratch2', to: 'petty', amount: 40, date: today() });
     await expectCode(w.platform.moneyAccounts.update(ctx, 'scratch2', { allowNegative: false }), 'rule_violation');
     await w.platform.moneyAccounts.transfer(ctx, { from: 'petty', to: 'scratch2', amount: 40, date: today() });

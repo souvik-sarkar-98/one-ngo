@@ -278,6 +278,7 @@ export type PageWidget = { index?: number; permission?: string } & (
     }
   | { type: 'list'; label: string; listView: string; view?: WidgetView; limit: number }
   | { type: 'links'; label: string; items: { label: string; to: string; permission?: string }[] }
+  | { type: 'wizards'; label: string; items: { label: string; to: string; permission?: string }[] }
 );
 
 export interface PageDef {
@@ -325,6 +326,12 @@ export interface Me {
     money: boolean;
     /** `money:accounts:manage`: open money accounts. */
     moneyManage?: boolean;
+    /** May import bank statements, pair them with the books and sign off. */
+    moneyReconcile?: boolean;
+    /** May move money between accounts. */
+    moneyTransfer?: boolean;
+    /** `ledger:read`: the trial balance. */
+    ledger?: boolean;
     /** `people:read`: the read-only directory. */
     peopleDirectory?: boolean;
     /** `members:manage`. */
@@ -341,6 +348,8 @@ export interface Me {
     migrationBooks?: boolean;
     /** `data:migrate:people`: map and run a people file (the person also needs `members:manage`). */
     migrationPeople?: boolean;
+    /** `data:migrate:state`: set migrated records' statuses without transitions. */
+    migrationState?: boolean;
     /** dmin:records: delete records and restore them from the recycle bin. */
     recordBin?: boolean;
   };

@@ -1,6 +1,6 @@
-name: CD (stage)
+name: Deploy Cloud Run (stage)
 
-# Called by ci.yml after "CI gate" passes on develop. Stage runs on Cloud Run,
+# Called by deploy.yml after "Test gate" passes on develop. Stage runs on Cloud Run,
 # in the project named by the stage environment. Production is a different
 # workflow and a different project.
 #
@@ -9,6 +9,11 @@ name: CD (stage)
 
 on:
   workflow_call:
+    inputs:
+      version:
+        description: 'Release version being deployed, for example 1.2.0-develop.1 (tagged after success)'
+        required: true
+        type: string
 
 concurrency:
   group: deploy-stage
@@ -24,17 +29,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: stage
-    outputs:
-      public_url: ${{ steps.urls.outputs.public_url }}
-      console_url: ${{ steps.urls.outputs.console_url }}
     env:
       PROJECT: ${{ vars.GCP_PROJECT_ID }}
       REGION: ${{ vars.GCP_REGION || 'asia-south1' }}
       MAIN_SERVICE: ngo
       CONSOLE_SERVICE: ngo-console
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # The tested commit itself. The tag does not exist until this succeeds.
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
@@ -48,11 +53,11 @@ jobs:
           node .github/scripts/stage-cloud-run.mjs apps/onengo/server .deploy/main
           node .github/scripts/stage-cloud-run.mjs apps/onengo-console/server .deploy/console
 
-      - uses: google-github-actions/auth@v2
+      - uses: google-github-actions/auth@7b53cdc2a387814ed14eec026287aac689ae8c9b # v2.1.9
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
-      - uses: google-github-actions/setup-gcloud@v2
+      - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
 
       - name: Migrate the stage database
         env:
@@ -74,6 +79,14 @@ jobs:
           CONSOLE_INTERNAL_TOKEN_SECRET: ${{ secrets.CONSOLE_INTERNAL_TOKEN_SECRET }}
           CONSOLE_OIDC_CLIENT_SECRET: ${{ secrets.CONSOLE_OIDC_CLIENT_SECRET }}
         run: bash .github/scripts/sync-stage-secrets.sh
+
+      # Cloud Run names allow only lowercase letters, digits and hyphens, so
+      # 1.2.0-develop.1 becomes v1-2-0-develop-1. The run number keeps a re-run
+      # of the same tag from colliding with the revision it already made.
+      - name: Name this release
+        env:
+          RELEASE_TAG: ${{ inputs.version }}
+        run: echo "REVISION_SUFFIX=v$(echo "$RELEASE_TAG" | tr . -)-r${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
 
       - name: Record the revisions now serving
         run: |
@@ -107,6 +120,7 @@ jobs:
               --memory 512Mi --cpu 1 --cpu-throttling \
               --concurrency "$concurrency" --port 8080 \
               --allow-unauthenticated --no-traffic --tag candidate \
+              --revision-suffix "$REVISION_SUFFIX" \
               --set-env-vars "$env_vars" \
               --set-secrets "$secrets" \
               --quiet
@@ -191,43 +205,11 @@ jobs:
         run: |
           {
             echo "### Stage deploy"
+            echo "- Release version: \`${{ inputs.version }}\` (commit \`${GITHUB_SHA::10}\`)"
+            echo "- Revision suffix: \`$REVISION_SUFFIX\`"
             echo "- Previous main revision: \`${PREVIOUS_MAIN:-none}\`"
             echo "- Previous console revision: \`${PREVIOUS_CONSOLE:-none}\`"
             echo "- Public app: ${{ steps.urls.outputs.public_url }}"
             echo "- Public console: ${{ steps.urls.outputs.console_url }}"
-            echo "- To go back, run Rollback (stage) with those two revision names."
+            echo "- To go back later, run the Rollback workflow (target stage) with the two previous revision names."
           } >> "$GITHUB_STEP_SUMMARY"
-
-  e2e:
-    name: Post-deploy end-to-end
-    needs: deploy
-    if: needs.deploy.result == 'success'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: tests/e2e/package-lock.json
-      - name: Install Playwright
-        working-directory: tests/e2e
-        run: npm ci
-      - name: Install Chromium
-        working-directory: tests/e2e
-        run: npx playwright install --with-deps chromium
-      - name: Open the deployed sign-in pages
-        working-directory: tests/e2e
-        env:
-          CI: true
-          APP_BASE_URL: ${{ needs.deploy.outputs.public_url }}
-          CONSOLE_BASE_URL: ${{ needs.deploy.outputs.console_url }}
-        run: npx playwright test --config=playwright.post-deploy.config.ts
-      - name: Upload the Playwright report
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: stage-playwright-${{ github.run_id }}
-          path: tests/e2e/playwright-report
-          retention-days: 7

@@ -7,6 +7,7 @@ import { actionPermission } from './action-permissions.js';
 import type { DefinitionService } from './definition-service.js';
 import { canEditField, canReadField } from './field-permissions.js';
 import { LOCALE_PATTERN, SHIPPED_LOCALES, type MessageCatalogue } from './messages.js';
+import type { AccountChoices, Choice } from './ports/account-choices.js';
 import type { LocaleStore } from './ports/locale-store.js';
 import { resolveRecordGroups } from './record-groups.js';
 import { translateBody } from './translate.js';
@@ -29,7 +30,29 @@ export class RuntimeService {
     private readonly defs: DefinitionService,
     private readonly catalogue: MessageCatalogue,
     private readonly settings: SettingReader,
+    /** Where fields with `choicesFrom` get their options. */
+    private readonly accounts?: AccountChoices,
   ) {}
+
+  /** The money accounts to offer, read only when some form of the person's has a field that takes its choices from them. */
+  private async accountChoices(tenantId: string, wanted: boolean): Promise<Choice[]> {
+    if (!wanted || !this.accounts) return [];
+    return this.tm.withTenant(tenantId, (tx) => this.accounts!.moneyAccounts(tx), { readOnly: true });
+  }
+
+  /** The options of action-form fields that take their choices from money accounts: the account's key is the value. Read only when some action asks. */
+  private async keyedAccountChoices(tenantId: string, wanted: ('moneyAccounts' | 'upiAccounts')[]): Promise<Record<'moneyAccounts' | 'upiAccounts', Choice[]>> {
+    const none = { moneyAccounts: [], upiAccounts: [] };
+    if (!wanted.length || !this.accounts) return none;
+    return this.tm.withTenant(
+      tenantId,
+      async (tx) => ({
+        moneyAccounts: wanted.includes('moneyAccounts') ? await this.accounts!.moneyAccountsByKey(tx) : [],
+        upiAccounts: wanted.includes('upiAccounts') ? await this.accounts!.moneyAccountsByKey(tx, { upi: true }) : [],
+      }),
+      { readOnly: true },
+    );
+  }
 
   /** The requested language, else the person's choice, else the organisation's default. */
   async localeFor(ctx: TenantContext, requested?: string): Promise<string> {
@@ -129,12 +152,18 @@ export class RuntimeService {
     );
 
     const actions: Record<string, (Omit<ActionDef, 'steps'> & { steps: { type: string }[]; allowed: boolean })[]> = {};
-    for (const a of (await this.defs.list(ctx.tenantId, 'action')).sort((x, y) => x.key.localeCompare(y.key))) {
+    const actionDefs = (await this.defs.list(ctx.tenantId, 'action')).sort((x, y) => x.key.localeCompare(y.key));
+    const keyed = await this.keyedAccountChoices(
+      ctx.tenantId,
+      actionDefs.flatMap((a) => a.body.form?.fields ?? []).flatMap((f) => (f.choicesFrom ? [f.choicesFrom] : [])),
+    );
+    for (const a of actionDefs) {
       if (a.body.hidden || !shown.has(a.body.recordType)) continue;
       const t = translateBody('action', a.body, entries);
       // Step settings (connectors, accounts) stay on the server; the app only needs to know what kind each step is.
       (actions[a.body.recordType] ??= []).push({
         ...t,
+        ...(t.form ? { form: { ...t.form, fields: t.form.fields.map((f) => (f.choicesFrom ? { ...f, choices: keyed[f.choicesFrom] } : f)) } } : {}),
         steps: t.steps.map((s) => ({ type: s.type })),
         allowed: can(ctx.actor, actionPermission(a.body)),
       });
@@ -150,12 +179,13 @@ export class RuntimeService {
         widgets: t.widgets
           .map((w, index) => ({ ...w, index }))
           .filter((w) => widgetVisible(ctx, w, shown, listTypes))
-          .map((w) => (w.type === 'links' ? { ...w, items: w.items.filter((i) => allowed(i.permission) && linkShown(i)) } : w))
-          .filter((w) => w.type !== 'links' || w.items.length > 0),
+          .map((w) => (w.type === 'links' || w.type === 'wizards' ? { ...w, items: w.items.filter((i) => allowed(i.permission) && linkShown(i)) } : w))
+          .filter((w) => (w.type !== 'links' && w.type !== 'wizards') || w.items.length > 0),
       });
     }
     const navItems = layout?.items.filter((i) => !(i.startsWith('page:') && hiddenPages.has(i.slice(5))) && !(i.startsWith('record:') && hiddenTypes.has(i.slice(7))));
 
+    const accountChoices = await this.accountChoices(ctx.tenantId, types.some((t) => t.body.fields.some((f) => f.choicesFrom === 'moneyAccounts')));
     return {
       locale,
       theme,
@@ -173,6 +203,7 @@ export class RuntimeService {
           ...body,
           fields: body.fields.map((f) => ({
             ...f,
+            ...(f.choicesFrom === 'moneyAccounts' ? { choices: accountChoices } : {}),
             ...(canReadField(ctx.actor, t.body, f) ? {} : { masked: true }),
             ...(canEditField(ctx.actor, f) ? {} : { readOnly: true }),
           })),

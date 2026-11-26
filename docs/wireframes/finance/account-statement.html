@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Account statement - wireframe</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<nav class="topnav"><a href="index.html">Finance wireframes</a><span>/</span><b>Account statement</b></nav>
+<header class="page">
+  <h1>Account statement <span class="ws">WS4</span><span class="ws">WS5</span></h1>
+  <p>A new screen at <code>/accounts/:key/statement</code>. It lists every entry on one money account between two dates, with a running balance and a link to the record that caused it. Opened from the Statement action on the Money page. All figures are made up.</p>
+  <div class="legend">
+    <span class="key"><i class="k-new"></i> New</span>
+    <span class="key"><i class="k-chg"></i> Changed</span>
+    <span class="key"><i class="k-old"></i> Existing, unchanged</span>
+  </div>
+</header>
+
+<main class="page">
+
+<h2 class="sec">1. Statement, desktop</h2>
+<p class="sub">Needs <code>money:accounts:read</code>. Data comes from <code>GET /api/money/accounts/:key/ledger?from=&amp;to=</code>.</p>
+
+<div class="browser">
+  <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.onengo.example/accounts/upi/statement</span></div>
+  <div class="scr" style="min-height:760px">
+    <div class="appbar"><span class="brand">OneNGO</span><span class="org">Asha Trust</span><span class="sp"></span><span class="av">SS</span></div>
+    <div class="body">
+      <nav class="rail">
+        <div class="nv"><span class="g">&#8962;</span>Home</div>
+        <div class="nv"><span class="g">&#9776;</span>Records</div>
+        <div class="nv on"><span class="g">&#8377;</span>Money</div>
+        <div class="nv"><span class="g">&#9638;</span>Reports</div>
+        <div class="nv"><span class="g">&#9993;</span>Inbox</div>
+      </nav>
+      <div class="main is-new" style="outline-offset:-4px">
+        <div class="crumbs"><a href="#">Home</a><span class="sep">&rsaquo;</span><a href="#">Money</a><span class="sep">&rsaquo;</span><a href="#">Main bank account (SBI)</a><span class="sep">&rsaquo;</span>Statement</div>
+        <div class="pagehead">
+          <h1>Main bank account (SBI) <span class="badge info">BANK</span></h1>
+          <span class="btn">Reconcile</span>
+          <span class="btn">Export CSV <span class="pin n">4</span></span>
+        </div>
+
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+            <div class="field" style="margin:0"><label>From</label><div class="inp" style="width:150px">01 Apr 2026 <span>&#128197;</span></div></div>
+            <div class="field" style="margin:0"><label>To</label><div class="inp" style="width:150px">31 May 2026 <span>&#128197;</span></div></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span class="btn sm">This financial year</span><span class="btn sm">Last month</span><span class="btn sm">This month</span>
+            </div>
+            <span class="btn primary sm" style="margin-left:auto">Show</span>
+          </div>
+          <p class="hint">Financial year 2026-27 runs 1 Apr 2026 to 31 Mar 2027. The default range is the current financial year.</p>
+        </div>
+
+        <div class="kpis" style="margin-bottom:12px">
+          <div class="kpi"><span>Opening, 01 Apr 2026</span><b>&#8377;1,80,000.00</b></div>
+          <div class="kpi"><span>Money in</span><b style="color:var(--ok)">&#8377;16,740.00</b></div>
+          <div class="kpi"><span>Money out</span><b style="color:var(--bad)">&#8377;59,200.00</b></div>
+          <div class="kpi total"><span>Closing, 31 May 2026</span><b>&#8377;1,37,540.00</b></div>
+        </div>
+
+        <table class="t">
+          <thead><tr>
+            <th>Date</th><th>Description</th><th>Source <span class="pin">2</span></th><th class="n">Money in</th><th class="n">Money out</th><th class="n">Balance</th>
+          </tr></thead>
+          <tbody>
+            <tr class="tot"><td colspan="5">Opening balance</td><td class="n">1,80,000.00</td></tr>
+            <tr><td>02 Apr</td><td class="desc">Donation from Asha Verma</td><td><a href="#">DON/2026-27/00001</a></td><td class="n">10,000.00</td><td class="n"></td><td class="n">1,90,000.00</td></tr>
+            <tr><td>14 Apr</td><td class="desc">Expense: Travel, field visit</td><td><a href="#">EXP/2026-27/00003</a></td><td class="n"></td><td class="n">4,200.00</td><td class="n">1,85,800.00</td></tr>
+            <tr><td>20 Apr</td><td class="desc">Transfer Main bank to Project bank (HDFC)</td><td><span class="badge off">Transfer</span></td><td class="n"></td><td class="n">50,000.00</td><td class="n">1,35,800.00</td></tr>
+            <tr><td>02 May</td><td class="desc">Membership fee from Ravi Nair</td><td><a href="#">MFEE/2026-27/00007</a></td><td class="n">500.00</td><td class="n"></td><td class="n">1,36,300.00</td></tr>
+            <tr class="struck"><td>10 May</td><td class="desc">Donation from Meena Rao</td><td><a href="#">DON/2026-27/00009</a> <span class="badge bad">Reversed</span></td><td class="n">5,000.00</td><td class="n"></td><td class="n">1,41,300.00</td></tr>
+            <tr><td>11 May</td><td class="desc">Reversal: duplicate entry</td><td><span class="badge warn">Reversal</span> <a href="#">DON/2026-27/00009</a></td><td class="n"></td><td class="n">5,000.00</td><td class="n">1,36,300.00</td></tr>
+            <tr><td>18 May</td><td class="desc">Interest earned, savings</td><td><a href="#">ERN/2026-27/00002</a></td><td class="n">1,240.00</td><td class="n"></td><td class="n">1,37,540.00</td></tr>
+            <tr class="tot"><td colspan="3">Closing balance</td><td class="n">16,740.00</td><td class="n">59,200.00</td><td class="n">1,37,540.00</td></tr>
+          </tbody>
+        </table>
+        <p class="hint">2,000 lines at most per request. If the range holds more, a "Load more" button appears under the table.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <h3>What changes</h3>
+  <ol>
+    <li><b>Whole screen</b> is new. Nothing like it exists today: the server cannot list the lines of one account over a date range, and the Money page shows only a current balance. <span class="ws">WS4</span></li>
+    <li><b>Source column.</b> Each line links to the record that caused it (donation, claim, fee, earning). Transfers and manual bank bookings show a badge instead of a link. Reversed entries are struck through and the reversal shows its own line.</li>
+    <li><b>Running balance</b> adds each line to the opening balance. The closing balance must equal the account balance on the Money page for the same date.</li>
+    <li><b>Export CSV</b> downloads the table as shown, with the same date range.</li>
+  </ol>
+  <h3 style="margin-top:12px">Behaviour</h3>
+  <ul>
+    <li>Closed accounts still open the statement.</li>
+    <li>A person who cannot read a record type still sees the line, but the source shows only the record number with no link.</li>
+    <li>The Reconcile button appears only for people with <code>money:reconcile</code>, and only on bank accounts.</li>
+  </ul>
+</div>
+
+<h2 class="sec">2. Statement, mobile</h2>
+<p class="sub">Lines become cards. The running balance is kept on each card so the account can be checked at a glance.</p>
+<div class="phone" style="margin-top:6px">
+  <div class="scr">
+    <div class="appbar"><span class="brand">OneNGO</span><span class="org">Asha Trust</span><span class="sp"></span><span class="av">SS</span></div>
+    <div class="main">
+      <div class="crumbs"><a href="#">Money</a><span class="sep">&rsaquo;</span>Statement</div>
+      <div class="pagehead" style="margin-bottom:8px"><h1 style="font-size:1rem;min-width:0">Main bank account (SBI)</h1><span class="btn sm">CSV</span></div>
+      <div class="card" style="padding:10px;margin-bottom:10px">
+        <div class="two"><div class="inp" style="font-size:12px">01 Apr 2026</div><div class="inp" style="font-size:12px">31 May 2026</div></div>
+        <div class="kpi total" style="margin-top:8px"><span>Closing balance</span><b>&#8377;1,37,540.00</b></div>
+      </div>
+      <div class="mcard"><div class="top"><div><b>Donation from Asha Verma</b><div class="meta">02 Apr &middot; <a href="#">DON/2026-27/00001</a></div></div><b style="color:var(--ok)">+10,000.00</b></div><div class="mini">Balance &#8377;1,90,000.00</div></div>
+      <div class="mcard"><div class="top"><div><b>Expense: Travel, field visit</b><div class="meta">14 Apr &middot; <a href="#">EXP/2026-27/00003</a></div></div><b style="color:var(--bad)">-4,200.00</b></div><div class="mini">Balance &#8377;1,85,800.00</div></div>
+      <div class="mcard"><div class="top"><div><b>Transfer to Project bank</b><div class="meta">20 Apr &middot; Transfer</div></div><b style="color:var(--bad)">-50,000.00</b></div><div class="mini">Balance &#8377;1,35,800.00</div></div>
+    </div>
+    <div class="navbar">
+      <div class="nv"><span class="g">&#8962;</span>Home</div>
+      <div class="nv"><span class="g">&#9776;</span>Records</div>
+      <div class="nv on"><span class="g">&#8377;</span>Money</div>
+      <div class="nv"><span class="g">&#9993;</span>Inbox</div>
+    </div>
+  </div>
+</div>
+
+</main>
+</body>
+</html>

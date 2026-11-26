@@ -47,15 +47,18 @@ describe('deployment credential boundaries', () => {
     const mainManifest = text('apps/onengo/server/app.yaml');
     const operatorManifest = text('apps/onengo-console/server/app.yaml');
     expect(mainManifest).toMatch(/service:\s*default/);
-    expect(mainManifest).toMatch(/service_account:\s*REPLACE_WITH_MAIN_SERVICE_ACCOUNT/);
-    expect(mainManifest).toContain('DATABASE_SYSTEM_URL:');
-    expect(mainManifest).toContain('DATABASE_RUNTIME_URL:');
+    expect(mainManifest).toMatch(/service_account:\s*REPLACE_WITH_SERVICE_ACCOUNT/);
     expect(operatorManifest).toMatch(/service:\s*console/);
-    expect(operatorManifest).toMatch(/service_account:\s*REPLACE_WITH_OPERATOR_SERVICE_ACCOUNT/);
+    expect(operatorManifest).toMatch(/service_account:\s*REPLACE_WITH_CONSOLE_SERVICE_ACCOUNT/);
     expect(operatorManifest).not.toMatch(/ingress_settings/);
-    expect(operatorManifest).toContain('OPERATOR_DATABASE_URL:');
-    expect(operatorManifest).toContain('OPERATOR_RUNTIME_URL:');
-    for (const serving of [mainManifest, operatorManifest, text('apps/onengo/server/src/main.ts'), text('apps/onengo-console/server/src/main.ts')]) {
+    // Secret values live in Secret Manager. The bootstrap reads them at start-up, so the manifests carry no secret names.
+    const secretNames = /DATABASE_(SYSTEM|RUNTIME|OWNER)_URL|OPERATOR_(DATABASE|RUNTIME)_URL|TOKEN_SECRET|ENCRYPTION_KEY|CLIENT_SECRET/;
+    for (const manifest of [mainManifest, operatorManifest]) {
+      expect(manifest).toMatch(/entrypoint:\s*node --enable-source-maps dist\/bootstrap\.js/);
+      expect(manifest).not.toMatch(secretNames);
+    }
+    expect(text('.github/workflows/deploy-gcp.yml')).not.toMatch(/REPLACE_WITH_(?:CONSOLE_)?(?:SYSTEM|RUNTIME|ENCRYPTION|TOKEN|INTERNAL|OIDC_CLIENT_SECRET)/);
+    for (const serving of [mainManifest, operatorManifest, text('apps/onengo/server/src/main.ts'), text('apps/onengo-console/server/src/main.ts'), text('apps/onengo/server/src/bootstrap.ts'), text('apps/onengo-console/server/src/bootstrap.ts')]) {
       expect(serving).not.toContain('DATABASE_OWNER_URL');
       expect(serving).not.toMatch(/(?:^|\s)DATABASE_URL\s*[:=]/);
     }

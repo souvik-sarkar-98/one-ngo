@@ -14,6 +14,12 @@
     "condition": { "type": "string", "description": "Posts only when this is true for the record", "x-expression": { "recordType": "/recordType" }, "x-group": "when" },
     "date": { "type": "string", "description": "Expression returning an ISO date", "x-expression": { "recordType": "/recordType" }, "x-group": "when" },
     "memo": { "type": "string", "description": "Expression returning text", "x-expression": { "recordType": "/recordType" }, "x-group": "when" },
+    "overdraftReason": {
+      "type": "string",
+      "description": "Expression returning why this entry may take a bank, cash or wallet account below zero. Leave empty to refuse an entry that would overdraw an account that does not allow it",
+      "x-expression": { "recordType": "/recordType" },
+      "x-group": "when"
+    },
     "lines": {
       "type": "array",
       "minItems": 2,

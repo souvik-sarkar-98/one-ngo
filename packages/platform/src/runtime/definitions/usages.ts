@@ -180,7 +180,7 @@ function recordTypeUsages(defs: AnyDefinition[], type: string, field: string | u
         if (r.recordType !== type) break;
         if (!field) c.add(d, '/recordType', 'posting rule');
         else {
-          for (const k of ['condition', 'date', 'memo'] as const) if (mentionsField(r[k], field)) c.add(d, `/${k}`, k);
+          for (const k of ['condition', 'date', 'memo', 'overdraftReason'] as const) if (mentionsField(r[k], field)) c.add(d, `/${k}`, k);
           r.lines.forEach((l, i) => {
             if ([l.amount, l.accountExpr, l.fund].some((e) => mentionsField(e, field))) c.add(d, `/lines/${i}`, `${l.side} line`);
           });
@@ -344,6 +344,9 @@ export function findUsages(defs: AnyDefinition[], target: UsageTarget): Usage[] 
         const base = d.kind === 'automation' ? '/actions' : '/steps';
         steps.forEach((s, i) => s.type === 'notify' && s.template === target.key && c.add(d, `${base}/${i}/template`, 'sends it'));
       }
+      for (const d of others) {
+        if (d.kind === 'report' && d.body.outputs?.pdf?.template === target.key) c.add(d, '/outputs/pdf/template', 'prints it');
+      }
       return c.out;
     }
     case 'listView': {
@@ -376,12 +379,36 @@ export function findUsages(defs: AnyDefinition[], target: UsageTarget): Usage[] 
       }
       return c.out;
     }
+    case 'page': {
+      const c = new Collector();
+      const at = `/pages/${target.key}`;
+      const opens = (to: string) => to === at || ['?', '/', '#'].some((sep) => to.startsWith(`${at}${sep}`));
+      for (const d of others) {
+        if (d.kind !== 'page') continue;
+        d.body.widgets.forEach((w, i) => {
+          if (w.type !== 'links' && w.type !== 'wizards') return;
+          w.items.forEach((l, j) => opens(l.to) && c.add(d, `/widgets/${i}/items/${j}/to`, `link '${l.label}'`));
+        });
+      }
+      return c.out;
+    }
     case 'report': {
       const c = new Collector();
       for (const d of others) {
-        if (d.kind !== 'reportGroup') continue;
-        const i = d.body.reports.indexOf(target.key);
-        if (i >= 0) c.add(d, `/reports/${i}`, 'report group');
+        if (d.kind === 'reportGroup') {
+          const i = d.body.reports.indexOf(target.key);
+          if (i >= 0) c.add(d, `/reports/${i}`, 'report group');
+        } else if (d.kind === 'automation' || d.kind === 'action') {
+          const steps = d.kind === 'automation' ? d.body.actions : d.body.steps;
+          const base = d.kind === 'automation' ? '/actions' : '/steps';
+          steps.forEach((s, i) => s.type === 'report' && s.report === target.key && c.add(d, `${base}/${i}/report`, 'opens it'));
+        } else if (d.kind === 'page') {
+          const at = `/reports/${target.key}`;
+          d.body.widgets.forEach((w, i) => {
+            if (w.type !== 'links' && w.type !== 'wizards') return;
+            w.items.forEach((l, j) => (l.to === at || l.to.startsWith(`${at}?`)) && c.add(d, `/widgets/${i}/items/${j}/to`, `link '${l.label}'`));
+          });
+        }
       }
       return c.out;
     }

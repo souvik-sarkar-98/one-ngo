@@ -1,5 +1,5 @@
 import { sql } from 'kysely';
-import type { MoneyAccount, MoneyAccountKind, MoneyAccountStore } from '../../../domain/accounts/ports/money-account-store.js';
+import type { LedgerStatementLine, MoneyAccount, MoneyAccountKind, MoneyAccountStore } from '../../../domain/accounts/ports/money-account-store.js';
 import { writeAudit } from './audit-store.js';
 import type { Tx } from '../../../domain/ports/transaction.js';
 import { executorOf, pg } from '../tx.js';
@@ -127,6 +127,100 @@ export const pgMoneyAccountStore: MoneyAccountStore = {
   async byKey(tx, key) {
     const row = await selectAccounts(tx).where('m.key', '=', key).executeTakeFirst();
     return row ? toAccount(row) : undefined;
+  },
+
+  async balancesAsOf(tx, asOf) {
+    const rows = await pg(tx)
+      .selectFrom('money_account as m')
+      .innerJoin('ledger_account as a', 'a.id', 'm.ledger_account_id')
+      .select([
+        'm.key',
+        'm.name',
+        'm.kind',
+        'a.code',
+        sql<string>`coalesce((select sum(l.debit - l.credit) from journal_line l join journal_entry e on e.id = l.entry_id where l.account_id = m.ledger_account_id and e.entry_date <= ${asOf}::date), 0)::numeric(14, 2)::text`.as(
+          'balance',
+        ),
+      ])
+      .where('m.tenant_id', '=', TENANT)
+      .where('m.status', '=', 'active')
+      .orderBy('m.kind')
+      .orderBy('m.name')
+      .execute();
+    return rows.map((r) => ({ key: r.key, name: r.name, kind: r.kind as MoneyAccountKind, ledgerCode: r.code, balance: r.balance }));
+  },
+
+  async ledgerStatement(tx, key, range, page) {
+    const db = pg(tx);
+    const account = sql`(select ledger_account_id from money_account where tenant_id = app_tenant() and key = ${key})`;
+    const { rows: head } = await sql<{ opening: string; total_in: string; total_out: string; count: string }>`
+      select
+        coalesce(sum(l.debit - l.credit) filter (where e.entry_date < ${range.from}::date), 0)::numeric(14, 2)::text as opening,
+        coalesce(sum(l.debit) filter (where e.entry_date between ${range.from}::date and ${range.to}::date), 0)::numeric(14, 2)::text as total_in,
+        coalesce(sum(l.credit) filter (where e.entry_date between ${range.from}::date and ${range.to}::date), 0)::numeric(14, 2)::text as total_out,
+        count(*) filter (where e.entry_date between ${range.from}::date and ${range.to}::date)::text as count
+      from journal_line l
+      join journal_entry e on e.id = l.entry_id
+      where l.tenant_id = app_tenant() and l.account_id = ${account} and e.entry_date <= ${range.to}::date`.execute(db);
+    const { opening, total_in, total_out, count } = head[0]!;
+    const { rows } = await sql<{
+      id: string;
+      entry_id: string;
+      date: string;
+      memo: string | null;
+      debit: string;
+      credit: string;
+      balance: string;
+      status: string;
+      is_reversal: boolean;
+      transfer_id: string | null;
+      record_id: string | null;
+      record_type: string | null;
+      record_number: string | null;
+    }>`
+      select l.id, e.id as entry_id, to_char(e.entry_date, 'YYYY-MM-DD') as date, e.memo,
+             l.debit::numeric(14, 2)::text as debit, l.credit::numeric(14, 2)::text as credit,
+             (${opening}::numeric + sum(l.debit - l.credit) over (order by e.entry_date, e.created_at, l.id))::numeric(14, 2)::text as balance,
+             e.status, e.reverses_entry_id is not null as is_reversal, t.id as transfer_id,
+             r.id as record_id, r.type_key as record_type, r.number as record_number
+        from journal_line l
+        join journal_entry e on e.id = l.entry_id
+        left join journal_entry undone on undone.id = e.reverses_entry_id
+        left join transfer t on t.journal_entry_id = coalesce(undone.id, e.id)
+        left join record r on r.id = coalesce(e.source_record_id, undone.source_record_id)
+       where l.tenant_id = app_tenant() and l.account_id = ${account}
+         and e.entry_date between ${range.from}::date and ${range.to}::date
+       order by e.entry_date, e.created_at, l.id
+       limit ${page.limit} offset ${page.offset}`.execute(db);
+    const lines = rows.map(
+      (r): LedgerStatementLine => ({
+        id: r.id,
+        entryId: r.entry_id,
+        date: r.date,
+        memo: r.memo,
+        debit: r.debit,
+        credit: r.credit,
+        balance: r.balance,
+        kind: r.is_reversal ? 'reversal' : r.transfer_id ? 'transfer' : r.record_id ? 'record' : 'manual',
+        reversed: r.status === 'reversed',
+        sourceRecordId: r.record_id,
+        sourceRecordType: r.record_type,
+        sourceRecordNumber: r.record_number,
+      }),
+    );
+    const closingPaise = Math.round(Number(opening) * 100) + Math.round(Number(total_in) * 100) - Math.round(Number(total_out) * 100);
+    return { opening, totalIn: total_in, totalOut: total_out, closing: (closingPaise / 100).toFixed(2), count: Number(count), lines };
+  },
+
+  async ledgerAccounts(tx) {
+    const rows = await pg(tx)
+      .selectFrom('ledger_account as a')
+      .leftJoin('money_account as m', 'm.ledger_account_id', 'a.id')
+      .select(['a.code', 'a.name', 'a.type', 'a.active', 'm.key as money_key'])
+      .where('a.tenant_id', '=', TENANT)
+      .orderBy('a.code')
+      .execute();
+    return rows.map((r) => ({ code: r.code, name: r.name, type: r.type, active: r.active, moneyKey: r.money_key }));
   },
 
   async lock(tx, keys) {

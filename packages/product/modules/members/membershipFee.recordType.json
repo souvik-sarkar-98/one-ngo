@@ -25,10 +25,8 @@
       "label": "Received in",
       "type": "choice",
       "visibleWhen": "status == 'paid'",
-      "choices": [
-        { "value": "BANK", "label": "Bank account" },
-        { "value": "CASH", "label": "Cash in hand" }
-      ]
+      "choicesFrom": "moneyAccounts",
+      "help": "The real account the money reached"
     },
     {
       "key": "method",
