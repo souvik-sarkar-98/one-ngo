@@ -5,7 +5,11 @@
   "pluralLabel": "Members",
   "description": "Members of the organisation, with their designation, contact details, address, and membership fees. Name, email and joining date come from the person's account.",
   "titleField": "name",
-  "numbering": { "sequence": "member", "format": "MBR/{seq:5}", "reset": "never" },
+  "numbering": {
+    "sequence": "member",
+    "format": "MBR/{seq:5}",
+    "reset": "never"
+  },
   "fields": [
     {
       "key": "login",
@@ -24,7 +28,9 @@
       "unique": true,
       "searchable": true,
       "placeholder": "Generated when the member is saved",
-      "generated": { "pattern": "NM{yymm:joinedOn}{initial:firstName}{initial:lastName}{seq:3}" }
+      "generated": {
+        "pattern": "NM{yymm:joinedOn}{initial:firstName}{initial:lastName}{seq:3}"
+      }
     },
     {
       "key": "name",
@@ -33,7 +39,10 @@
       "maxLength": 300,
       "searchable": true,
       "placeholder": "Filled from the selected person",
-      "follow": { "via": "login", "field": "name" }
+      "follow": {
+        "via": "login",
+        "field": "name"
+      }
     },
     {
       "key": "firstName",
@@ -69,14 +78,38 @@
       "personal": true,
       "placeholder": "Select a title",
       "choices": [
-        { "value": "mr", "label": "Mr" },
-        { "value": "mrs", "label": "Mrs" },
-        { "value": "ms", "label": "Ms" },
-        { "value": "miss", "label": "Miss" },
-        { "value": "dr", "label": "Dr" },
-        { "value": "prof", "label": "Prof" },
-        { "value": "shri", "label": "Shri" },
-        { "value": "smt", "label": "Smt" }
+        {
+          "value": "mr",
+          "label": "Mr"
+        },
+        {
+          "value": "mrs",
+          "label": "Mrs"
+        },
+        {
+          "value": "ms",
+          "label": "Ms"
+        },
+        {
+          "value": "miss",
+          "label": "Miss"
+        },
+        {
+          "value": "dr",
+          "label": "Dr"
+        },
+        {
+          "value": "prof",
+          "label": "Prof"
+        },
+        {
+          "value": "shri",
+          "label": "Shri"
+        },
+        {
+          "value": "smt",
+          "label": "Smt"
+        }
       ]
     },
     {
@@ -86,13 +119,40 @@
       "personal": true,
       "placeholder": "Select a gender",
       "choices": [
-        { "value": "male", "label": "Male" },
-        { "value": "female", "label": "Female" },
-        { "value": "other", "label": "Other" },
-        { "value": "undisclosed", "label": "Prefer not to say" }
+        {
+          "value": "male",
+          "label": "Male"
+        },
+        {
+          "value": "female",
+          "label": "Female"
+        },
+        {
+          "value": "other",
+          "label": "Other"
+        },
+        {
+          "value": "undisclosed",
+          "label": "Prefer not to say"
+        }
       ]
     },
-    { "key": "dateOfBirth", "label": "Date of birth", "type": "date", "personal": true, "placeholder": "Select date of birth" },
+    {
+      "key": "dateOfBirth",
+      "label": "Date of birth",
+      "type": "date",
+      "personal": true,
+      "placeholder": "Select date of birth"
+    },
+    {
+      "key": "picture",
+      "label": "Picture",
+      "type": "file",
+      "accept": [
+        "image"
+      ],
+      "maxSizeMb": 2
+    },
     {
       "key": "designation",
       "label": "Designation",
@@ -107,7 +167,10 @@
       "type": "date",
       "required": true,
       "placeholder": "Filled from the person's joined date",
-      "follow": { "via": "login", "field": "joinedAt" }
+      "follow": {
+        "via": "login",
+        "field": "joinedAt"
+      }
     },
     {
       "key": "email",
@@ -115,7 +178,10 @@
       "type": "email",
       "searchable": true,
       "placeholder": "Filled from the selected person",
-      "follow": { "via": "login", "field": "email" }
+      "follow": {
+        "via": "login",
+        "field": "email"
+      }
     },
     {
       "key": "phone",
@@ -126,11 +192,34 @@
       "placeholder": "+91 98765 43210",
       "help": "Include the country code, for example +91 for India"
     },
-
-    { "key": "addressLine1", "label": "Address line 1", "type": "text", "maxLength": 200, "placeholder": "House or flat number, street" },
-    { "key": "addressLine2", "label": "Address line 2", "type": "text", "maxLength": 200, "placeholder": "Area, locality" },
-    { "key": "addressLine3", "label": "Address line 3", "type": "text", "maxLength": 200, "placeholder": "Landmark" },
-    { "key": "city", "label": "City", "type": "text", "maxLength": 100, "placeholder": "For example Bengaluru" },
+    {
+      "key": "addressLine1",
+      "label": "Address line 1",
+      "type": "text",
+      "maxLength": 200,
+      "placeholder": "House or flat number, street"
+    },
+    {
+      "key": "addressLine2",
+      "label": "Address line 2",
+      "type": "text",
+      "maxLength": 200,
+      "placeholder": "Area, locality"
+    },
+    {
+      "key": "addressLine3",
+      "label": "Address line 3",
+      "type": "text",
+      "maxLength": 200,
+      "placeholder": "Landmark"
+    },
+    {
+      "key": "city",
+      "label": "City",
+      "type": "text",
+      "maxLength": 100,
+      "placeholder": "For example Bengaluru"
+    },
     {
       "key": "pincode",
       "label": "Pincode",
@@ -140,10 +229,27 @@
       "patternMessage": "Enter a 6-digit pincode.",
       "placeholder": "560001"
     },
-    { "key": "district", "label": "District", "type": "text", "maxLength": 100, "placeholder": "For example Bengaluru Urban" },
-    { "key": "state", "label": "State", "type": "text", "maxLength": 100, "placeholder": "For example Karnataka" },
-    { "key": "country", "label": "Country", "type": "text", "maxLength": 100, "placeholder": "For example India" },
-
+    {
+      "key": "district",
+      "label": "District",
+      "type": "text",
+      "maxLength": 100,
+      "placeholder": "For example Bengaluru Urban"
+    },
+    {
+      "key": "state",
+      "label": "State",
+      "type": "text",
+      "maxLength": 100,
+      "placeholder": "For example Karnataka"
+    },
+    {
+      "key": "country",
+      "label": "Country",
+      "type": "text",
+      "maxLength": 100,
+      "placeholder": "For example India"
+    },
     {
       "key": "joiningFee",
       "label": "Membership fee",
@@ -152,18 +258,28 @@
       "placeholder": "Amount to collect from this member",
       "help": "A membership fee for this amount is raised automatically when the member is created. Leave blank to raise none"
     },
-
     {
       "key": "feesPaid",
       "label": "Membership fees paid",
       "type": "number",
-      "rollup": { "recordType": "membershipFee", "reference": "member", "measure": "count", "where": "status == 'paid'" }
+      "rollup": {
+        "recordType": "membershipFee",
+        "reference": "member",
+        "measure": "count",
+        "where": "status == 'paid'"
+      }
     },
     {
       "key": "feesTotal",
       "label": "Total fees paid",
       "type": "money",
-      "rollup": { "recordType": "membershipFee", "reference": "member", "measure": "sum", "field": "amount", "where": "status == 'paid'" }
+      "rollup": {
+        "recordType": "membershipFee",
+        "reference": "member",
+        "measure": "sum",
+        "field": "amount",
+        "where": "status == 'paid'"
+      }
     },
     {
       "key": "notes",
@@ -171,6 +287,13 @@
       "type": "longText",
       "placeholder": "Reason for resignation",
       "help": "Asked only when recording a resignation"
+    },
+    {
+      "key": "resignedOn",
+      "label": "Resigned on",
+      "type": "date",
+      "required": false,
+      "placeholder": "Filled from resignationined date"
     }
   ]
 }

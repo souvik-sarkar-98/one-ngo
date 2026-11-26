@@ -1,6 +1,6 @@
 {
   "key": "donations",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "label": "Donations",
   "description": "Keep donors, record donations from raised to paid, post them to the books, and issue numbered receipts.",
   "engine": "0.1.0",
@@ -47,20 +47,59 @@
           "report:donationRegister:run"
         ]
       },
-      { "key": "viewer", "label": "Viewer", "permissions": ["record:donor:read", "record:donation:read", "people:read"] }
+      {
+        "key": "viewer",
+        "label": "Viewer",
+        "permissions": [
+          "record:donor:read",
+          "record:donation:read",
+          "people:read"
+        ]
+      }
     ],
     "accounts": [
-      { "code": "BANK", "name": "Bank account", "type": "asset" },
-      { "code": "CASH", "name": "Cash in hand", "type": "asset" },
-      { "code": "DONATION_INCOME", "name": "Donations received", "type": "income" },
-      { "code": "OPENING_FUNDS", "name": "Opening funds", "type": "equity" }
+      {
+        "code": "BANK",
+        "name": "Bank account",
+        "type": "asset"
+      },
+      {
+        "code": "CASH",
+        "name": "Cash in hand",
+        "type": "asset"
+      },
+      {
+        "code": "DONATION_INCOME",
+        "name": "Donations received",
+        "type": "income"
+      },
+      {
+        "code": "OPENING_FUNDS",
+        "name": "Opening funds",
+        "type": "equity"
+      }
     ],
     "moneyAccounts": [
-      { "key": "upi", "name": "Main bank account", "kind": "bank", "ledgerCode": "BANK" },
-      { "key": "cash", "name": "Cash in hand", "kind": "cash", "ledgerCode": "CASH" }
+      {
+        "key": "upi",
+        "name": "Main bank account",
+        "kind": "bank",
+        "ledgerCode": "BANK"
+      },
+      {
+        "key": "cash",
+        "name": "Cash in hand",
+        "kind": "cash",
+        "ledgerCode": "CASH"
+      }
     ],
     "receiptSeries": [
-      { "key": "donation-receipt", "prefix": "RCPT", "label": "Donation acknowledgement", "reset": "fiscal_year" }
+      {
+        "key": "donation-receipt",
+        "prefix": "RCPT",
+        "label": "Donation acknowledgement",
+        "reset": "fiscal_year"
+      }
     ]
   }
 }
