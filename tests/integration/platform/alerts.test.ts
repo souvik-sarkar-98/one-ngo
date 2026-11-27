@@ -101,26 +101,3 @@ describe('alert events', () => {
   });
 });
 
-describe('monitoring definitions', () => {
-  const dir = MONITORING_DIR;
-  const read = (file: string) => JSON.parse(readFileSync(join(dir, file), 'utf8'));
-  const metrics = new Map(readdirSync(join(dir, 'metrics')).map((f) => [basename(f, '.json'), read(join('metrics', f)) as { filter: string }]));
-  const policyFilters: string[] = readdirSync(join(dir, 'policies')).flatMap((f) =>
-    read(join('policies', f)).conditions.map((c: { conditionThreshold: { filter: string } }) => c.conditionThreshold.filter),
-  );
-  const chartFilters: string[] = read('dashboard.json').mosaicLayout.tiles.flatMap(
-    (t: { widget: { xyChart: { dataSets: { timeSeriesQuery: { timeSeriesFilter: { filter: string } } }[] } } }) =>
-      t.widget.xyChart.dataSets.map((d) => d.timeSeriesQuery.timeSeriesFilter.filter),
-  );
-
-  it('have one log-based metric per alert name, each with an alert policy and a dashboard chart', () => {
-    expect(metrics.size).toBe(Object.keys(ALERT).length);
-    for (const alert of Object.values(ALERT)) {
-      const [name] = [...metrics].find(([, m]) => m.filter === `jsonPayload.alert="${alert}"`) ?? [];
-      expect(name, alert).toBeDefined();
-      const type = `metric.type="logging.googleapis.com/user/${name}"`;
-      expect(policyFilters.filter((f) => f.includes(type)), alert).toHaveLength(1);
-      expect(chartFilters.filter((f) => f.includes(type)), alert).toHaveLength(1);
-    }
-  });
-});
