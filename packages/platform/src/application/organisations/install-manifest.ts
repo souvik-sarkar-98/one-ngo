@@ -3,8 +3,15 @@ import type { SignInTheme } from './organisation-service.js';
 const BRAND = '#1f5f8b';
 const BACKGROUND = '#f5f7fa';
 
+interface ManifestIcon {
+  src: string;
+  sizes: string;
+  type: string;
+  purpose?: string;
+}
+
 /** The shared heart, used when the organisation has no logo the browser can install. */
-const DEFAULT_ICONS = [
+const DEFAULT_ICONS: ManifestIcon[] = [
   { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
   { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
   { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
@@ -48,39 +55,39 @@ const LOGO = /^\/api\/auth\/organisations\/([a-z0-9][a-z0-9-]{0,39})\/logo\?v=(\
  * Square icons made from the logo. Chrome's install dialog ignores a wide
  * image and draws a letter instead, so the logo is fitted into a square PNG.
  */
-function icons(logoUrl: string | null | undefined, logoMime: string | null | undefined): Record<string, string>[] {
-  const match = LOGO.exec(logoUrl?.trim() ?? '');
-  const type = logoMime?.trim().toLowerCase() ?? '';
-  if (!match || !ICON_TYPES.has(type)) return DEFAULT_ICONS;
-  const src = (size: number) => `/api/auth/organisations/${match[1]}/icon/${size}?v=${match[2]}&i=${INSTALL_ICON_REVISION}`;
-  return [
-    { src: src(192), sizes: '192x192', type: 'image/png', purpose: 'any' },
-    { src: src(512), sizes: '512x512', type: 'image/png', purpose: 'any' },
-    { src: src(512), sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-    { src: src(180), sizes: '180x180', type: 'image/png' },
-  ];
-}
+  function icons(logoUrl: string | null | undefined, logoMime: string | null | undefined): ManifestIcon[] {
+    const match = LOGO.exec(logoUrl?.trim() ?? '');
+    const type = logoMime?.trim().toLowerCase() ?? '';
+    if (!match || !ICON_TYPES.has(type)) return DEFAULT_ICONS;
+    const src = (size: number) => `/api/auth/organisations/${match[1]}/icon/${size}?v=${match[2]}&i=${INSTALL_ICON_REVISION}`;
+    return [
+      { src: src(192), sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: src(512), sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: src(512), sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: src(180), sizes: '180x180', type: 'image/png' },
+    ];
+  }
 
-/**
- * The web app manifest for one organisation. `id` keeps each organisation a
- * separate installed app. `start_url` opens that organisation's sign-in page.
- * `scope` stays the whole site so the signed-in app remains in the same window.
- * Icon and start addresses are root-absolute because this document is served
- * from the API, not from the site root. The intended home-screen icon is the
- * organisation logo, or the shared heart when it has none. Windows Chrome
- * still installs a letter; that is a known bug (docs/ui-design.md).
- */
-export function organisationManifest(org: InstallManifestInput): Record<string, unknown> {
-  const name = org.displayName.trim() || org.code;
-  return {
-    name,
-    short_name: shortName(name, org.code),
-    id: `/o/${org.code}/`,
-    start_url: `/o/${org.code}/sign-in`,
-    scope: '/',
-    display: 'standalone',
-    theme_color: colour(org.theme?.brand, BRAND),
-    background_color: colour(org.theme?.background, BACKGROUND),
-    icons: icons(org.logoUrl, org.logoMime),
-  };
-}
+  /**
+   * The web app manifest for one organisation. `id` keeps each organisation a
+   * separate installed app. `start_url` opens that organisation's sign-in page.
+   * `scope` stays the whole site so the signed-in app remains in the same window.
+   * Icon and start addresses are root-absolute because this document is served
+   * from the API, not from the site root. The intended home-screen icon is the
+   * organisation logo, or the shared heart when it has none. Windows Chrome
+   * still installs a letter; that is a known bug (docs/ui-design.md).
+   */
+  export function organisationManifest(org: InstallManifestInput): Record<string, unknown> {
+    const name = org.displayName.trim() || org.code;
+    return {
+      name,
+      short_name: shortName(name, org.code),
+      id: `/o/${org.code}/`,
+      start_url: `/o/${org.code}/sign-in`,
+      scope: '/',
+      display: 'standalone',
+      theme_color: colour(org.theme?.brand, BRAND),
+      background_color: colour(org.theme?.background, BACKGROUND),
+      icons: icons(org.logoUrl, org.logoMime),
+    };
+  }

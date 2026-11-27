@@ -71,11 +71,11 @@ function contain(logo: Rgba, size: number): Rgba {
     for (let x = 0; x < dw; x++) {
       const sx = Math.min(logo.width - 1, Math.floor(((x + 0.5) * logo.width) / dw));
       const from = (sy * logo.width + sx) * 4;
-      const alpha = logo.pixels[from + 3] / 255;
+      const alpha = (logo.pixels[from + 3] ?? 255) / 255;
       const to = ((oy + y) * size + ox + x) * 4;
-      pixels[to] = Math.round(logo.pixels[from] * alpha + WHITE[0] * (1 - alpha));
-      pixels[to + 1] = Math.round(logo.pixels[from + 1] * alpha + WHITE[1] * (1 - alpha));
-      pixels[to + 2] = Math.round(logo.pixels[from + 2] * alpha + WHITE[2] * (1 - alpha));
+      pixels[to] = Math.round((logo.pixels[from] ?? 0) * alpha + WHITE[0] * (1 - alpha));
+      pixels[to + 1] = Math.round((logo.pixels[from + 1] ?? 0) * alpha + WHITE[1] * (1 - alpha));
+      pixels[to + 2] = Math.round((logo.pixels[from + 2] ?? 0) * alpha + WHITE[2] * (1 - alpha));
       pixels[to + 3] = 255;
     }
   }
@@ -91,7 +91,7 @@ function heart(size: number): Rgba {
   for (let py = 0; py < size; py++) {
     for (let px = 0; px < size; px++) {
       let covered = 0;
-      const rgb = [0, 0, 0];
+      const rgb: [number, number, number] = [0, 0, 0];
       for (let sy = 0; sy < samples; sy++) {
         for (let sx = 0; sx < samples; sx++) {
           const x = ((px + (sx + 0.5) / samples) / size) * 2 - 1;
@@ -148,9 +148,9 @@ function decodePng(buf: Buffer): Rgba | null {
     if (type === 'IHDR') {
       width = data.readUInt32BE(0);
       height = data.readUInt32BE(4);
-      bitDepth = data[8];
-      colorType = data[9];
-      interlace = data[12];
+      bitDepth = data[8] ?? 0;
+      colorType = data[9] ?? 0;
+      interlace = data[12] ?? 0;
     } else if (type === 'PLTE') palette = new Uint8Array(data);
     else if (type === 'tRNS') transparency = new Uint8Array(data);
     else if (type === 'IDAT') idat.push(Buffer.from(data));
@@ -166,6 +166,7 @@ function decodePng(buf: Buffer): Rgba | null {
   const pixels = new Uint8Array(width * height * 4);
   for (let y = 0; y < height; y++) {
     const row = rows[y];
+    if (!row) return null;
     for (let x = 0; x < width; x++) {
       const at = (y * width + x) * 4;
       const i = x * channels;
@@ -175,13 +176,15 @@ function decodePng(buf: Buffer): Rgba | null {
         pixels.set(row.subarray(i, i + 3), at);
         pixels[at + 3] = 255;
       } else if (colorType === 4) {
-        pixels[at] = pixels[at + 1] = pixels[at + 2] = row[i];
-        pixels[at + 3] = row[i + 1];
+        const v = row[i] ?? 0;
+        pixels[at] = pixels[at + 1] = pixels[at + 2] = v;
+        pixels[at + 3] = row[i + 1] ?? 255;
       } else if (colorType === 0) {
-        pixels[at] = pixels[at + 1] = pixels[at + 2] = row[i];
+        const v = row[i] ?? 0;
+        pixels[at] = pixels[at + 1] = pixels[at + 2] = v;
         pixels[at + 3] = 255;
       } else if (colorType === 3 && palette) {
-        const index = row[i];
+        const index = row[i] ?? 0;
         const p = index * 3;
         pixels[at] = palette[p] ?? 0;
         pixels[at + 1] = palette[p + 1] ?? 0;
@@ -204,15 +207,16 @@ function unfilter(raw: Buffer, height: number, stride: number, channels: number)
     const prev = rows[y - 1];
     if (filter === 1 || filter === 3 || filter === 4) {
       for (let i = 0; i < stride; i++) {
-        const left = i >= channels ? row[i - channels] : 0;
-        const up = prev ? prev[i] : 0;
-        const ul = prev && i >= channels ? prev[i - channels] : 0;
-        if (filter === 1) row[i] = (row[i] + left) & 255;
-        else if (filter === 3) row[i] = (row[i] + Math.floor((left + up) / 2)) & 255;
-        else row[i] = (row[i] + paeth(left, up, ul)) & 255;
+        const left = i >= channels ? (row[i - channels] ?? 0) : 0;
+        const up = prev ? (prev[i] ?? 0) : 0;
+        const ul = prev && i >= channels ? (prev[i - channels] ?? 0) : 0;
+        const cur = row[i] ?? 0;
+        if (filter === 1) row[i] = (cur + left) & 255;
+        else if (filter === 3) row[i] = (cur + Math.floor((left + up) / 2)) & 255;
+        else row[i] = (cur + paeth(left, up, ul)) & 255;
       }
     } else if (filter === 2 && prev) {
-      for (let i = 0; i < stride; i++) row[i] = (row[i] + prev[i]) & 255;
+      for (let i = 0; i < stride; i++) row[i] = ((row[i] ?? 0) + (prev[i] ?? 0)) & 255;
     }
     rows.push(row);
   }

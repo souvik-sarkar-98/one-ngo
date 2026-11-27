@@ -4,7 +4,7 @@ import { buildServer } from '../../src/http/server.js';
 import { clientAddressKey, proxyTrust, trustProxyFromEnv } from '../../src/http/client-address.js';
 import { ORGANISATION_LOOKUP_FLOOR_MS } from '../../src/http/plugins/organisation.js';
 import { MemoryRateLimiter, safeNextPath } from '@onengo/platform/testing';
-import { safeNext } from '@onengo/web-kit';
+import { safeNext } from '@onengo/web-kit/safe-next';
 import { createWorld, type TestWorld } from '../../../../../packages/platform/test/helpers.js';
 
 /**

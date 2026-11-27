@@ -63,7 +63,7 @@ describe('list view live preview', () => {
     }));
     const draft: ListViewDef = {
       ...donationsView,
-      chips: [...donationsView.chips, { id: 'guest', label: 'Guest', filters: { donorType: { eq: 'guest' } } }],
+      chips: [...(donationsView.chips ?? []), { id: 'guest', label: 'Guest', filters: { donorType: { eq: 'guest' } } }],
     };
     const { total } = await listPreview({ draft, subject: { type: donationType, workflows: [donationWorkflow] }, records }).rows('guest');
     expect(total).toBe(records.filter((r) => r.data.donorType === 'guest').length);

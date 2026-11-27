@@ -40,7 +40,7 @@ describe('list spec', () => {
   it('keeps a chip field condition and sends it with the list query', () => {
     const view = {
       ...donationsView,
-      chips: [...donationsView.chips, { id: 'guest', label: 'Guest', filters: { donorType: { eq: 'guest' } } }],
+      chips: [...(donationsView.chips ?? []), { id: 'guest', label: 'Guest', filters: { donorType: { eq: 'guest' } } }],
     };
     const s = resolveListSpec(donationType, donationWorkflow, view);
     expect(s.chips.find((c) => c.id === 'guest')?.filters).toEqual({ donorType: { eq: 'guest' } });

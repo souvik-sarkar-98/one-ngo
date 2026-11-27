@@ -25,6 +25,7 @@
       "@onengo/platform/deployment": ["./packages/platform/src/api/deployment.ts"],
       "@onengo/platform/testing": ["./packages/platform/src/api/testing.ts"],
       "@onengo/platform/icons": ["./packages/platform/src/runtime/definitions/icon-names.ts"],
+      "@onengo/web-kit/safe-next": ["./packages/web-kit/src/logic/safe-next.ts"],
       "@onengo/server/*": ["./apps/onengo/server/src/*"]
     }
   }
