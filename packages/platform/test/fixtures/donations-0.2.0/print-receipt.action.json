@@ -1,8 +1,0 @@
-{
-  "key": "printReceipt",
-  "recordType": "donation",
-  "label": "Print receipt",
-  "placement": ["panel", "row"],
-  "when": "status == 'paid'",
-  "steps": [{ "type": "openReceipt" }]
-}

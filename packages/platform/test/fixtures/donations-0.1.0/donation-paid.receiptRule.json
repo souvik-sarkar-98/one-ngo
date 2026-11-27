@@ -1,8 +1,0 @@
-{
-  "key": "donationPaidReceipt",
-  "recordType": "donation",
-  "whenStatus": "paid",
-  "series": "donation-receipt",
-  "amount": "record.amount",
-  "date": "record.paidOn"
-}
