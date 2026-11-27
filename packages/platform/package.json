@@ -17,8 +17,8 @@
     "db:types": "tsx scripts/db-types.ts"
   },
   "dependencies": {
-    "@onengo/kernel": "0.1.0",
-    "@onengo/product": "0.1.0",
+    "@onengo/kernel": "1.0.0",
+    "@onengo/product": "1.0.0",
     "@simplewebauthn/server": "^13.3.3",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
