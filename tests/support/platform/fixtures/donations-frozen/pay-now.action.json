@@ -1,0 +1,29 @@
+{
+  "key": "payNow",
+  "hidden": false,
+  "recordType": "donation",
+  "label": "Pay now",
+  "placement": ["panel"],
+  "when": "status == 'raised'",
+  "form": {
+    "fields": [
+      {
+        "key": "account",
+        "label": "Pay into",
+        "type": "choice",
+        "choicesFrom": "upiAccounts",
+        "help": "The bank account the donor pays into. Only accounts with a UPI ID are listed. Leave empty to use the main bank account"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "type": "createPayment",
+      "provider": "upi",
+      "amount": "record.amount",
+      "account": "upi",
+      "accountFrom": "input.account",
+      "onPaid": { "transition": "markPaid", "fields": { "paidOn": "paidOn", "reference": "reference", "method": "method", "account": "receivedIn" }, "methodValue": "upi" }
+    }
+  ]
+}

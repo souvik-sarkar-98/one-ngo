@@ -14,6 +14,11 @@ export interface RecordsGateway {
   revokeReceiptLink(receiptId: string): Promise<void>;
   pendingApproval(type: string, id: string): Promise<PendingApproval | null>;
   decide(approvalId: string, decision: 'approve' | 'reject'): Promise<{ status: string; message?: string }>;
+  /** An administrator's delete at the version they read; the record goes to the recycle bin. */
+  remove(type: string, id: string, version: number): Promise<void>;
+  /** The record's live public link, or null when it has none. */
+  publicLink(type: string, id: string): Promise<string | null>;
+  revokePublicLink(type: string, id: string): Promise<void>;
 }
 
 /** An error as the server reports it: a message, a code, and per-field issues. */

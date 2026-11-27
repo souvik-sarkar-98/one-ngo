@@ -3,6 +3,9 @@ import type {
   AuthenticationEvidence,
   TenantAuthPolicy,
 } from './assurance.js';
+import type { EmailPurpose } from '../email-purposes.js';
+
+export type { EmailPurpose } from '../email-purposes.js';
 /** Account, sign-in, session and member lookups the owner-level database capability provides across organisations. */
 export interface OidcLoginStart {
   state_hash: string;
@@ -93,10 +96,6 @@ export interface PasswordTokenInput {
   createdBy: string | null;
   evidence?: AuthenticationEvidence;
 }
-
-/** The system emails an organisation may send from one of its message templates. */
-export const EMAIL_PURPOSES = ['sign_in_code', 'password_reset', 'invite'] as const;
-export type EmailPurpose = (typeof EMAIL_PURPOSES)[number];
 
 /** One-time sign-in credentials (emailed codes, reset and invitation links, two-step tickets) and failed-attempt throttling. */
 export interface SignInStore {

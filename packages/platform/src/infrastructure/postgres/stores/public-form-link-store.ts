@@ -1,4 +1,5 @@
 import { sql } from 'kysely';
+import type { CatalogueHit, PublicFormLinkStore, StoredPublicLink } from '../../../application/actions/ports/public-form-link-store.js';
 import type { Tx } from '../../../domain/ports/transaction.js';
 import type { Database } from '../db.js';
 import { typed } from '../kysely.js';
@@ -6,23 +7,11 @@ import { pg } from '../tx.js';
 
 const TENANT = sql<string>`app_tenant()`;
 
-export interface StoredPublicLink {
-  tokenEnc: string;
-  revoked: boolean;
-}
-
-export interface CatalogueHit {
-  id: string;
-  number: string | null;
-  status: string | null;
-  data: Record<string, unknown>;
-}
-
 /**
  * Secret links for a record a visitor submitted. Tenant rows are read and written inside the
  * tenant's transaction. The token lookup runs as the system and matches only the hash of a live token.
  */
-export class PostgresPublicFormLinkStore {
+export class PostgresPublicFormLinkStore implements PublicFormLinkStore {
   constructor(private readonly db: Database) {}
 
   async findLive(tokenHash: string): Promise<{ tenantId: string; recordId: string } | null> {

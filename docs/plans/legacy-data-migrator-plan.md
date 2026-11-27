@@ -18,7 +18,7 @@ Every fact below was read in the code. Corrections to the brief come first becau
 | C6 | `IdentityService.addMember` "account upsert, then membership and roles" | True, and two transactions (`accounts.add` runs through `db.asSystem`, then `withTenant`). But `MemberStore.join` does `on conflict … set status = 'active'`, so re-adding a suspended member reactivates them. `AccountStore.add` on conflict is a no-op update (it keeps the name and password) and returns the existing id. | `addMember` cannot be reused as is for an idempotent migration. A new `importMember` path is needed (M3). |
 | C7 | "A role with `require_two_step` locks out people who have not enrolled" | Worse than a lock-out you can fix. `completeSignIn` and `signInVerifiedUser` throw before any session exists when a role requires two-step and TOTP is not enabled. `beginTwoStep` acts only on the signed-in actor (`POST /api/auth/two-step/begin`, `…/confirm`). Nobody can enrol such a person. The Settings screen shows only on/off. | The Check blocks people files that give a `require_two_step` role. Assign that role after the person has signed in and enrolled. |
 | C8 | "plain Fastify routes with schema contracts" | The migration plugin (`apps/onengo/server/src/http/plugins/migration.ts`) uses no schemas; `readMapping` validates by hand and returns path-level issues. Other plugins use `schemaOf` contracts (for example `http/contracts/members.ts`). | New routes get a coarse contract in `http/contracts/migration.ts`. Deep validation stays in `readMapping`, which gives better messages. |
-| C9 | "no owner access outside the kernel; a test enforces this" | `owner-capabilities.test.ts` counts `.asSystem(` and `db.exec(` outside `packages/platform/src/infrastructure/`; the allowlist `packages/platform/test/owner-capabilities-allowlist.json` is `{}`. | No new owner call may appear in application code. People import needs no new owner capability (see 3.1). |
+| C9 | "no owner access outside the kernel; a test enforces this" | `owner-capabilities.test.ts` counts `.asSystem(` and `db.exec(` outside `packages/platform/src/infrastructure/`; the allowlist `tests/support/platform/owner-capabilities-allowlist.json` is `{}`. | No new owner call may appear in application code. People import needs no new owner capability (see 3.1). |
 | C10 | "Person cells resolve only by email or user id of an ACTIVE member" | Confirmed: `resolvePerson` uses `PersonDirectory.find`, where active means member active and account active. A saved person value must also be an active member when set (`personFieldIssues`). | Decision 2: a suspended or missing user cannot fill a person field without a small platform change (M4). |
 | C11 | Source formats | `exceljs` is already a declared dependency of `packages/platform`. Node core has no ZIP reader. | XLSX needs no new dependency. ZIP does. |
 
@@ -70,7 +70,7 @@ New in the application layer:
 
 - `IdentityService.importMember(ctx, input, alongside)`: like `addMember`, but it (a) never reactivates, (b) can create a suspended member, (c) sets locale, (d) adds roles additively under `demandGrant`, (e) writes audit `member.imported`, (f) runs `alongside(tx, userId)` in the membership transaction to write the mapping row, (g) does not call `actorCache.clear()` per row (the caller calls `forgetActors()` once per batch; each membership or role insert already bumps `tenant.access_version` by trigger).
 - `MemberStore.importJoin(tx, userId, { displayName, status, locale })`: insert if absent; if present change only `display_name` and `locale`, never `status`.
-- `MigrationService` receives an `identity` port limited to `importMember` and `forgetActors` (check `packages/platform/test/layer-graph.ts` allows application → application).
+- `MigrationService` receives an `identity` port limited to `importMember` and `forgetActors` (check `tests/support/platform/layer-graph.ts` allows application → application).
 
 ### 3.2 Permissions
 
@@ -312,7 +312,7 @@ Screens: `apps/onengo/web/src/app/admin/migration/migration.screen.ts` and `migr
 
 ### 3.10 Tests
 
-Unit (`packages/platform/test/`):
+Unit (`tests/unit/platform/`) and integration (`tests/integration/platform/`):
 - `migration-mapping.test.ts`: people mapping rules and paths, role map, status lists, `persons` and `files` rules, a column used for both a person and a text field, kind dispatch with an old mapping lacking `kind`, `@people` ordering (people before records, hand order refused, cycle unaffected).
 - New `migration-people.test.ts`: email normalisation, the conflict table, ID mapping with UUID, integer and text legacy ids, role grant refusal, `require_two_step` refusal, suspended-in-file handling.
 
@@ -407,7 +407,7 @@ The sections above are the plan as approved. The code differs in these places; t
 
 ## 9. Acceptance criteria and the tests that cover them
 
-Backend tests are in `packages/platform/test/`. The journey is `tests/e2e/specs/journeys/data/e2e-12-legacy-migration.spec.ts` (not executed yet).
+Backend tests are in `tests/unit/platform/` and `tests/integration/platform/`. The journey is `tests/e2e/specs/journeys/data/e2e-12-legacy-migration.spec.ts` (not executed yet).
 
 | # | Criterion | Tests (file: test name) |
 | --- | --- | --- |

@@ -29,7 +29,7 @@
 .crumbs__item + .crumbs__item::before {
   content: '›';
   margin: 0 6px;
-  color: #94a3b8;
+  color: var(--grey-400, #94a3b8);
 }
 .crumbs__item--last {
   flex: 0 1 auto;

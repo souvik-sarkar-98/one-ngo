@@ -53,6 +53,7 @@ export function defineReceiptContract(world: World): void {
           date: IN_PERIOD,
           replacesReceiptId: null,
           issuer: ISSUER,
+          signatures: [],
           content: wording,
         }),
       );
@@ -104,6 +105,7 @@ export function defineReceiptContract(world: World): void {
             date: IN_PERIOD,
             replacesReceiptId: null,
             issuer: ISSUER,
+            signatures: [],
           }),
         );
       await expectRefused(world(), again({ number: r.number }), 'duplicate');

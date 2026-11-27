@@ -14,3 +14,7 @@ typecheck-output.txt
 .vscode/
 .cursor/
 utilities/migration-samples/
+
+# Word lock and temp files
+~$*
+~WRL*.tmp

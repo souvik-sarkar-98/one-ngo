@@ -16,6 +16,8 @@
   --section-border: var(--brand-tint-line);
   --section-radius: 12px;
   --chip-active-shadow: none;
+  --chip-padding: 6px 18px;
+  --chip-padding-narrow: 6px 16px;
   --action-grid-columns: 4;
   --action-grid-gap: .5rem;
   --row-menu-size: 24px;
@@ -138,6 +140,14 @@ tr.clickable:hover { background: var(--uld-row-hover); }
 
 /* Overrides of the pinned list toolkit styles. They carry a little more weight (`html` first) so they win over the component styles. */
 html .chip-bar .chip-bar__chip--active { box-shadow: var(--chip-active-shadow); }
+/* Chips are a little roomier than the toolkit's, on narrow screens too. */
+html .chip-bar .chip-bar__chip { padding: var(--chip-padding); }
+@media (max-width: 480px) {
+  html .chip-bar .chip-bar__chip { padding: var(--chip-padding-narrow); }
+}
+/* A form spans its container, so what follows it (a card's Save row) starts below it rather than beside it. */
+html cf-form { display: block; width: 100%; min-width: 0; }
+html cf-form .cf-form { width: 100%; }
 html .table-rows .list-dashboard__row-menu-btn { width: var(--row-menu-size); height: var(--row-menu-size); }
 /* Row lines a little clearer than the toolkit's; the last row stays borderless because the "End of list" line below it carries the rule. */
 html .table-rows.table-rows.table-rows td { border-bottom-color: var(--table-line); }

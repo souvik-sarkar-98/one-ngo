@@ -71,7 +71,7 @@ type PreviewSurface = 'list' | 'form' | 'signIn';
             <div class="th__body th__form">
               <div class="th__field">
                 <span>{{ 'ui.builder.preview.sampleName' | t }}</span>
-                <div class="th__input" aria-hidden="true">Ravi Kumar</div>
+                <div class="th__input" aria-hidden="true">{{ 'ui.builder.preview.sampleName' | t }}</div>
               </div>
               <div class="th__field">
                 <span>{{ 'ui.builder.preview.sampleList' | t }}</span>
@@ -83,7 +83,7 @@ type PreviewSurface = 'list' | 'form' | 'signIn';
           @case ('signIn') {
             <div class="th__bar">{{ 'ui.admin.theme.preview.signIn' | t }}</div>
             <div class="th__body th__signin">
-              <div class="th__signin-title">Demo Foundation</div>
+              <div class="th__signin-title">{{ 'ui.builder.preview.sampleOrganisation' | t }}</div>
               <button appBtn="primary" type="button" tabindex="-1">{{ 'ui.auth.signIn' | t }}</button>
             </div>
           }

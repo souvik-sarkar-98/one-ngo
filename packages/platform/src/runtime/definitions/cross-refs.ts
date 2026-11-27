@@ -1,10 +1,10 @@
 import { checkPattern } from './field-pattern.js';
-import { parseGenerated } from '../../shared/definitions/generated-pattern.js';
+import { parseGenerated } from '../expressions/generated-pattern.js';
 import { checkExpression } from '../expressions/expression.js';
 import type { FieldIssue } from '@onengo/kernel/errors';
 import { checkCron } from './cron.js';
 import { checkDeclaredInputs, HOOK_TAKES_EFFECTS } from './script-inputs.js';
-import { checkTemplate } from './template.js';
+import { checkTemplate } from '../expressions/template.js';
 import { checkDocumentTemplate } from './document-template.js';
 import { REGISTRATION_TYPE } from '../../domain/organisations/organisation.js';
 import type {

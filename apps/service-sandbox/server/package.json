@@ -7,7 +7,7 @@
   "scripts": {
     "start": "tsx src/main.ts",
     "dev": "tsx src/main.ts",
-    "test": "vitest run --config vitest.config.ts",
+    "test": "vitest run --config ../../../vitest.config.ts --project unit tests/unit/service-sandbox",
     "check": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

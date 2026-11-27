@@ -1,0 +1,65 @@
+{
+  "key": "donor",
+  "hidden": false,
+  "label": "Donor",
+  "pluralLabel": "Donors",
+  "description": "People and organisations who give, with their totals.",
+  "titleField": "name",
+  "numbering": { "sequence": "donor", "format": "DNR/{seq:5}", "reset": "never" },
+  "fields": [
+    { "key": "name", "label": "Name", "type": "text", "required": true, "maxLength": 200, "searchable": true },
+    { "key": "email", "label": "Email", "type": "email", "searchable": true },
+    { "key": "phone", "label": "Phone", "type": "phone", "searchable": true },
+    {
+      "key": "pan",
+      "label": "PAN",
+      "type": "text",
+      "maxLength": 10,
+      "sensitive": true,
+      "unique": true,
+      "pattern": "[A-Z]{5}[0-9]{4}[A-Z]",
+      "patternMessage": "Enter the PAN as five letters, four digits and a letter, for example ABCDE1234F."
+    },
+    { "key": "address", "label": "Address", "type": "longText", "maxLength": 1000 },
+    { "key": "city", "label": "City", "type": "text", "maxLength": 100 },
+    {
+      "key": "login",
+      "label": "Person",
+      "type": "person",
+      "unique": true,
+      "placeholder": "Search by name or email",
+      "help": "The person this donor is. Leave blank for donors who have no account. Member donors are linked to the same person as their member profile."
+    },
+    {
+      "key": "donorType",
+      "label": "Donor type",
+      "type": "choice",
+      "choices": [
+        { "value": "individual", "label": "Individual" },
+        { "value": "organisation", "label": "Organisation" },
+        { "value": "member", "label": "Member" }
+      ]
+    },
+    {
+      "key": "monthlyDonation",
+      "label": "Monthly donation",
+      "type": "money",
+      "min": 1,
+      "placeholder": "Leave blank for none",
+      "help": "Raised as a donation on the 1st of every month, and the donor is emailed. Clear it to stop."
+    },
+    {
+      "key": "totalGiven",
+      "label": "Total given",
+      "type": "money",
+      "rollup": { "recordType": "donation", "reference": "donor", "measure": "sum", "field": "amount", "where": "status == 'paid'" }
+    },
+    {
+      "key": "donationCount",
+      "label": "Donations paid",
+      "type": "number",
+      "rollup": { "recordType": "donation", "reference": "donor", "measure": "count", "where": "status == 'paid'" }
+    },
+    { "key": "notes", "label": "Notes", "type": "longText" }
+  ]
+}

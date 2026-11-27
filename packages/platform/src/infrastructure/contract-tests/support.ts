@@ -101,6 +101,7 @@ export async function issueReceipt(world: ProviderWorld, tx: Tx, amount: string,
     date: IN_PERIOD,
     replacesReceiptId,
     issuer: ISSUER,
+    signatures: [],
   });
 }
 

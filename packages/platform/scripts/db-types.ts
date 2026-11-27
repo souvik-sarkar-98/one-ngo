@@ -6,7 +6,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Cli } from 'kysely-codegen';
 import { migrate, PgDatabase } from '@onengo/platform/testing';
-import { dropDatabase, prepareDatabase, typesDatabaseUrl, waitForNoConnections, withClient } from '../test/test-database.js';
+import { dropDatabase, prepareDatabase, typesDatabaseUrl, waitForNoConnections, withClient } from '../../../tests/support/platform/test-database.js';
 
 const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const CONFIG_FILE = join(PACKAGE_ROOT, '.kysely-codegenrc.json');

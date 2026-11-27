@@ -7,7 +7,7 @@ import type { AuditTrail } from '../../domain/ports/audit-trail.js';
 import type { TransactionManager, Tx } from '../../domain/ports/transaction.js';
 import type { DefinitionReader } from '../../runtime/definitions/definition-service.js';
 import { canReadField, isReadProtected, MASK } from '../../runtime/definitions/field-permissions.js';
-import { checkTemplate, renderEmailHtml, renderTemplate } from '../../runtime/definitions/template.js';
+import { checkTemplate, renderEmailHtml, renderTemplate } from '../../runtime/expressions/template.js';
 import { ExpressionError } from '../../runtime/expressions/expression.js';
 import type { EmailPurpose } from '../../domain/identity/ports/identity-directory.js';
 import type { FieldDef, NotifyChannel, RecipientDef } from '../../runtime/definitions/types.js';

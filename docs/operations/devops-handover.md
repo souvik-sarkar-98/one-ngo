@@ -195,7 +195,7 @@ Record: the first green gate run, the first production release name, the date **
 | `http.unhandled_error` | ERROR | A request got a 500 from an unexpected error. The policy fires above 5 in 5 minutes | Users see a request id; search for it in the entry's trace field. A burst right after a deploy points at the release: route traffic back to the previous version |
 | `memory.high` | WARNING | An instance's resident memory is above `MEMORY_ALERT_MB` (default 300 of the F1 instance's 384 MB) | Look for a large import or export, or growth since a deploy. Steady load means a larger instance class |
 
-The definitions are in `docs/operations/monitoring/` (read `docs/operations/monitoring/README.md` too): one log-based metric per alert in `metrics/` (the file name is the metric name), one alert policy per metric in `policies/`, and `dashboard.json`.
+The definitions are in `docs/monitoring/` (read `docs/monitoring/README.md` too): one log-based metric per alert in `metrics/` (the file name is the metric name), one alert policy per metric in `policies/`, and `dashboard.json`.
 
 ### Steps
 
@@ -205,18 +205,18 @@ The definitions are in `docs/operations/monitoring/` (read `docs/operations/moni
 
    ```powershell
    $project = '<project id>'
-   Get-ChildItem docs/operations/monitoring/metrics/*.json | ForEach-Object {
+   Get-ChildItem docs/monitoring/metrics/*.json | ForEach-Object {
      gcloud logging metrics create $_.BaseName --project=$project --config-from-file=$_.FullName
    }
    $channel = "projects/$project/notificationChannels/<channel id>"
-   Get-ChildItem docs/operations/monitoring/policies/*.json | ForEach-Object {
+   Get-ChildItem docs/monitoring/policies/*.json | ForEach-Object {
      gcloud alpha monitoring policies create --project=$project --policy-from-file=$_.FullName --notification-channels=$channel
    }
-   gcloud monitoring dashboards create --project=$project --config-from-file=docs/operations/monitoring/dashboard.json
+   gcloud monitoring dashboards create --project=$project --config-from-file=docs/monitoring/dashboard.json
    ```
 
    These files were checked only as valid JSON; gcloud has not been run against them. If gcloud rejects a field, note the exact error and send it to the development team rather than editing the file in place.
-4. **Do not run `create` twice.** It makes duplicates. For later changes use `gcloud logging metrics update`, `gcloud alpha monitoring policies update <policy id>` and `gcloud monitoring dashboards update <dashboard id>` (`docs/operations/monitoring/README.md` has the full commands).
+4. **Do not run `create` twice.** It makes duplicates. For later changes use `gcloud logging metrics update`, `gcloud alpha monitoring policies update <policy id>` and `gcloud monitoring dashboards update <dashboard id>` (`docs/monitoring/README.md` has the full commands).
 5. **Check that an alert fires.** From Cloud Shell or another Bash shell (PowerShell mangles the JSON quotes):
 
    ```bash
@@ -474,7 +474,7 @@ Record: date, provider account (test mode), the case results, and any request or
 
 ## Migration numbering
 
-Migrations in `packages/platform/migrations/` run in file-name order and the history table records the full file name, so gaps in the numbers are harmless. There is no `023` (`022` is followed by `024`). Do not renumber or rename an applied file: its name is its history row, and a renamed file would run again. `packages/platform/src/infrastructure/postgres/migrate.ts` and `packages/platform/test/migrate.test.ts` do not assume consecutive numbers.
+Migrations in `packages/platform/migrations/` run in file-name order and the history table records the full file name, so gaps in the numbers are harmless. There is no `023` (`022` is followed by `024`). Do not renumber or rename an applied file: its name is its history row, and a renamed file would run again. `packages/platform/src/infrastructure/postgres/migrate.ts` and `tests/integration/platform/migrate.test.ts` do not assume consecutive numbers.
 
 ## Client address behind a proxy (TRUST_PROXY)
 

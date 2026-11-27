@@ -8,7 +8,7 @@ import { checksum } from '../../runtime/definitions/definition-service.js';
 import { describeChanges, diffDefinitions, same, type DescribeLabels } from '../../runtime/definitions/describe.js';
 import { applyExtensionPatch, stalePatchPaths } from '../../runtime/definitions/merge.js';
 import { byInstallOrder, loadModulePackage, moduleContents, publishModulePackage, type ModuleContent } from '../../runtime/definitions/package-loader.js';
-import { renderEmailHtml, renderTemplate } from '../../runtime/definitions/template.js';
+import { renderEmailHtml, renderTemplate } from '../../runtime/expressions/template.js';
 import { DocumentTemplateError, renderDocumentHtml } from '../../runtime/definitions/document-template.js';
 import {
   DEFINITION_KINDS,

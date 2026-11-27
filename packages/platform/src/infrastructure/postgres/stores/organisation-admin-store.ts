@@ -161,7 +161,7 @@ export const postgresOrganisationAdminStore: OrganisationAdminStore = {
       .executeTakeFirst();
   },
 
-  async setupFacts(tx, administratorRole) {
+  async setupFacts(tx, administratorRole, settings) {
     const k = pg(tx);
     const facts = await k
       .selectNoFrom((eb) => [
@@ -195,7 +195,7 @@ export const postgresOrganisationAdminStore: OrganisationAdminStore = {
               .innerJoin('connector as c', (j) => j.onRef('c.tenant_id', '=', 's.tenant_id').on(sql<SqlBool>`c.key = (s.value #>> '{}')`))
               .select(eb.lit(1).as('one'))
               .where('s.tenant_id', '=', APP_TENANT)
-              .where('s.key', '=', 'mail.connector')
+              .where('s.key', '=', settings.mailConnector)
               .where('c.enabled', '=', true)
               .where('c.type', '=', 'email'),
           )
@@ -207,7 +207,7 @@ export const postgresOrganisationAdminStore: OrganisationAdminStore = {
               .innerJoin('connector as c', (j) => j.onRef('c.tenant_id', '=', 's.tenant_id').on(sql<SqlBool>`c.key = (s.value #>> '{}')`))
               .select(eb.lit(1).as('one'))
               .where('s.tenant_id', '=', APP_TENANT)
-              .where('s.key', '=', 'files.storeConnector')
+              .where('s.key', '=', settings.fileStore)
               .where('c.enabled', '=', true)
               .where('c.type', '=', 'storage'),
           )

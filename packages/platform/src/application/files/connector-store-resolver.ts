@@ -1,10 +1,10 @@
 import { PLATFORM_STORE, type FileStore, type FileStoreResolver } from '@onengo/kernel/files';
 import { ruleViolation } from '@onengo/kernel/errors';
 import type { TransactionManager } from '../../domain/ports/transaction.js';
+import { parseStorageConfig } from '../../domain/connectors/storage-config.js';
 import type { OAuthCredentials } from '../connectors/oauth-credentials.js';
+import type { OpenStorageStore } from '../connectors/ports/connector-runtime.js';
 import type { ConnectorRow, ConnectorStore } from '../connectors/ports/connector-store.js';
-import { FILE_STORE_SETTING } from '../connectors/ports/connector-store.js';
-import { openStorageStore, parseStorageConfig } from '../../infrastructure/files/storage-connector.js';
 
 const NO_STORE = 'Choose a file store in Settings before uploading.';
 
@@ -21,6 +21,7 @@ export class ConnectorStoreResolver implements FileStoreResolver {
     private readonly connectors: Pick<ConnectorStore, 'connector' | 'storeChoice'>,
     private readonly decrypt: (stored: string) => Record<string, string>,
     private readonly oauth: Pick<OAuthCredentials, 'accessToken'>,
+    private readonly openStorageStore: OpenStorageStore,
     private readonly fallback?: FileStore,
     private readonly fetchFn?: typeof fetch,
   ) {}
@@ -59,7 +60,7 @@ export class ConnectorStoreResolver implements FileStoreResolver {
     const config = parseStorageConfig(row.config);
     if (!config) throw ruleViolation(NO_STORE);
     const secrets = row.secret_enc ? this.decrypt(row.secret_enc) : {};
-    const store = openStorageStore(config, secrets, {
+    const store = this.openStorageStore(config, secrets, {
       ...(config.provider === 'drive' && config.credential ? { accessToken: () => this.oauth.accessToken(tenantId, config.credential!) } : {}),
       ...(this.fetchFn ? { fetch: this.fetchFn } : {}),
     });
@@ -67,5 +68,3 @@ export class ConnectorStoreResolver implements FileStoreResolver {
     return store;
   }
 }
-
-export { FILE_STORE_SETTING };

@@ -51,6 +51,9 @@ export function httpGateway(http: HttpLike): RecordsGateway {
     revokeReceiptLink: (receiptId) => http.delete<void>(`/api/print/receipt/${encodeURIComponent(receiptId)}/link`),
     pendingApproval: async (type, id) => (await http.get<{ pending: PendingApproval | null }>(`${one(type, id)}/approval`)).pending,
     decide: (id, decision) => send('POST /api/approvals/:id/decision', { id }, { decision }),
+    remove: (type, id, version) => http.delete<void>(`${one(type, id)}?version=${version}`),
+    publicLink: async (type, id) => (await http.get<{ path: string | null }>(`${one(type, id)}/public-link`)).path,
+    revokePublicLink: (type, id) => http.delete<void>(`${one(type, id)}/public-link`),
   };
 }
 

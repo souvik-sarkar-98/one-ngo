@@ -1,0 +1,6 @@
+{
+  "key": "donationReminder",
+  "label": "Donation payment reminder",
+  "subject": "A reminder about your pledge, {{ record.donorName }}",
+  "body": "Dear {{ record.donorName }},\n\nThis is a gentle reminder about your pledge of Rs. {{ record.amount }} (reference {{ record.number }}). If you have already paid, please ignore this message.\n\nThank you for supporting our work."
+}

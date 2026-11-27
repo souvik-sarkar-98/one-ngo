@@ -51,7 +51,7 @@ Paths in this document are relative to `one-ngo/` unless they start with `.curso
 
 ### 0.4 Implementation status (2026-10-28)
 
-Release 1 (blocks B00–B45) is built and validated (`.cursor/docs/reports/release-validation-2026-10-24.md`, `-2026-10-25.md`); the manual walkthrough against the wireframes awaits sign-off. The backend enhancement tracks F, D, H, S, X, O, P, A and G are merged except where the table says otherwise. Release 2 phase 1 (operator-run onboarding and lifecycle, R2-B01) is in the code: migration 017, `packages/platform/src/application/organisations/onboarding-service.ts`, `packages/platform/test/organisation-onboarding.test.ts`. Phase 2 (configuration packages, R2-B02) is not built.
+Release 1 (blocks B00–B45) is built and validated (`.cursor/docs/reports/release-validation-2026-10-24.md`, `-2026-10-25.md`); the manual walkthrough against the wireframes awaits sign-off. The backend enhancement tracks F, D, H, S, X, O, P, A and G are merged except where the table says otherwise. Release 2 phase 1 (operator-run onboarding and lifecycle, R2-B01) is in the code: migration 017, `packages/platform/src/application/organisations/onboarding-service.ts`, `tests/integration/platform/organisation-onboarding.test.ts`. Phase 2 (configuration packages, R2-B02) is not built.
 
 | Area | State | Notes |
 | --- | --- | --- |
@@ -195,7 +195,7 @@ The only behavioural differences between the modes are tenant resolution and ope
 - **npm packages stay external.** The bundle holds only this repository's code; App Engine installs `dependencies`. QuickJS finds its WebAssembly file in its own package.
 - **The bundle must stay in `dist/` directly under the package root.** It finds `product/`, `web/` and `.data/` one folder up, as the source does from `src/`.
 - The server reads settings from the environment (`.env.example`). `npm start` does not read `.env`.
-- `apps/onengo/server/test/artifact.test.ts` builds both bundles against a throwaway database, checks that the server refuses the unprepared database, runs the deploy step twice (the second applies nothing), starts the server and checks `/health`, a refused API call and the web shell.
+- `tests/integration/onengo-server/artifact.test.ts` builds both bundles against a throwaway database, checks that the server refuses the unprepared database, runs the deploy step twice (the second applies nothing), starts the server and checks `/health`, a refused API call and the web shell.
 
 ### 3.4 Checks before merge
 
@@ -242,7 +242,7 @@ The platform runs no monitoring service. It writes structured JSON logs that Clo
 | `http.unhandled_error` | ERROR | A request was answered 500 for an unexpected error. The policy fires above 5 in 5 minutes | Find the request id in the trace field; a burst after a deploy points at the release |
 | `memory.high` | WARNING | Resident memory above `MEMORY_ALERT_MB` (default 300 of 384 MB) | Look for a large import or export, or growth since a deploy |
 
-Each instance checks memory every minute, and every tick checks too. The definitions are in `.cursor/docs/operations/monitoring/` (`metrics/`, `policies/`, `dashboard.json`, and a README with the `gcloud` commands, update commands and a test-entry command). **A person applies them; nothing in the build, deploy step or server does** (`devops-handover.md` section 2). `packages/platform/test/alerts.test.ts` checks that each condition logs exactly one entry with the expected `alert` and severity, and that every alert has a metric, a policy and a chart.
+Each instance checks memory every minute, and every tick checks too. The definitions are in `docs/monitoring/` (`metrics/`, `policies/`, `dashboard.json`, and a README with the `gcloud` commands, update commands and a test-entry command). **A person applies them; nothing in the build, deploy step or server does** (`devops-handover.md` section 2). `tests/integration/platform/alerts.test.ts` checks that each condition logs exactly one entry with the expected `alert` and severity, and that every alert has a metric, a policy and a chart.
 
 ### 3.7 Supported databases (ADR-13)
 
@@ -273,7 +273,7 @@ Each instance checks memory every minute, and every tick checks too. The definit
 5. List, count, totals and save latency measured at the reference NGO size and published against section 13.
 6. Provisioning, backup and restore per NGO, export, deletion, monitoring and runbooks written and drilled (O4, P6).
 
-**How an unsupported combination is rejected.** `connectSupportedDatabase` in `packages/platform/src/infrastructure/postgres/database-support.ts` (tests in `packages/platform/test/database-support.test.ts`) runs in both the server and the deploy step, so the deploy step never migrates an unsupported database. It reads `INSTALLATION_MODE` (`one-ngo`, the default, or `shared`) and the provider from the `DATABASE_URL` scheme before connecting, then `server_version_num` right after. On failure it logs `Start-up failed` with only the refused scheme (never the connection string) and exits 1 with exactly one of:
+**How an unsupported combination is rejected.** `connectSupportedDatabase` in `packages/platform/src/infrastructure/postgres/database-support.ts` (tests in `tests/integration/platform/database-support.test.ts`) runs in both the server and the deploy step, so the deploy step never migrates an unsupported database. It reads `INSTALLATION_MODE` (`one-ngo`, the default, or `shared`) and the provider from the `DATABASE_URL` scheme before connecting, then `server_version_num` right after. On failure it logs `Start-up failed` with only the refused scheme (never the connection string) and exits 1 with exactly one of:
 
 | Condition | Message |
 | --- | --- |
@@ -317,32 +317,32 @@ Import direction: `http → application → runtime → domain`, with `infrastru
 
 ### 4.2 Composition
 
-`platform.ts` calls one private wiring function per capability in `packages/platform/src/composition/`. HTTP plugins receive typed application bundles (`HttpDeps`), never `Platform`. `asTx`, `transactions` and `joinTx` live once in `domain/ports/transaction.ts`; `Actor`, `TenantContext` and `systemActor` live once in `domain/ports/tenant-context.ts`. The audit trail stays module-level in the domain and is bound by composition (`packages/platform/test/composition.test.ts`).
+`platform.ts` calls one private wiring function per capability in `packages/platform/src/composition/`. HTTP plugins receive typed application bundles (`HttpDeps`), never `Platform`. `asTx`, `transactions` and `joinTx` live once in `domain/ports/transaction.ts`; `Actor`, `TenantContext` and `systemActor` live once in `domain/ports/tenant-context.ts`. The audit trail stays module-level in the domain and is bound by composition (`tests/unit/platform/composition.test.ts`).
 
 ### 4.3 Rules shared with the web app
 
-Pure rules the screens also run live in `packages/platform/src/shared/`. The web app reaches them only through `apps/onengo/web/src/app/core/server.ts`; server contract types reach it only through `apps/onengo/web/src/app/core/contracts.ts` (type-only, from `packages/platform/src/http/contracts`). `packages/platform/test/web-architecture.test.ts` pins that list and fails if `packages/platform/src/shared/` reaches Node, a package or another server layer. The message catalogue is `packages/product/locale/`, one copy for both sides (`LOCALE_DIR` in `platform.ts`).
+Pure rules the screens also run live in `packages/platform/src/shared/`. The web app reaches them only through `apps/onengo/web/src/app/core/server.ts`; server contract types reach it only through `apps/onengo/web/src/app/core/contracts.ts` (type-only, from `packages/platform/src/http/contracts`). `tests/unit/platform/web-architecture.test.ts` pins that list and fails if `packages/platform/src/shared/` reaches Node, a package or another server layer. The message catalogue is `packages/product/locale/`, one copy for both sides (`LOCALE_DIR` in `platform.ts`).
 
 ### 4.4 Guardrails
 
-The architecture tests enforce the layout. There are no violations, no pending list and no exceptions; a new violation fails its test, and the fix is in the code. `packages/platform/test/layer-allowlist.json` and `packages/platform/test/package-allowlist.json` stay empty (`{}`); an entry in either fails once the block it names is Merged or Done in section 5.1 of the backend plan (`packages/platform/test/plan-status.ts`).
+The architecture tests enforce the layout. There are no violations, no pending list and no exceptions; a new violation fails its test, and the fix is in the code. `tests/support/platform/layer-allowlist.json` and `tests/support/platform/package-allowlist.json` stay empty (`{}`); an entry in either fails once the block it names is Merged or Done in section 5.1 of the backend plan (`tests/support/platform/plan-status.ts`).
 
 | Rule | Test | Detail |
 | --- | --- | --- |
-| Layer direction | `packages/platform/test/layer-architecture.test.ts`, `packages/platform/test/layer-graph.ts` | Imports parsed with the TypeScript compiler API; type-only port imports told apart from value imports; the root of `src/` is fixed to the entry points and `platform.ts` |
+| Layer direction | `tests/unit/platform/layer-architecture.test.ts`, `tests/support/platform/layer-graph.ts` | Imports parsed with the TypeScript compiler API; type-only port imports told apart from value imports; the root of `src/` is fixed to the entry points and `platform.ts` |
 | Runtime siblings | same | `runtime/<a>` may import `runtime/<b>` only for `types.ts`, anything under `ports/`, anything under `runtime/expressions/`, and the pure helpers in `RUNTIME_PURE_HELPERS` (one reason each). Type-only imports of a sibling service class are rejected too |
 | Application siblings | same | `application/<a>` may not value-import another capability's module. Collaborators arrive through the constructor as `import type`. Ports and `application/shared/` are allowed |
 | Re-exports | same | Application files that http imports, every `http-api.ts` and `application/shared` may not re-export from `domain` or `runtime`, value or type-only, including re-exported imported bindings. The application declares its own alias |
 | Port files | same | A `/ports/` file holds interfaces, type aliases, `declare const` brand symbols and type-only exports. Constants, functions, classes, enums, namespaces, top-level statements, module `let` and value re-exports are rejected (`PORT_VALUE_EXCEPTIONS` is empty) |
 | Composition is wiring | same | In `src/composition/**`, calls to `withTenant`, `asSystem`, `asTx`, `joinTx`, `transaction`, `audit.audit` / `audit.event`, `fastify` imports and `req` / `reply` / `request` use are reported per file and kind. `transactions(db)` is wiring and allowed |
-| Persistence | `packages/platform/test/persistence-architecture.test.ts`, `packages/platform/test/persistence-graph.ts` | No core file imports Kysely or the SQL executor; `packages/platform/src/domain/ports/` is not exempt; imports from `ports/database.js` and SQL executor type declarations are seen |
-| Raw SQL ratchet | `packages/platform/test/kysely-architecture.test.ts`, `packages/platform/test/raw-sql-baseline.json` | Raw SQL only in the listed files and counts |
-| Owner capabilities | `packages/platform/test/owner-capabilities.test.ts` | Owner transactions and statements (`asSystem(`, `db.exec(`) are opened only in infrastructure, which hands services named capabilities instead (`packages/platform/test/owner-capabilities-allowlist.json`) |
-| Web | `packages/platform/test/web-architecture.test.ts` | Section 10.1 |
+| Persistence | `tests/unit/platform/persistence-architecture.test.ts`, `tests/support/platform/persistence-graph.ts` | No core file imports Kysely or the SQL executor; `packages/platform/src/domain/ports/` is not exempt; imports from `ports/database.js` and SQL executor type declarations are seen |
+| Raw SQL ratchet | `tests/unit/platform/kysely-architecture.test.ts`, `tests/support/platform/raw-sql-baseline.json` | Raw SQL only in the listed files and counts |
+| Owner capabilities | `tests/unit/platform/owner-capabilities.test.ts` | Owner transactions and statements (`asSystem(`, `db.exec(`) are opened only in infrastructure, which hands services named capabilities instead (`tests/support/platform/owner-capabilities-allowlist.json`) |
+| Web | `tests/unit/platform/web-architecture.test.ts` | Section 10.1 |
 
 ### 4.5 Relocation from `ngo-platform`
 
-The relocate script (since removed; the table is `docs/architecture/relocation-map.md`) moved every file of the old server tree into the five layers. In short: `kernel/` dissolved into `infrastructure/` (database, jobs, outbox, audit, crypto, observability), `domain/` (errors, permissions, ports) and `runtime/definitions/` (settings, list parameters, index expressions, number format); `metadata/` became `runtime/definitions/`; `engines/records` became `runtime/records`; `engines/approvals` and `engines/automation` moved under `runtime/`; the multi-capability engines (actions, admin, builder, connectors, files, imports, notify) became `application/` use cases with their transports in `infrastructure/`; `identity/` split between `application/identity/` and `domain/identity/`; `expressions/` and `scripts/` moved under `runtime/`; `deployment.ts` became `prepare-deployment.ts`. The full table is Appendix A.
+The relocate script (since removed; the table is Appendix A) moved every file of the old server tree into the five layers. In short: `kernel/` dissolved into `infrastructure/` (database, jobs, outbox, audit, crypto, observability), `domain/` (errors, permissions, ports) and `runtime/definitions/` (settings, list parameters, index expressions, number format); `metadata/` became `runtime/definitions/`; `engines/records` became `runtime/records`; `engines/approvals` and `engines/automation` moved under `runtime/`; the multi-capability engines (actions, admin, builder, connectors, files, imports, notify) became `application/` use cases with their transports in `infrastructure/`; `identity/` split between `application/identity/` and `domain/identity/`; `expressions/` and `scripts/` moved under `runtime/`; `deployment.ts` became `prepare-deployment.ts`. The full table is Appendix A.
 
 ## 5. Metadata
 
@@ -379,7 +379,7 @@ Contents today:
 - `platform/` (key `platform`, 0.1.0): `person.recordType.json` (one profile per member, linked by `userId`; name and email stay on the account) and `people.listView.json`.
 - `modules/donations/` (key `donations`, 0.2.1): donor and donation record types, the donation workflow, thank-you and reminder templates, a posting rule and a receipt rule, a thank-you automation, list views, the Fundraising group, the actions Send reminder, Pay now and Print receipt, rollups on the donor and unique PAN. Enabling it also creates the Finance and Viewer roles (both with `people:read`), the bank, cash and donation-income accounts, an opening-funds equity account for a data migration's opening balances, and the donation receipt series.
 
-**Hiding what a module adds.** Every definition people see (record type, record group, list view, action, page, report, report group, workflow) has `hidden` in its body, `false` as shipped. An organisation changes it on Builder > Modules ("Choose what shows" on a module that is on and at its shipped version). That saves `hidden: true` in the definition's extension patch and publishes it again at the same base version, so module updates keep the choice (`DefinitionService.setDefinitionHidden`, `PUT /api/builder/modules/:key/definitions/:kind/:defKey/hidden`, needs `config:modules`). A definition with an open draft, or one that is turned off, is refused. Hidden means out of menus, Home, lists and pages; records, data and permissions stay, and links to existing records still open. `RuntimeService.definitions` leaves out hidden list views, actions, pages and record groups, sends `hidden` on record types (also true for a type only in hidden groups) and on workflows, and drops detail sections, widgets, links and navigation entries that point at hidden things. `ReportService.list` skips hidden reports and reports only in hidden groups. The app filters menus, choosers, inbox filters and "New" buttons with `apps/onengo/web/src/app/core/hidden.ts`. The retired module options (`modules.options` setting) are moved over once per organisation by `DefinitionService.retireModuleOptions`, run from the deployment steps: an option that took a record type out of its group hides the type, one that took a definition out whole turns it off, other parts go into the patch, and roles that lost permissions are marked customised so updates do not give the permissions back. A test in `packages/platform/test/shipped-modules.test.ts` fails when a shipped definition people see does not start as `"hidden": false`.
+**Hiding what a module adds.** Every definition people see (record type, record group, list view, action, page, report, report group, workflow) has `hidden` in its body, `false` as shipped. An organisation changes it on Builder > Modules ("Choose what shows" on a module that is on and at its shipped version). That saves `hidden: true` in the definition's extension patch and publishes it again at the same base version, so module updates keep the choice (`DefinitionService.setDefinitionHidden`, `PUT /api/builder/modules/:key/definitions/:kind/:defKey/hidden`, needs `config:modules`). A definition with an open draft, or one that is turned off, is refused. Hidden means out of menus, Home, lists and pages; records, data and permissions stay, and links to existing records still open. `RuntimeService.definitions` leaves out hidden list views, actions, pages and record groups, sends `hidden` on record types (also true for a type only in hidden groups) and on workflows, and drops detail sections, widgets, links and navigation entries that point at hidden things. `ReportService.list` skips hidden reports and reports only in hidden groups. The app filters menus, choosers, inbox filters and "New" buttons with `apps/onengo/web/src/app/core/hidden.ts`. The retired module options (`modules.options` setting) are moved over once per organisation by `DefinitionService.retireModuleOptions`, run from the deployment steps: an option that took a record type out of its group hides the type, one that took a definition out whole turns it off, other parts go into the patch, and roles that lost permissions are marked customised so updates do not give the permissions back. A test in `tests/integration/platform/shipped-modules.test.ts` fails when a shipped definition people see does not start as `"hidden": false`.
 
 **Leave `platform/` at the product root.** Moving it under `modules/` without code changes stops the deploy step and the server. Moving it and repointing the deploy step and start-up check boots, but the Builder then lists Platform as an optional module: enabling and disabling it copy and retire organisation copies while the shared base keeps People working, and the module screen tracks a version separate from the one the deploy step reapplies.
 
@@ -787,7 +787,7 @@ Not built yet: `fund`, `statutory_year`, `account_balance`, depreciation, bank m
 2. Database: row-level security on every tenant table using `app.tenant_id`. Each tenant transaction starts with `set local role app_runtime` and a transaction-local `set_config`, which works with transaction-mode poolers (Supabase, Neon). RLS binds `app_runtime` and is not FORCEd, so system work runs as the owning role on hosted PostgreSQL. Users are visible to the runtime role only within their NGO.
 3. Files: keys prefixed by tenant id, streamed only through the server after a permission check.
 4. Sequences, jobs, outbox, caches, script runs and audit events all carry the tenant id.
-5. Cross-tenant tests run on every build (`packages/platform/test/tenancy.test.ts`, the contract suite, `packages/platform/test/security/`). S4-13 (open): cross-organisation lockout.
+5. Cross-tenant tests run on every build (`tests/integration/platform/tenancy.test.ts`, the contract suite, `tests/integration/platform/security/`). S4-13 (open): cross-organisation lockout.
 
 ### 8.4 Size budget for the free database
 
@@ -818,11 +818,11 @@ For an NGO of about 500 members and a few thousand transactions a year: records 
 | Concern | Control |
 | --- | --- |
 | Authentication | Built-in identity (ADR-07): scrypt hashes, email one-time code, TOTP two-step (required per role), OpenID Connect (code flow with PKCE, server-held state and nonce, verified email, existing members only; Google via `GOOGLE_CLIENT_ID`; NGO-run providers must name their email domains; role-required two-step still applies through a 5-minute ticket). Account and IP lockout in PostgreSQL. Password policy on every set: length, common list (extendable with `COMMON_PASSWORDS_FILE`), trivial patterns, personal and organisation words, and the Have I Been Pwned range check (k-anonymity, padded; `BREACHED_PASSWORD_CHECK=off` disables; fails open after 2 s with a log entry). Password reset and invitations are single-use hashed links that end all sessions |
-| Sessions | Short-lived signed access tokens (`jose`, HS256); rotating refresh token with reuse detection in an HttpOnly, Secure, SameSite=Strict cookie (SameSite=None only for an allow-listed cross-site origin). Development header sign-in is refused in production and on any cloud host. Every `/api/` route refuses a signed-out caller (`packages/platform/test/route-guard.test.ts`). S4-6 (open): access tokens live 15 minutes after sign-out |
+| Sessions | Short-lived signed access tokens (`jose`, HS256); rotating refresh token with reuse detection in an HttpOnly, Secure, SameSite=Strict cookie (SameSite=None only for an allow-listed cross-site origin). Development header sign-in is refused in production and on any cloud host. Every `/api/` route refuses a signed-out caller (`tests/integration/platform/route-guard.test.ts`). S4-6 (open): access tokens live 15 minutes after sign-out |
 | Authorisation | One permission model for API, engines, pages and scripts; deny by default; record, field, section, widget and link permissions (sections 6.13, 11) |
 | Tenancy | Section 8.3 |
 | Scripts | Sandbox limits, a copy of the input only, declared effects checked by the owning engines, audit, `enabled` switch (section 6.6) |
-| Secrets | Secret Manager or environment variables; connector and two-step secrets encrypted at rest; never in definitions, responses or exports (`packages/platform/test/response-secrets.test.ts`) |
+| Secrets | Secret Manager or environment variables; connector and two-step secrets encrypted at rest; never in definitions, responses or exports (`tests/integration/platform/response-secrets.test.ts`) |
 | Transport and headers | HTTPS, HSTS, a content security policy with no third-party origins, `nosniff`, `Referrer-Policy`, frame denial and `permissions-policy` with `geolocation=(self)` (camera and microphone off), all set by the server |
 | Uploads | Size and content-sniffed type allow-list, quota, same-origin downloads after a permission check |
 | Webhooks | Signature verification on the exact raw body (the only route that keeps it), idempotent processing, replay window |
@@ -830,7 +830,7 @@ For an NGO of about 500 members and a few thousand transactions a year: records 
 | Errors | No internal ids, configuration or supplier diagnostics in user-facing errors; users see a request id |
 | Audit | Append-only; covers data, configuration, scripts, sign-in, exports and erasures |
 
-Open findings from the S4 review are tracked in `.cursor/docs/reports/s4-review-2026-10-26.md`; eleven probes in `packages/platform/test/security/` are `it.fails` until fixed. S4 is done when each finding is fixed or accepted in writing.
+Open findings from the S4 review are tracked in `.cursor/docs/reports/s4-review-2026-10-26.md`; eleven probes in `tests/integration/platform/security/` are `it.fails` until fixed. S4 is done when each finding is fixed or accepted in writing.
 
 ## 10. Web app
 
@@ -862,7 +862,7 @@ flowchart TB
   Gateways --> Api["Server /api"]
 ```
 
-Rules, each enforced by `packages/platform/test/web-architecture.test.ts` or the build tests:
+Rules, each enforced by `tests/unit/platform/web-architecture.test.ts` or the build tests:
 
 1. **Core is framework-free.** `web/src/app/core/**` imports no Angular, rxjs or Material. All behaviour lives there and is unit-tested.
 2. **One component per control.** Every wireframe control exists once under `apps/onengo/web/src/app/ui/`. Screens compose them and never re-implement or restyle their internals. Material is imported only under `ui/` and loads only with record lists.
@@ -1059,15 +1059,15 @@ The initial download is `index.html`'s scripts and styles and what they import. 
 
 | Level | What | Where |
 | --- | --- | --- |
-| Server | Engines, routes, core rules (including hostile scripts), tenancy, save pipeline and transactions, script effects, approvals query, sharing in every read path, imports, files, connectors with recorded fake HTTP, encryption, consent and erasure, deployment, alerts | `test/*.test.ts` on PostgreSQL (`TEST_DATABASE_URL`, `packages/platform/test/test-database.ts`) |
+| Server | Engines, routes, core rules (including hostile scripts), tenancy, save pipeline and transactions, script effects, approvals query, sharing in every read path, imports, files, connectors with recorded fake HTTP, encryption, consent and erasure, deployment, alerts | `tests/integration/platform/*.test.ts` on PostgreSQL (`TEST_DATABASE_URL`, `tests/support/platform/test-database.ts`) |
 | Provider contract | Every persistence port and the financial and tenancy invariants, including bypass writes | `packages/platform/src/infrastructure/contract-tests/`, `npm run test:contract` |
-| Security probes | S4 findings; failing probes are `it.fails` until fixed | `packages/platform/test/security/` |
+| Security probes | S4 findings; failing probes are `it.fails` until fixed | `tests/integration/platform/security/` |
 | Server architecture | Layers, conformance rules, persistence, raw SQL, owner capabilities, composition | Section 4.4 |
 | Core unit | Address contracts, sessions, groups, Builder operations per kind, diagram layout, cron text, contrast, change text, breadcrumb trails for every route | `web/src/app/core/**/*.test.ts` |
-| Web architecture | Section 10.1 rules; `packages/platform/src/shared` reach; contracts type-only | `packages/platform/test/web-architecture.test.ts` |
-| Look and parity | Ported stylesheets unchanged; cards and table give the same queries and states; approvals cards and table give the same rows | `apps/onengo/web/src/app/ui/look.test.ts`, `web/src/app/**/parity.test.ts` |
+| Web architecture | Section 10.1 rules; `packages/platform/src/shared` reach; contracts type-only | `tests/unit/platform/web-architecture.test.ts` |
+| Look and parity | Ported stylesheets unchanged; cards and table give the same queries and states; approvals cards and table give the same rows | `tests/unit/onengo-web/app/ui/look.test.ts`, `tests/unit/onengo-web/app/**/parity.test.ts` |
 | Generic editor | Every kind's schema renders a complete editor; body to form to body is lossless for all module definitions | `web/src/app/builder/editors/generic/*.test.ts` |
-| Build | No zone.js or toolkit; Material only in lazy chunks; manifest and service worker; `/api/` not cached; size budgets; server bundle | `utilities/maintenance/measure.mjs`, `apps/onengo/server/test/artifact.test.ts` |
+| Build | No zone.js or toolkit; Material only in lazy chunks; manifest and service worker; `/api/` not cached; size budgets; server bundle | `utilities/maintenance/measure.mjs`, `tests/integration/onengo-server/artifact.test.ts` |
 | Visual | Every Flow and Builder step at 390, 900 and 1280 px against the wireframes | Manual checklist (`.cursor/skills/validating-ngo-release/`) |
 
 Each package should carry acceptance tests as definition files plus expected outcomes, so the AI build loop can verify parity without a person reading code. Cursor rules should require schema validation before a definition is committed.
@@ -1236,7 +1236,7 @@ Built as an optional sign-in method, off by default for every organisation (`ten
 | Managed indexes grow or lock tables | Built concurrently in jobs, capped per type, dropped after 30 days unused, shared by type key |
 | Extension patches conflict on upgrade | Module update review; patches that no longer fit kept as drafts; stable base keys |
 | Scripts write balanced but wrong entries, since finance scripts need no second approval | Declared accounts and ceilings, `script.published.finance` with administrator notification, Try it previews |
-| Expression evaluator security | No method calls or prototype access, capped size and depth, `packages/platform/test/expression.test.ts`; fuzz tests still to add |
+| Expression evaluator security | No method calls or prototype access, capped size and depth, `tests/unit/platform/expression.test.ts`; fuzz tests still to add |
 | Regular expressions in `pattern` (ReDoS) | Length limit, nested-quantifier check on publish, time limit |
 | Rollups drift from their children | Updated in the child's transaction, rebuilt on publish, a nightly sample check |
 | Restricted visibility missed in one read path | One SQL helper plus engine checks; a test runs every read path |
@@ -1255,7 +1255,7 @@ Built as an optional sign-in method, off by default for every organisation (`ten
 
 ## Appendix A. Relocation map (`ngo-platform/src/` → `one-ngo/src/`)
 
-Generated by the relocate script (since removed) from its moves table. The copy kept with the code is `docs/architecture/relocation-map.md`. Files not listed did not move.
+Generated by the relocate script (since removed) from its moves table. This appendix is the only copy of that table. Files not listed did not move.
 
 | Old | New |
 | --- | --- |

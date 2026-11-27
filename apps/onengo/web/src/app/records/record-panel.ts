@@ -6,7 +6,6 @@ import type { FieldModel, FormValues } from '../core/records/record/forms';
 import { approvalSummary, detailSections, editSummary, recordTitle, stepSummary, workflowLines } from '../core/records/record/present';
 import { relatedSectionId, type RelatedCreate } from '../core/records/record/related';
 import { canShare } from '../core/records/sharing/sharing';
-import { Api } from '../services/api';
 import { TranslatePipe } from '../services/i18n';
 import { Session } from '../services/session';
 import { CfForm } from '../ui/cf-form';
@@ -322,7 +321,6 @@ import { Btn } from '@onengo/web-kit';
 export class RecordPanel {
   readonly store = inject(ListStore);
   readonly rec = inject(RecordStore);
-  private readonly api = inject(Api);
   readonly publicLink = signal<string | null>(null);
   /** Revoking changes the record's link, so it needs the same permission as editing the record. */
   readonly canRevokePublicLink = computed(() => !!this.store.spec()?.type.canUpdate);
@@ -431,7 +429,7 @@ export class RecordPanel {
     this.deleteBusy.set(true);
     this.deleteError.set('');
     try {
-      await this.api.delete(`/api/records/${encodeURIComponent(record.type)}/${encodeURIComponent(record.id)}?version=${record.version}`);
+      await this.rec.delete(record);
       this.deleting.set(false);
       this.store.intents.close();
       await this.store.intents.controller.reload();
@@ -446,7 +444,7 @@ export class RecordPanel {
     const id = this.rec.snapshot()?.record?.id;
     const type = this.store.spec()?.type.key;
     if (!id || !type) return;
-    await this.api.delete(`/api/records/${encodeURIComponent(type)}/${encodeURIComponent(id)}/public-link`);
+    await this.rec.revokePublicLink(type, id);
     this.publicLink.set(null);
   }
 
@@ -456,8 +454,8 @@ export class RecordPanel {
       return;
     }
     try {
-      const link = await this.api.get<{ path: string | null }>(`/api/records/${encodeURIComponent(type)}/${encodeURIComponent(id)}/public-link`);
-      if (this.rec.snapshot()?.record?.id === id) this.publicLink.set(link.path);
+      const path = await this.rec.publicLink(type, id);
+      if (this.rec.snapshot()?.record?.id === id) this.publicLink.set(path);
     } catch {
       if (this.rec.snapshot()?.record?.id === id) this.publicLink.set(null);
     }

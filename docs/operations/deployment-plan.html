@@ -186,7 +186,7 @@
 </div>
 
 <h3>Why the build is repeated instead of passed from CI</h3>
-<p>CI already has a test (<code>apps/onengo/server/test/artifact.test.ts</code>) that builds the bundle twice from clean and fails if the two results differ. So building again from the same commit in the deploy job gives the same bytes CI tested, without moving artifacts between jobs.</p>
+<p>CI already has a test (<code>tests/integration/onengo-server/artifact.test.ts</code>) that builds the bundle twice from clean and fails if the two results differ. So building again from the same commit in the deploy job gives the same bytes CI tested, without moving artifacts between jobs.</p>
 
 <h3>Why the database moves before the code</h3>
 <p>The server refuses to start if <code>deploy:prepare</code> has not run (tested in the same artifact test). So the order is fixed: migrate, then start new code. The old version keeps serving against the new schema for the minutes between steps 5 and 8.</p>
@@ -311,7 +311,7 @@ grant ngo_operator_runtime to ngo_operator_runtime_login;</code></pre>
   <li>Build the four connection strings with these logins and store them as the four database secrets. Add <code>?sslmode=require</code> if your provider requires encrypted connections.</li>
   <li><b>Open gap:</b> create the first console account (a row in <code>operator_account</code>, migration 030, linked to the identity provider's subject). The repository does not yet document a production procedure for this. Ask the development team for it before go-live, or nobody can sign in to the console.</li>
 </ol>
-<div class="note">The role statements follow the bundle test in <code>apps/onengo/server/test/artifact.test.ts</code>, which creates the same logins the same way and starts the real bundle with them. The local development script creates its runtime login with <code>noinherit</code>; the hosted pattern above is the one the bundle test proves.</div>
+<div class="note">The role statements follow the bundle test in <code>tests/integration/onengo-server/artifact.test.ts</code>, which creates the same logins the same way and starts the real bundle with them. The local development script creates its runtime login with <code>noinherit</code>; the hosted pattern above is the one the bundle test proves.</div>
 <p>Free managed databases pause or limit idle projects, cap storage, and differ in backup retention. Check yours against the backup and restore drill (O4) in <code>docs/operations/devops-handover.md</code> before the first real member is added.</p>
 
 <h2 id="gcp">11. Google Cloud set-up (once)</h2>

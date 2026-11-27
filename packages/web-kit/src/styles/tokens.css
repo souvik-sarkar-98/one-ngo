@@ -90,6 +90,8 @@
   --badge-ok-bg: #e3f4ea;
   --badge-warn-bg: #fdf1dc;
   --badge-bad-bg: #fdf0ef;
+  --badge-hidden-bg: #e9e3f7;
+  --badge-hidden-fg: #5a3d9a;
   --notice-radius: 12px;
   --notice-error-bg: #fdf0ef;
   --notice-error-border: #efc4c1;

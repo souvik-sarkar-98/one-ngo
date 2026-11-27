@@ -31,7 +31,7 @@ const TENANT = sql<string>`app_tenant()`;
 
 /**
  * Each world and migration target is its own schema of the test database,
- * named with the run's prefix so test/global-setup.ts drops it when the run
+ * named with the run's prefix so tests/support/platform/global-setup.ts drops it when the run
  * ends. The migrator creates the schema on first use.
  */
 function newDatabase(tag: string, maxConnections = 3): PgDatabase {

@@ -1,8 +1,12 @@
-import { defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
+import { defineConfig } from 'vitest/config';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
 
+// Two projects, chosen by folder (tests/e2e is Playwright and runs on its own):
+//   tests/unit         needs no database
+//   tests/integration  needs PostgreSQL; globalSetup creates the test database
+// Shared helpers, fixtures and allowlists live in tests/support.
 export default defineConfig({
   resolve: {
     alias: [
@@ -18,23 +22,22 @@ export default defineConfig({
   },
   test: {
     root,
-    include: [
-      'packages/kernel/test/**/*.test.ts',
-      'packages/web-kit/test/**/*.test.ts',
-      'packages/platform/test/**/*.test.ts',
-      'packages/platform/src/infrastructure/contract-tests/**/*.test.ts',
-      'apps/onengo/server/test/**/*.test.ts',
-      'apps/onengo-console/server/test/**/*.test.ts',
-      'apps/onengo/web/src/**/*.test.ts',
-      'apps/onengo-console/web/src/**/*.test.ts',
-      'apps/onengo-guide/web/src/**/*.test.ts',
-    ],
-    globalSetup: ['packages/platform/test/global-setup.ts'],
-    setupFiles: ['packages/platform/test/setup-text.ts'],
+    setupFiles: ['tests/support/platform/setup-text.ts'],
     testTimeout: 30_000,
     hookTimeout: 60_000,
     pool: 'forks',
     // More workers than this overload one local PostgreSQL and tests time out.
     maxWorkers: 6,
+    projects: [
+      { extends: true, test: { name: 'unit', include: ['tests/unit/**/*.test.ts'] } },
+      {
+        extends: true,
+        test: {
+          name: 'integration',
+          include: ['tests/integration/**/*.test.ts'],
+          globalSetup: ['tests/support/platform/global-setup.ts'],
+        },
+      },
+    ],
   },
 });

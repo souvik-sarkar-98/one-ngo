@@ -3,7 +3,7 @@ import type { Database } from '../../db.js';
 import { typed } from '../../kysely.js';
 import { NOW, minutesFromNow } from '../../sql-fragments.js';
 import { useTwoStepStep } from './two-step-step.js';
-import { EMAIL_PURPOSES, type EmailPurpose, type SignInStore } from '../../../../domain/identity/ports/identity-directory.js';
+import type { EmailPurpose, SignInStore } from '../../../../domain/identity/ports/identity-directory.js';
 import type { AssuranceLevel, AuthenticationEvidence, TenantAuthPolicy } from '../../../../domain/identity/ports/assurance.js';
 
 const DEFAULT_AUTH_POLICY: Readonly<TenantAuthPolicy> = {
@@ -296,20 +296,16 @@ export function pgSignInStore(db: Database): SignInStore {
       const rows = await db.asSystem((tx) =>
         typed(tx).selectFrom('tenant_auth_email_template').select(['purpose', 'template_key']).where('tenant_id', '=', tenantId).execute(),
       );
+      // The table's check constraint holds `purpose` to the known purposes.
       const out: Partial<Record<EmailPurpose, string>> = {};
-      for (const r of rows) if ((EMAIL_PURPOSES as readonly string[]).includes(r.purpose)) out[r.purpose as EmailPurpose] = r.template_key;
+      for (const r of rows) out[r.purpose as EmailPurpose] = r.template_key;
       return out;
     },
     saveEmailTemplates(tenantId, templates, updatedBy) {
       return db.asSystem(async (tx) => {
         const k = typed(tx);
         await k.deleteFrom('tenant_auth_email_template').where('tenant_id', '=', tenantId).execute();
-        const values = EMAIL_PURPOSES.filter((p) => templates[p]).map((purpose) => ({
-          tenant_id: tenantId,
-          purpose,
-          template_key: templates[purpose]!,
-          updated_by: updatedBy,
-        }));
+        const values = Object.entries(templates).flatMap(([purpose, key]) => (key ? [{ tenant_id: tenantId, purpose, template_key: key, updated_by: updatedBy }] : []));
         if (values.length) await k.insertInto('tenant_auth_email_template').values(values).execute();
       });
     },

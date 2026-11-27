@@ -1,5 +1,4 @@
 import { Component, inject } from '@angular/core';
-import { Router } from '@angular/router';
 import { Btn, PageFrame } from '@onengo/web-kit';
 import { ThemePreview } from '../../builder/editors/generic/theme-preview';
 import { colourPicker, type ThemeField, type ThemeSuggestion } from '../../core/admin/theme-form';
@@ -269,7 +268,7 @@ import { ThemeStore } from './theme-store';
 })
 export class ThemeScreen {
   readonly store = inject(ThemeStore);
-  readonly titleKey = inject(Router).url.includes('/builder/') ? 'ui.builder.look.theme' : 'ui.crumbs.admin.theme';
+  readonly titleKey = this.store.titleKey;
 
   picker(field: ThemeField): string {
     return colourPicker(field, this.store.values()[field]);

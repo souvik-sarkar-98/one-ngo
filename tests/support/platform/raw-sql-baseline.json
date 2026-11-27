@@ -1,0 +1,16 @@
+{
+  "raw": {
+    "src/infrastructure/postgres/pg-database.ts": "The adapter: pool and runtime-login checks, the tenant bind key, transaction statements and TENANT_PREAMBLE.",
+    "src/infrastructure/postgres/stores/record-queries.ts": "The one typed wrapper per dynamic record function (plan section 1.5): app_record_ids, app_record_count and app_record_agg run clauses built from the record definitions, which Kysely cannot express as fixed-table queries.",
+    "src/infrastructure/postgres/tenant-directory.ts": "Catalog checks on tables that are not engine tables: whether the pg_trgm extension is installed (pg_extension), and whether a managed index was left invalid (pg_index, pg_class, pg_namespace).",
+    "src/infrastructure/postgres/query-compiler/index-expressions.ts": "Builds dynamic record index expressions, the one owner of them; any query it gains stays raw.",
+    "src/runtime/definitions/index-manager.ts": "Managed-index DDL stays raw (run through the ManagedIndexes capability); its registry-row queries use Kysely.",
+    "src/infrastructure/postgres/stores/owner/definition-base.ts": "Calls the reviewed security-definer start-up function; the function result is not a generated table."
+  },
+  "counts": {
+    "src/infrastructure/postgres/pg-database.ts": 7,
+    "src/infrastructure/postgres/stores/owner/definition-base.ts": 1,
+    "src/infrastructure/postgres/stores/record-queries.ts": 3,
+    "src/infrastructure/postgres/tenant-directory.ts": 2
+  }
+}

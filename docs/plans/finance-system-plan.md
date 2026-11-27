@@ -48,9 +48,9 @@ Status as of the last update: **done** H1, H3, H5, A1 to A7, B1, B3, F1 and the 
 | --- | --- | --- | --- | --- |
 | H1 | Resolve the migration state. Docs name migrations up to 029; `packages/platform/migrations/` holds `001` to `006`, and `007` to `019` show as deleted in git | `packages/platform/migrations/`, git history | Decision recorded: merged into `001` to `006`, or restored. Docs and numbering agree | S |
 | H2 | Commit the finance work in reviewed pieces. The module folders are untracked | git | Modules, money-account change and docs are in history | S |
-| H3 | Fix or explain the failing `receipt-layout.test.ts` (it issues a receipt with no legal name or address, which is now refused) | `packages/platform/test/receipt-layout.test.ts` | Full finance test set green | S |
+| H3 | Fix or explain the failing `receipt-layout.test.ts` (it issues a receipt with no legal name or address, which is now refused) | `tests/integration/platform/receipt-layout.test.ts` | Full finance test set green | S |
 | H4 | Check Razorpay and Cashfree against their sandboxes. Webhooks are tested only with a fake HTTP client | `infrastructure/payments/providers.ts` | A paid sandbox order marks a donation Paid once, and an amount mismatch is held | M |
-| H5 | Add a permanent test that all shipped modules publish together, and that every module's `dependsOn` exists | `packages/platform/test/` | Test fails if a module names a missing dependency | S |
+| H5 | Add a permanent test that all shipped modules publish together, and that every module's `dependsOn` exists | `tests/unit/platform/` | Test fails if a module names a missing dependency | S |
 
 ### Phase A: finish the bank model
 
@@ -58,7 +58,7 @@ Status as of the last update: **done** H1, H3, H5, A1 to A7, B1, B3, F1 and the 
 | --- | --- | --- | --- | --- |
 | A1 | Add a `ledgerCode` field to the Money page, so attaching to `BANK` needs no API call | `apps/onengo/web/src/app/money/`, `core/money/money.ts` (`OpenAccountBody`), locale strings | A person with `money:accounts:manage` opens an account on `BANK` from the page | S |
 | A2 | Create the money account when a module is enabled, so attaching is not a manual step. Needs a decision on where the UPI ID comes from (organisation settings, or entered on first use) | `definition-store.ts` `installModule`, module manifest schema, `donations/module.json` | Enabling donations leaves `BANK` and `CASH` with money accounts; re-running changes nothing | M |
-| A3 | Decide the key of the Pay now account. Today `upi`; renaming to `bank` means editing `pay-now.action.json` and the `s4-money` test, which probes it by key | `donations/pay-now.action.json`, `packages/platform/test/security/s4-money.test.ts` | Decision recorded; if renamed, tests updated | S |
+| A3 | Decide the key of the Pay now account. Today `upi`; renaming to `bank` means editing `pay-now.action.json` and the `s4-money` test, which probes it by key | `donations/pay-now.action.json`, `tests/integration/platform/security/s4-money.test.ts` | Decision recorded; if renamed, tests updated | S |
 | A4 | Let forms offer the organisation's real accounts. "Received in" and "Paid from" are fixed choice lists today. Add a choice source that reads money accounts, then a second bank needs no module change | `recordType` schema (choice field), record engine, `expenses`, `earnings`, `members` record types | Opening a second money account makes it appear in the three forms; its posting debits its own ledger account | L |
 | A5 | Bring back a balances report: bank and cash balances "as on" a date, over the organisation's money accounts. The old report listed fixed codes | `donations` (or a new report package), `report-service.ts` ledger dataset | Report lists every money account's ledger balance as on a date, and the total | M |
 | A6 | Overdraft rule. Postings never check balance, and bank money accounts allow negative by default (verify). Decide: hard stop, warning, or override with a reason | `LedgerService.post`, posting rules effect, `money-account-service.ts` | A payment that would take cash or bank below zero is refused or flagged as decided | M |

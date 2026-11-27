@@ -3,7 +3,7 @@ import type { IssuerSnapshot } from '../../domain/organisations/organisation.js'
 import type { ReceiptContent } from '../../domain/receipts/receipt-content.js';
 import type { FieldDef, ReceiptLayout, ReceiptLayoutRow } from '../definitions/types.js';
 import { ExpressionError } from '../expressions/expression.js';
-import { renderTemplate } from '../definitions/template.js';
+import { renderTemplate } from '../expressions/template.js';
 import { evalValue } from './save/scope.js';
 
 /** What a receipt rule knew when it issued the receipt. */

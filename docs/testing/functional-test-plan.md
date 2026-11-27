@@ -6,7 +6,7 @@
 | Baseline | `develop` at commit `361d226` (merge of `features/template-html-email`), 2026-11-03 |
 | Owner | QA Manager |
 | Status | Draft for review |
-| Supersedes | Nothing. It extends [the manual test plan](manual-test-plan.md); `MT-*` ids there stay valid and are cross-referenced here |
+| Supersedes | Nothing. It extends [the manual test plan](../testing.md#appendix-a-manual-test-cases-and-results); `MT-*` ids there stay valid and are cross-referenced here |
 
 ## 1. Purpose
 
@@ -61,16 +61,16 @@ The expected results were taken from the code at the baseline commit, not only f
 
 | Document | Used for |
 | --- | --- |
-| `docs/testing/manual-test-plan.md` | Existing manual cases `MT-*` |
+| `docs/testing.md`, Appendix A | Existing manual cases `MT-*` |
 | `docs/product-briefs/ngo-management-platform.md` | Product goals and the six core rules |
 | `docs/design/ngo-app-ui-design.md` | Screen behaviour and the address contract |
 | `docs/user-guide/index.html` | User-facing wording |
 | `docs/business/**/business-document.html` | Payment gateway, financial year, organisation, override script, consent and erasure, person |
-| `docs/plans/ngo-release-1-build-blocks.md`, `ngo-release-2-build-blocks.md` | Block-level rules |
-| `docs/reports/s4-review-2026-10-26.md` | Security findings S4-1 to S4-17 |
-| `docs/reports/ui-ux-audit-2026-11-01.md` | UX-001 to UX-015 |
+| `docs/plans/ngo-release-2-build-blocks.md` | Release 2 block-level rules. The Release 1 block sheet was removed once delivered; its outcome is in `docs/architecture/ngo-platform-architecture.md` section 0.4 |
+| `docs/architecture/ngo-platform-architecture.md` section 9 | Security findings S4-1 to S4-17 |
+| `docs/archive/test-plan-appendices-b-c-d-f.md`, Appendix C | UX-001 to UX-015 |
 | `docs/architecture/connector-runtime.html`, `ngo-script-effects-design.md` | Connector and script runtime |
-| `docs/operations/devops-handover.md`, `docs/operations/monitoring/` | Webhooks, alerts, start-up checks |
+| `docs/operations/devops-handover.md`, `docs/monitoring/` | Webhooks, alerts, start-up checks |
 | `packages/product/modules/donations/*.json`, `packages/product/schemas/*.schema.json` | Module and definition limits |
 
 ## 5. Test approach
@@ -1456,7 +1456,7 @@ Run only after the branch merges. Expected results come from the design on that 
 | Builder | Builder wireframes | `apps/onengo/web/src/app/builder`, `packages/platform/src/runtime/definitions` |
 | Runtime engines | Connector runtime, script effects design | `packages/platform/src/runtime/{automation,scripts}`, `packages/platform/src/application/{connectors,notifications}` |
 | Privacy | Consent and erasure document | `packages/platform/src/application/privacy` |
-| Operations | DevOps handover, monitoring | `apps/onengo/server/src/deploy.ts`, `docs/operations/monitoring` |
+| Operations | DevOps handover, monitoring | `apps/onengo/server/src/deploy.ts`, `docs/monitoring` |
 
 ## 37. Results sheet
 

@@ -5,9 +5,10 @@ NGO platform, relocated from `legacy/ngo-platform`: the server in the five-layer
 
 - This is one npm workspace with one root `package-lock.json`; install every package and app with `npm ci` at the repository root.
 - The file moves into this layout are recorded in Appendix A of `docs/architecture.md` (history; the move script is gone).
-- Layer rules: `packages/platform/test/layer-architecture.test.ts` with the exact baseline `packages/platform/test/layer-allowlist.json` (empty).
+- Layer rules: `tests/unit/platform/layer-architecture.test.ts` with the exact baseline `tests/support/platform/layer-allowlist.json` (empty).
 - Conformance rules (runtime/application siblings, re-exports, port files, composition wiring, SQL types) allow no violations and no pending list; see section 4.4 of `docs/architecture.md`.
-- Commands: `npm run typecheck`, `npm run build:server`, `npm run operator:server:build`, `npm run web:build`, `npm run operator:web:build`, and `npm test` (tests need local PostgreSQL; see `packages/platform/test/test-database.ts`).
+- Commands: `npm run typecheck`, `npm run build:server`, `npm run operator:server:build`, `npm run web:build`, `npm run operator:web:build`, and `npm test` (tests need local PostgreSQL; see `tests/support/platform/test-database.ts`).
+- Tests live in `tests/`: `tests/unit` (no database; `npm run test:unit`), `tests/integration` (PostgreSQL; `npm run test:integration`), `tests/e2e` (Playwright) and `tests/support` (shared helpers, fixtures and allowlists). Each has a folder per package or app. Tests find repository files through `tests/support/paths.ts`, not their own location.
 
 ## Web app
 

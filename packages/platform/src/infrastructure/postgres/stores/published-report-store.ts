@@ -1,6 +1,9 @@
-import type { PublishedFormat, PublishedReportInsert, PublishedReportRow, PublishedReportStore, PublishedSnapshot } from '../../../application/reports/published-store.js';
+import { sql } from 'kysely';
+import type { PublishedFormat, PublishedReportInsert, PublishedReportRow, PublishedReportStore, PublishedSnapshot } from '../../../application/reports/ports/published-store.js';
 import type { Tx } from '../../../domain/ports/transaction.js';
-import { executorOf } from '../tx.js';
+import { pg } from '../tx.js';
+
+const TENANT = sql<string>`app_tenant()`;
 
 interface Stored {
   id: string;
@@ -14,8 +17,14 @@ interface Stored {
   created_at: string | Date;
 }
 
-const COLUMNS = `p.id, p.report_key, p.title, p.params, p.format, p.created_by, app_member_name(u.id) as created_by_name, p.created_at`;
-const FROM = `from published_report p left join app_user u on u.id::text = p.created_by`;
+const COLUMNS = ['p.id', 'p.report_key', 'p.title', 'p.params', 'p.format', 'p.created_by', 'p.created_at'] as const;
+
+const selectPublished = (tx: Tx) =>
+  pg(tx)
+    .selectFrom('published_report as p')
+    .leftJoin('app_user as u', (join) => join.on((eb) => eb(eb.cast<string>('u.id', 'text'), '=', eb.ref('p.created_by'))))
+    .select([...COLUMNS, sql<string | null>`app_member_name(u.id)`.as('created_by_name')])
+    .where('p.tenant_id', '=', TENANT);
 
 const formatOf = (value: string | null | undefined): PublishedFormat => (value === 'excel' ? 'excel' : 'pdf');
 
@@ -40,40 +49,32 @@ const rowOf = (row: Stored): PublishedReportRow => ({
 /** Published report files for one organisation, kept in the open tenant transaction. */
 export class PgPublishedReportStore implements PublishedReportStore {
   async insert(tx: Tx, row: PublishedReportInsert): Promise<{ id: string }> {
-    const rows = await executorOf(tx).query<{ id: string }>(
-      `insert into published_report (tenant_id, report_key, title, params, format, model, created_by)
-       values (app_tenant(), $1, $2, $3::jsonb, $4, $5::jsonb, $6)
-       returning id`,
-      [row.reportKey, row.title, JSON.stringify(row.params), row.format, JSON.stringify(row.model), row.createdBy],
-    );
-    const id = rows[0]!.id;
-    for (const file of row.signatoryFiles ?? []) {
-      await executorOf(tx).query(
-        `insert into published_report_signatory (published_report_id, tenant_id, file_id, position)
-         values ($1::uuid, app_tenant(), $2::uuid, $3)`,
-        [id, file.fileId, file.position],
-      );
-    }
+    const k = pg(tx);
+    const { id } = await k
+      .insertInto('published_report')
+      .values({
+        tenant_id: TENANT,
+        report_key: row.reportKey,
+        title: row.title,
+        params: JSON.stringify(row.params),
+        format: row.format,
+        model: JSON.stringify(row.model),
+        created_by: row.createdBy,
+      })
+      .returning('id')
+      .executeTakeFirstOrThrow();
+    const files = (row.signatoryFiles ?? []).map((file) => ({ published_report_id: id, tenant_id: TENANT, file_id: file.fileId, position: file.position }));
+    if (files.length) await k.insertInto('published_report_signatory').values(files).execute();
     return { id };
   }
 
   async list(tx: Tx, reportKey: string): Promise<PublishedReportRow[]> {
-    const rows = await executorOf(tx).query<Stored>(
-      `select ${COLUMNS} ${FROM}
-        where p.tenant_id = app_tenant() and p.report_key = $1
-        order by p.created_at desc
-        limit 100`,
-      [reportKey],
-    );
+    const rows = await selectPublished(tx).where('p.report_key', '=', reportKey).orderBy('p.created_at', 'desc').limit(100).$castTo<Stored>().execute();
     return rows.map(rowOf);
   }
 
   async get(tx: Tx, id: string): Promise<(PublishedReportRow & { model: PublishedSnapshot }) | undefined> {
-    const rows = await executorOf(tx).query<Stored>(
-      `select ${COLUMNS}, p.model ${FROM} where p.tenant_id = app_tenant() and p.id = $1::uuid`,
-      [id],
-    );
-    const row = rows[0];
+    const row = await selectPublished(tx).select('p.model').where('p.id', '=', id).$castTo<Stored>().executeTakeFirst();
     const model = row ? snapshotOf(row.model) : undefined;
     return row && model ? { ...rowOf(row), model } : undefined;
   }

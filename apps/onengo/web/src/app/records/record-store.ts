@@ -88,6 +88,20 @@ export class RecordStore {
     return this.current()!;
   }
 
+  /** An administrator's delete at the version shown; the record goes to the recycle bin. */
+  delete(record: RecordView): Promise<void> {
+    return this.list.gateway.remove(record.type, record.id, record.version);
+  }
+
+  /** The record's live public link, or null when it has none. */
+  publicLink(type: string, id: string): Promise<string | null> {
+    return this.list.gateway.publicLink(type, id);
+  }
+
+  revokePublicLink(type: string, id: string): Promise<void> {
+    return this.list.gateway.revokePublicLink(type, id);
+  }
+
   /** Another record type's list spec, for pickers and related sections; null when the person cannot read it. */
   private specOf(type: string): ListSpec | null {
     const defs = this.app.defs();

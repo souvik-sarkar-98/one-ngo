@@ -24,7 +24,7 @@ export interface DatabaseCatalog {
   hasTrigram(): Promise<boolean>;
 }
 
-/** Checks against PostgreSQL's own catalogs, which are not engine tables (test/raw-sql-baseline.json). */
+/** Checks against PostgreSQL's own catalogs, which are not engine tables (tests/support/platform/raw-sql-baseline.json). */
 function catalogChecks(db: Database) {
   return {
     async hasTrigram() {

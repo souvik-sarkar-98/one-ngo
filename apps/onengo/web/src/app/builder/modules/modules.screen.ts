@@ -179,7 +179,7 @@ import { ModulesStore } from './modules-store';
     .modules-table td p { margin: 0 0 .2rem; }
     .modules-table td .badge.warn { display: inline-block; margin-top: .3rem; white-space: normal; }
     .modules-actions { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: flex-end; }
-    .badge.hidden { display: inline-block; background: #e9e3f7; color: #5a3d9a; }
+    .badge.hidden { display: inline-block; background: var(--badge-hidden-bg); color: var(--badge-hidden-fg); }
     .modules-table tr.panel-row > td { background: var(--surface, #f8faff); padding: 0; }
     .vis { padding: .75rem 1rem .9rem; border-left: 3px solid var(--brand, #2f6fde); }
     .vis-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .6rem; margin-bottom: .6rem; }

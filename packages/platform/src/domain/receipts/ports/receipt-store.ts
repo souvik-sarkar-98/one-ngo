@@ -1,6 +1,8 @@
 import type { Tx } from '../../ports/transaction.js';
 import type { FiscalYearSettings } from '../../ledger/ports/ledger-store.js';
-import type { IssuerSnapshot } from '../../organisations/organisation.js';
+import type { IssuerSignatory, IssuerSnapshot } from '../../organisations/organisation.js';
+
+export type { IssuerSignatory, IssuerSnapshot } from '../../organisations/organisation.js';
 
 export interface Receipt {
   id: string;
@@ -42,6 +44,8 @@ export interface NewReceipt {
   date: string;
   replacesReceiptId: string | null;
   issuer: IssuerSnapshot;
+  /** The signatures the receipt shows, in print order (`signatoriesOf(issuer)`); their images are kept with it. */
+  signatures: IssuerSignatory[];
   /** Wording resolved at issue. Null leaves the receipt without kept wording. */
   content?: ReceiptContent | null;
 }

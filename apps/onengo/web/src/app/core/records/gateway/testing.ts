@@ -127,6 +127,11 @@ export function fakeGateway(total = 41) {
     }),
     pendingApproval: async () => null,
     decide: async () => ({ status: 'approved' }),
+    remove: async (t, id, v) => {
+      calls.push({ op: 'remove', args: [t, id, v] });
+    },
+    publicLink: async () => null,
+    revokePublicLink: async () => undefined,
   };
   return {
     gateway,

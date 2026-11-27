@@ -1,5 +1,5 @@
 import type { Tx } from '../../../domain/ports/transaction.js';
-import { counterDigits, initialOf, parseGenerated, yymmOf, type GeneratedPart } from '../../../shared/definitions/generated-pattern.js';
+import { counterDigits, initialOf, parseGenerated, yymmOf, type GeneratedPart } from '../../expressions/generated-pattern.js';
 import type { FieldDef } from '../../definitions/types.js';
 import type { RecordStore } from '../ports/record-store.js';
 import type { SaveContext } from './context.js';

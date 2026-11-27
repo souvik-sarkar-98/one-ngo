@@ -732,11 +732,11 @@ import { MigrationStore } from './migration-store';
                               @let d = store.drafts()[r.sourceId]?.people;
                               <tr>
                                 <th scope="row">
-                                  {{ 'ui.admin.migration.people.' + r.draftKey | t }}@if (r.required) {<span class="migration__req" aria-hidden="true"> *</span>}
-                                  <div class="migration__hint">{{ 'ui.admin.migration.people.' + r.draftKey + 'Hint' | t }}</div>
+                                  {{ r.label | t }}@if (r.required) {<span class="migration__req" aria-hidden="true"> *</span>}
+                                  <div class="migration__hint">{{ r.hint | t }}</div>
                                 </th>
                                 <td>
-                                  <select [attr.aria-label]="('ui.admin.migration.people.' + r.draftKey | t) + ' · ' + ('ui.admin.migration.group.file' | t)" (change)="store.setPeopleRowFile(r, $any($event.target).value)">
+                                  <select [attr.aria-label]="(r.label | t) + ' · ' + ('ui.admin.migration.group.file' | t)" (change)="store.setPeopleRowFile(r, $any($event.target).value)">
                                     <option value="" [selected]="!r.sourceId">{{ 'ui.admin.migration.group.notFilled' | t }}</option>
                                     @for (f of store.peopleFileChoices(); track f.id) {
                                       <option [value]="f.id" [selected]="f.id === r.sourceId">{{ f.name }}</option>
@@ -748,7 +748,7 @@ import { MigrationStore } from './migration-store';
                                 </td>
                                 <td>
                                   @if (r.sourceId) {
-                                    <select [attr.aria-label]="('ui.admin.migration.people.' + r.draftKey | t) + ' · ' + ('ui.admin.migration.group.column' | t)" [attr.aria-required]="r.required" (change)="store.setPeopleRowColumn(r, $any($event.target).value)">
+                                    <select [attr.aria-label]="(r.label | t) + ' · ' + ('ui.admin.migration.group.column' | t)" [attr.aria-required]="r.required" (change)="store.setPeopleRowColumn(r, $any($event.target).value)">
                                       <option value="" [selected]="!r.column">{{ (r.required ? 'ui.admin.migration.chooseColumn' : 'ui.admin.migration.notInFile') | t }}</option>
                                       @for (col of store.columnsOf(r.sourceId); track col.name) {
                                         <option [value]="col.name" [selected]="r.column === col.name">{{ store.columnLabel(col) }}</option>

@@ -1,0 +1,10 @@
+{
+  "key": "donorMonthlyEmail",
+  "label": "Email the donor when the monthly donation is raised",
+  "recordType": "donor",
+  "trigger": { "event": "schedule", "cron": "0 3 1 * *" },
+  "condition": "not isEmpty(record.monthlyDonation) and not isEmpty(record.email)",
+  "actions": [
+    { "type": "notify", "template": "donorMonthlyDonation", "to": { "email": "record.email" }, "channels": ["email"] }
+  ]
+}

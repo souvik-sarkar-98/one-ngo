@@ -1,6 +1,7 @@
 import { AdministrationService } from '../application/administration/administration-service.js';
 import { OrganisationService } from '../application/organisations/organisation-service.js';
 import { PrivacyService } from '../application/privacy/privacy-service.js';
+import { CONNECTOR_SETTINGS } from '../domain/connectors/connector-settings.js';
 import { PgConnectorStore } from '../infrastructure/postgres/stores/connector-store.js';
 import { postgresAdministrationStore } from '../infrastructure/postgres/stores/administration-store.js';
 import { postgresOrganisationAdminStore } from '../infrastructure/postgres/stores/organisation-admin-store.js';
@@ -24,7 +25,7 @@ export function wireAdministration(base: Base, { definitions }: Definitions, { s
       definitions,
       (tenantId) => files.usageOf(tenantId),
       apiKeys.defaultLimit,
-      new PgConnectorStore(),
+      new PgConnectorStore(CONNECTOR_SETTINGS),
       identity,
     ),
     organisation: new OrganisationService(tm, postgresOrganisationStore, postgresOrganisationAdminStore, owner.tenants, files, definitions),

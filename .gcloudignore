@@ -14,6 +14,7 @@ apps/*/web/node_modules/
 .env.example
 
 test/
+tests/
 coverage/
 
 # Angular build input is not needed; server artifacts contain the compiled web

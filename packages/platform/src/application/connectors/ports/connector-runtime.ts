@@ -1,3 +1,8 @@
+import type { FileStore } from '@onengo/kernel/files';
+import type { StorageConfig } from '../../../domain/connectors/storage-config.js';
+
+export type { StorageConfig } from '../../../domain/connectors/storage-config.js';
+
 export interface ConnectorRequest {
   url: string;
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -24,6 +29,13 @@ export interface ConnectorSecretBox {
   /** Hex HMAC-SHA256 of `data` under `secret`. */
   sign(secret: string, data: string): string;
 }
+
+/** The file store of one saved storage connector. Drive needs `accessToken` for its oauth credential. */
+export type OpenStorageStore = (
+  config: StorageConfig,
+  secrets: Record<string, string>,
+  options?: { accessToken?: () => Promise<string>; fetch?: typeof fetch },
+) => FileStore;
 
 /** Sends one organisation's outbox event again, to every handler, with at least one attempt left. */
 export interface ConnectorOutbox {

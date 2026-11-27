@@ -10,7 +10,7 @@ npm run test:contract
 ```
 
 It also runs in the normal `vitest run` (`vitest.config.ts` includes this
-folder). It needs the test database that `packages/platform/test/global-setup.ts` prepares.
+folder). It needs the test database that `tests/support/platform/global-setup.ts` prepares.
 
 ## Layout
 
@@ -21,7 +21,7 @@ folder). It needs the test database that `packages/platform/test/global-setup.ts
 | `*.contract.ts` | One contract each; they state behaviour through the ports, never SQL or plan shapes |
 | `support.ts` | Record, ledger and receipt builders shared by the contracts |
 | `postgres/fixture.ts` | The PostgreSQL fixture: isolated schema, stores, bypass handle, refusal mapping |
-| `packages/platform/test/postgres-contract.test.ts` | Runs the suite against PostgreSQL; it hands the fixture the core's `transactions` and `joinTx`, which infrastructure may not import as values |
+| `tests/integration/platform/postgres-contract.test.ts` | Runs the suite against PostgreSQL; it hands the fixture the core's `transactions` and `joinTx`, which infrastructure may not import as values |
 
 ## Adding a provider
 
@@ -29,7 +29,7 @@ folder). It needs the test database that `packages/platform/test/global-setup.ts
    - `capabilities`: the provider's `DatabaseCapabilities` (`packages/platform/src/domain/ports/database-capabilities.ts`).
    - `open()`: an isolated, fully migrated database with the provider's stores behind the ports, a `TransactionManager`, `newTenant()`, job queue, outbox dispatcher, index manager, a `BypassHandle` that writes to the tables directly inside a tenant transaction, and `refusal()` mapping the provider's errors to `duplicate`, `rule` or `isolation`.
    - `migrations`: the provider's file for a logical step, and empty databases to migrate.
-2. Add `packages/platform/test/<provider>-contract.test.ts` calling `defineProviderContract(<provider>Provider(...))`.
+2. Add `tests/integration/platform/<provider>-contract.test.ts` calling `defineProviderContract(<provider>Provider(...))`.
 3. Run it. Do not edit a contract to make a provider pass. Capabilities may only change how a rule is met (when balance is checked, whether workers skip locked rows, which text queries run), never whether tenancy, ledger or receipt rules hold.
 
 ## Coverage: section 11.3 ports
@@ -66,5 +66,5 @@ folder). It needs the test database that `packages/platform/test/global-setup.ts
 ## Not covered
 
 - **Record soft delete.** `RecordStore` has no delete operation yet; no production code soft-deletes records.
-- **A migration process killed mid-file.** Needs provider-specific process control; `packages/platform/test/migrate.test.ts` covers it for PostgreSQL.
+- **A migration process killed mid-file.** Needs provider-specific process control; `tests/integration/platform/migrate.test.ts` covers it for PostgreSQL.
 - **Performance and plan shapes** (ADR-13 criterion 5) and **operational qualification** (criterion 6): not portable behaviour; blocks P6 and O4.

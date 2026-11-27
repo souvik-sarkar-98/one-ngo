@@ -59,7 +59,7 @@ async function loadFootprint() {
 async function loadBundle() {
   ({ createPlatform, PATHS } = await import('@onengo/platform/main'));
   ({ asTx, loadModulePackage, PgDatabase, provisionTenant, SchemaRegistry } = await import('@onengo/platform/testing'));
-  ({ dropDatabase, prepareDatabase, testDatabaseUrl, withClient } = await import('../packages/platform/test/test-database.js'));
+  ({ dropDatabase, prepareDatabase, testDatabaseUrl, withClient } = await import('../tests/support/platform/test-database.js'));
 }
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));

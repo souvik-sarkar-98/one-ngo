@@ -125,14 +125,14 @@ export interface FieldRow {
   canTransform: boolean;
 }
 
-/** The parts of a person a file can give, in the People table: the draft's key for each, and whether it is required. */
+/** The parts of a person a file can give, in the People table: the draft's key for each, whether it is required, and its label and hint. */
 const PEOPLE_ROWS = [
-  { key: 'oldId', draftKey: 'oldId', required: true },
-  { key: 'email', draftKey: 'email', required: true },
-  { key: 'name', draftKey: 'name', required: true },
-  { key: 'locale', draftKey: 'locale', required: false },
-  { key: 'roles', draftKey: 'rolesColumn', required: false },
-  { key: 'status', draftKey: 'statusColumn', required: false },
+  { key: 'oldId', draftKey: 'oldId', required: true, label: 'ui.admin.migration.people.oldId', hint: 'ui.admin.migration.people.oldIdHint' },
+  { key: 'email', draftKey: 'email', required: true, label: 'ui.admin.migration.people.email', hint: 'ui.admin.migration.people.emailHint' },
+  { key: 'name', draftKey: 'name', required: true, label: 'ui.admin.migration.people.name', hint: 'ui.admin.migration.people.nameHint' },
+  { key: 'locale', draftKey: 'locale', required: false, label: 'ui.admin.migration.people.locale', hint: 'ui.admin.migration.people.localeHint' },
+  { key: 'roles', draftKey: 'rolesColumn', required: false, label: 'ui.admin.migration.people.rolesColumn', hint: 'ui.admin.migration.people.rolesColumnHint' },
+  { key: 'status', draftKey: 'statusColumn', required: false, label: 'ui.admin.migration.people.statusColumn', hint: 'ui.admin.migration.people.statusColumnHint' },
 ] as const;
 
 /** One row of the People table: a part of a person, the file it comes from, and the column that fills it there. */
@@ -140,6 +140,9 @@ export interface PeopleRow {
   key: (typeof PEOPLE_ROWS)[number]['key'];
   draftKey: (typeof PEOPLE_ROWS)[number]['draftKey'];
   required: boolean;
+  /** Catalogue keys of the row's name and the line under it. */
+  label: string;
+  hint: string;
   sourceId: string;
   column: string;
 }

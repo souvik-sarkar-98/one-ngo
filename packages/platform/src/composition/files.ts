@@ -3,7 +3,9 @@ import { ConnectorStoreResolver } from '../application/files/connector-store-res
 import { ExportService } from '../application/records/export-service.js';
 import { ImportService } from '../application/records/import-service.js';
 import type { OAuthCredentials } from '../application/connectors/oauth-credentials.js';
+import { CONNECTOR_SETTINGS } from '../domain/connectors/connector-settings.js';
 import { connectorSecretBox } from '../infrastructure/crypto/connector-secrets.js';
+import { openStorageStore } from '../infrastructure/files/storage-connector.js';
 import { PgConnectorStore } from '../infrastructure/postgres/stores/connector-store.js';
 import { PgFileCatalog } from '../infrastructure/postgres/stores/file-catalog.js';
 import { PgImportStore } from '../infrastructure/postgres/stores/import-store.js';
@@ -28,12 +30,13 @@ export function wireFiles(
   const box = connectorSecretBox(secretKey);
   const stores = new ConnectorStoreResolver(
     tm,
-    new PgConnectorStore(),
+    new PgConnectorStore(CONNECTOR_SETTINGS),
     (stored) => {
       const parsed = JSON.parse(box.decrypt(stored)) as unknown;
       return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, string>) : {};
     },
     oauth,
+    openStorageStore,
     options.fileStore,
     options.storageFetch,
   );

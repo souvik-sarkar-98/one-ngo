@@ -9,7 +9,7 @@ const INDEX_DDL = /^(create (unique )?index |drop index )/;
 
 /**
  * The owner-level indexes capability. `isInvalid` is the PostgreSQL catalog check, kept with the other
- * catalog checks in tenant-directory.ts (the file test/raw-sql-baseline.json names for them).
+ * catalog checks in tenant-directory.ts (the file tests/support/platform/raw-sql-baseline.json names for them).
  */
 export function pgManagedIndexes(db: Database, isInvalid: (name: string) => Promise<boolean>): ManagedIndexes {
   return {

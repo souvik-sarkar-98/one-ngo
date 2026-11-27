@@ -7,7 +7,7 @@ import type { TransactionManager, Tx } from '../../domain/ports/transaction.js';
 import type { DefinitionReader } from '../../runtime/definitions/ports/definition-reader.js';
 import type { FieldDef, PublicAccessDef, RecordTypeDef } from '../../runtime/definitions/types.js';
 import type { RecordService } from '../../runtime/records/record-service.js';
-import type { PostgresPublicFormLinkStore } from '../../infrastructure/postgres/stores/public-form-link-store.js';
+import type { PublicFormLinkStore } from './ports/public-form-link-store.js';
 import type { SignInTheme } from '../organisations/organisation-service.js';
 
 const TOKEN = /^[A-Za-z0-9_-]{20,128}$/;
@@ -82,7 +82,7 @@ export class PublicFormService {
     private readonly organisations: PublicOrganisationHome,
     private readonly defs: DefinitionReader,
     private readonly records: RecordService,
-    private readonly store: PostgresPublicFormLinkStore,
+    private readonly store: PublicFormLinkStore,
     private readonly crypto: Pick<CredentialCrypto, 'sha256' | 'randomToken' | 'encryptSecret' | 'decryptSecret'>,
     private readonly audit: AuditTrail,
   ) {}

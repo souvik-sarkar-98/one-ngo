@@ -1,15 +1,13 @@
 import { sql } from 'kysely';
-import {
-  FILE_STORE_SETTING,
-  MAIL_CONNECTOR_SETTING,
-  MAIL_FROM_SETTING,
-  type ConnectorListRow,
-  type ConnectorRow,
-  type ConnectorStore,
-  type DeliveryAttempt,
-  type DeliveryRow,
-  type DeliveryStatus,
-  type SaveConnector,
+import type {
+  ConnectorListRow,
+  ConnectorRow,
+  ConnectorSettingKeys,
+  ConnectorStore,
+  DeliveryAttempt,
+  DeliveryRow,
+  DeliveryStatus,
+  SaveConnector,
 } from '../../../application/connectors/ports/connector-store.js';
 import type { Tx } from '../../../domain/ports/transaction.js';
 import { pg } from '../tx.js';
@@ -20,6 +18,8 @@ const NOW = sql<Date>`now()`;
 const CONNECTOR_COLUMNS = ['key', 'type', 'config', 'secret_enc', 'enabled', 'archived_at', 'updated_by', 'updated_at'] as const;
 
 export class PgConnectorStore implements ConnectorStore {
+  constructor(private readonly settings: ConnectorSettingKeys) {}
+
   connector(tx: Tx, key: string): Promise<ConnectorRow | undefined> {
     return pg(tx)
       .selectFrom('connector')
@@ -50,11 +50,11 @@ export class PgConnectorStore implements ConnectorStore {
       .selectFrom('tenant_setting')
       .select(['key', 'value'])
       .where('tenant_id', '=', APP_TENANT)
-      .where('key', 'in', [MAIL_CONNECTOR_SETTING, MAIL_FROM_SETTING])
+      .where('key', 'in', [this.settings.mailConnector, this.settings.mailFrom])
       .execute();
     const value = (key: string) => rows.find((r) => r.key === key)?.value;
-    const connector = value(MAIL_CONNECTOR_SETTING);
-    const from = value(MAIL_FROM_SETTING);
+    const connector = value(this.settings.mailConnector);
+    const from = value(this.settings.mailFrom);
     return {
       connector: typeof connector === 'string' && connector ? connector : null,
       from: typeof from === 'string' && from ? from : null,
@@ -72,7 +72,7 @@ export class PgConnectorStore implements ConnectorStore {
   }
 
   async storeChoice(tx: Tx): Promise<string | null> {
-    const row = await pg(tx).selectFrom('tenant_setting').select('value').where('tenant_id', '=', APP_TENANT).where('key', '=', FILE_STORE_SETTING).executeTakeFirst();
+    const row = await pg(tx).selectFrom('tenant_setting').select('value').where('tenant_id', '=', APP_TENANT).where('key', '=', this.settings.fileStore).executeTakeFirst();
     return typeof row?.value === 'string' && row.value ? row.value : null;
   }
 

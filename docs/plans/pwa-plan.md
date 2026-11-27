@@ -8,7 +8,7 @@ Status: proposed. Covers how OneNGO works as an installed progressive web app (P
 - **Service worker.** Angular's `ngsw` prefetches the app shell and loads lazy chunks as they are needed. It does not cache `/api`. The server sends `index.html`, `ngsw-worker.js`, `ngsw.json` and the manifest as no-cache, and hashed assets with a long cache.
 - **Updates.** The update prompt (`update-prompt.ts`) appears when a new version is ready.
 - **Offline.** The offline banner (`offline-banner.ts`) says the app is offline. What is on screen stays visible. Saves are blocked, and nothing is queued.
-- **Known defect.** DEF-12 in `docs/testing/defect-report.md`: a save attempted offline is not retried when the connection returns.
+- **Known defect.** DEF-12 in Appendix B of `docs/archive/test-plan-appendices-b-c-d-f.md`: a save attempted offline is not retried when the connection returns.
 
 ## 2. Phase 1: make the three platforms behave the same
 
@@ -82,6 +82,6 @@ This is the largest piece. Decisions are needed before any code is written.
 - `apps/onengo/server/src/http/plugins/static.ts` (no-cache rules)
 - `apps/onengo/server/src/http/plugins/organisation.ts` (manifest and icon routes)
 - `packages/platform/src/application/organisations/install-manifest.ts`
-- `docs/plans/ngo-release-1-build-blocks.md` (B44, Installable app)
+- Release 1 block B44, Installable app (delivered; see `docs/architecture/ngo-platform-architecture.md` section 10)
 - `docs/product-briefs/ngo-management-platform.md` (offline, push, native app scope)
 - `docs/architecture/ngo-platform-architecture.md` (Web Push planned, not built)

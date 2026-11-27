@@ -1,0 +1,8 @@
+{
+  "extends": "../apps/onengo/web/tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["unit/onengo-web", "unit/onengo-console-web", "unit/onengo-guide-web", "support/paths.ts"]
+}

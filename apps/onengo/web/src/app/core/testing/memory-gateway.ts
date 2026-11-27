@@ -441,6 +441,20 @@ export function memoryGateway(seed: SampleSeed = sampleSeed()): MemoryGateways {
       log('records', 'decide', [approvalId, decision]);
       return decideApproval(approvalId, decision);
     },
+    async remove(type, id, version) {
+      log('records', 'remove', [type, id, version]);
+      checkVersion(stored(type, id).record, version);
+      records.delete(id);
+    },
+    async publicLink(type, id) {
+      log('records', 'publicLink', [type, id]);
+      stored(type, id);
+      return null;
+    },
+    async revokePublicLink(type, id) {
+      log('records', 'revokePublicLink', [type, id]);
+      stored(type, id);
+    },
   };
 
   const token = (id: string): SignInResult => {

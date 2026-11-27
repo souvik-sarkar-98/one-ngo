@@ -31,7 +31,7 @@
   flex: 0 0 auto;
   object-fit: contain;
   border-radius: 6px;
-  background: #fff;
+  background: var(--card, #fff);
 }
 .app-bar__org {
   min-width: 0;
@@ -88,8 +88,8 @@
   padding: 0 4px;
   box-sizing: border-box;
   border-radius: 8px;
-  background: #fdf1dc;
-  color: #9a6200;
+  background: var(--badge-warn-bg, #fdf1dc);
+  color: var(--warn, #9a6200);
   font-size: 0.6rem;
   font-weight: 700;
   line-height: 16px;

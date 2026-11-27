@@ -1,8 +1,10 @@
 import { ConnectorService } from '../application/connectors/connector-service.js';
 import { OAuthCredentials } from '../application/connectors/oauth-credentials.js';
 import { NotificationService } from '../application/notifications/notification-service.js';
+import { CONNECTOR_SETTINGS } from '../domain/connectors/connector-settings.js';
 import { fetchConnectorHttp } from '../infrastructure/connectors/http.js';
 import { connectorSecretBox } from '../infrastructure/crypto/connector-secrets.js';
+import { openStorageStore } from '../infrastructure/files/storage-connector.js';
 import type { EmailTransport } from '@onengo/kernel/ports';
 import { MAX_ATTEMPTS } from '../infrastructure/outbox/outbox-dispatcher.js';
 import { PgConnectorStore } from '../infrastructure/postgres/stores/connector-store.js';
@@ -14,7 +16,7 @@ import type { Base, Cryptography } from './infrastructure.js';
 /** Connectors and notifications: email only through the organisation's email connector, plus SMS, WhatsApp and webhooks. There is no SMTP fallback. */
 export function wireMessaging(base: Base, { definitions }: Definitions, { secretKeys, sensitive }: Cryptography) {
   const { db, tm, owner, logger, options } = base;
-  const connectorStore = new PgConnectorStore();
+  const connectorStore = new PgConnectorStore(CONNECTOR_SETTINGS);
   const transportFor = async (tenantId: string): Promise<EmailTransport | undefined> => {
     const sender = await connectors.emailTransport(tenantId);
     if (sender) return sender;
@@ -33,6 +35,7 @@ export function wireMessaging(base: Base, { definitions }: Definitions, { secret
     { maxAttempts: MAX_ATTEMPTS },
     base.audit,
     oauthCredentials,
+    openStorageStore,
     logger,
   );
   const notificationStore = new PgNotificationStore();

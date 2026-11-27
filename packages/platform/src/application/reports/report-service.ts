@@ -10,7 +10,7 @@ import type { TransactionManager } from '../../domain/ports/transaction.js';
 import type { DefinitionReader } from '../../runtime/definitions/definition-service.js';
 import { renderDocumentHtml, DocumentTemplateError } from '../../runtime/definitions/document-template.js';
 import type { FieldFilter, ReportDataset, ReportDef, ReportGroupDef } from '../../runtime/definitions/types.js';
-import type { PublishedFormat, PublishedReportRow, PublishedReportStore, PublishedSnapshot } from './published-store.js';
+import type { PublishedFormat, PublishedReportRow, PublishedReportStore, PublishedSnapshot } from './ports/published-store.js';
 import { compileExpression } from '../../runtime/expressions/expression.js';
 import type { RecordAggregates } from '../../runtime/records/aggregates.js';
 import type { JobRunner } from '../../runtime/records/ports/job-runner.js';

@@ -1,10 +1,11 @@
 import type { Tx } from '../../../domain/ports/transaction.js';
 
-/** Organisation settings that name the email connector and the address it sends from. */
-export const MAIL_CONNECTOR_SETTING = 'mail.connector';
-export const MAIL_FROM_SETTING = 'mail.from';
-/** The storage connector every new upload is written to. */
-export const FILE_STORE_SETTING = 'files.storeConnector';
+/** The organisation setting keys that hold the mail connector, its From address and the file store connector. */
+export interface ConnectorSettingKeys {
+  mailConnector: string;
+  mailFrom: string;
+  fileStore: string;
+}
 
 export type DeliveryStatus = 'pending' | 'sent' | 'failed';
 

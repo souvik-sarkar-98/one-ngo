@@ -29,10 +29,11 @@ import type { TransactionManager, Tx } from '../../domain/ports/transaction.js';
 import type { FileService, UploadInput } from '../files/file-service.js';
 import type { DefinitionReader } from '../../runtime/definitions/ports/definition-reader.js';
 import type { OrganisationAdminStore } from './ports/organisation-admin-store.js';
+import { CONNECTOR_SETTINGS } from '../../domain/connectors/connector-settings.js';
+import { ADMINISTRATOR_ROLE } from './onboarding-service.js';
 
 const SETTINGS = 'admin:settings';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ADMINISTRATOR_ROLE = 'admin';
 /** Codes made before the sign-in link format may be shorter, so lookups accept any plausible code. */
 const CODE_LOOKUP = /^[a-z0-9][a-z0-9-]{0,39}$/;
 export const UNAVAILABLE = 'This organisation is not available. Check the sign-in link, or ask your organisation for it.';
@@ -557,7 +558,7 @@ export class OrganisationService {
   }
 
   private async checklist(tx: Tx, legalName: string | null, profile: OrganisationProfileState, registrations: number): Promise<SetupChecklist> {
-    const facts = await this.store.setupFacts(tx, ADMINISTRATOR_ROLE);
+    const facts = await this.store.setupFacts(tx, ADMINISTRATOR_ROLE.key, CONNECTOR_SETTINGS);
     const email = facts.email ? 'organisation' : 'none';
     const items: SetupItem[] = [
       { key: 'identity', required: true, done: !!(profile.identityConfirmedAt && legalName && profile.address && profile.contact.email) },

@@ -28,6 +28,8 @@ import { AdminBase } from '../admin-store';
 export class ThemeStore extends AdminBase {
   readonly groups = THEME_GROUPS;
   readonly palettes = THEME_PALETTES;
+  /** The screen's heading: the Builder's name for it under /builder, Administration's otherwise. */
+  readonly titleKey = this.router.url.includes('/builder/') ? 'ui.builder.look.theme' : 'ui.crumbs.admin.theme';
   readonly values = signal<Record<ThemeField, string>>(themeDraft(null));
   readonly errors = signal<Partial<Record<ThemeField, string>>>({});
   readonly confirm = signal(false);

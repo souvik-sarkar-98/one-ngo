@@ -10,14 +10,9 @@ import type { TransactionManager } from '../../domain/ports/transaction.js';
 import type { WebhookRequest } from '../../runtime/automation/run-action.js';
 import type { PhoneChannel, PhoneMessage } from '../notifications/notification-service.js';
 import { normalisePhone } from '../shared/phone.js';
-import { openStorageStore, parseStorageConfig, storageSecretNames } from '../../infrastructure/files/storage-connector.js';
-import {
-  emailHttpConfig,
-  oauthHasGmailSend,
-  parseEmailConfig,
-  renderEmailHttp,
-  unknownEmailPlaceholders,
-} from '../../infrastructure/email/email-connector.js';
+import { parseStorageConfig, storageSecretNames } from '../../domain/connectors/storage-config.js';
+import { oauthHasGmailSend, parseEmailConfig } from '../../domain/connectors/email-config.js';
+import { emailHttpConfig, renderEmailHttp, unknownEmailPlaceholders } from './email-connector.js';
 import {
   HTTP_SEND_MESSAGE_PARTS,
   HttpTemplateError,
@@ -29,7 +24,16 @@ import {
 } from './http-template.js';
 import { CredentialNeedsReconnect, parseOauthConfig, type OAuthCredentials } from './oauth-credentials.js';
 import { rfc822 } from './rfc822.js';
-import type { ConnectorDeliveryPolicy, ConnectorEvent, ConnectorHttp, ConnectorOutbox, ConnectorRequest, ConnectorResponse, ConnectorSecretBox } from './ports/connector-runtime.js';
+import type {
+  ConnectorDeliveryPolicy,
+  ConnectorEvent,
+  ConnectorHttp,
+  ConnectorOutbox,
+  ConnectorRequest,
+  ConnectorResponse,
+  ConnectorSecretBox,
+  OpenStorageStore,
+} from './ports/connector-runtime.js';
 import type { ConnectorRow, ConnectorStore } from './ports/connector-store.js';
 
 export const CONNECTOR_KINDS = ['sms', 'whatsapp', 'webhook', 'http', 'oauth', 'storage', 'email'] as const;
@@ -317,6 +321,7 @@ export class ConnectorService implements ConnectorCalls {
     private readonly delivery: ConnectorDeliveryPolicy,
     private readonly audit: AuditTrail,
     private readonly oauth: Pick<OAuthCredentials, 'accessToken'>,
+    private readonly openStorageStore: OpenStorageStore,
     private readonly logger: Logger = silentLogger,
   ) {}
 
@@ -530,7 +535,7 @@ export class ConnectorService implements ConnectorCalls {
     const key = `${tenantId}/connector-test-${randomBytes(4).toString('hex')}`;
     const body = Buffer.from('storage-test');
     try {
-      const store = openStorageStore(config, c.secrets, {
+      const store = this.openStorageStore(config, c.secrets, {
         ...(config.provider === 'drive' && config.credential ? { accessToken: () => this.oauth.accessToken(tenantId, config.credential!) } : {}),
       });
       await store.put(key, Readable.from([body]), 'text/plain');

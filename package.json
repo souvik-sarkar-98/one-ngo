@@ -11,11 +11,13 @@
     "node": ">=22"
   },
   "scripts": {
-    "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p tsconfig.json",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p tsconfig.json && tsc --noEmit -p tests/tsconfig.json && tsc --noEmit -p tests/tsconfig.web.json",
     "test": "vitest run --config vitest.config.ts",
     "test:e2e": "npm test --prefix tests/e2e",
     "test:watch": "vitest",
-    "test:contract": "vitest run --config vitest.config.ts packages/platform/test/postgres-contract.test.ts",
+    "test:unit": "vitest run --config vitest.config.ts --project unit",
+    "test:integration": "vitest run --config vitest.config.ts --project integration",
+    "test:contract": "vitest run --config vitest.config.ts tests/integration/platform/postgres-contract.test.ts",
     "start": "npm run start --workspace @onengo/server",
     "start:dev": "npm run start:dev --workspace @onengo/server",
     "build": "npm run build --workspaces --if-present",

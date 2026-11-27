@@ -1,4 +1,5 @@
 import type { Tx } from '../../../domain/ports/transaction.js';
+import type { ConnectorSettingKeys } from '../../connectors/ports/connector-store.js';
 
 export interface LogoRow {
   file_id: string;
@@ -65,7 +66,8 @@ export interface OrganisationAdminStore {
   replaceDocumentSignatories(tx: Tx, documentKey: string, signatoryIds: string[]): Promise<void>;
   /** That file when it is a current signature or one an issued receipt or published report keeps. */
   signatoryFile(tx: Tx, fileId: string): Promise<LogoFile | undefined>;
-  setupFacts(tx: Tx, administratorRole: string): Promise<SetupFacts>;
+  /** `settings` names the organisation settings that hold the mail and file store connectors. */
+  setupFacts(tx: Tx, administratorRole: string, settings: ConnectorSettingKeys): Promise<SetupFacts>;
   /** The published organisation theme body, or null when none is published. A tenant theme replaces the platform one. */
   publishedTheme(tx: Tx): Promise<unknown>;
 }

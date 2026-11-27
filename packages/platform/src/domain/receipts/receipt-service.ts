@@ -107,6 +107,7 @@ export class ReceiptService {
       date: input.date,
       replacesReceiptId: replaces ?? null,
       issuer,
+      signatures: signatoriesOf(issuer),
       content,
     });
   }

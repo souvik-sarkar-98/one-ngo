@@ -1,6 +1,5 @@
 import { sql } from 'kysely';
-import type { IssuerSignatory } from '../../../domain/organisations/organisation.js';
-import type { IssuerSource } from '../../../domain/receipts/ports/receipt-store.js';
+import type { IssuerSignatory, IssuerSource } from '../../../domain/receipts/ports/receipt-store.js';
 import { pg } from '../tx.js';
 
 const APP_TENANT = sql<string>`app_tenant()`;

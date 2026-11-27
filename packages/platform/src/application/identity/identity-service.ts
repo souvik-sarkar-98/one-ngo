@@ -1,5 +1,6 @@
 import type { AuditInput, AuditTrail } from '../../domain/ports/audit-trail.js';
-import { EMAIL_PURPOSES, type AccountRow, type AccountStore, type EmailPurpose, type PasswordTokenInput, type ProviderPolicy, type SessionStore, type SignInStore } from '../../domain/identity/ports/identity-directory.js';
+import type { AccountRow, AccountStore, PasswordTokenInput, ProviderPolicy, SessionStore, SignInStore } from '../../domain/identity/ports/identity-directory.js';
+import { EMAIL_PURPOSES, type EmailPurpose } from '../../domain/identity/email-purposes.js';
 import { emailDomains } from '../../domain/identity/email-domains.js';
 import type { CredentialCrypto } from '@onengo/kernel/ports';
 import type { TenantDirectory } from '../../domain/organisations/ports/organisation-directory.js';

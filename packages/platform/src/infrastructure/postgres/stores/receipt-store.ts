@@ -1,5 +1,4 @@
 import { sql } from 'kysely';
-import { signatoriesOf } from '../../../domain/organisations/organisation.js';
 import type { Receipt, ReceiptContent, ReceiptStore } from '../../../domain/receipts/ports/receipt-store.js';
 import { writeAudit } from './audit-store.js';
 import type { Tx } from '../../../domain/ports/transaction.js';
@@ -80,7 +79,6 @@ export const pgReceiptStore = (sequences: PostgresSequenceStore): ReceiptStore =
       .returning(COLUMNS)
       .$narrowType<Pick<ReceiptRow, 'status'>>()
       .executeTakeFirst();
-    const signatures = signatoriesOf(r.issuer);
     await k
       .insertInto('receipt_issuer')
       .values({
@@ -88,10 +86,10 @@ export const pgReceiptStore = (sequences: PostgresSequenceStore): ReceiptStore =
         tenant_id: TENANT,
         issuer: JSON.stringify(r.issuer),
         logo_file_id: r.issuer.logo?.fileId ?? null,
-        signatory_file_id: signatures[0]?.file?.fileId ?? null,
+        signatory_file_id: r.signatures[0]?.file?.fileId ?? null,
       })
       .execute();
-    const kept = signatures.flatMap((signature, position) => (signature.file ? [{ receipt_id: row!.id, tenant_id: TENANT, file_id: signature.file.fileId, position }] : []));
+    const kept = r.signatures.flatMap((signature, position) => (signature.file ? [{ receipt_id: row!.id, tenant_id: TENANT, file_id: signature.file.fileId, position }] : []));
     if (kept.length) await k.insertInto('receipt_signatory_file').values(kept).execute();
     if (r.content) {
       await k
