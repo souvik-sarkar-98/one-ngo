@@ -1,6 +1,6 @@
 {
   "name": "@onengo/service-sandbox",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Local-only stand-ins for Razorpay, Cashfree, Google sign-in, Cloud Storage, a Gmail-style email sender, connector targets and the breached-password service. Test use only.",
