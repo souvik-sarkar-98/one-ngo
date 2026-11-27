@@ -1541,6 +1541,16 @@ export class MigrationService {
       if ('error' in parsed) out.problems.push({ row: r.row, column: used[0], field: f.key, message: `${f.label} ${parsed.error}` });
       else out.data[f.key] = parsed.value;
     }
+    for (const [fieldKey, defaultValue] of Object.entries(t.defaults ?? {})) {
+      if (fieldKey in t.fields || (t.derived && fieldKey in t.derived)) continue;
+      const f = type.fields.find((x) => x.key === fieldKey);
+      if (!f) continue;
+      const raw = defaultValue.trim();
+      if (raw === '') continue;
+      const parsed = await readCell(ctx, this.records, f, raw, refs);
+      if ('error' in parsed) out.problems.push({ row: r.row, field: f.key, message: `${f.label} ${parsed.error}` });
+      else out.data[f.key] = parsed.value;
+    }
   }
 
   /**

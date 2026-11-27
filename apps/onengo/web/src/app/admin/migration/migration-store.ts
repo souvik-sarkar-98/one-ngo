@@ -226,7 +226,7 @@ export class MigrationStore extends AdminBase {
     const linked = this.linkedFiles().map((l) => ({ id: l.source.id, choices: this.choices(l.target), files: this.fileChoices(l.target), target: l.target }));
     const pending = this.pendingFile();
     return [...importableFields(type), ...fileFields(type)].map((field): FieldRow => {
-      const owner = linked.find((l) => fillsField(l.target, field.key)) ?? linked.find((l) => l.id === pending[field.key]);
+      const owner = linked.find((l) => fillsField(l.target, field.key)) ?? linked.find((l) => l.id === pending[field.key]) ?? (linked.length === 1 ? linked[0] : undefined);
       return {
         field,
         sourceId: owner?.id ?? '',
@@ -236,7 +236,7 @@ export class MigrationStore extends AdminBase {
         canDerive: canDerive(field),
         rules: owner?.target.transforms?.[field.key] ?? [],
         default: owner?.target.defaults?.[field.key] ?? '',
-        canTransform: canTransform(field) && !!owner?.target.fields[field.key],
+        canTransform: canTransform(field) && !!owner,
       };
     });
   });

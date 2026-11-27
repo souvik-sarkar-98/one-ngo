@@ -3,20 +3,115 @@
   "hidden": false,
   "recordType": "donor",
   "label": "Donors",
-  "pageSize": 20,
-  "layout": "table",
-  "columns": ["name", "email", "phone", "city", "donorType", "monthlyDonation"],
-  "compactColumns": ["name", "phone"],
-  "chips": [{ "id": "all", "label": "All" }],
-  "defaultChip": "all",
-  "filters": ["city", "donorType"],
-  "row": { "title": "name", "subtitle": ["email", "phone"], "meta": "number" },
-  "detail": {
-    "sections": [
-      { "id": "donor", "label": "Donor", "fields": ["number", "name", "donorType", "login", "email", "phone", "pan", "address", "city", "monthlyDonation", "totalGiven", "donationCount", "notes"] },
-      { "id": "donations", "label": "Donations", "related": { "recordType": "donation", "field": "donor", "total": "amount" } }
+  "create": {
+    "fields": [
+      "name",
+      "donorType",
+      "login",
+      "email",
+      "phone",
+      "pan",
+      "address",
+      "city",
+      "monthlyDonation",
+      "notes"
     ]
   },
-  "create": { "fields": ["name", "donorType", "login", "email", "phone", "pan", "address", "city", "monthlyDonation", "notes"] },
-  "edit": { "fields": ["name", "donorType", "login", "email", "phone", "pan", "address", "city", "monthlyDonation", "notes"] }
+  "detail": {
+    "sections": [
+      {
+        "id": "donor",
+        "label": "Donor",
+        "fields": [
+          "number",
+          "name",
+          "donorType",
+          "login",
+          "email",
+          "phone",
+          "pan",
+          "address",
+          "city",
+          "monthlyDonation",
+          "totalGiven",
+          "donationCount",
+          "notes"
+        ]
+      },
+      {
+        "id": "donations",
+        "label": "Donations",
+        "related": {
+          "field": "donor",
+          "total": "amount",
+          "recordType": "donation"
+        }
+      }
+    ]
+  },
+  "layout": "table",
+  "columns": [
+    "name",
+    "email",
+    "phone",
+    "city",
+    "donorType",
+    "monthlyDonation"
+  ],
+  "filters": [
+    "city",
+    "donorType"
+  ],
+  "pageSize": 20,
+  "defaultChip": "individual",
+  "compactColumns": [
+    "name",
+    "phone"
+  ],
+  "row": {
+    "meta": "number",
+    "title": "name",
+    "subtitle": [
+      "email",
+      "phone"
+    ]
+  },
+  "edit": {
+    "fields": [
+      "name",
+      "donorType",
+      "login",
+      "email",
+      "phone",
+      "pan",
+      "address",
+      "city",
+      "monthlyDonation",
+      "notes"
+    ]
+  },
+  "chips": [
+    {
+      "id": "individual",
+      "label": "Individual",
+      "filters": {
+        "donorType": {
+          "eq": "individual"
+        }
+      }
+    },
+    {
+      "id": "organization",
+      "label": "Organization",
+      "filters": {
+        "donorType": {
+          "eq": "organisation"
+        }
+      }
+    },
+    {
+      "id": "all",
+      "label": "All"
+    }
+  ]
 }

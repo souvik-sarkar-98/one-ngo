@@ -362,19 +362,19 @@ function withoutDerived(target: MigrationTarget, fieldKey: string): MigrationTar
   return Object.keys(others).length ? { ...rest, derived: others } : rest;
 }
 
-/** The target keeping value rules and defaults only for fields that still have a column. */
+/** The target keeping value rules only for fields that still have a column, and non-empty defaults. */
 function tidy(target: MigrationTarget): MigrationTarget {
   if (!target.transforms && !target.defaults) return target;
   const { transforms, defaults, ...rest } = target;
   const kept = (m: Record<string, unknown> | undefined) => Object.fromEntries(Object.entries(m ?? {}).filter(([k]) => k in target.fields));
   const t = kept(transforms);
-  const d = kept(defaults);
+  const d = defaults ? Object.fromEntries(Object.entries(defaults).filter(([, v]) => typeof v === 'string' && v.trim() !== '')) : {};
   return { ...rest, ...(Object.keys(t).length ? { transforms: t } : {}), ...(Object.keys(d).length ? { defaults: d } : {}) } as MigrationTarget;
 }
 
-/** Whether a column, a reference, a legacy user id column or a file name column fills the field of the target. */
+/** Whether a column, a reference, a legacy user id column, a file name column or a default value fills the field of the target. */
 export const fillsField = (target: MigrationTarget, fieldKey: string): boolean =>
-  fieldKey in target.fields || fieldKey in target.refs || !!target.persons?.[fieldKey] || !!target.files?.[fieldKey] || !!target.derived?.[fieldKey];
+fieldKey in target.fields || fieldKey in target.refs || !!target.persons?.[fieldKey] || !!target.files?.[fieldKey] || !!target.derived?.[fieldKey] || !!target.defaults?.[fieldKey];
 
 /** The target with nothing filling the field. */
 export function clearField(target: MigrationTarget, fieldKey: string): MigrationTarget {
@@ -385,11 +385,13 @@ export function clearField(target: MigrationTarget, fieldKey: string): Migration
     refs: drop(target.refs),
     ...(target.persons ? { persons: drop(target.persons) } : {}),
     ...(target.files ? { files: drop(target.files) } : {}),
+    ...(target.defaults ? { defaults: drop(target.defaults) } : {}),
+    ...(target.transforms ? { transforms: drop(target.transforms) } : {}),
   });
 }
 
-/** Field types whose values a rule can change: text, a choice, yes/no. */
-export const canTransform = (f: FieldDef): boolean => ['text', 'longText', 'choice', 'boolean'].includes(f.type);
+/** Field types whose values a rule can change, or that can take a default value. */
+export const canTransform = (f: FieldDef): boolean => !f.calculated && !f.rollup && f.type !== 'file' && f.type !== 'signature';
 /** Field types a template can fill. */
 export const canDerive = (f: FieldDef): boolean => f.type === 'text' || f.type === 'longText';
 
@@ -965,7 +967,7 @@ export class MigrationSession {
   constructor(
     private readonly gateway: MigrationGateway,
     private readonly schedule: (fn: () => void, ms: number) => ReturnType<typeof setTimeout> = (fn, ms) => setTimeout(fn, ms),
-  ) {}
+  ) { }
 
   async loadList(): Promise<void> {
     this.state.set({ loading: true, error: '' });

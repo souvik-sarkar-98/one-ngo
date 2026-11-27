@@ -1,6 +1,6 @@
 {
   "key": "donations",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "label": "Donations",
   "description": "Keep donors, record donations from raised to paid, post them to the books, and issue numbered receipts.",
   "engine": "0.1.0",

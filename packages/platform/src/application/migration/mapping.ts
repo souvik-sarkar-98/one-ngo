@@ -36,7 +36,22 @@ export interface ValueTransform {
 }
 
 /** The field types whose values a rule or a default can change. */
-export const TRANSFORM_TYPES = ['text', 'longText', 'choice', 'boolean'] as const;
+export const TRANSFORM_TYPES = [
+  'text',
+  'longText',
+  'number',
+  'money',
+  'date',
+  'boolean',
+  'choice',
+  'email',
+  'phone',
+  'reference',
+  'multiChoice',
+  'location',
+  'richText',
+  'person',
+] as const;
 export const MAX_TRANSFORMS = 200;
 export const MAX_TRANSFORM_TEXT = 200;
 
@@ -324,7 +339,7 @@ export function readMapping(input: unknown, columns: readonly string[], types: T
         continue;
       }
       if (!(TRANSFORM_TYPES as readonly string[]).includes(f.type)) {
-        add(path, `'${f.label}' is not a text, choice or yes/no field, so its values cannot be changed`);
+        add(path, `'${f.label}' cannot have transform rules`);
         continue;
       }
       if (!Object.hasOwn(fields, f.key)) {
@@ -352,7 +367,7 @@ export function readMapping(input: unknown, columns: readonly string[], types: T
       if (rules.length) transforms[f.key] = rules;
     }
 
-    // Defaults: the value a field takes when no rule names its cell. Only for a field filled from a column, as rules are.
+    // Defaults: the value a field takes when no rule names its cell, or when the field is not imported from a column.
     const defaults: Record<string, string> = {};
     for (const [fieldKey, value] of Object.entries(isObject(t.defaults) ? t.defaults : {})) {
       const path = `${at}/defaults/${fieldKey}`;
@@ -362,11 +377,7 @@ export function readMapping(input: unknown, columns: readonly string[], types: T
         continue;
       }
       if (!(TRANSFORM_TYPES as readonly string[]).includes(f.type)) {
-        add(path, `'${f.label}' is not a text, choice or yes/no field, so it cannot have a default`);
-        continue;
-      }
-      if (!Object.hasOwn(fields, f.key)) {
-        add(path, `'${f.label}' has no column to take a default value from`);
+        add(path, `'${f.label}' cannot have a default`);
         continue;
       }
       if (typeof value !== 'string') {
