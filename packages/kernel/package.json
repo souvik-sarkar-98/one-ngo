@@ -21,8 +21,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "jose": "^6.2.13",
-    "nodemailer": "^10.1.2",
+    "jose": "^6.2.18",
+    "nodemailer": "^10.6.1",
     "otplib": "^13.5.0",
     "pg": "^8.23.1"
   },
