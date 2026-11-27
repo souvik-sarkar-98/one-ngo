@@ -10,7 +10,7 @@
     "watch": "ng build --watch --configuration development"
   },
   "dependencies": {
-    "@angular/animations": "21.2.25",
+    "@angular/animations": "22.3.0",
     "@angular/cdk": "21.2.14",
     "@angular/common": "21.2.25",
     "@angular/compiler": "21.2.25",
