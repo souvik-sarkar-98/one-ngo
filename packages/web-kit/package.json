@@ -9,7 +9,7 @@
     "./styles/*": "./src/styles/*"
   },
   "peerDependencies": {
-    "@angular/core": "21.2.25"
+    "@angular/core": "^22.3.0"
   },
   "dependencies": {
     "tslib": "^2.6.0"
