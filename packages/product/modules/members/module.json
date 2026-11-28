@@ -3,7 +3,7 @@
   "version": "1.17.4",
   "label": "Members",
   "description": "Member profiles with designation and contact details, membership requests from applicants or staff that create the member and donor profiles, and one-time membership fees. Paid fees post to the books and issue a numbered receipt.",
-  "engine": "0.1.0",
+  "engine": "1.0.0",
   "dependsOn": [
     "donations"
   ],

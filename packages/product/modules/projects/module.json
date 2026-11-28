@@ -3,7 +3,7 @@
   "version": "1.2.1",
   "label": "Projects and events",
   "description": "Projects with goals and milestones, and events with a venue, a project link and an attendee list.",
-  "engine": "0.1.0",
+  "engine": "1.0.0",
   "definitions": [
     "project.recordType.json",
     "projectStatus.workflow.json",

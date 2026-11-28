@@ -3,8 +3,10 @@
   "version": "1.1.1",
   "label": "Beneficiaries",
   "description": "People or households the organisation serves, with a consent record for each purpose and case notes with follow-up dates.",
-  "engine": "0.1.0",
-  "dependsOn": ["projects"],
+  "engine": "1.0.0",
+  "dependsOn": [
+    "projects"
+  ],
   "definitions": [
     "beneficiary.recordType.json",
     "beneficiaryStatus.workflow.json",

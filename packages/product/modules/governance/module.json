@@ -3,8 +3,10 @@
   "version": "1.1.1",
   "label": "Governance",
   "description": "Meetings with agenda and minutes, resolutions that office bearers pass by vote, and notices emailed to members with a record of each one sent.",
-  "engine": "0.1.0",
-  "dependsOn": ["members"],
+  "engine": "1.0.0",
+  "dependsOn": [
+    "members"
+  ],
   "definitions": [
     "meeting.recordType.json",
     "meetingStatus.workflow.json",
@@ -40,7 +42,11 @@
       {
         "key": "office-bearer",
         "label": "Office bearer",
-        "permissions": ["record:meeting:read", "record:resolution:read", "record:memberNotice:read"]
+        "permissions": [
+          "record:meeting:read",
+          "record:resolution:read",
+          "record:memberNotice:read"
+        ]
       }
     ]
   }

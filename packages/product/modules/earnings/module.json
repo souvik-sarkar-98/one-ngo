@@ -3,7 +3,7 @@
   "version": "1.2.2",
   "label": "Earnings",
   "description": "Income other than donations and membership fees, such as interest, sales and service fees. Received earnings post to the books.",
-  "engine": "0.1.0",
+  "engine": "1.0.0",
   "definitions": [
     "earning.recordType.json",
     "earning.workflow.json",
@@ -17,20 +17,59 @@
       {
         "key": "earnings-manager",
         "label": "Earnings manager",
-        "permissions": ["record:earning:*", "record:earning:transition:*", "money:accounts:read", "report:earningsRegister:run"]
+        "permissions": [
+          "record:earning:*",
+          "record:earning:transition:*",
+          "money:accounts:read",
+          "report:earningsRegister:run"
+        ]
       }
     ],
     "accounts": [
-      { "code": "BANK", "name": "Bank account", "type": "asset" },
-      { "code": "CASH", "name": "Cash in hand", "type": "asset" },
-      { "code": "EARN_INTEREST", "name": "Interest earned", "type": "income" },
-      { "code": "EARN_SALES", "name": "Sales income", "type": "income" },
-      { "code": "EARN_FEES", "name": "Service fees", "type": "income" },
-      { "code": "EARN_OTHER", "name": "Other earnings", "type": "income" }
+      {
+        "code": "BANK",
+        "name": "Bank account",
+        "type": "asset"
+      },
+      {
+        "code": "CASH",
+        "name": "Cash in hand",
+        "type": "asset"
+      },
+      {
+        "code": "EARN_INTEREST",
+        "name": "Interest earned",
+        "type": "income"
+      },
+      {
+        "code": "EARN_SALES",
+        "name": "Sales income",
+        "type": "income"
+      },
+      {
+        "code": "EARN_FEES",
+        "name": "Service fees",
+        "type": "income"
+      },
+      {
+        "code": "EARN_OTHER",
+        "name": "Other earnings",
+        "type": "income"
+      }
     ],
     "moneyAccounts": [
-      { "key": "upi", "name": "Main bank account", "kind": "bank", "ledgerCode": "BANK" },
-      { "key": "cash", "name": "Cash in hand", "kind": "cash", "ledgerCode": "CASH" }
+      {
+        "key": "upi",
+        "name": "Main bank account",
+        "kind": "bank",
+        "ledgerCode": "BANK"
+      },
+      {
+        "key": "cash",
+        "name": "Cash in hand",
+        "kind": "cash",
+        "ledgerCode": "CASH"
+      }
     ]
   }
 }
