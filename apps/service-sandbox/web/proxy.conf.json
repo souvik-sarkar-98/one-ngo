@@ -1,0 +1,5 @@
+{
+  "^/inbox$": { "target": "https://127.0.0.1:8095", "secure": false, "changeOrigin": true },
+  "/inbox/": { "target": "https://127.0.0.1:8095", "secure": false, "changeOrigin": true },
+  "/mail/": { "target": "https://127.0.0.1:8095", "secure": false, "changeOrigin": true }
+}

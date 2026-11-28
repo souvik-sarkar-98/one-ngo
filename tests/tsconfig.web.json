@@ -4,5 +4,5 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["unit/onengo-web", "unit/onengo-console-web", "unit/onengo-guide-web", "support/paths.ts"]
+  "include": ["unit/onengo-web", "unit/onengo-console-web", "unit/onengo-guide-web", "unit/service-sandbox-web", "support/paths.ts"]
 }

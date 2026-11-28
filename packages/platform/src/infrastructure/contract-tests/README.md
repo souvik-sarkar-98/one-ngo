@@ -2,7 +2,7 @@
 
 The portable behaviour every database provider must show (block P4, section 11
 of `docs/plans/ngo-backend-enhancement-plan.md`; ADR-13 in
-`docs/architecture.md` section 3.7). PostgreSQL passes
+`docs/documents.html#architecture` section 3.7). PostgreSQL passes
 it; a provider migration is not released until it passes in full.
 
 ```powershell

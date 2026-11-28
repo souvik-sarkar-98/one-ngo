@@ -18,6 +18,10 @@ import { ScreenMeta } from '../services/screen-meta';
 import { Session } from '../services/session';
 import { Viewport } from '../ui/viewport';
 
+/** The User guide destination's link in the navigation, and the copy of the guide the web build serves beside the app. */
+const GUIDE_LINK = '/guide';
+const USER_GUIDE_PAGE = '/user-guide.html';
+
 /**
  * The shell's state: destinations with the approvals badge, the active one,
  * the app bar and the breadcrumb, all derived from the address. The only place
@@ -113,6 +117,10 @@ export class ShellStore {
 
   go(link: string): void {
     this.moreOpen.set(false);
+    if (link === GUIDE_LINK) {
+      window.open(USER_GUIDE_PAGE, '_blank', 'noopener');
+      return;
+    }
     void this.router.navigateByUrl(link);
   }
 

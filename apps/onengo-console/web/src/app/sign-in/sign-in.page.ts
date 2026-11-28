@@ -5,6 +5,7 @@ import { Btn } from '@onengo/web-kit';
 
 const REFUSED: Record<string, string> = {
   unknown: 'This login is not an operator on this console. Copy the provider and subject below for the person who manages operators.',
+  used: 'This temporary login has already been used. A temporary operator can sign in once. Ask the person who manages operators for a new account.',
   reauth: 'Sign in again to confirm this action.',
   provider: 'The identity provider did not complete sign-in. Try again in a moment.',
   ended: 'Your session has ended. Sign in again.',

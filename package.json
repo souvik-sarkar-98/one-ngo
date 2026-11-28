@@ -1,6 +1,6 @@
 {
   "name": "@onengo/workspace",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -16,6 +16,7 @@
     "test:e2e": "npm test --prefix tests/e2e",
     "test:watch": "vitest",
     "test:unit": "vitest run --config vitest.config.ts --project unit",
+    "test:hygiene": "vitest run --config vitest.config.ts --project hygiene",
     "test:integration": "vitest run --config vitest.config.ts --project integration",
     "test:contract": "vitest run --config vitest.config.ts tests/integration/platform/postgres-contract.test.ts",
     "start": "npm run start --workspace @onengo/server",
@@ -37,8 +38,9 @@
     "web:build": "npm run build --workspace @onengo/web",
     "operator:web:build": "npm run build --workspace @onengo-console/web",
     "guide:web:build": "npm run build --workspace @onengo-guide/web",
+    "sandbox:web:build": "npm run build --workspace @onengo/service-sandbox-web",
     "operator:server:build": "npm run build --workspace @onengo-console/server",
-    "ci": "npm run typecheck && npm run build:server && npm run web:build && npm run operator:web:build && npm run guide:web:build && npm run operator:server:build && npm test",
+    "ci": "npm run typecheck && npm run build:server && npm run web:build && npm run operator:web:build && npm run guide:web:build && npm run sandbox:web:build && npm run operator:server:build && npm test",
     "ci:audit": "npm audit --omit=dev --audit-level=high",
     "demo:integrations": "npm run start --workspace @onengo/service-sandbox"
   },
@@ -47,18 +49,9 @@
     "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
     "esbuild": "^0.28.2",
-    "playwright": "^1.65.1",
     "tsx": "^4.23.15",
     "typescript": "~5.9.3",
     "vite": "^7.0.0",
-    "vitest": "^5.0.5",
-    "@playwright/test": "^1.65.1"
-  },
-  "dependencies": {},
-  "allowScripts": {
-    "esbuild": true,
-    "@parcel/watcher": true,
-    "lmdb": true,
-    "msgpackr-extract": true
+    "vitest": "^5.0.5"
   }
 }

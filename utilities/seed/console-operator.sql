@@ -1,4 +1,5 @@
--- Local development only. A database administrator inserts the first production operator.
+-- Local development only. In production the first operator is created with
+-- utilities/access/create-first-operator.sql (docs/developer.html#first-operator).
 -- utilities/sandbox/dev-setup.mjs replaces __ISSUER__ and __SUBJECT__ before running this.
 -- An identity that is already stored is left in place. A missing action is granted.
 -- A revoked action is restored so the local operator keeps the full console.

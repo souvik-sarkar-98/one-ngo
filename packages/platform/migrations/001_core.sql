@@ -708,6 +708,9 @@ create table migration_profile (
   books_result jsonb,
   check_result jsonb,
   job_id uuid references job(id),
+  -- Uploaded CSVs and failed-row data can hold personal information. Purging deletes them and
+  -- stamps when it happened, so the screens can say the data is gone.
+  purged_at timestamptz,
   created_by text not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -724,6 +727,7 @@ create table migration_source (
   row_count integer not null default 0,
   position integer not null,
   mapping jsonb,
+  purged_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (profile_id, file_name)
@@ -742,11 +746,28 @@ create table migration_key (
 );
 create index migration_key_record on migration_key (record_id);
 
+-- The files a data migration's records point at (photos, scans), uploaded to the profile under a
+-- relative path. A file column of a record file names them. An attachment is exempt from the 24-hour
+-- clean-up of unlinked uploads (it is kept while this row exists) and is linked to its record by the
+-- normal save during the run.
+create table migration_attachment (
+  id          uuid primary key default gen_random_uuid(),
+  tenant_id   uuid not null references tenant(id),
+  profile_id  uuid not null references migration_profile(id) on delete cascade,
+  path        text not null check (length(path) between 1 and 255),
+  file_id     uuid not null references file_object(id),
+  size        bigint not null check (size >= 0),
+  uploaded_by text not null,
+  created_at  timestamptz not null default now()
+);
+create unique index migration_attachment_path on migration_attachment (profile_id, lower(path));
+create index migration_attachment_file on migration_attachment (file_id);
+
 do $$
 declare
   t text;
 begin
-  foreach t in array array['migration_profile', 'migration_source', 'migration_key'] loop
+  foreach t in array array['migration_profile', 'migration_source', 'migration_key', 'migration_attachment'] loop
     execute format('alter table %I enable row level security', t);
     execute format(
       'create policy tenant_isolation on %I using (tenant_id = (select app_tenant())) with check (tenant_id = (select app_tenant()))', t);
@@ -756,6 +777,7 @@ $$;
 
 grant select, insert, update on migration_profile, migration_source, migration_key to app_runtime;
 grant delete on migration_source to app_runtime;
+grant select, insert, delete on migration_attachment to app_runtime;
 
 -- Row-level security -------------------------------------------------------------------------
 -- Policies bind app_runtime, the role every tenant transaction switches to. RLS is

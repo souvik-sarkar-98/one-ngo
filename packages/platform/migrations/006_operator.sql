@@ -16,6 +16,10 @@ create table operator_account (
   disabled_by uuid references operator_account(id),
   disabled_reason text
     check (disabled_reason is null or length(trim(disabled_reason)) between 1 and 500),
+  -- A temporary account may sign in once. The console sets first_signed_in_at on that sign-in and
+  -- refuses any later one. A session that already exists lasts until it expires or is revoked.
+  temporary boolean not null default false,
+  first_signed_in_at timestamptz,
   check (
     (status = 'active' and disabled_at is null and disabled_by is null)
     or (status = 'disabled' and disabled_at is not null and disabled_by is not null)

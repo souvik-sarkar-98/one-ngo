@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OneNGO service sandbox</title>
+  <meta name="description" content="Local stand-ins for the outside services OneNGO calls: sign-in, payments, mail, SMS, WhatsApp, webhooks, and storage." />
+  <!-- The same look as the OneNGO web apps: tokens and base rules from the web kit, then the one stylesheet every doc shares. -->
+  <link rel="stylesheet" href="../packages/web-kit/src/styles/base.css" />
+  <link rel="stylesheet" href="assets/docs.css" />
+</head>
+<body>
+  <!-- Shared arrow heads for every diagram below. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" class="mk" /></marker>
+      <marker id="arr-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" class="mk-ok" /></marker>
+      <marker id="arr-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" class="mk-bad" /></marker>
+    </defs>
+  </svg>
+  <header class="appbar">
+    <a class="appbar__name" href="index.html">OneNGO</a>
+    <span class="appbar__title">Service sandbox</span>
+    <span class="appbar__spacer"></span>
+    <a class="appbar__link" href="index.html">Home</a>
+    <a class="appbar__link" href="user-guide.html">User guide</a>
+    <a class="appbar__link" href="developer.html">Developer</a>
+    <a class="appbar__link" href="service-sandbox.html" aria-current="page">Sandbox</a>
+    <a class="appbar__link" href="documents.html">Reference</a>
+  </header>
+
+  <div class="shell">
+    <nav class="rail" aria-label="Sandbox contents">
+      <a href="#how">How it fits</a>
+      <a href="#start">Start it</a>
+      <a href="#overview">Capabilities</a>
+      <a href="#details">Capability details</a>
+      <a href="#connected">What to put in .env</a>
+      <a href="#troubleshooting">Troubleshooting</a>
+    </nav>
+
+    <main class="content" id="content">
+      <div class="page">
+
+        <div class="card hero">
+          <h1>Service sandbox</h1>
+          <p class="lede">Local stand-ins for the outside services OneNGO calls. Each capability below names the production system it replaces, what the stand-in does, and how to connect it to the NGO app or the operator console.</p>
+          <div class="hero__meta">
+            <span class="pill">13 capabilities</span>
+            <span class="pill">HTTPS on port 8095</span>
+            <span class="pill">Mail inbox at /inbox</span>
+            <span class="pill">This machine only</span>
+          </div>
+          <div class="actions">
+            <a class="cta" href="#start">Start it</a>
+            <a class="cta ghost" href="#overview">See the 13 capabilities</a>
+            <a class="cta ghost" href="#connected">What to put in .env</a>
+          </div>
+        </div>
+
+        <div class="notice warn"><strong>For local development and tests only</strong><p>Every service answers on this machine with fixed demo credentials. Nothing here talks to a real Razorpay, Cashfree, Google, Cloud Storage, or Have I Been Pwned account.</p></div>
+
+        <div class="toolbar-lite">
+          <button type="button" class="app-btn app-btn--sm" id="fold-all">Collapse all sections</button>
+          <button type="button" class="app-btn app-btn--sm" id="unfold-all">Expand all sections</button>
+          <button type="button" class="app-btn app-btn--sm" id="open-all">Open every capability</button>
+          <span class="spacer"></span>
+          <button type="button" class="app-btn app-btn--sm" onclick="window.print()">Print or save as PDF</button>
+        </div>
+
+        <section class="card" id="how">
+          <h2>How it fits</h2>
+          <p>Your servers call the sandbox instead of the real services. You choose which ones by putting its address into <code>.env</code> or into a setting saved in the app. Anything you leave empty keeps the real service.</p>
+          <figure class="diagram">
+            <svg viewBox="0 0 880 300" role="img" aria-labelledby="d-sb-t d-sb-d">
+              <title id="d-sb-t">How the sandbox stands in for outside services</title>
+              <desc id="d-sb-d">The main server and the console server call the service sandbox on port 8095. The sandbox answers as sign-in, payments, messaging, connectors, files, and security services. The real services are not called.</desc>
+              <rect class="n" x="20" y="44" width="190" height="72" rx="10" /><text class="t t-b" x="115" y="74" text-anchor="middle">Main server</text><text class="t-s" x="115" y="94" text-anchor="middle">:8080 · NGO app</text>
+              <rect class="n" x="20" y="176" width="190" height="72" rx="10" /><text class="t t-b" x="115" y="206" text-anchor="middle">Console server</text><text class="t-s" x="115" y="226" text-anchor="middle">:9090 · operators</text>
+              <path class="edge" d="M212 80 H268" /><path class="edge" d="M212 212 H268" />
+              <text class="t-s" x="240" y="150" text-anchor="middle" transform="rotate(-90 240 150)">URLs from .env</text>
+              <rect class="zone" x="270" y="14" width="360" height="272" rx="16" />
+              <text class="t-brand" x="288" y="38" style="font-size:12px">SERVICE SANDBOX · https://127.0.0.1:8095</text>
+              <rect class="n" x="288" y="54" width="160" height="62" rx="10" /><text class="t t-b" x="368" y="80" text-anchor="middle">Sign-in</text><text class="t-s" x="368" y="98" text-anchor="middle">Google · operator</text>
+              <rect class="n" x="452" y="54" width="160" height="62" rx="10" /><text class="t t-b" x="532" y="80" text-anchor="middle">Payments</text><text class="t-s" x="532" y="98" text-anchor="middle">Razorpay · Cashfree</text>
+              <rect class="n" x="288" y="124" width="160" height="62" rx="10" /><text class="t t-b" x="368" y="150" text-anchor="middle">Messaging</text><text class="t-s" x="368" y="168" text-anchor="middle">email · SMS · WhatsApp</text>
+              <rect class="n" x="452" y="124" width="160" height="62" rx="10" /><text class="t t-b" x="532" y="150" text-anchor="middle">Connectors</text><text class="t-s" x="532" y="168" text-anchor="middle">webhook · pincode · OAuth</text>
+              <rect class="n" x="288" y="194" width="160" height="62" rx="10" /><text class="t t-b" x="368" y="220" text-anchor="middle">Files</text><text class="t-s" x="368" y="238" text-anchor="middle">Cloud Storage · token</text>
+              <rect class="n" x="452" y="194" width="160" height="62" rx="10" /><text class="t t-b" x="532" y="220" text-anchor="middle">Security</text><text class="t-s" x="532" y="238" text-anchor="middle">breached passwords</text>
+              <path class="edge edge-d edge-bad" d="M632 150 H688" />
+              <text class="t-s" x="660" y="140" text-anchor="middle">instead of</text>
+              <rect class="ghost" x="690" y="30" width="180" height="240" rx="14" style="stroke:var(--line);stroke-dasharray:6 4;stroke-width:1.5" />
+              <text class="t t-b" x="780" y="62" text-anchor="middle">Real services</text>
+              <text class="t-s" x="780" y="82" text-anchor="middle">(not called)</text>
+              <text class="t-s" x="780" y="116" text-anchor="middle">Google · Auth0</text>
+              <text class="t-s" x="780" y="140" text-anchor="middle">Razorpay · Cashfree</text>
+              <text class="t-s" x="780" y="164" text-anchor="middle">Gmail · SMS · WhatsApp</text>
+              <text class="t-s" x="780" y="188" text-anchor="middle">Cloud Storage</text>
+              <text class="t-s" x="780" y="212" text-anchor="middle">Have I Been Pwned</text>
+            </svg>
+            <figcaption><b>Fake, fixed, and local.</b> Every service answers on this machine with demo credentials. Mail is kept in memory and read at <code>/inbox</code>.</figcaption>
+          </figure>
+        </section>
+
+
+    <section class="card" id="start">
+      <h2>Start it</h2>
+      <p><code>npm run dev</code> from the repository root starts the sandbox on HTTPS <code>8095</code>, waits until it answers, then starts the API, the web app, and the operator console. Pass <code>--no-sandbox</code> to leave the sandbox off, or <code>--no-console</code> to leave the console off. The sandbox only listens. It does not write <code>.env</code> and it does not fill API or console variables. Prepare the database once with <code>npm run dev:setup</code>. The examples on this page use the default ports. Files stay in <code>.data/service-sandbox</code>.</p>
+      <p>To run the sandbox alone, use <code>npm run demo:integrations</code> from the repository root, or <code>npm run dev</code> in <code>apps/service-sandbox/server</code>. Pass <code>--https-port</code> to change its port. From the repository root, pass <code>--sandbox-port</code>; that start script forwards it as <code>--https-port</code>.</p>
+      <p><code>GET https://127.0.0.1:8095/</code> returns JSON links to <code>/swagger</code> and <code>/openapi.json</code>. <code>/swagger</code> is the API reference. <code>GET /inbox</code> lists accepted mail as JSON, and <code>GET /inbox/&lt;id&gt;</code> returns one message. <code>GET /api/log</code> returns the log, orders, and message headers. The browser warns about the certificate once on the sign-in page. Set <code>NODE_EXTRA_CA_CERTS</code> to the absolute path of <code>.data/service-sandbox/tls/ca.crt</code> before the API calls the sandbox.</p>
+    </section>
+
+    <section class="card" id="overview">
+      <h2>Capabilities</h2>
+      <p>
+        <span class="badge ready">Ready</span> is on the sandbox with no one-ngo setting.
+        <span class="badge setup">Save in app</span> needs a setting saved in one-ngo.
+        <span class="badge env">.env</span> needs a value in <code>.env</code>.
+      </p>
+      <div class="panel panel-table"><table>
+        <thead>
+          <tr><th>Capability</th><th>Area</th><th>Production system</th><th>Set-up</th><th>What you get</th><th>Answers at</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><a href="#google-sign-in">Google sign-in</a></td><td><span class="badge area-tag">Sign-in</span></td><td>Google, <code>accounts.google.com</code></td><td><span class="badge setup">Save in app</span></td><td>A sign-in page that returns a verified ID token for an existing member.</td><td><code>/oauth2/authorize</code></td></tr>
+          <tr><td><a href="#operator-sign-in">Operator sign-in</a></td><td><span class="badge area-tag">Sign-in</span></td><td>Operator identity provider (Auth0 by default)</td><td><span class="badge env">.env</span></td><td>The same provider, second client. Tokens report multi-factor sign-in.</td><td><code>/oauth2/authorize</code></td></tr>
+          <tr><td><a href="#razorpay">Razorpay</a></td><td><span class="badge area-tag">Payments</span></td><td>Razorpay, <code>api.razorpay.com</code></td><td><span class="badge setup">Save in app</span></td><td>Order creation, then a signed Capture or Fail webhook.</td><td><code>POST /v1/orders</code></td></tr>
+          <tr><td><a href="#cashfree">Cashfree</a></td><td><span class="badge area-tag">Payments</span></td><td>Cashfree sandbox and production</td><td><span class="badge setup">Save in app</span></td><td>Order creation, then a signed Capture or Fail webhook.</td><td><code>POST /pg/orders</code></td></tr>
+          <tr><td><a href="#email">Email</a></td><td><span class="badge area-tag">Messaging</span></td><td>Gmail <code>users.messages.send</code></td><td><span class="badge setup">Save in app</span></td><td>An HTTP send endpoint and an inbox. The connector is required.</td><td><code>POST /gmail/v1/users/me/messages/send</code></td></tr>
+          <tr><td><a href="#sms">SMS</a></td><td><span class="badge area-tag">Connectors</span></td><td>The organisation's SMS gateway</td><td><span class="badge setup">Save in app</span></td><td>Accepts a send and returns a queued id.</td><td><code>POST /sms</code></td></tr>
+          <tr><td><a href="#whatsapp">WhatsApp</a></td><td><span class="badge area-tag">Connectors</span></td><td>WhatsApp Business Cloud API</td><td><span class="badge setup">Save in app</span></td><td>Accepts a Cloud API style message send.</td><td><code>POST /whatsapp/…/messages</code></td></tr>
+          <tr><td><a href="#webhook">Webhook</a></td><td><span class="badge area-tag">Connectors</span></td><td>The organisation's webhook receiver</td><td><span class="badge setup">Save in app</span></td><td>Checks the signature on an outbound webhook.</td><td><code>POST /hooks/in</code></td></tr>
+          <tr><td><a href="#pincode">Pincode lookup</a></td><td><span class="badge area-tag">Connectors</span></td><td>An HTTPS lookup the organisation configures</td><td><span class="badge setup">Save in app</span></td><td>Area, district, and state for four PIN codes.</td><td><code>GET /lookup/&lt;pincode&gt;</code></td></tr>
+          <tr><td><a href="#connector-oauth">Connector OAuth</a></td><td><span class="badge area-tag">Connectors</span></td><td>An OAuth provider, such as Google</td><td><span class="badge setup">Save in app</span></td><td>A consent page, then an access token.</td><td><code>/connector-oauth/authorize</code></td></tr>
+          <tr><td><a href="#cloud-storage">Cloud Storage</a></td><td><span class="badge area-tag">Files</span></td><td>Google Cloud Storage, <code>storage.googleapis.com</code></td><td><span class="badge env">.env</span></td><td>Upload, download, and delete. Files survive a restart.</td><td><code>/upload/storage/v1/b/…/o</code></td></tr>
+          <tr><td><a href="#metadata-token">Metadata token</a></td><td><span class="badge area-tag">Files</span></td><td>Compute Engine metadata, <code>metadata.google.internal</code></td><td><span class="badge ready">Ready</span></td><td>The token Cloud Storage calls expect.</td><td><code>GET /token</code></td></tr>
+          <tr><td><a href="#breached-passwords">Breached passwords</a></td><td><span class="badge area-tag">Security</span></td><td>Have I Been Pwned, <code>api.pwnedpasswords.com</code></td><td><span class="badge ready">Ready</span></td><td>Only the word <code>password</code> counts as breached.</td><td><code>GET /range/&lt;prefix&gt;</code></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="card" id="details">
+      <h2>Capability details</h2>
+      <p>Open a capability to see which production system it stands in for, what it does, and how to connect it. Copy the values you want from the <a href="#connected">.env</a> section. Empty values keep the real service. Nothing in <code>npm run dev</code> fills them.</p>
+
+      <details class="scenario" id="google-sign-in">
+        <summary><span class="stitle">Google sign-in</span><span class="badge area-tag">Sign-in</span><span class="badge setup">Save in app</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>Google OpenID Connect at <code>https://accounts.google.com</code>, the default member sign-in issuer when <code>OIDC_ISSUER</code> is empty. Any other OpenID Connect issuer set as <code>OIDC_ISSUER</code> works the same way.</p>
+          <h4>What it does</h4>
+          <p>Stands in for that issuer on the sandbox origin. It serves discovery at <code>/.well-known/openid-configuration</code>, the sign-in page at <code>/oauth2/authorize</code>, the code exchange at <code>/oauth2/token</code>, and the signing keys at <code>/oauth2/jwks</code>. The sign-in page asks only for an email. The ID token marks that email verified, and its subject is <code>demo-</code> plus the first 20 hex characters of the SHA-256 of the lower-cased email. An authorization code lasts 5 minutes and the ID token lasts 1 hour. The sandbox does not create a member.</p>
+          <h4>How to integrate it</h4>
+          <p>Set these in <code>.env</code>, then restart the API.</p>
+          <div class="panel panel-table"><table>
+            <thead><tr><th>Variable</th><th>Value</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>OIDC_ISSUER</code></td><td><code>https://127.0.0.1:8095</code></td><td>Sandbox issuer. Empty means Google.</td></tr>
+              <tr><td><code>OIDC_CLIENT_ID</code></td><td><code>demo-google</code></td><td></td></tr>
+              <tr><td><code>OIDC_CLIENT_SECRET</code></td><td><code>demo-google-secret</code></td><td></td></tr>
+              <tr><td><code>OIDC_PROVIDER_ID</code></td><td><code>google</code></td><td></td></tr>
+              <tr><td><code>OIDC_PROVIDER_LABEL</code></td><td><code>Google</code></td><td></td></tr>
+              <tr><td><code>NODE_EXTRA_CA_CERTS</code></td><td>Absolute path to <code>.data/service-sandbox/tls/ca.crt</code></td><td>Lets the API trust the sandbox certificate.</td></tr>
+            </tbody>
+          </table></div>
+          <p>In the operator console, open the organisation's sign-in settings and turn on the shared Google provider for that organisation. Then open the organisation sign-in page in the NGO app and choose Google.</p>
+          <p>On the sandbox page, enter the email of a member who already exists in that organisation. one-ngo refuses an email it does not already have.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="operator-sign-in">
+        <summary><span class="stitle">Operator sign-in</span><span class="badge area-tag">Sign-in</span><span class="badge env">.env</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>The operator console's identity provider. Production uses an external provider that can prove multi-factor sign-in, and Auth0 is the one named for that role. Google used on its own is not accepted for operators. <code>OPERATOR_OIDC_ISSUER</code> holds the provider's address. Leave it empty until you choose a provider, including this sandbox.</p>
+          <h4>What it does</h4>
+          <p>Uses the same OpenID Connect endpoints as Google sign-in, with a second client: id and audience <code>demo-operator</code>, secret <code>demo-operator-secret</code>. The ID token includes <code>amr</code> values of <code>pwd</code> and <code>mfa</code>, which the operator console requires. The page does not ask for a password or a second factor; it writes those claims itself. The console still decides what the person may do, so a token for an email that was never linked does not create a session.</p>
+          <h4>How to integrate it</h4>
+          <p>Set these in <code>.env</code>, then restart the operator console.</p>
+          <div class="panel panel-table"><table>
+            <thead><tr><th>Variable</th><th>Value</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>OPERATOR_OIDC_ISSUER</code></td><td><code>https://127.0.0.1:8095</code></td><td>Sandbox issuer</td></tr>
+              <tr><td><code>OPERATOR_OIDC_CLIENT_ID</code></td><td><code>demo-operator</code></td><td></td></tr>
+              <tr><td><code>OPERATOR_OIDC_CLIENT_SECRET</code></td><td><code>demo-operator-secret</code></td><td></td></tr>
+              <tr><td><code>OPERATOR_OIDC_AUDIENCE</code></td><td><code>demo-operator</code></td><td>Same as the client id</td></tr>
+              <tr><td><code>NODE_EXTRA_CA_CERTS</code></td><td>Absolute path to <code>.data/service-sandbox/tls/ca.crt</code></td><td>Lets the console trust the sandbox certificate.</td></tr>
+            </tbody>
+          </table></div>
+          <p><code>npm run dev:setup</code> links one account, display name "Local operator", to <code>operator.full@onengo.local</code> on the sandbox issuer at port <code>8095</code> and grants every console action. To use a real provider, set that provider in <code>.env</code> and link a real subject. The console keeps <code>OPERATOR_OIDC_MFA_ACR</code> and <code>OPERATOR_IAP_AUDIENCE</code> when you set them.</p>
+          <p>Open <code>http://localhost:9090</code>, then enter <code>operator.full@onengo.local</code> on the sandbox page. A different email produces a different subject, and the console finds no account for it.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="razorpay">
+        <summary><span class="stitle">Razorpay</span><span class="badge area-tag">Payments</span><span class="badge setup">Save in app</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>The Razorpay Orders API at <code>https://api.razorpay.com</code>. Production calls that host. <code>RAZORPAY_API_BASE</code> replaces it with the sandbox.</p>
+          <h4>What it does</h4>
+          <p>Stands in for order creation at <code>POST /v1/orders</code>. It accepts HTTP basic auth with key id <code>rzp_test_demo</code> and key secret <code>demo-key-secret</code>, requires an amount of at least 100 paise and the currency <code>INR</code>, and rejects any other key. Orders are kept in memory; restarting the sandbox clears them. <code>GET /api/log</code> lists them. <code>POST /orders/razorpay/&lt;orderId&gt;/capture</code> posts a <code>payment.captured</code> webhook and <code>POST /orders/razorpay/&lt;orderId&gt;/fail</code> posts <code>payment.failed</code>. Both are signed with <code>demo-webhook-secret</code>. The body is JSON <code>{"org":"demo"}</code>.</p>
+          <h4>How to integrate it</h4>
+          <p>Set these in <code>.env</code>, then restart the API. Leave <code>RAZORPAY_API_BASE</code> empty to call Razorpay.</p>
+          <div class="panel panel-table"><table>
+            <thead><tr><th>Variable</th><th>Value</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>RAZORPAY_API_BASE</code></td><td><code>https://127.0.0.1:8095</code></td><td>Sandbox Orders API</td></tr>
+              <tr><td><code>NODE_EXTRA_CA_CERTS</code></td><td>Absolute path to <code>.data/service-sandbox/tls/ca.crt</code></td><td>Lets the API trust the sandbox certificate.</td></tr>
+            </tbody>
+          </table></div>
+          <p>Then, as a member who can manage payment gateways such as a treasurer, save the gateway with <code>PUT /api/admin/payment-gateways/razorpay</code>:</p>
+          <pre><code>{ "keyId": "rzp_test_demo", "keySecret": "demo-key-secret", "webhookSecret": "demo-webhook-secret" }</code></pre>
+          <p>Start a payment in the NGO app. The order appears in <code>GET /api/log</code> with its amount and reference. Post capture or fail with the organisation key that owns the payment, such as <code>demo</code> or <code>harbour</code>. The sandbox posts to <code>http://localhost:&lt;backend port&gt;/webhooks/payments/razorpay/&lt;org&gt;</code> and returns JSON with the order status and the webhook answer. The order status changes only when one-ngo answers with a success status.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="cashfree">
+        <summary><span class="stitle">Cashfree</span><span class="badge area-tag">Payments</span><span class="badge setup">Save in app</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>Cashfree at <code>https://sandbox.cashfree.com</code> when the saved environment is <code>sandbox</code>, which is the default, and <code>https://api.cashfree.com</code> when it is <code>production</code>. <code>CASHFREE_API_BASE</code> replaces both hosts with the sandbox.</p>
+          <h4>What it does</h4>
+          <p>Stands in for order creation at <code>POST /pg/orders</code>. Requests must carry <code>x-client-id: cf_demo</code>, <code>x-client-secret: demo-cf-secret</code>, and an <code>x-api-version</code> header, and the amount must be at least 1 rupee in <code>INR</code>. <code>POST /orders/cashfree/&lt;orderId&gt;/capture</code> and <code>/fail</code> post a webhook signed with the client secret. The body is JSON <code>{"org":"demo"}</code>. The order status changes only when one-ngo answers with a success status.</p>
+          <h4>How to integrate it</h4>
+          <p>Set these in <code>.env</code>, then restart the API. Leave <code>CASHFREE_API_BASE</code> empty to call Cashfree.</p>
+          <div class="panel panel-table"><table>
+            <thead><tr><th>Variable</th><th>Value</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>CASHFREE_API_BASE</code></td><td><code>https://127.0.0.1:8095</code></td><td>Sandbox replaces both Cashfree hosts</td></tr>
+              <tr><td><code>NODE_EXTRA_CA_CERTS</code></td><td>Absolute path to <code>.data/service-sandbox/tls/ca.crt</code></td><td>Lets the API trust the sandbox certificate.</td></tr>
+            </tbody>
+          </table></div>
+          <p>Save the gateway with <code>PUT /api/admin/payment-gateways/cashfree</code>:</p>
+          <pre><code>{ "keyId": "cf_demo", "keySecret": "demo-cf-secret", "environment": "sandbox" }</code></pre>
+          <p>Start a payment in the NGO app, then post capture or fail. The webhook goes to <code>http://localhost:&lt;backend port&gt;/webhooks/payments/cashfree/&lt;org&gt;</code>. The JSON response and <code>GET /api/log</code> record the answer or a connection error.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="email">
+        <summary><span class="stitle">Email</span><span class="badge area-tag">Messaging</span><span class="badge setup">Save in app</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>Gmail's send method, <code>POST https://gmail.googleapis.com/gmail/v1/users/me/messages/send</code>. The body is <code>{"raw":"&lt;base64url RFC 822&gt;"}</code> and the header is <code>Authorization: Bearer</code> plus an access token. one-ngo sends that through the organisation's <code>email</code> connector chosen in Settings. This stand-in uses a bearer secret in place of a Google account, so you can save it without leaving the machine. There is no SMTP listener. Leave <code>SMTP_*</code> unset.</p>
+          <h4>What it does</h4>
+          <p><code>POST /gmail/v1/users/me/messages/send</code> accepts that Gmail body. The request must send <code>Authorization: Bearer demo-mail-token</code>, and a wrong token or a <code>raw</code> value that is not a message is refused. The answer is <code>{"id","threadId","labelIds":["SENT"]}</code>. Each message is kept in memory, up to 200. <code>GET /inbox</code> lists them as JSON and <code>GET /inbox/&lt;id&gt;</code> returns one message, including its HTML. <code>GET /mail/&lt;id&gt;</code> returns the raw source. Restarting the sandbox clears the mailbox.</p>
+          <h4>How to integrate it</h4>
+          <p>Set these in <code>.env</code>, then restart the API.</p>
+          <div class="panel panel-table"><table>
+            <thead><tr><th>Variable</th><th>Value</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>CONNECTOR_ALLOWED_HOSTS</code></td><td><code>127.0.0.1</code></td><td>Add to any existing hosts, comma separated. The API refuses this address without it.</td></tr>
+              <tr><td><code>NODE_EXTRA_CA_CERTS</code></td><td>Absolute path to <code>.data/service-sandbox/tls/ca.crt</code></td><td>Lets the API trust the sandbox certificate.</td></tr>
+              <tr><td><code>SMTP_HOST</code></td><td>Leave unset</td><td>Mail goes only through the gmail connector.</td></tr>
+            </tbody>
+          </table></div>
+          <p>In <strong>Administration → Connectors</strong>, create key <code>gmail</code> and save this definition. Then in <strong>Administration → Organisation → Settings</strong>, choose <code>gmail</code> as the mail connector and set the From address to <code>demo@localhost</code>. That writes the organisation settings <code>mail.connector</code> and <code>mail.from</code>.</p>
+          <pre><code>{
+  "kind": "email",
+  "enabled": true,
+  "config": {
+    "provider": "http",
+    "method": "POST",
+    "url": "https://127.0.0.1:8095/gmail/v1/users/me/messages/send",
+    "headers": { "Authorization": "Bearer {{secrets.accessToken}}" },
+    "body": "{\"raw\":\"{{ message.mime | base64url }}\"}",
+    "contentType": "json"
+  },
+  "secrets": { "accessToken": "demo-mail-token" }
+}</code></pre>
+          <p>Send mail from the NGO app, such as an invitation or a password reset, then <code>GET https://127.0.0.1:8095/inbox</code>. <code>GET /inbox/&lt;id&gt;</code> returns the text and HTML. Nothing reaches a real inbox.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="sms">
+        <summary><span class="stitle">SMS</span><span class="badge area-tag">Connectors</span><span class="badge setup">Save in app</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>The HTTPS SMS gateway saved on the organisation's <code>sms</code> connector. one-ngo does not call a named SMS vendor, so the connector URL is the production system. When you leave the sandbox, point that URL at the real gateway; the same <code>{{to}}</code> and <code>{{message}}</code> placeholders apply.</p>
+          <h4>What it does</h4>
+          <p><code>POST /sms</code> accepts a JSON body and returns a queued id such as <code>sms_…</code>. The request must send <code>Authorization: Bearer demo-sms-key</code>, and a wrong key is refused. Every send is written to the sandbox log.</p>
+          <h4>How to integrate it</h4>
+          <p>Set these in <code>.env</code>, then restart the API.</p>
+          <div class="panel panel-table"><table>
+            <thead><tr><th>Variable</th><th>Value</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>CONNECTOR_ALLOWED_HOSTS</code></td><td><code>127.0.0.1</code></td><td>Add to any existing hosts, comma separated. The API refuses this address without it.</td></tr>
+              <tr><td><code>NODE_EXTRA_CA_CERTS</code></td><td>Absolute path to <code>.data/service-sandbox/tls/ca.crt</code></td><td>Lets the API trust the sandbox certificate.</td></tr>
+            </tbody>
+          </table></div>
+          <p>In the NGO app, open <strong>Administration → Connectors</strong>, create a connector with key <code>sms</code>, and save this definition:</p>
+          <pre><code>{
+  "kind": "sms",
+  "enabled": true,
+  "config": {
+    "url": "https://127.0.0.1:8095/sms",
+    "method": "POST",
+    "headers": { "Authorization": "Bearer {{secrets.apiKey}}" },
+    "body": "{\"to\":\"{{to}}\",\"message\":\"{{message}}\"}",
+    "contentType": "json"
+  },
+  "secrets": { "apiKey": "demo-sms-key" }
+}</code></pre>
+          <p>Use that connector from the feature that sends SMS. The sandbox log shows the body it received.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="whatsapp">
+        <summary><span class="stitle">WhatsApp</span><span class="badge area-tag">Connectors</span><span class="badge setup">Save in app</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>The WhatsApp Business Cloud API. In production, <code>baseUrl</code> is that API's address including its version, and <code>phoneNumberId</code> comes from WhatsApp Business. The sandbox uses phone number id <code>1234567890</code> and token <code>demo-whatsapp-token</code> in place of those production values.</p>
+          <h4>What it does</h4>
+          <p>Stands in for a Cloud API send at <code>POST /whatsapp/1234567890/messages</code>. A request with <code>Authorization: Bearer demo-whatsapp-token</code> returns a <code>wamid.demo…</code> id, and a wrong token is refused. The sandbox log shows the recorded body.</p>
+          <h4>How to integrate it</h4>
+          <p>Set these in <code>.env</code>, then restart the API.</p>
+          <div class="panel panel-table"><table>
+            <thead><tr><th>Variable</th><th>Value</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>CONNECTOR_ALLOWED_HOSTS</code></td><td><code>127.0.0.1</code></td><td>Add to any existing hosts, comma separated. The API refuses this address without it.</td></tr>
+              <tr><td><code>NODE_EXTRA_CA_CERTS</code></td><td>Absolute path to <code>.data/service-sandbox/tls/ca.crt</code></td><td>Lets the API trust the sandbox certificate.</td></tr>
+            </tbody>
+          </table></div>
+          <p>In <strong>Administration → Connectors</strong>, create key <code>whatsapp</code> and save this definition:</p>
+          <pre><code>{
+  "kind": "whatsapp",
+  "enabled": true,
+  "config": {
+    "baseUrl": "https://127.0.0.1:8095/whatsapp",
+    "phoneNumberId": "1234567890"
+  },
+  "secrets": { "accessToken": "demo-whatsapp-token" }
+}</code></pre>
+          <p>Send a WhatsApp message from the NGO app and check the sandbox log.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="webhook">
+        <summary><span class="stitle">Webhook</span><span class="badge area-tag">Connectors</span><span class="badge setup">Save in app</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>The HTTPS receiver the organisation names on a <code>webhook</code> connector. That is the customer's own endpoint, or any service that checks <code>x-ngo-signature</code>. one-ngo signs the raw body with the connector's signing secret, and the sandbox checks that same signature.</p>
+          <h4>What it does</h4>
+          <p><code>POST /hooks/in</code> receives outbound webhooks from one-ngo. It reads the header <code>x-ngo-signature</code>, which must be <code>sha256=</code> followed by the HMAC-SHA256 of the raw body with <code>demo-signing-secret</code>. A match returns success and any other signature is refused. Both outcomes are written to the sandbox log, along with the event name.</p>
+          <h4>How to integrate it</h4>
+          <p>Set these in <code>.env</code>, then restart the API.</p>
+          <div class="panel panel-table"><table>
+            <thead><tr><th>Variable</th><th>Value</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>CONNECTOR_ALLOWED_HOSTS</code></td><td><code>127.0.0.1</code></td><td>Add to any existing hosts, comma separated. The API refuses this address without it.</td></tr>
+              <tr><td><code>NODE_EXTRA_CA_CERTS</code></td><td>Absolute path to <code>.data/service-sandbox/tls/ca.crt</code></td><td>Lets the API trust the sandbox certificate.</td></tr>
+            </tbody>
+          </table></div>
+          <p>In <strong>Administration → Connectors</strong>, create key <code>webhook</code> and save this definition:</p>
+          <pre><code>{
+  "kind": "webhook",
+  "enabled": true,
+  "config": { "url": "https://127.0.0.1:8095/hooks/in" },
+  "secrets": { "signingSecret": "demo-signing-secret" }
+}</code></pre>
+          <p>Trigger the event in the NGO app that calls this connector, then check the sandbox log.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="pincode">
+        <summary><span class="stitle">Pincode lookup</span><span class="badge area-tag">Connectors</span><span class="badge setup">Save in app</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>An HTTPS lookup the organisation saves on an <code>http</code> connector in lookup mode. one-ngo does not call a postal service itself, so the connector URL is the production system. This stand-in answers four India PIN codes so a record can fill its area and district. A production lookup, such as a bank or postal API, fills its own fields from its own address.</p>
+          <h4>What it does</h4>
+          <p><code>GET /lookup/&lt;pincode&gt;</code> returns <code>{"data":{"code","name","district","state"}}</code> for the four PIN codes below. Any other PIN code returns 404.</p>
+          <div class="panel panel-table"><table>
+            <thead><tr><th>PIN code</th><th>Area</th><th>District</th><th>State</th></tr></thead>
+            <tbody>
+              <tr><td><code>110001</code></td><td>Connaught Place</td><td>New Delhi</td><td>Delhi</td></tr>
+              <tr><td><code>400001</code></td><td>Fort</td><td>Mumbai</td><td>Maharashtra</td></tr>
+              <tr><td><code>560001</code></td><td>Bengaluru GPO</td><td>Bengaluru Urban</td><td>Karnataka</td></tr>
+              <tr><td><code>700001</code></td><td>BBD Bagh</td><td>Kolkata</td><td>West Bengal</td></tr>
+            </tbody>
+          </table></div>
+          <h4>How to integrate it</h4>
+          <p>Set these in <code>.env</code>, then restart the API.</p>
+          <div class="panel panel-table"><table>
+            <thead><tr><th>Variable</th><th>Value</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>CONNECTOR_ALLOWED_HOSTS</code></td><td><code>127.0.0.1</code></td><td>Add to any existing hosts, comma separated. The API refuses this address without it.</td></tr>
+              <tr><td><code>NODE_EXTRA_CA_CERTS</code></td><td>Absolute path to <code>.data/service-sandbox/tls/ca.crt</code></td><td>Lets the API trust the sandbox certificate.</td></tr>
+            </tbody>
+          </table></div>
+          <p>In <strong>Administration → Connectors</strong>, create key <code>pincode</code> and save this definition. The response map copies <code>data.name</code> to area and <code>data.district</code> to district.</p>
+          <pre><code>{
+  "kind": "http",
+  "enabled": true,
+  "config": {
+    "mode": "lookup",
+    "method": "GET",
+    "url": "https://127.0.0.1:8095/lookup/{{record.pincode}}",
+    "inputs": ["pincode"],
+    "responseMap": { "area": "data.name", "district": "data.district" }
+  }
+}</code></pre>
+          <p>On a record that uses this lookup, enter one of the PIN codes above. A code outside the table comes back as not found.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="connector-oauth">
+        <summary><span class="stitle">Connector OAuth</span><span class="badge area-tag">Connectors</span><span class="badge setup">Save in app</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>The OAuth authorization-code provider named on an <code>oauth</code> connector, with that connector's <code>authorizationUrl</code> and <code>tokenUrl</code>. For Google those are <code>https://accounts.google.com/o/oauth2/v2/auth</code> and <code>https://oauth2.googleapis.com/token</code>. The sandbox consent page stands in for that provider.</p>
+          <h4>What it does</h4>
+          <p><code>/connector-oauth/authorize</code> shows Allow and Deny for scope <code>demo.read</code>, with client id <code>demo-connector</code> and secret <code>demo-connector-secret</code>. <code>/connector-oauth/token</code> exchanges the code, or a refresh token, for an access token. A code lasts 5 minutes and an access token lasts 1 hour. Deny returns <code>access_denied</code> and no token.</p>
+          <h4>How to integrate it</h4>
+          <p>Set these in <code>.env</code>, then restart the API.</p>
+          <div class="panel panel-table"><table>
+            <thead><tr><th>Variable</th><th>Value</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>CONNECTOR_ALLOWED_HOSTS</code></td><td><code>127.0.0.1</code></td><td>Add to any existing hosts, comma separated. The API refuses this address without it.</td></tr>
+              <tr><td><code>NODE_EXTRA_CA_CERTS</code></td><td>Absolute path to <code>.data/service-sandbox/tls/ca.crt</code></td><td>Lets the API trust the sandbox certificate.</td></tr>
+            </tbody>
+          </table></div>
+          <p>In <strong>Administration → Connectors</strong>, create key <code>demoOauth</code> and save this definition:</p>
+          <pre><code>{
+  "kind": "oauth",
+  "enabled": true,
+  "config": {
+    "authorizationUrl": "https://127.0.0.1:8095/connector-oauth/authorize",
+    "tokenUrl": "https://127.0.0.1:8095/connector-oauth/token",
+    "clientId": "demo-connector",
+    "scopes": ["demo.read"]
+  },
+  "secrets": { "clientSecret": "demo-connector-secret" }
+}</code></pre>
+          <p>Start the connector's connect action in the NGO app. On the sandbox consent page, click Allow.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="cloud-storage">
+        <summary><span class="stitle">Cloud Storage</span><span class="badge area-tag">Files</span><span class="badge env">.env</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>The Google Cloud Storage JSON API at <code>storage.googleapis.com</code>. one-ngo calls that host. A bucket in <code>.env</code> talks to Cloud Storage, including the audit archive when <code>AUDIT_ARCHIVE_BUCKET</code> is set.</p>
+          <h4>What it does</h4>
+          <p>Stands in for that API for upload, metadata, download, and delete when a client calls this sandbox directly. Objects are stored as files under <code>.data/service-sandbox/files/&lt;bucket&gt;/</code> and survive a restart. Calls must send the bearer token <code>demo-gcs-token</code>, which the <a href="#metadata-token">metadata token</a> endpoint hands out.</p>
+          <h4>How to integrate it</h4>
+          <p>Organisation uploads use the storage connector chosen in Settings. Point an S3 connector's endpoint at <code>https://127.0.0.1:8095</code> to keep those files here. The stand-in also accepts Google Drive file calls, and the Cloud Storage JSON API when a client calls this sandbox directly. <code>AUDIT_ARCHIVE_BUCKET</code> is still the operator audit archive on Cloud Storage. one-ngo does not send <code>storage.googleapis.com</code> here.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="metadata-token">
+        <summary><span class="stitle">Metadata token</span><span class="badge area-tag">Files</span><span class="badge ready">Ready</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>The Compute Engine metadata server at <code>metadata.google.internal</code>, path <code>/computeMetadata/v1/instance/service-accounts/default/token</code>. On App Engine or Compute Engine, production receives a real token from that host. one-ngo does not send that request here.</p>
+          <h4>What it does</h4>
+          <p><code>GET /token</code> with the header <code>Metadata-Flavor: Google</code> returns <code>{"access_token":"demo-gcs-token","expires_in":3599,"token_type":"Bearer"}</code>. A request without the header is refused.</p>
+          <h4>How to integrate it</h4>
+          <p>Nothing to save in the app. Call <code>GET /token</code> on the sandbox directly. one-ngo does not send its metadata token request here.</p>
+        </div>
+      </details>
+
+      <details class="scenario" id="breached-passwords">
+        <summary><span class="stitle">Breached passwords</span><span class="badge area-tag">Security</span><span class="badge ready">Ready</span></summary>
+        <div class="body">
+          <h4>Production system</h4>
+          <p>Have I Been Pwned's Pwned Passwords range API at <code>https://api.pwnedpasswords.com/range/&lt;5 hex characters&gt;</code>. With the check left on and <code>PWNED_PASSWORDS_API_BASE</code> empty, one-ngo calls Have I Been Pwned. That base replaces the host.</p>
+          <h4>What it does</h4>
+          <p><code>GET /range/&lt;5 hex characters&gt;</code> answers in the same <code>SUFFIX:COUNT</code> line format. Only the exact word <code>password</code> is reported breached, and every other password is reported clear.</p>
+          <h4>How to integrate it</h4>
+          <p>Set this in <code>.env</code>, then restart the API.</p>
+          <div class="panel panel-table"><table>
+            <thead><tr><th>Variable</th><th>Value</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>BREACHED_PASSWORD_CHECK</code></td><td><code>online</code> (default) or <code>off</code></td><td><code>online</code> calls the range API. <code>off</code> skips the check.</td></tr>
+              <tr><td><code>PWNED_PASSWORDS_API_BASE</code></td><td><code>https://127.0.0.1:8095</code></td><td>Empty keeps Have I Been Pwned. Set <code>NODE_EXTRA_CA_CERTS</code> so the API trusts this certificate.</td></tr>
+            </tbody>
+          </table></div>
+          <p><code>GET /range/&lt;prefix&gt;</code> on the sandbox is the local stand-in for tests that call it directly. The word <code>password</code> is the only value that stand-in reports as breached.</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="card" id="connected">
+      <h2>What to put in .env</h2>
+      <p>Copy a row into <code>.env</code> only for the stand-in you want, then restart the API or the console. Leave a key empty to keep the real service. The same comments are in <code>.env.example</code>.</p>
+      <div class="panel panel-table"><table>
+        <thead><tr><th>Setting</th><th>Sandbox value</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>NODE_EXTRA_CA_CERTS</code></td><td>Absolute path to <code>.data/service-sandbox/tls/ca.crt</code></td><td>Lets the API trust the sandbox's HTTPS certificate. Set this before any sandbox URL. It must be absolute because the API starts from its own folder.</td></tr>
+          <tr><td><code>OIDC_ISSUER</code></td><td><code>https://127.0.0.1:8095</code></td><td>Member sign-in provider. Empty means Google.</td></tr>
+          <tr><td><code>OIDC_CLIENT_ID</code>, <code>OIDC_CLIENT_SECRET</code></td><td><code>demo-google</code>, <code>demo-google-secret</code></td><td>Member sign-in client</td></tr>
+          <tr><td><code>OIDC_PROVIDER_ID</code>, <code>OIDC_PROVIDER_LABEL</code></td><td><code>google</code>, <code>Google</code></td><td>Shared provider shown in the app</td></tr>
+          <tr><td><code>OPERATOR_OIDC_ISSUER</code></td><td><code>https://127.0.0.1:8095</code></td><td>Operator sign-in. <code>npm run dev:setup</code> links the seeded operator to this issuer on port 8095.</td></tr>
+          <tr><td><code>OPERATOR_OIDC_CLIENT_ID</code>, <code>OPERATOR_OIDC_CLIENT_SECRET</code>, <code>OPERATOR_OIDC_AUDIENCE</code></td><td><code>demo-operator</code>, <code>demo-operator-secret</code>, <code>demo-operator</code></td><td>Operator sign-in client</td></tr>
+          <tr><td><code>RAZORPAY_API_BASE</code>, <code>CASHFREE_API_BASE</code></td><td><code>https://127.0.0.1:8095</code></td><td>Payment APIs. Empty uses the real gateways.</td></tr>
+          <tr><td><code>PWNED_PASSWORDS_API_BASE</code></td><td><code>https://127.0.0.1:8095</code></td><td>Breached-password check. Empty uses Have I Been Pwned.</td></tr>
+          <tr><td><code>CONNECTOR_ALLOWED_HOSTS</code></td><td><code>127.0.0.1</code></td><td>Lets connectors call this machine</td></tr>
+        </tbody>
+      </table></div>
+      <p>Email is not in this table. Save the <code>gmail</code> connector described above, and leave <code>SMTP_*</code> unset.</p>
+    </section>
+
+    <section class="card" id="troubleshooting">
+      <h2>Troubleshooting</h2>
+      <div class="panel panel-table"><table>
+        <thead><tr><th>Problem</th><th>What to do</th></tr></thead>
+        <tbody>
+          <tr><td>Certificate warning in the browser</td><td>Accept it once on the sign-in page. Set <code>NODE_EXTRA_CA_CERTS</code> to the absolute path of <code>.data/service-sandbox/tls/ca.crt</code> so the API trusts the same certificate.</td></tr>
+          <tr><td>Port already in use</td><td>Stop the process using that port, or pass another one. The sandbox takes <code>--https-port</code>. The API, web app, and console take <code>--port</code>.</td></tr>
+          <tr><td>Mail never appears in the inbox</td><td>Save the <code>gmail</code> connector, switch it on, and choose it under Settings with From <code>demo@localhost</code> (<code>mail.connector</code> and <code>mail.from</code>). Leave <code>SMTP_*</code> unset.</td></tr>
+          <tr><td>Operator sign-in creates no session</td><td>Enter <code>operator.full@onengo.local</code>. A different email does not match the one account <code>npm run dev:setup</code> linked.</td></tr>
+          <tr><td>Sign-in, payments, or the password check still call the real service</td><td>Set that service's URL in <code>.env</code> and restart. Empty <code>OIDC_ISSUER</code> means Google. Empty payment bases mean Razorpay and Cashfree. Empty <code>PWNED_PASSWORDS_API_BASE</code> means Have I Been Pwned. Organisation files wait until Settings names a storage connector.</td></tr>
+          <tr><td>Start from clean data</td><td>Stop the sandbox and delete <code>.data/service-sandbox</code>. The next start creates new certificates and files. Mail and orders were only in memory.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <div class="notice info"><p>Keep the organisation's saved credentials and the sandbox values in step. If you change a secret in one place, change it in the other.</p></div>
+
+        <div class="nextprev">
+          <a href="developer.html"><small>Previous</small><strong>Developer guide</strong></a>
+          <a class="next" href="index.html"><small>Back to</small><strong>Home</strong></a>
+        </div>
+        <footer class="foot">
+          <p>The sandbox lives in <code>apps/service-sandbox</code>. It is for local development and tests only. Never put a real secret in these pages.</p>
+        </footer>
+      </div>
+    </main>
+  </div>
+  <script>
+    document.getElementById('open-all').addEventListener('click', function () {
+      document.querySelectorAll('details.scenario').forEach(function (d) { d.open = true; });
+    });
+  </script>
+  <script src="assets/docs.js"></script>
+</body>
+</html>

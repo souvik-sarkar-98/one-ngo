@@ -4,7 +4,7 @@
  * =============================================================================
  *
  *  File     : utilities/access/create-serving-logins.sql
- *  Follows  : docs/operations/deployment-plan.html, section 10, step 3
+ *  Follows  : docs/documents.html#deployment, section 6 (One-time setup, Database)
  *             (the statements the bundle test in
  *              tests/integration/onengo-server/artifact.test.ts also uses)
  *
@@ -25,9 +25,10 @@
  *
  *  What this script does NOT do
  *    - It creates no tables, data, policies, functions or grants. Migrations
- *      001 to 013 own all of those, and `npm run deploy:prepare` runs them.
+ *      001 to 007 own all of those, and `npm run deploy:prepare` runs them.
  *    - It inserts no sample data and no operator account. The first console
- *      operator is a separate, documented step (deployment plan, section 10).
+ *      operator is a separate step: utilities/access/create-first-operator.sql
+ *      (docs/developer.html#first-operator).
  *    - It never writes a password to this file, to the shell history or to the
  *      server log. Passwords are typed at \password prompts.
  *

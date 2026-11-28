@@ -180,7 +180,7 @@ export function violations(all: Source[]): Map<string, { edge: Edge; why: string
 
 // ---------------------------------------------------------------------------------------------
 // Conformance rules (block G). Each rule returns hits keyed `<rule>: <detail>`. There are no hits
-// today, and any hit fails its test (see docs/architecture.md section 4.4).
+// today, and any hit fails its test (see docs/documents.html#architecture section 4.4).
 // ---------------------------------------------------------------------------------------------
 
 /** Blocks that own a rule: H http->application, R runtime/application siblings, D domain purity, I infrastructure, C composition. */

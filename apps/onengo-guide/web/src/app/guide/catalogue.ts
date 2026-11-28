@@ -843,7 +843,7 @@ export const GUIDE: readonly GuideSection[] = [
     id: 'connectors',
     label: 'Connectors',
     icon: 'search',
-    source: 'docs/connector-runtime.html',
+    source: 'docs/documents.html#architecture, Appendix D (connector runtime)',
     chapters: [
       {
         id: 'shape',

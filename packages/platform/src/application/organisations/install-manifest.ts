@@ -75,7 +75,7 @@ const LOGO = /^\/api\/auth\/organisations\/([a-z0-9][a-z0-9-]{0,39})\/logo\?v=(\
    * Icon and start addresses are root-absolute because this document is served
    * from the API, not from the site root. The intended home-screen icon is the
    * organisation logo, or the shared heart when it has none. Windows Chrome
-   * still installs a letter; that is a known bug (docs/ui-design.md).
+   * still installs a letter; that is a known bug (docs/documents.html#ui-design).
    */
   export function organisationManifest(org: InstallManifestInput): Record<string, unknown> {
     const name = org.displayName.trim() || org.code;

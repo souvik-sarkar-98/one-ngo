@@ -22,7 +22,7 @@ describe('user guide catalogue', () => {
   it('covers the design wireframes and the connector runtime', () => {
     expect(GUIDE.map((section) => section.id)).toEqual(['app', 'builder', 'sign-in', 'organisation', 'connectors']);
     expect(GUIDE.find((section) => section.id === 'app')?.source).toContain('ngo-app-navigation-flows.html');
-    expect(GUIDE.find((section) => section.id === 'connectors')?.source).toContain('connector-runtime.html');
+    expect(GUIDE.find((section) => section.id === 'connectors')?.source).toContain('Appendix D');
   });
 
   it('gives every chapter at least one step for both arrangements', () => {

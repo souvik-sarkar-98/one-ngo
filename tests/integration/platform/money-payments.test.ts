@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { RecordService } from '../../../packages/platform/src/runtime/records/record-service.js';
 import type { TenantContext } from '../../../packages/platform/src/domain/ports/tenant-context.js';
@@ -9,7 +7,6 @@ import { buildServer } from '@onengo/server/http/server.js';
 import { hmacSha256 } from '@onengo/kernel/crypto';
 import { admin, completeIdentity, createWorld, expectCode, today, type TestWorld } from '../../support/platform/helpers.js';
 import { asTx } from '../../../packages/platform/src/infrastructure/postgres/tx.js';
-import { PLATFORM_ROOT } from '../../support/paths.js';
 
 const calls: { url: string; body: string; headers: Record<string, string> }[] = [];
 const fakePost: HttpPost = async (url, init) => {
@@ -423,21 +420,6 @@ describe('a money account is the real account, attached to its ledger account', 
     const err = await expectCode(w.platform.moneyAccounts.transfer(ctx, { from: 'fresh', to: 'petty', amount: 10, date: today() }), 'rule_violation');
     expect(err.message).toMatch(/only 0.00 available/);
     await w.platform.moneyAccounts.close(ctx, 'fresh');
-  });
-
-  it('migration 012 turns the overdraft off for a bank account that holds zero or more, and leaves one below zero', async () => {
-    const ctx = w.as(w.ngoA);
-    await w.platform.moneyAccounts.open(ctx, { key: 'oldzero', name: 'Old zero', kind: 'bank', allowNegative: true });
-    await w.platform.moneyAccounts.open(ctx, { key: 'olddebt', name: 'Old debt', kind: 'bank', allowNegative: true });
-    await w.platform.moneyAccounts.open(ctx, { key: 'oldcash', name: 'Old cash', kind: 'cash', allowNegative: true });
-    await w.platform.moneyAccounts.transfer(ctx, { from: 'olddebt', to: 'petty', amount: 5, date: today() });
-    const sql = readFileSync(join(PLATFORM_ROOT, 'migrations', '012_overdraft_default_off.sql'), 'utf8');
-    const update = sql.slice(sql.indexOf('update money_account'), sql.indexOf('insert into schema_compatibility'));
-    const run = () => w.platform.db.asSystem((tx) => tx.query(update));
-    await run();
-    await run();
-    const flags = Object.fromEntries((await w.platform.moneyAccounts.list(ctx)).map((a) => [a.key, a.allowNegative]));
-    expect(flags).toMatchObject({ oldzero: false, olddebt: true, oldcash: true });
   });
 
   it('refuses to turn the overdraft off while the account is below zero, and keeps closed accounts fixed', async () => {

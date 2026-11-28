@@ -133,7 +133,7 @@ function currentOf(history: ConsentEvent[]): ConsentEvent[] {
  * Consent per data subject and purpose, and erasure by pseudonymisation
  * (DPDP). A data subject is a record (a donor, a beneficiary) or a member.
  * The erasure rules await product-owner approval and the financial retention
- * period awaits counsel; see docs/architecture.md section 8.5.
+ * period awaits counsel; see docs/documents.html#architecture section 8.5.
  */
 export class PrivacyService {
   constructor(

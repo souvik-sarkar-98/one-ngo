@@ -1,5 +1,5 @@
 {
   "extends": "../tsconfig.base.json",
   "include": ["unit", "integration", "support"],
-  "exclude": ["unit/onengo-web", "unit/onengo-console-web", "unit/onengo-guide-web"]
+  "exclude": ["unit/onengo-web", "unit/onengo-console-web", "unit/onengo-guide-web", "unit/service-sandbox-web"]
 }

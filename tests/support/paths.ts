@@ -13,8 +13,5 @@ export const repoPath = (...parts: string[]): string => join(REPO_ROOT, ...parts
 export const PLATFORM_ROOT = repoPath('packages', 'platform');
 export const PRODUCT_ROOT = repoPath('packages', 'product');
 
-/** The log metrics, alert policies and dashboard a person applies with gcloud (its README says how). */
-export const MONITORING_DIR = repoPath('docs', 'monitoring');
-
 /** Data files the tests read: allowlists, baselines and fixtures, in a folder per package. */
 export const SUPPORT_DIR = repoPath('tests', 'support');

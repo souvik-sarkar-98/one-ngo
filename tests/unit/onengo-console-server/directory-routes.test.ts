@@ -104,6 +104,7 @@ describe('operator directory routes', () => {
     const store = {
       consumeLogin: vi.fn().mockResolvedValue({ state: 's', nonce: 'n', verifier: 'v', nextPath: '/organisations/find' }),
       createSession: vi.fn().mockResolvedValue(undefined),
+      temporaryUsed: vi.fn().mockResolvedValue(false),
     };
     const provider = {
       config: { issuer: 'https://id.example/' },
@@ -113,6 +114,22 @@ describe('operator directory routes', () => {
     const res = await open.inject({ method: 'GET', url: '/op/auth/callback?code=c&state=s' });
     expect(res.statusCode).toBe(302);
     expect(res.headers.location).toBe('/sign-in?refused=unknown&issuer=https%3A%2F%2Fid.example%2F&subject=ada-1');
+  });
+
+  it('tells a person whose temporary login was already used why they are refused', async () => {
+    const store = {
+      consumeLogin: vi.fn().mockResolvedValue({ state: 's', nonce: 'n', verifier: 'v', nextPath: '/organisations/find' }),
+      createSession: vi.fn().mockResolvedValue(undefined),
+      temporaryUsed: vi.fn().mockResolvedValue(true),
+    };
+    const provider = {
+      config: { issuer: 'https://id.example/' },
+      callback: vi.fn().mockResolvedValue({ identity: { issuer: 'https://id.example/', subject: 'ada-1' }, tokens: {} }),
+    };
+    open = buildOperatorServer({ store: store as never, provider: provider as never, control: {} as never });
+    const res = await open.inject({ method: 'GET', url: '/op/auth/callback?code=c&state=s' });
+    expect(res.headers.location).toBe('/sign-in?refused=used&issuer=https%3A%2F%2Fid.example%2F&subject=ada-1');
+    expect(store.temporaryUsed).toHaveBeenCalledWith('https://id.example/', 'ada-1');
   });
 });
 

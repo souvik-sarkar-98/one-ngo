@@ -1,0 +1,4 @@
+/* Everything comes from the web kit, the same file the member app, the operator console and the guide import. */
+@import '@onengo/web-kit/styles/base.css';
+
+html, body { height: 100%; }

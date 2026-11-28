@@ -1,6 +1,6 @@
 # Finance system plan
 
-Written 2026-11-22. This is the remaining work on the finance system after the bank model change (a money account can attach to an existing ledger account) and the removal of the `bank-accounts` module. Built behaviour is in `architecture.md` section 7; shipping status is in `roadmap.md`.
+Written 2026-11-22. This is the remaining work on the finance system after the bank model change (a money account can attach to an existing ledger account) and the removal of the `bank-accounts` module. Built behaviour is in `docs/documents.html#architecture` section 7; shipping status is in `docs/documents.html#product-brief` (section 8).
 
 Sizes are rough estimates (S under 2 days, M 2 to 5 days, L over 5 days), not measured. Items marked "verify" rest on code I read but did not run.
 
@@ -21,7 +21,7 @@ Rules that stay as they are: every entry balances, posted entries are immutable,
 
 | Area | State |
 | --- | --- |
-| Double-entry ledger, receipts, posting rules, UPI links, statement matching (API), gateway webhooks, finance scripts | Built (see `architecture.md` section 7) |
+| Double-entry ledger, receipts, posting rules, UPI links, statement matching (API), gateway webhooks, finance scripts | Built (see `docs/documents.html#architecture` section 7) |
 | Money account attaches to an existing asset ledger account (`ledgerCode`) | Built and tested. The Money page has the field and an Edit action (A1) |
 | Donations creates the `upi` money account on `BANK` when the module is installed (A2) | Built (`setup.moneyAccounts` in the module manifest). Only for new installs: the module version was not raised, so an organisation that already installed Donations does not get it |
 | `bank-accounts` module (`BANK_2`, `BANK_3`, bank balances report) | Removed. Forms offer `BANK` and `CASH` only |
@@ -29,7 +29,7 @@ Rules that stay as they are: every entry balances, posted entries are immutable,
 | Bank reconciliation (B1, B3, B4 in part) | Built, with a screen (`/accounts/:key/reconcile`): upload a CSV (columns guessed and remembered per account, Indian dates and amounts read), review, auto-match by amount within 3 days, match, ignore with a reason, book an unmatched line, compare book lines with the statement, report the difference, sign off. Permission `money:reconcile`. Migration `007_bank_reconciliation.sql` |
 | Overdraft guard (A6) | Decided: refuse, with an override reason that is recorded. Every account refuses a posting that takes it below zero unless the person gives a reason (audit action `ledger.overdraft_override`). New bank accounts default to not allowing negative; migration `012` switches existing bank accounts. Edits cannot turn it on or off while the balance is negative |
 | Forms offer the organisation's real accounts (A4) | Built. A record field with `choicesFrom: moneyAccounts` lists the open money accounts and saves the ledger code; `expenses`, `earnings` and `members` use it, so a second bank needs no module change. Action forms use `choicesFrom: moneyAccounts` or `upiAccounts` (accounts with a UPI ID) and save the account key |
-| Pay now account choice (A3) | Decided: the stored key stays `upi`. The donations Pay now action asks which UPI account to use (`accountFrom: input.account`, falling back to `upi`); the choice is kept on the payment (migration `013_payment_intent_account.sql`) and the receiving ledger account follows it. Schema level 13 |
+| Pay now account choice (A3) | Decided: the stored key stays `upi`. The donations Pay now action asks which UPI account to use (`accountFrom: input.account`, falling back to `upi`); the choice is kept on the payment (`payment_intent.account_key`, in `003_ledger_money.sql`) and the receiving ledger account follows it |
 | Balances as on a date (A5), account statement (A7) | Built. `GET /api/money/balances?asOf=` and the Money page balance date; `GET /api/money/accounts/:key/ledger` and the statement screen (`/accounts/:key/statement`) with running balance, source links and CSV |
 | Trial balance (new) | Built. `GET /api/ledger/trial-balance?asOf=` with permission `ledger:read`, and the screen `/accounts/trial-balance`. Money, debts and funds carry forward; income and expenses are those of the financial year holding the date. Earlier years' income less expenses shows as one line, `Surplus from earlier years`, so the two columns always agree |
 | Expense approval (F1) | Built. The expense claim workflow has Approve and Pay steps, and the person who submitted a claim cannot approve or pay it |
@@ -112,7 +112,7 @@ Confirm accounting standard, 80G, FCRA and TDS rules with your CA before buildin
 | ID | Change | Where | Done when | Size |
 | --- | --- | --- | --- | --- |
 | G1 | Receipts and payments, income and expenditure, and balance sheet, with funds | `statutory-books` package, `report-service.ts` | The three statements agree with the trial balance | L |
-| G2 | Year-end close: checklist, frozen opening balances, handover pack for the auditor | `architecture.md` section 7.1 lists these as not started | A closed year cannot change, and the pack opens in one download | L |
+| G2 | Year-end close: checklist, frozen opening balances, handover pack for the auditor | `docs/documents.html#architecture` section 7.1 lists these as not started | A closed year cannot change, and the pack opens in one download | L |
 | G3 | 80G register and FCRA reports, including the designated foreign-contribution account | new reports | Each report reproduces its source receipts | L |
 | G4 | TDS on payments: rate, deduction, payable and return summary | expenses, ledger accounts | A claim with TDS posts three lines and appears in the summary | L |
 

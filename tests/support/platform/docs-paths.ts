@@ -4,11 +4,12 @@ import { ROOT } from './layer-graph.js';
 
 /**
  * These files record the layout before the move into packages and apps, so they
- * name paths that no longer exist. Everything under `docs/archive/` is kept for
- * history only. Current docs and READMEs must cite paths that are on disk.
+ * name paths that no longer exist. Everything under `docs/deleted/` (duplicate or
+ * superseded documents, moved out of the live set) is kept for history only.
+ * Current docs and READMEs must cite paths that are on disk.
  */
 const HISTORY = new Set(['docs/plans/ngo-backend-enhancement-plan.md']);
-const HISTORY_DIRS = ['docs/archive/'];
+const HISTORY_DIRS = ['docs/deleted/'];
 
 const PATH_IN_BACKTICKS = /`((?:apps|packages|src|product|docs|test|web|scripts)\/[^`\n]+)`/g;
 
@@ -16,7 +17,8 @@ function markdownFiles(dir: string): string[] {
   const out: string[] = [];
   for (const name of readdirSync(dir)) {
     // `.data` is gitignored app and scratch space that holds worktrees of other branches; only tracked docs are checked.
-    if (name === 'node_modules' || name === 'dist' || name === '.data' || name === '.git') continue;
+    // `.cursor` holds editor snapshots of earlier file states, which are not part of the repository's documents.
+    if (name === 'node_modules' || name === 'dist' || name === '.data' || name === '.git' || name === '.cursor') continue;
     const abs = join(dir, name);
     if (statSync(abs).isDirectory()) out.push(...markdownFiles(abs));
     else if (name.endsWith('.md')) out.push(abs);

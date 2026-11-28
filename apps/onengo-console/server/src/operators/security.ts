@@ -77,11 +77,15 @@ export class OperatorStore {
     issuer: string; subject: string; display: string; authTime: number; amr: string[]; acr?: string; sid?: string; provider: unknown;
   }): Promise<Session | undefined> {
     return this.tx(async (tx) => {
+      // A temporary account may sign in once. `for update` serialises two sign-ins racing for the same account.
       const account = (await tx.query<{ id: string; display_name: string }>(
         `select a.id,a.display_name from operator_identity i join operator_account a on a.id=i.operator_id
-         where i.issuer=$1 and i.subject=$2 and a.status='active'`, [identity.issuer, identity.subject],
+         where i.issuer=$1 and i.subject=$2 and a.status='active'
+           and (not a.temporary or a.first_signed_in_at is null)
+         for update of a`, [identity.issuer, identity.subject],
       ))[0];
       if (!account) return undefined;
+      await tx.query('update operator_account set first_signed_in_at=now() where id=$1 and temporary and first_signed_in_at is null', [account.id]);
       const grants = await this.grants(tx, account.id);
       const token = opaque();
       const csrf = opaque();
@@ -133,6 +137,18 @@ export class OperatorStore {
   async revoke(token: string): Promise<void> {
     await this.tx((tx) => tx.query('update operator_session set revoked_at=coalesce(revoked_at,now()) where token_hash=$1', [digest(token)]).then(() => undefined));
   }
+  /** True when this login belongs to a temporary operator that has already signed in once. */
+  async temporaryUsed(issuer: string, subject: string): Promise<boolean> {
+    return this.tx(async (tx) => {
+      const rows = await tx.query<{ used: boolean }>(
+        `select true as used from operator_identity i join operator_account a on a.id=i.operator_id
+          where i.issuer=$1 and i.subject=$2 and a.temporary and a.first_signed_in_at is not null limit 1`,
+        [issuer, subject],
+      );
+      return rows.length > 0;
+    });
+  }
+
   async revokeSid(issuer: string, sid: string): Promise<void> {
     await this.tx((tx) => tx.query('update operator_session set revoked_at=coalesce(revoked_at,now()) where issuer=$1 and provider_sid=$2', [issuer, sid]).then(() => undefined));
   }

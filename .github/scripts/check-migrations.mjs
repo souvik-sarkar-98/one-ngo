@@ -20,8 +20,6 @@ const WRITE = /^(insert|update|delete|truncate|copy|merge|upsert)\b/i;
 const ALLOWED = [
   ['*', /^insert\s+into\s+schema_compatibility\b/i], // migration bookkeeping, one row per file
   ['001_core.sql', /^insert\s+into\s+tenant_seal_key\b/i], // the one-time seal secret, first migration only
-  ['008_retire_bank_accounts_module.sql', /^delete\s+from\s+tenant_module\b/i], // clean up disabled module toggle
-  ['012_overdraft_default_off.sql', /^update\s+money_account\b/i], // default existing non-negative bank accounts to no overdraft
 ];
 
 function strip(sql) {

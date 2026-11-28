@@ -312,6 +312,9 @@ create table payment_intent (
   status text not null default 'awaiting_payment'
     check (status in ('awaiting_payment', 'paid', 'failed', 'cancelled')),
   on_paid jsonb not null,
+  -- The money account the person chose to be paid into. When the payment arrives, the record's
+  -- "received in" field is filled from it, so the money is booked to the right bank.
+  account_key text,
   upi_link text,
   provider_order_id text,
   provider_payment_id text,

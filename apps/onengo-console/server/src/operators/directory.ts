@@ -132,9 +132,9 @@ export class OperatorDirectory {
     if (status && status !== 'active' && status !== 'disabled') throw new Error('The status filter is not recognised.');
     const rows = await this.tx((tx) => tx.query<{
       id: string; display_name: string; status: 'active' | 'disabled'; created_at: Date; disabled_at: Date | null;
-      disabled_reason: string | null; identities: unknown; actions: string[] | null;
+      disabled_reason: string | null; temporary: boolean; first_signed_in_at: Date | null; identities: unknown; actions: string[] | null;
     }>(
-      `select a.id, a.display_name, a.status, a.created_at, a.disabled_at, a.disabled_reason,
+      `select a.id, a.display_name, a.status, a.created_at, a.disabled_at, a.disabled_reason, a.temporary, a.first_signed_in_at,
               coalesce(json_agg(distinct jsonb_build_object('issuer', i.issuer, 'subject', i.subject))
                 filter (where i.operator_id is not null), '[]') as identities,
               coalesce(array_agg(distinct g.action) filter (where g.action is not null), '{}') as actions
@@ -288,9 +288,9 @@ export class OperatorDirectory {
   private async load(tx: SqlExecutor, id: string): Promise<OperatorAccountContract> {
     const row = (await tx.query<{
       id: string; display_name: string; status: 'active' | 'disabled'; created_at: Date; disabled_at: Date | null;
-      disabled_reason: string | null; identities: unknown; actions: string[] | null;
+      disabled_reason: string | null; temporary: boolean; first_signed_in_at: Date | null; identities: unknown; actions: string[] | null;
     }>(
-      `select a.id, a.display_name, a.status, a.created_at, a.disabled_at, a.disabled_reason,
+      `select a.id, a.display_name, a.status, a.created_at, a.disabled_at, a.disabled_reason, a.temporary, a.first_signed_in_at,
               coalesce(json_agg(distinct jsonb_build_object('issuer', i.issuer, 'subject', i.subject))
                 filter (where i.operator_id is not null), '[]') as identities,
               coalesce(array_agg(distinct g.action) filter (where g.action is not null), '{}') as actions
@@ -307,12 +307,13 @@ export class OperatorDirectory {
 
   private account(row: {
     id: string; display_name: string; status: 'active' | 'disabled'; created_at: Date; disabled_at: Date | null;
-    disabled_reason: string | null; identities: unknown; actions: string[] | null;
+    disabled_reason: string | null; temporary: boolean; first_signed_in_at: Date | null; identities: unknown; actions: string[] | null;
   }): OperatorAccountContract {
     const actions = (row.actions ?? []).filter((action): action is OperatorActionContract => (OPERATOR_ACTIONS as readonly string[]).includes(action));
     return {
       id: row.id, displayName: row.display_name, status: row.status, createdAt: iso(row.created_at)!,
-      disabledAt: iso(row.disabled_at), disabledReason: row.disabled_reason, identities: identitiesOf(row.identities), actions,
+      disabledAt: iso(row.disabled_at), disabledReason: row.disabled_reason, temporary: row.temporary,
+      firstSignedInAt: iso(row.first_signed_in_at), identities: identitiesOf(row.identities), actions,
     };
   }
 

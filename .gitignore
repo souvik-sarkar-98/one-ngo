@@ -11,6 +11,7 @@ test-output.txt
 typecheck-output.txt
 .data/
 .deploy/
+apps/onengo/web/generated/
 .vscode/
 .cursor/
 utilities/migration-samples/

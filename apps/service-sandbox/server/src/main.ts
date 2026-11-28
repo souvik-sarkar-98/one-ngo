@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { HTTPS_PORT } from './constants.js';
 import { DEFAULT_DATA_DIR, startFixture } from './server.js';
+import { WEB_DIR } from './web.js';
 
 function portNumber(raw: string | undefined, label: string, fallback: number): number {
   if (!raw?.trim()) return fallback;
@@ -53,9 +54,9 @@ const fixture = await startFixture({
 console.log(`one-ngo service sandbox (test use only)
   API:     ${fixture.origin}/
   Swagger: ${fixture.origin}/swagger
-  Inbox:   ${fixture.origin}/inbox
+  Inbox:   ${fixture.origin}/inbox${existsSync(join(WEB_DIR, 'index.html')) ? '' : ' (JSON only; for the page run: npm run sandbox:web:build)'}
   Files:   ${fixture.filesDir}
-Copy the sandbox URLs you want into .env. See README.html.
+Copy the sandbox URLs you want into .env. See docs/service-sandbox.html.
 Your browser will warn about the certificate once on the sign-in page; accepting it is enough for that session.
 Press Ctrl+C to stop.`);
 

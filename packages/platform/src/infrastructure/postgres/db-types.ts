@@ -480,8 +480,10 @@ export interface OperatorAccount {
   disabled_by: string | null;
   disabled_reason: string | null;
   display_name: string;
+  first_signed_in_at: Timestamp | null;
   id: Generated<string>;
   status: Generated<string>;
+  temporary: Generated<boolean>;
 }
 
 export interface OperatorGrant {

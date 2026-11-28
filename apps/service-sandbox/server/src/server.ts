@@ -13,6 +13,7 @@ import { payments, type Payments, type WebhookPost } from './payments.js';
 import { pwnedRoutes } from './pwned.js';
 import { storageRoutes } from './storage.js';
 import { fixtureTls, type FixtureTls } from './tls.js';
+import { webRoutes } from './web.js';
 
 /** `.data/service-sandbox` at the repository root. */
 export const DEFAULT_DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', '.data', 'service-sandbox');
@@ -25,6 +26,8 @@ export interface FixtureOptions {
   /** one-ngo's PUBLIC_BASE_URL; payment webhooks are posted there. */
   oneNgoBaseUrl?: string;
   webhookPost?: WebhookPost;
+  /** The built inbox app. Defaults to `apps/service-sandbox/web/dist/inbox/browser`. */
+  webDir?: string;
 }
 
 export interface Fixture {
@@ -96,7 +99,7 @@ export async function startFixture(options: FixtureOptions = {}): Promise<Fixtur
     return false;
   };
 
-  handlers = [home, mailRoutes(mailbox, log), provider.routes, pay.routes, storageRoutes(filesDir, log), pwnedRoutes(log), connectorRoutes(log)];
+  handlers = [home, webRoutes(options.webDir), mailRoutes(mailbox, log), provider.routes, pay.routes, storageRoutes(filesDir, log), pwnedRoutes(log), connectorRoutes(log)];
   log.add('fixture', `Started on ${origin}`);
 
   return {

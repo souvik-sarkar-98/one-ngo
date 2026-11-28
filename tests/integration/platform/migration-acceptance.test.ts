@@ -8,7 +8,7 @@ import type { DefinitionKind } from '../../../packages/platform/src/runtime/defi
 import { createWorld, type TestWorld } from '../../support/platform/helpers.js';
 
 /**
- * Acceptance criteria 7 and 10 of docs/plans/legacy-data-migrator-plan.md, asserted in one place
+ * Acceptance criteria 7 and 10 of docs/documents.html#architecture, Appendix E (the legacy data migrator plan), asserted in one place
  * (the others are covered in data-migration, migration-people, migration-persons, migration-files,
  * migration-check and migration-retention; the table is at the end of the plan).
  */

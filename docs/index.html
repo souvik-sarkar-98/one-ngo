@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OneNGO documentation</title>
+  <meta name="description" content="Start here: what OneNGO is, who it is for, what it does today, and where to read more." />
+  <!-- The same look as the OneNGO web apps: tokens and base rules from the web kit, then the one stylesheet every doc shares. -->
+  <link rel="stylesheet" href="../packages/web-kit/src/styles/base.css" />
+  <link rel="stylesheet" href="assets/docs.css" />
+</head>
+<body>
+  <!-- Shared arrow heads for every diagram below. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" class="mk" /></marker>
+      <marker id="arr-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" class="mk-ok" /></marker>
+      <marker id="arr-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" class="mk-bad" /></marker>
+    </defs>
+  </svg>
+  <header class="appbar">
+    <a class="appbar__name" href="index.html">OneNGO</a>
+    <span class="appbar__title">Documentation</span>
+    <span class="appbar__spacer"></span>
+    <a class="appbar__link" href="index.html" aria-current="page">Home</a>
+    <a class="appbar__link" href="user-guide.html">User guide</a>
+    <a class="appbar__link" href="developer.html">Developer</a>
+    <a class="appbar__link" href="service-sandbox.html">Sandbox</a>
+    <a class="appbar__link" href="documents.html">Reference</a>
+  </header>
+
+  <div class="shell">
+    <nav class="rail" aria-label="Contents">
+      <a href="#choose">Where to go</a>
+      <div class="rail__group">The product</div>
+      <a href="#what">What is OneNGO?</a>
+      <a href="#who">Who uses it</a>
+      <a href="#does">What it does today</a>
+      <a href="#how">How it works</a>
+      <a href="#journey">A first month</a>
+      <a href="#safe">Safe by design</a>
+      <a href="#apps">What is in the box</a>
+      <a href="#glossary">Plain words</a>
+      <div class="rail__group">The documents</div>
+      <a href="#docs">Doc map</a>
+      <a href="#wireframes">Wireframes</a>
+      <a href="#rules">About these docs</a>
+      <a href="#gaps">Known gaps</a>
+      <a href="#deleted">Moved files</a>
+    </nav>
+
+    <main class="content" id="content">
+      <div class="page">
+        <div class="card hero">
+          <h1>OneNGO: one place for an NGO's people, records, and money</h1>
+          <p class="lede">OneNGO is a configurable management platform for non-profits. Donations, members, expenses, approvals, and receipts all live in one app that an NGO sets up for itself, without waiting for a developer. This page is the front door. It explains the product in plain words and points you to the right guide.</p>
+          <div class="hero__meta">
+            <span class="pill">Works on phone and desktop</span>
+            <span class="pill">English, Hindi, Tamil, Telugu, Bengali, Marathi</span>
+            <span class="pill">Money rules that cannot be broken</span>
+            <span class="pill">Runs on a free-tier budget</span>
+          </div>
+          <div class="stats">
+            <div class="stat"><b>1</b><span>module ships today: Donations</span></div>
+            <div class="stat"><b>4</b><span>ways to sign in</span></div>
+            <div class="stat"><b>6</b><span>languages</span></div>
+            <div class="stat"><b>2</b><span>installation types</span></div>
+          </div>
+          <div class="actions">
+            <a class="cta" href="user-guide.html">Open the user guide</a>
+            <a class="cta ghost" href="developer.html">Developer guide</a>
+            <a class="cta ghost" href="#what">What is OneNGO?</a>
+          </div>
+        </div>
+
+        <p class="section-title" id="choose">Where do you want to go?</p>
+        <div class="doc-tiles">
+          <a href="user-guide.html"><span class="tag">For end users</span><strong>User guide</strong><small>Sign in, work with records, approve requests. NGO administrators: people, roles, settings, the Builder. Operators: open and look after organisations.</small></a>
+          <a href="developer.html"><span class="tag admin">For developers</span><strong>Developer guide</strong><small>Architecture, the setup guide for your machine, the deployment pipeline and how to set it up, releasing, alerts, backups.</small></a>
+          <a href="service-sandbox.html"><span class="tag admin">For developers</span><strong>Service sandbox</strong><small>Fake sign-in, payments, mail, SMS, and storage on your own machine, so you can try everything without real accounts.</small></a>
+          <a href="documents.html"><span class="tag ref">Reference library</span><strong>Full reference</strong><small>Product brief, architecture, screen design, deployment, and the test plan in full, with search.</small></a>
+          <a href="wireframes/ngo-app-navigation-flows.html"><span class="tag">For designers</span><strong>Wireframes</strong><small>Interactive journeys on phone and desktop, and every Builder screen.</small></a>
+          <a href="plans/"><span class="tag plan">Plans</span><strong>Plans (Markdown)</strong><small>Backend and finance plans. They stay as Markdown files and are never copied into these pages.</small></a>
+        </div>
+
+        <div class="toolbar-lite">
+          <button type="button" class="app-btn app-btn--sm" id="fold-all">Collapse all sections</button>
+          <button type="button" class="app-btn app-btn--sm" id="unfold-all">Expand all sections</button>
+          <span class="spacer"></span>
+          <button type="button" class="app-btn app-btn--sm" onclick="window.print()">Print or save as PDF</button>
+        </div>
+
+        <!-- ============================== WHAT ============================== -->
+        <section class="card" id="what">
+          <h2>What is OneNGO?</h2>
+          <p>Most small NGOs run on spreadsheets, or on software that needs a developer for every change. OneNGO gives them a single app where donors, members, money, and approvals sit together. The app is <b>configurable</b>: an administrator adds a form, a rule, or an approval step in a screen called the Builder, and it is live. No developer, no release.</p>
+
+          <figure class="diagram">
+            <svg viewBox="0 0 880 332" role="img" aria-labelledby="d-ctx-t d-ctx-d">
+              <title id="d-ctx-t">OneNGO in context</title>
+              <desc id="d-ctx-d">Operators, administrators, staff, members, and donors use OneNGO. OneNGO can optionally connect to email, SMS and WhatsApp, payment providers, an identity provider, and webhooks. With none connected it still works.</desc>
+              <text class="t-s" x="20" y="14">PEOPLE</text>
+              <rect class="n" x="20" y="22" width="210" height="46" rx="10" /><text class="t" x="125" y="50" text-anchor="middle">Operators</text>
+              <rect class="n" x="20" y="84" width="210" height="46" rx="10" /><text class="t" x="125" y="112" text-anchor="middle">NGO administrators</text>
+              <rect class="n" x="20" y="146" width="210" height="46" rx="10" /><text class="t" x="125" y="174" text-anchor="middle">Staff and finance</text>
+              <rect class="n" x="20" y="208" width="210" height="46" rx="10" /><text class="t" x="125" y="236" text-anchor="middle">Members and volunteers</text>
+              <rect class="n" x="20" y="270" width="210" height="46" rx="10" /><text class="t" x="125" y="298" text-anchor="middle">Donors and the public</text>
+              <path class="edge" d="M232 45 H288" /><path class="edge" d="M232 107 H288" /><path class="edge" d="M232 169 H288" /><path class="edge" d="M232 231 H288" /><path class="edge" d="M232 293 H288" />
+
+              <rect class="zone" x="290" y="8" width="300" height="316" rx="16" />
+              <text class="t-brand" x="308" y="32" style="font-size:13px">ONENGO</text>
+              <rect class="n" x="308" y="46" width="130" height="126" rx="10" /><text class="t t-b" x="373" y="74" text-anchor="middle">Records</text><text class="t-s" x="373" y="96" text-anchor="middle">donors, members,</text><text class="t-s" x="373" y="112" text-anchor="middle">workflows,</text><text class="t-s" x="373" y="128" text-anchor="middle">approvals</text>
+              <rect class="n-ok" x="442" y="46" width="130" height="126" rx="10" /><text class="t t-b" x="507" y="74" text-anchor="middle">Money</text><text class="t-s" x="507" y="96" text-anchor="middle">ledger, receipts,</text><text class="t-s" x="507" y="112" text-anchor="middle">payments,</text><text class="t-s" x="507" y="128" text-anchor="middle">financial year</text>
+              <rect class="n" x="308" y="182" width="130" height="126" rx="10" /><text class="t t-b" x="373" y="210" text-anchor="middle">Builder</text><text class="t-s" x="373" y="232" text-anchor="middle">change forms, rules</text><text class="t-s" x="373" y="248" text-anchor="middle">and pages without</text><text class="t-s" x="373" y="264" text-anchor="middle">code</text>
+              <rect class="n" x="442" y="182" width="130" height="126" rx="10" /><text class="t t-b" x="507" y="210" text-anchor="middle">People</text><text class="t-s" x="507" y="232" text-anchor="middle">sign-in, roles,</text><text class="t-s" x="507" y="248" text-anchor="middle">invitations,</text><text class="t-s" x="507" y="264" text-anchor="middle">audit log</text>
+
+              <text class="t-s" x="660" y="14">OPTIONAL, ONE BY ONE</text>
+              <rect class="n-warn" x="660" y="22" width="200" height="46" rx="10" /><text class="t" x="760" y="50" text-anchor="middle">Email</text>
+              <rect class="n-warn" x="660" y="84" width="200" height="46" rx="10" /><text class="t" x="760" y="112" text-anchor="middle">SMS and WhatsApp</text>
+              <rect class="n-warn" x="660" y="146" width="200" height="46" rx="10" /><text class="t" x="760" y="174" text-anchor="middle">Razorpay, Cashfree, UPI</text>
+              <rect class="n-warn" x="660" y="208" width="200" height="46" rx="10" /><text class="t" x="760" y="236" text-anchor="middle">Your sign-in provider</text>
+              <rect class="n-warn" x="660" y="270" width="200" height="46" rx="10" /><text class="t" x="760" y="298" text-anchor="middle">Webhooks</text>
+              <path class="edge edge-d" d="M592 45 H658" /><path class="edge edge-d" d="M592 107 H658" /><path class="edge edge-d" d="M592 169 H658" /><path class="edge edge-d" d="M592 231 H658" /><path class="edge edge-d" d="M592 293 H658" />
+            </svg>
+            <figcaption><b>Everything outside is optional.</b> With nothing connected, OneNGO still works: its own sign-in, notices inside the app, UPI payments confirmed by hand, and receipts you print from the browser.</figcaption>
+          </figure>
+
+          <h3>The problems it solves</h3>
+          <div class="cards">
+            <div class="mode"><strong>Change without waiting</strong><span>New fields, rules, approval steps, and pages are made by the NGO itself in the Builder.</span></div>
+            <div class="mode"><strong>Cost that fits a small NGO</strong><span>One light server that sleeps when idle and runs mostly within a free cloud allowance. No paid cache or queue.</span></div>
+            <div class="mode"><strong>Trustworthy accounts</strong><span>Entries balance, receipt numbers are never reused, and a closed year stays closed. Configuration cannot bend these.</span></div>
+          </div>
+          <div class="notice info"><strong>Two ways to run it</strong><p>A <b>one-NGO installation</b> gives an NGO its own project and database, so it holds its own data. A <b>shared installation</b> hosts many NGOs side by side, each kept apart by the database itself. It is the same product either way.</p></div>
+        </section>
+
+        <!-- ============================== WHO ============================== -->
+        <section class="card" id="who">
+          <h2>Who uses it</h2>
+          <p>Each person sees only what their role allows. Five kinds of people use or run it.</p>
+          <div class="panel panel-table">
+            <table>
+              <thead><tr><th>Who</th><th>What they do</th><th>Where</th></tr></thead>
+              <tbody>
+                <tr><td><b>Users</b><br />staff, finance, office bearers, members, volunteers</td><td>Keep records, issue receipts, approve requests, keep their own profile.</td><td>The organisation app: Home, Records, Inbox, More. Works on a phone and installs like an app.</td></tr>
+                <tr><td><b>NGO administrators</b></td><td>Invite people, set roles, connect services, issue API keys, finish setup, and change how things work in the Builder.</td><td>The same app, under More, then Administration and Builder.</td></tr>
+                <tr><td><b>Operators</b></td><td>The people who run the platform. They open a new organisation, retry a failed opening, and suspend, reactivate, or close one.</td><td>A separate console with its own two-factor sign-in.</td></tr>
+                <tr><td><b>Donors and the public</b></td><td>Pay by UPI, open a receipt link, use public pages and forms. No account needed for a receipt.</td><td>Public pages and links from the organisation.</td></tr>
+                <tr><td><b>Developers</b></td><td>Build, run, and deploy the platform.</td><td><a href="developer.html">Developer guide</a>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="notice info"><strong>One organisation at a time</strong><p>People sign in with an organisation code, for example <code>/o/&lt;code&gt;/sign-in</code>. OneNGO never publishes a list of organisations.</p></div>
+        </section>
+
+        <!-- ============================== DOES ============================== -->
+        <section class="card" id="does">
+          <h2>What it does today</h2>
+          <p>This is the honest picture of the current product. <span class="badge ok">Built</span> works in the app. <span class="badge warn">Server only</span> works in the API but has no screen yet. <span class="badge">Not yet</span> is planned or out of scope.</p>
+          <div class="panel panel-table">
+            <table>
+              <thead><tr><th>Area</th><th>What you get</th><th>State</th></tr></thead>
+              <tbody>
+                <tr><td><b>Sign-in and access</b></td><td>Password, a 10-minute email code, your organisation's identity provider, and passkeys. Optional two-step sign-in that a role can require. Invitation links last 7 days; reset links 30 minutes. Role changes apply within about 5 seconds.</td><td><span class="badge ok">Built</span></td></tr>
+                <tr><td><b>Records</b></td><td>A generic record engine. Text, numbers, money, dates, choices, links between records, files, photos, signatures, calculated fields, and encrypted sensitive fields. Search, filters, sharing, bulk edit, CSV import (up to 20,000 rows), export, and a change history for every record.</td><td><span class="badge ok">Built</span></td></tr>
+                <tr><td><b>Workflows and approvals</b></td><td>Named steps. A step that needs approval waits in the Inbox until enough different people approve. Nobody approves their own request. Automations send messages from templates. Background jobs show progress and failed rows.</td><td><span class="badge ok">Built</span></td></tr>
+                <tr><td><b>Money and receipts</b></td><td>A double-entry ledger that refuses unbalanced journals. A financial year from a month you choose (April by default). Gap-free receipt numbers that restart each year; a void keeps its number. UPI is the default payment method.</td><td><span class="badge ok">Built</span></td></tr>
+                <tr><td><b>Donations module</b></td><td>Donors and donations numbered per financial year. Mark as paid, then a numbered acknowledgement, a ledger posting, thank-you messages, a summary, and a register.</td><td><span class="badge ok">Built</span></td></tr>
+                <tr><td><b>Builder</b></td><td>Drafts until published. History restores an older version. Record types, workflows, lists, pages, actions, automations, templates, posting and receipt rules, scripts, theme, translations, roles, and modules. A data migrator loads CSV exports of an earlier system.</td><td><span class="badge ok">Built</span></td></tr>
+                <tr><td><b>Override scripts</b></td><td>Logic at set moments (before save, validate, after save, workflow guard, custom button). A script only <i>proposes</i> changes; the platform checks them. A trial run changes nothing.</td><td><span class="badge ok">Built</span> <span class="badge warn">Server only</span> for proposed actions on the Builder screen</td></tr>
+                <tr><td><b>Connectors</b></td><td>SMS, WhatsApp, and webhooks. Nothing is sent until one is set up and switched on. Failed deliveries can be retried. Razorpay and Cashfree can be saved per organisation.</td><td><span class="badge ok">Built</span> <span class="badge warn">Server only</span> for gateway setup</td></tr>
+                <tr><td><b>Organisation setup</b></td><td>An operator onboards an approved NGO from one validated, retry-safe request. Identity, registrations (80G, 12A, FCRA), logo, authorised signatory, and a setup checklist. Lifecycle: Active, Suspended, Closed (data kept).</td><td><span class="badge ok">Built</span></td></tr>
+                <tr><td><b>App experience</b></td><td>Bottom bar on a phone, side navigation on larger screens. Installable. What is on screen stays when the connection drops, and saves wait for it to return. Print views. Nothing loads from the public internet.</td><td><span class="badge ok">Built</span></td></tr>
+                <tr><td><b>Privacy</b></td><td>Consent records and erasure of a suspended person (made anonymous; amounts, dates, and receipt numbers stay). Rules await product-owner approval. Sensitive fields are masked without permission.</td><td><span class="badge warn">Server only</span></td></tr>
+                <tr><td><b>More modules</b></td><td>Eight modules (expenses, earnings, assets, members, governance, projects, beneficiaries, donations) are written as configuration, but only Donations is installed by default.</td><td><span class="badge">Written, not live</span></td></tr>
+                <tr><td><b>Later</b></td><td>Volunteer management, compliance calendar, grants, case management, events, membership fees, bulk email, paid SMS and WhatsApp.</td><td><span class="badge">Not yet</span></td></tr>
+                <tr><td><b>Out of scope</b></td><td>Tax-credit receipts, FCRA books, regulator filing, payroll and HR, a native mobile app, self-registration, and subscription billing.</td><td><span class="badge">No</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>The long form is the <a href="documents.html#product-brief--7-what-the-product-does-today">product brief, section 7</a>. How to use each part is in the <a href="user-guide.html">user guide</a>.</p>
+        </section>
+
+        <!-- ============================== HOW ============================== -->
+        <section class="card" id="how">
+          <h2>How it works</h2>
+          <p>OneNGO separates <b>what an NGO wants</b> from <b>the rules that keep money safe</b>.</p>
+          <figure class="diagram">
+            <svg viewBox="0 0 880 270" role="img" aria-labelledby="d-how-t d-how-d">
+              <title id="d-how-t">Configure, do not code</title>
+              <desc id="d-how-d">An administrator uses the Builder to publish definitions. The app reads them and shows screens and rules. Everything goes through fixed engines for ledger, receipts, payments, sign-in, permissions, and audit, which configuration cannot bypass.</desc>
+              <rect class="n" x="20" y="24" width="240" height="96" rx="12" /><text class="t t-b" x="140" y="54" text-anchor="middle">1 · An administrator</text><text class="t-s" x="140" y="76" text-anchor="middle">opens the Builder, drafts a</text><text class="t-s" x="140" y="92" text-anchor="middle">form, a rule, an approval step</text>
+              <rect class="n" x="320" y="24" width="240" height="96" rx="12" /><text class="t t-b" x="440" y="54" text-anchor="middle">2 · Definitions</text><text class="t-s" x="440" y="76" text-anchor="middle">saved as versioned data.</text><text class="t-s" x="440" y="92" text-anchor="middle">Older versions stay restorable</text>
+              <rect class="n" x="620" y="24" width="240" height="96" rx="12" /><text class="t t-b" x="740" y="54" text-anchor="middle">3 · The app</text><text class="t-s" x="740" y="76" text-anchor="middle">screens, lists, and rules</text><text class="t-s" x="740" y="92" text-anchor="middle">appear for everyone, at once</text>
+              <path class="edge" d="M262 72 H318" /><text class="t-s" x="290" y="62" text-anchor="middle">publish</text>
+              <path class="edge" d="M562 72 H618" /><text class="t-s" x="590" y="62" text-anchor="middle">read by</text>
+              <rect class="n-ok" x="20" y="156" width="840" height="96" rx="12" />
+              <text class="t t-b" x="440" y="184" text-anchor="middle">Fixed engines that configuration cannot bypass</text>
+              <text class="t-s" x="440" y="208" text-anchor="middle">Ledger · Receipts · Payments · Sign-in · Permissions · Organisation separation · Audit trail</text>
+              <text class="t-s" x="440" y="228" text-anchor="middle">Even a script only proposes changes. The platform checks them and applies them together, or not at all.</text>
+              <path class="edge edge-d edge-ok" d="M440 122 V154" />
+            </svg>
+            <figcaption><b>Freedom on top, safety underneath.</b> Publishing never changes past records.</figcaption>
+          </figure>
+          <h3>Six rules nothing can break</h3>
+          <ul class="check">
+            <li>Every accounting entry balances: debits equal credits.</li>
+            <li>A closed period or year changes only by a reopen with a recorded reason.</li>
+            <li>An issued receipt number is never reused or altered. A void keeps its number.</li>
+            <li>An account balance changes only through a recorded transaction.</li>
+            <li>Permission checks and the audit trail always apply.</li>
+            <li>One organisation's data is never visible to another.</li>
+          </ul>
+        </section>
+
+        <!-- ============================== JOURNEY ============================== -->
+        <section class="card" id="journey">
+          <h2>A first month, in seven steps</h2>
+          <p>A picture of how an NGO goes from nothing to taking donations.</p>
+          <ol class="track" aria-label="A first month">
+            <li><b>Open</b>An operator onboards the NGO</li>
+            <li><b>Set up</b>The administrator finishes the checklist</li>
+            <li><b>Invite</b>People get a link and roles</li>
+            <li><b>Record</b>Staff add donors and donations</li>
+            <li><b>Approve</b>Approvers decide in the Inbox</li>
+            <li><b>Receipt</b>Paid donations get a numbered receipt</li>
+            <li><b>Adjust</b>The administrator changes forms in the Builder</li>
+          </ol>
+          <p>Each step has a how-to in the <a href="user-guide.html">user guide</a>: the operator <a href="user-guide.html#onboard">onboards</a>, the administrator <a href="user-guide.html#setup">finishes setup</a> and <a href="user-guide.html#people">invites people</a>, users work in <a href="user-guide.html#records">Records</a> and the <a href="user-guide.html#inbox">Inbox</a>, and the administrator uses the <a href="user-guide.html#builder">Builder</a>.</p>
+        </section>
+
+        <!-- ============================== SAFE ============================== -->
+        <section class="card" id="safe">
+          <h2>Safe by design</h2>
+          <div class="cards four">
+            <div class="mode"><strong>Separate organisations</strong><span>The database itself hides one organisation's rows from another. The organisation always comes from who signed in.</span></div>
+            <div class="mode"><strong>Protected money</strong><span>Rules live in code and in database triggers. Scripts and configuration cannot skip them.</span></div>
+            <div class="mode"><strong>Secrets locked away</strong><span>Passwords are hashed. Stored credentials and sensitive fields are encrypted. Secrets never sit in files or in the repository.</span></div>
+            <div class="mode"><strong>Everything audited</strong><span>Every change has a history. Operator actions are recorded with who, when, and why.</span></div>
+          </div>
+          <ul class="check">
+            <li>Operators sign in with two-step verification, and again before suspending or closing an organisation.</li>
+            <li>The operator console sits behind Google Identity-Aware Proxy in production.</li>
+            <li>Nothing loads from the public internet: no web fonts, scripts, or images from other sites.</li>
+            <li>A security review fixed 16 findings. It is not a substitute for a human penetration test.</li>
+          </ul>
+        </section>
+
+        <!-- ============================== APPS ============================== -->
+        <section class="card" id="apps">
+          <h2>What is in the box</h2>
+          <div class="panel panel-table">
+            <table>
+              <thead><tr><th>Part</th><th>For</th><th>What it is</th><th>Read</th></tr></thead>
+              <tbody>
+                <tr><td><b>Organisation app</b></td><td>Users, administrators</td><td>The installable web app with Home, Records, Inbox, Administration, and the Builder.</td><td><a href="user-guide.html">User guide</a></td></tr>
+                <tr><td><b>Operator console</b></td><td>Operators</td><td>A separate app to open, suspend, reactivate, and close organisations.</td><td><a href="user-guide.html#operator-sign-in">Operator section</a></td></tr>
+                <tr><td><b>Interactive guide</b></td><td>Everyone in the app</td><td>The help shown inside the app at <code>/guide</code>.</td><td><a href="user-guide.html">User guide</a></td></tr>
+                <tr><td><b>Service sandbox</b></td><td>Developers</td><td>Fake outside services for local work and tests.</td><td><a href="service-sandbox.html">Service sandbox</a></td></tr>
+                <tr><td><b>Servers and engine</b></td><td>Developers</td><td>Two servers (main and console) built on one engine and one PostgreSQL database.</td><td><a href="developer.html">Developer guide</a></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============================== GLOSSARY ============================== -->
+        <section class="card" id="glossary">
+          <h2>Plain words</h2>
+          <div class="panel panel-table">
+            <table>
+              <thead><tr><th>Word</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td><b>Organisation</b></td><td>One NGO inside OneNGO, with its own people, records, and code (the part after <code>/o/</code> in its sign-in address).</td></tr>
+                <tr><td><b>Record</b></td><td>One item the NGO keeps, such as a donor or a donation. Its kinds are called record types.</td></tr>
+                <tr><td><b>Module</b></td><td>A ready-made bundle of record types, forms, workflows, and reports. Donations is the one that ships.</td></tr>
+                <tr><td><b>Definition</b></td><td>A saved description of how something looks or behaves. The app reads definitions instead of code.</td></tr>
+                <tr><td><b>Builder</b></td><td>The screen where an administrator drafts, checks, and publishes definitions.</td></tr>
+                <tr><td><b>Workflow</b></td><td>The steps a record moves through, such as Raised then Paid.</td></tr>
+                <tr><td><b>Connector</b></td><td>A saved link to an outside service, such as SMS or a webhook.</td></tr>
+                <tr><td><b>Override script</b></td><td>A small piece of logic for what configuration cannot express. It proposes changes and the platform checks them.</td></tr>
+                <tr><td><b>Ledger</b></td><td>The double-entry books. Every entry balances.</td></tr>
+                <tr><td><b>Operator</b></td><td>A person who runs the platform itself, not one NGO.</td></tr>
+                <tr><td><b>PWA</b></td><td>An installable web app: add it to your phone's home screen and it opens like an app.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============================== DOC MAP ============================== -->
+        <section class="card" id="docs">
+          <h2>Doc map</h2>
+          <p>Four pages cover day-to-day needs. The reference library holds the long-form documents. Plans stay as Markdown.</p>
+          <div class="panel panel-table">
+            <table>
+              <thead><tr><th style="width:200px">If you are</th><th>Read in this order</th></tr></thead>
+              <tbody>
+                <tr><td>New to the product</td><td>This page, then the <a href="user-guide.html">user guide</a>. For depth: <a href="documents.html#product-brief">product brief</a> (section 7 is what the app does today, section 8 the roadmap).</td></tr>
+                <tr><td>A user</td><td><a href="user-guide.html#sign-in">Sign in</a>, <a href="user-guide.html#move">Move around</a>, <a href="user-guide.html#records">Records</a>, <a href="user-guide.html#inbox">Inbox</a>.</td></tr>
+                <tr><td>An NGO administrator</td><td><a href="user-guide.html#admin-home">Administration</a>, <a href="user-guide.html#setup">Finish setup</a>, <a href="user-guide.html#people">People</a>, <a href="user-guide.html#builder">Builder</a>, and the <a href="user-guide.html#builder-reference">Builder reference</a>. Moving data from an old system: <a href="user-guide.html#migrate-data">Move data</a>.</td></tr>
+                <tr><td>An operator</td><td><a href="user-guide.html#operator-sign-in">Console sign-in</a>, <a href="user-guide.html#onboard">Onboard</a>, <a href="user-guide.html#lifecycle">Suspend, reactivate, close</a>.</td></tr>
+                <tr><td>A developer</td><td><a href="developer.html#setup">Setup guide</a>, <a href="developer.html#repo">Code layout</a>, <a href="developer.html#how">How it works</a>, then <a href="documents.html#architecture">architecture</a> for the full design. Integrations: <a href="service-sandbox.html">Service sandbox</a>.</td></tr>
+                <tr><td>DevOps or release owner</td><td><a href="developer.html#pipeline">The pipeline</a>, <a href="developer.html#pipeline-setup">Pipeline setup guide</a>, <a href="developer.html#release">Releasing</a>, <a href="developer.html#go-live">Go-live checklist</a>, <a href="developer.html#monitoring">Alerts</a>, <a href="developer.html#backup">Backup drill</a>.</td></tr>
+                <tr><td>A designer</td><td><a href="documents.html#ui-design">UI design</a>, then the <a href="#wireframes">wireframes</a>.</td></tr>
+                <tr><td>QA</td><td><a href="documents.html#testing">Test plan</a>, with the <a href="user-guide.html">user guide</a> for user-facing wording.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <h3>The reference library</h3>
+          <p><a href="documents.html"><b>documents.html</b></a> holds six long-form documents in one searchable page. Every section is linked from its contents.</p>
+          <div class="doc-tiles">
+            <a href="documents.html#product-brief"><span class="tag ref">Reference</span><strong>Product brief</strong><small>Why the product exists and who it is for. Section 7: what it does today. Section 8: roadmap and open questions.</small></a>
+            <a href="documents.html#architecture"><span class="tag ref">Reference</span><strong>Architecture</strong><small>The single architecture document: layers, engines, ledger, payments, security, 19 decision records, money flows.</small></a>
+            <a href="documents.html#ui-design"><span class="tag ref">Reference</span><strong>UI design</strong><small>The source of truth for screen behaviour. Where a wireframe disagrees, this wins.</small></a>
+            <a href="documents.html#deployment"><span class="tag ref">Reference</span><strong>Deployment</strong><small>The long form of the pipeline, setup, monitoring files, backup drill, and gateway sandboxes.</small></a>
+            <a href="documents.html#testing"><span class="tag ref">Reference</span><strong>Test plan</strong><small>Functional cases by area, suites, traceability, test data, and results.</small></a>
+            <a href="documents.html#readme"><span class="tag ref">Reference</span><strong>README</strong><small>The repository's front page: run it, test it, and the folder map.</small></a>
+          </div>
+          <h3>Plans (Markdown only)</h3>
+          <div class="panel panel-table">
+            <table>
+              <thead><tr><th>File</th><th>What it is</th></tr></thead>
+              <tbody>
+                <tr><td><a href="plans/ngo-backend-enhancement-plan.md">plans/ngo-backend-enhancement-plan.md</a> <span class="tag plan">plan</span> <span class="tag">read by tests</span></td><td>The backend plan: decisions, building blocks, dependencies, delivery waves. Its section 5.1 is the authoritative block status and tests read it. Do not rename or move it.</td></tr>
+                <tr><td><a href="plans/finance-system-plan.md">plans/finance-system-plan.md</a> <span class="tag plan">plan</span></td><td>The remaining finance work: real accounts versus books, work items by phase, decisions, risks. Migration comments cite it. Do not rename or move it.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============================== WIREFRAMES ============================== -->
+        <section class="card" id="wireframes">
+          <h2>Wireframes</h2>
+          <p>Interactive HTML pages in <a href="wireframes/">wireframes/</a>. Open them in a browser. The four marked <em>cited</em> are named by the in-app guide, so do not rename or move them. Thirteen other design-record and proposal wireframes were moved to <a href="deleted/wireframes/">deleted/wireframes/</a>. The app is the source of truth for those screens, together with <a href="documents.html#ui-design">UI design</a>.</p>
+          <div class="panel panel-table">
+<table>
+  <tr><th>Wireframe</th><th>Shows</th><th>State</th></tr>
+  <tr><td><a href="wireframes/ngo-app-navigation-flows.html">ngo-app-navigation-flows</a></td><td>Step-by-step journeys on phone and desktop with the same controls</td><td><span class="tag built">built</span><span class="tag ref">cited</span></td></tr>
+  <tr><td><a href="wireframes/ngo-builder-screens.html">ngo-builder-screens</a></td><td>Every Builder screen, everything configurable</td><td><span class="tag built">built</span><span class="tag ref">cited</span></td></tr>
+  <tr><td><a href="wireframes/release-2-sign-in-wireframe.html">release-2-sign-in-wireframe</a></td><td>Sign-in screens for Release 2 (organisation code, methods)</td><td><span class="tag built">built</span><span class="tag ref">cited</span></td></tr>
+  <tr><td><a href="wireframes/org-admin-appearance.html">org-admin-appearance</a></td><td>Organisation administrator: theme, layout and organisation information</td><td><span class="tag built">built</span><span class="tag ref">cited</span></td></tr>
+  <tr><td><a href="wireframes/finance/index.html">finance/ (index)</a></td><td>Finance controls and multi-bank: <a href="wireframes/finance/money-page.html">money page</a>, <a href="wireframes/finance/account-statement.html">account statement</a>, <a href="wireframes/finance/bank-reconciliation.html">bank reconciliation</a>, <a href="wireframes/finance/record-forms.html">record forms and approvals</a>, <a href="wireframes/finance/pay-now.html">pay now</a>, <a href="wireframes/finance/trial-balance.html">trial balance</a></td><td><span class="tag built">built</span></td></tr>
+</table>
+          </div>
+        </section>
+
+
+        <!-- ============================== RULES ============================== -->
+        <section class="card" id="rules">
+          <h2>About these docs</h2>
+          <ul class="check">
+            <li><b>One look.</b> Every page here uses the same stylesheet, <code>assets/docs.css</code>, and the same script, <code>assets/docs.js</code>, on top of the web kit's design tokens. Change a colour or spacing once and every page follows.</li>
+            <li><b>One document per topic.</b> Extend the existing page. Do not add a second copy in another folder.</li>
+            <li><b>Plans stay in Markdown.</b> Keep plans in <a href="plans/">plans/</a>. Never copy them into <code>documents.html</code>, <code>user-guide.html</code>, <code>developer.html</code>, or any other HTML page.</li>
+            <li><b>Do not rename or move</b> <a href="plans/ngo-backend-enhancement-plan.md">the backend plan</a> (tests read it), <a href="plans/finance-system-plan.md">the finance plan</a> (migration comments cite it), or the four cited wireframes (the in-app guide cites them).</li>
+            <li><b>Code paths in Markdown backticks must exist.</b> <code>tests/unit/platform/docs-paths.test.ts</code> checks every <code>`apps/…`</code>, <code>`packages/…`</code>, and <code>`docs/…`</code> path in <code>.md</code> files, except under <code>docs/deleted/</code> and the historical backend plan.</li>
+            <li><b>Never put a secret in a document.</b></li>
+            <li>Retire a document by moving it into <code>docs/deleted/</code> with the same relative path, then add it to the table at the bottom of this page.</li>
+          </ul>
+        </section>
+
+        <section class="card" id="gaps">
+          <h2>Known gaps</h2>
+          <div class="notice warn"><strong>Check the code before relying on these</strong>
+            <ul>
+              <li><a href="documents.html#testing">Test plan</a> lists passkey sign-in as unmerged (sections 3.2 and 33). Passkeys are built. Its baseline is the 2026-11-03 commit.</li>
+              <li><a href="plans/finance-system-plan.md">The finance plan</a>, work item H1, describes an older migration state.</li>
+              <li>Three wireframes began as proposals (settings screen, theme editor, organisation settings regroup). The app already follows the settings regroup and part of the theme guidance. Confirm against the app before building from the rest.</li>
+              <li>Not yet proven on a live project: Playwright against a live address, the pipeline on a GitHub runner, automatic rollback in practice, and the stage Cloud Run deploy.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="card" id="deleted">
+          <h2>Moved to <code>docs/deleted/</code></h2>
+          <p>Nothing was deleted. 82 files were moved, keeping their relative paths, because they duplicate a live document, are superseded by one, or were merged into one without losing content. The docs-paths test ignores this folder. To restore a file, move it back to the same path without <code>deleted/</code>.</p>
+          <details class="more">
+            <summary>All 82 moved files, with the live document to use instead</summary>
+            <div class="panel panel-table">
+<table><tr><th>Moved file</th><th>Why</th><th>Use instead</th></tr>
+<tr><td><a href="deleted/apps/service-sandbox/readme.html">apps/service-sandbox/readme.html</a></td><td>Moved into the docs folder and restyled with the shared stylesheet</td><td><a href="service-sandbox.html">service-sandbox.html</a></td></tr>
+<tr><td><a href="deleted/summary.html">summary.html</a></td><td>Hand-written digest of the live documents; it repeated them, went out of date, and summarised the plans</td><td><a href="#docs">The doc map above</a> and <a href="documents.html">documents.html</a></td></tr>
+<tr><td><a href="deleted/roadmap.md">roadmap.md</a></td><td>Merged into the product brief</td><td><a href="documents.html#product-brief--8-roadmap">product-brief (section 8)</a></td></tr>
+<tr><td><a href="deleted/operations/pipeline-setup.md">operations/pipeline-setup.md</a></td><td>Merged into the deployment page (sections 6 and 7)</td><td><a href="documents.html#deployment">deployment (sections 6 and 7)</a></td></tr>
+<tr><td><a href="deleted/monitoring/README.md">monitoring/README.md</a></td><td>Merged into the deployment page (section 8); the JSON definitions stay in monitoring/</td><td><a href="documents.html#deployment">deployment (section 8)</a></td></tr>
+<tr><td><a href="deleted/connector-runtime.html">connector-runtime.html</a></td><td>Merged into the architecture document (Appendix D)</td><td><a href="documents.html#architecture">architecture (Appendix D)</a></td></tr>
+<tr><td><a href="deleted/financial-flow.html">financial-flow.html</a></td><td>Merged into the architecture document (Appendix C)</td><td><a href="documents.html#architecture">architecture (Appendix C)</a></td></tr>
+<tr><td><a href="deleted/plans/legacy-data-migrator-plan.md">plans/legacy-data-migrator-plan.md</a></td><td>Merged into the architecture document (Appendix E)</td><td><a href="documents.html#architecture">architecture (Appendix E)</a></td></tr>
+<tr><td><a href="deleted/user-guide/migrate-donations-and-expenses.md">user-guide/migrate-donations-and-expenses.md</a></td><td>Merged into the user guide ("Move data from an old system")</td><td><a href="user-guide.html#migrate-data">user-guide.html (Move data from an old system)</a></td></tr>
+<tr><td><a href="deleted/architecture/connector-runtime.html">architecture/connector-runtime.html</a></td><td>Duplicate (differs by two lines)</td><td><a href="documents.html#architecture">architecture (Appendix D)</a></td></tr>
+<tr><td><a href="deleted/architecture/migration-schema-analysis.html">architecture/migration-schema-analysis.html</a></td><td>Historical plan that merged 32 migrations into the first files; superseded</td><td><a href="documents.html#architecture">architecture (Appendix B)</a></td></tr>
+<tr><td><a href="deleted/architecture/ngo-platform-architecture.md">architecture/ngo-platform-architecture.md</a></td><td>Older copy of the architecture document</td><td><a href="documents.html#architecture">architecture</a></td></tr>
+<tr><td><a href="deleted/archive/builder-guide.html">archive/builder-guide.html</a></td><td>Older split user guide; now one guide with the Builder reference</td><td><a href="user-guide.html">user-guide.html</a></td></tr>
+<tr><td><a href="deleted/archive/deployment-plan.html">archive/deployment-plan.html</a></td><td>Long earlier deployment text, partly out of date; replaced by one deployment page</td><td><a href="documents.html#deployment">deployment (sections 6 to 8)</a></td></tr>
+<tr><td><a href="deleted/archive/devops-handover.md">archive/devops-handover.md</a></td><td>Long earlier deployment text, partly out of date; replaced by one deployment page</td><td><a href="documents.html#deployment">deployment (sections 6 to 8)</a></td></tr>
+<tr><td><a href="deleted/archive/feature-list.html">archive/feature-list.html</a></td><td>Old feature list, condensed into the product brief</td><td><a href="documents.html#product-brief">product-brief (section 7)</a></td></tr>
+<tr><td><a href="deleted/archive/migration-schema-analysis.html">archive/migration-schema-analysis.html</a></td><td>Historical plan that merged 32 migrations into the first files; superseded</td><td><a href="documents.html#architecture">architecture (Appendix B)</a></td></tr>
+<tr><td><a href="deleted/archive/ngo-backend-building-blocks.md">archive/ngo-backend-building-blocks.md</a></td><td>Snapshot of backend block status; section 5.1 of the plan is authoritative</td><td><a href="plans/ngo-backend-enhancement-plan.md">plans/ngo-backend-enhancement-plan.md (section 5.1)</a></td></tr>
+<tr><td><a href="deleted/archive/passkey-technical-design.html">archive/passkey-technical-design.html</a></td><td>Passkey design, now covered by the architecture document and user guide</td><td><a href="documents.html#architecture">architecture (Passkeys)</a></td></tr>
+<tr><td><a href="deleted/archive/passkey-user-journey.html">archive/passkey-user-journey.html</a></td><td>Passkey design, now covered by the architecture document and user guide</td><td><a href="documents.html#architecture">architecture (Passkeys)</a></td></tr>
+<tr><td><a href="deleted/archive/pwa-plan.md">archive/pwa-plan.md</a></td><td>Full PWA plan, condensed into the roadmap (product brief, section 8)</td><td><a href="documents.html#product-brief">product-brief (section 8.3)</a></td></tr>
+<tr><td><a href="deleted/archive/release-2-build-blocks.md">archive/release-2-build-blocks.md</a></td><td>Full Release 2 plan, condensed into the roadmap (product brief, section 8)</td><td><a href="documents.html#product-brief">product-brief (section 8.2)</a></td></tr>
+<tr><td><a href="deleted/archive/test-plan-appendices-b-c-d-f.md">archive/test-plan-appendices-b-c-d-f.md</a></td><td>Defect report and UI audit of 3 to 4 November 2026; history only</td><td><a href="documents.html#testing">testing</a></td></tr>
+<tr><td><a href="deleted/archive/user-guide-index.html">archive/user-guide-index.html</a></td><td>Older split user guide; now one guide with the Builder reference</td><td><a href="user-guide.html">user-guide.html</a></td></tr>
+<tr><td><a href="deleted/design/ngo-app-ui-design.md">design/ngo-app-ui-design.md</a></td><td>Older copy of the UI design</td><td><a href="documents.html#ui-design">ui-design</a></td></tr>
+<tr><td><a href="deleted/design/wireframes/builder-messages-and-reports.html">design/wireframes/builder-messages-and-reports.html</a></td><td>Duplicate of the wireframe in wireframes/ (older or identical copy)</td><td><a href="deleted/wireframes/builder-messages-and-reports.html">wireframes/builder-messages-and-reports.html</a></td></tr>
+<tr><td><a href="deleted/design/wireframes/data-migrator.html">design/wireframes/data-migrator.html</a></td><td>Duplicate of the wireframe in wireframes/ (older or identical copy)</td><td><a href="deleted/wireframes/data-migrator.html">wireframes/data-migrator.html</a></td></tr>
+<tr><td><a href="deleted/design/wireframes/ngo-app-navigation-flows.html">design/wireframes/ngo-app-navigation-flows.html</a></td><td>Duplicate of the wireframe in wireframes/ (older or identical copy)</td><td><a href="wireframes/ngo-app-navigation-flows.html">wireframes/ngo-app-navigation-flows.html</a></td></tr>
+<tr><td><a href="deleted/design/wireframes/ngo-builder-screens.html">design/wireframes/ngo-builder-screens.html</a></td><td>Duplicate of the wireframe in wireframes/ (older or identical copy)</td><td><a href="wireframes/ngo-builder-screens.html">wireframes/ngo-builder-screens.html</a></td></tr>
+<tr><td><a href="deleted/design/wireframes/ngo-report-builder.html">design/wireframes/ngo-report-builder.html</a></td><td>Duplicate of the wireframe in wireframes/ (older or identical copy)</td><td><a href="deleted/wireframes/ngo-report-builder.html">wireframes/ngo-report-builder.html</a></td></tr>
+<tr><td><a href="deleted/design/wireframes/operator-console.html">design/wireframes/operator-console.html</a></td><td>Duplicate of the wireframe in wireframes/ (older or identical copy)</td><td><a href="deleted/wireframes/operator-console.html">wireframes/operator-console.html</a></td></tr>
+<tr><td><a href="deleted/design/wireframes/org-admin-appearance.html">design/wireframes/org-admin-appearance.html</a></td><td>Duplicate of the wireframe in wireframes/ (older or identical copy)</td><td><a href="wireframes/org-admin-appearance.html">wireframes/org-admin-appearance.html</a></td></tr>
+<tr><td><a href="deleted/design/wireframes/organisation-area.html">design/wireframes/organisation-area.html</a></td><td>Duplicate of the wireframe in wireframes/ (older or identical copy)</td><td><a href="deleted/wireframes/organisation-area.html">wireframes/organisation-area.html</a></td></tr>
+<tr><td><a href="deleted/design/wireframes/pwa-install-workflow.html">design/wireframes/pwa-install-workflow.html</a></td><td>Duplicate of the wireframe in wireframes/ (older or identical copy)</td><td><a href="deleted/wireframes/pwa-install-workflow.html">wireframes/pwa-install-workflow.html</a></td></tr>
+<tr><td><a href="deleted/design/wireframes/release-2-sign-in-wireframe.html">design/wireframes/release-2-sign-in-wireframe.html</a></td><td>Duplicate of the wireframe in wireframes/ (older or identical copy)</td><td><a href="wireframes/release-2-sign-in-wireframe.html">wireframes/release-2-sign-in-wireframe.html</a></td></tr>
+<tr><td><a href="deleted/design/wireframes/reports.html">design/wireframes/reports.html</a></td><td>Duplicate of the wireframe in wireframes/ (older or identical copy)</td><td><a href="deleted/wireframes/reports.html">wireframes/reports.html</a></td></tr>
+<tr><td><a href="deleted/design/wireframes/settings-screen.html">design/wireframes/settings-screen.html</a></td><td>Duplicate of the wireframe in wireframes/ (older or identical copy)</td><td><a href="deleted/wireframes/settings-screen.html">wireframes/settings-screen.html</a></td></tr>
+<tr><td><a href="deleted/design/wireframes/user-guide.html">design/wireframes/user-guide.html</a></td><td>Duplicate of the wireframe in wireframes/ (older or identical copy)</td><td><a href="deleted/wireframes/user-guide.html">wireframes/user-guide.html</a></td></tr>
+<tr><td><a href="deleted/operations/deployment-plan.html">operations/deployment-plan.html</a></td><td>Long earlier deployment text, partly out of date; replaced by one deployment page</td><td><a href="documents.html#deployment">deployment (sections 6 to 8)</a></td></tr>
+<tr><td><a href="deleted/operations/devops-handover.md">operations/devops-handover.md</a></td><td>Long earlier deployment text, partly out of date; replaced by one deployment page</td><td><a href="documents.html#deployment">deployment (sections 6 to 8)</a></td></tr>
+<tr><td><a href="deleted/operations/monitoring/dashboard.json">operations/monitoring/dashboard.json</a></td><td>Duplicate of monitoring/</td><td><a href="documents.html#deployment">deployment (section 8)</a></td></tr>
+<tr><td><a href="deleted/operations/monitoring/metrics/ngo_http_unhandled_error.json">operations/monitoring/metrics/ngo_http_unhandled_error.json</a></td><td>Duplicate of monitoring/</td><td><a href="documents.html#deployment">deployment (section 8)</a></td></tr>
+<tr><td><a href="deleted/operations/monitoring/metrics/ngo_job_failed.json">operations/monitoring/metrics/ngo_job_failed.json</a></td><td>Duplicate of monitoring/</td><td><a href="documents.html#deployment">deployment (section 8)</a></td></tr>
+<tr><td><a href="deleted/operations/monitoring/metrics/ngo_outbox_failed_permanently.json">operations/monitoring/metrics/ngo_outbox_failed_permanently.json</a></td><td>Duplicate of monitoring/</td><td><a href="documents.html#deployment">deployment (section 8)</a></td></tr>
+<tr><td><a href="deleted/operations/monitoring/policies/http-error-rate.json">operations/monitoring/policies/http-error-rate.json</a></td><td>Duplicate of monitoring/</td><td><a href="documents.html#deployment">deployment (section 8)</a></td></tr>
+<tr><td><a href="deleted/operations/monitoring/policies/job-failed.json">operations/monitoring/policies/job-failed.json</a></td><td>Duplicate of monitoring/</td><td><a href="documents.html#deployment">deployment (section 8)</a></td></tr>
+<tr><td><a href="deleted/operations/monitoring/policies/memory-high.json">operations/monitoring/policies/memory-high.json</a></td><td>Duplicate of monitoring/</td><td><a href="documents.html#deployment">deployment (section 8)</a></td></tr>
+<tr><td><a href="deleted/operations/monitoring/policies/outbox-failed-permanently.json">operations/monitoring/policies/outbox-failed-permanently.json</a></td><td>Duplicate of monitoring/</td><td><a href="documents.html#deployment">deployment (section 8)</a></td></tr>
+<tr><td><a href="deleted/ops/monitoring/metrics/ngo_memory_high.json">ops/monitoring/metrics/ngo_memory_high.json</a></td><td>Duplicate of monitoring/</td><td><a href="documents.html#deployment">deployment (section 8)</a></td></tr>
+<tr><td><a href="deleted/ops/monitoring/README.md">ops/monitoring/README.md</a></td><td>Duplicate of monitoring/</td><td><a href="documents.html#deployment">deployment (section 8)</a></td></tr>
+<tr><td><a href="deleted/passkey-technical-design.html">passkey-technical-design.html</a></td><td>Passkey design, now covered by the architecture document and user guide</td><td><a href="documents.html#architecture">architecture (Passkeys)</a></td></tr>
+<tr><td><a href="deleted/passkey-user-journey.html">passkey-user-journey.html</a></td><td>Passkey design, now covered by the architecture document and user guide</td><td><a href="documents.html#architecture">architecture (Passkeys)</a></td></tr>
+<tr><td><a href="deleted/plans/ngo-backend-building-blocks.md">plans/ngo-backend-building-blocks.md</a></td><td>Snapshot of backend block status; section 5.1 of the plan is authoritative</td><td><a href="plans/ngo-backend-enhancement-plan.md">plans/ngo-backend-enhancement-plan.md (section 5.1)</a></td></tr>
+<tr><td><a href="deleted/plans/ngo-release-2-build-blocks.md">plans/ngo-release-2-build-blocks.md</a></td><td>Full Release 2 plan, condensed into the roadmap (product brief, section 8)</td><td><a href="documents.html#product-brief">product-brief (section 8.2)</a></td></tr>
+<tr><td><a href="deleted/plans/pwa-plan.md">plans/pwa-plan.md</a></td><td>Full PWA plan, condensed into the roadmap (product brief, section 8)</td><td><a href="documents.html#product-brief">product-brief (section 8.3)</a></td></tr>
+<tr><td><a href="deleted/product-briefs/ngo-management-platform.md">product-briefs/ngo-management-platform.md</a></td><td>Older copy of the product brief (no section 7)</td><td><a href="documents.html#product-brief">product-brief</a></td></tr>
+<tr><td><a href="deleted/testing/functional-test-plan.md">testing/functional-test-plan.md</a></td><td>Older copy of the test plan</td><td><a href="documents.html#testing">testing</a></td></tr>
+<tr><td><a href="deleted/user-guide/builder-guide.html">user-guide/builder-guide.html</a></td><td>Older split user guide; now one guide with the Builder reference</td><td><a href="user-guide.html">user-guide.html</a></td></tr>
+<tr><td><a href="deleted/user-guide/index.html">user-guide/index.html</a></td><td>Older split user guide; now one guide with the Builder reference</td><td><a href="user-guide.html">user-guide.html</a></td></tr>
+<tr><td><a href="deleted/wireframes/legacy-data-migrator.html">wireframes/legacy-data-migrator.html</a></td><td>Earlier proposal wireframe, replaced by the built data migrator</td><td><a href="deleted/wireframes/data-migrator.html">wireframes/data-migrator.html</a></td></tr>
+<tr><td><a href="deleted/wireframes/builder-messages-and-reports.html">wireframes/builder-messages-and-reports.html</a></td><td>Design-record or proposal wireframe; the app and ui-design are the source of truth</td><td><a href="documents.html#ui-design">ui-design</a></td></tr>
+<tr><td><a href="deleted/wireframes/data-migrator.html">wireframes/data-migrator.html</a></td><td>Design-record or proposal wireframe; the app and ui-design are the source of truth</td><td><a href="documents.html#ui-design">ui-design</a></td></tr>
+<tr><td><a href="deleted/wireframes/home-screen-redesign.html">wireframes/home-screen-redesign.html</a></td><td>Design-record or proposal wireframe; the app and ui-design are the source of truth</td><td><a href="documents.html#ui-design">ui-design</a></td></tr>
+<tr><td><a href="deleted/wireframes/membership-request-workflow.html">wireframes/membership-request-workflow.html</a></td><td>Design-record or proposal wireframe; the app and ui-design are the source of truth</td><td><a href="documents.html#ui-design">ui-design</a></td></tr>
+<tr><td><a href="deleted/wireframes/ngo-report-builder.html">wireframes/ngo-report-builder.html</a></td><td>Design-record or proposal wireframe; the app and ui-design are the source of truth</td><td><a href="documents.html#ui-design">ui-design</a></td></tr>
+<tr><td><a href="deleted/wireframes/operator-console.html">wireframes/operator-console.html</a></td><td>Design-record or proposal wireframe; the app and ui-design are the source of truth</td><td><a href="documents.html#ui-design">ui-design</a></td></tr>
+<tr><td><a href="deleted/wireframes/organisation-area.html">wireframes/organisation-area.html</a></td><td>Design-record or proposal wireframe; the app and ui-design are the source of truth</td><td><a href="documents.html#ui-design">ui-design</a></td></tr>
+<tr><td><a href="deleted/wireframes/organisation-settings-reorg.html">wireframes/organisation-settings-reorg.html</a></td><td>Design-record or proposal wireframe; the app and ui-design are the source of truth</td><td><a href="documents.html#ui-design">ui-design</a></td></tr>
+<tr><td><a href="deleted/wireframes/pwa-install-workflow.html">wireframes/pwa-install-workflow.html</a></td><td>Design-record or proposal wireframe; the app and ui-design are the source of truth</td><td><a href="documents.html#ui-design">ui-design</a></td></tr>
+<tr><td><a href="deleted/wireframes/reports.html">wireframes/reports.html</a></td><td>Design-record or proposal wireframe; the app and ui-design are the source of truth</td><td><a href="documents.html#ui-design">ui-design</a></td></tr>
+<tr><td><a href="deleted/wireframes/settings-screen.html">wireframes/settings-screen.html</a></td><td>Design-record or proposal wireframe; the app and ui-design are the source of truth</td><td><a href="documents.html#ui-design">ui-design</a></td></tr>
+<tr><td><a href="deleted/wireframes/theme-editor-enhanced.html">wireframes/theme-editor-enhanced.html</a></td><td>Design-record or proposal wireframe; the app and ui-design are the source of truth</td><td><a href="documents.html#ui-design">ui-design</a></td></tr>
+<tr><td><a href="deleted/wireframes/user-guide.html">wireframes/user-guide.html</a></td><td>Design-record or proposal wireframe; the app and ui-design are the source of truth</td><td><a href="documents.html#ui-design">ui-design</a></td></tr>
+<tr><td><a href="deleted/monitoring/dashboard.json">monitoring/dashboard.json</a></td><td>Embedded in the deployment page</td><td><a href="documents.html#deployment">deployment (section 8.1)</a></td></tr>
+<tr><td><a href="deleted/monitoring/metrics/ngo_http_unhandled_error.json">monitoring/metrics/ngo_http_unhandled_error.json</a></td><td>Embedded in the deployment page</td><td><a href="documents.html#deployment">deployment (section 8.1)</a></td></tr>
+<tr><td><a href="deleted/monitoring/metrics/ngo_job_failed.json">monitoring/metrics/ngo_job_failed.json</a></td><td>Embedded in the deployment page</td><td><a href="documents.html#deployment">deployment (section 8.1)</a></td></tr>
+<tr><td><a href="deleted/monitoring/metrics/ngo_memory_high.json">monitoring/metrics/ngo_memory_high.json</a></td><td>Embedded in the deployment page</td><td><a href="documents.html#deployment">deployment (section 8.1)</a></td></tr>
+<tr><td><a href="deleted/monitoring/metrics/ngo_outbox_failed_permanently.json">monitoring/metrics/ngo_outbox_failed_permanently.json</a></td><td>Embedded in the deployment page</td><td><a href="documents.html#deployment">deployment (section 8.1)</a></td></tr>
+<tr><td><a href="deleted/monitoring/policies/http-error-rate.json">monitoring/policies/http-error-rate.json</a></td><td>Embedded in the deployment page</td><td><a href="documents.html#deployment">deployment (section 8.1)</a></td></tr>
+<tr><td><a href="deleted/monitoring/policies/job-failed.json">monitoring/policies/job-failed.json</a></td><td>Embedded in the deployment page</td><td><a href="documents.html#deployment">deployment (section 8.1)</a></td></tr>
+<tr><td><a href="deleted/monitoring/policies/memory-high.json">monitoring/policies/memory-high.json</a></td><td>Embedded in the deployment page</td><td><a href="documents.html#deployment">deployment (section 8.1)</a></td></tr>
+<tr><td><a href="deleted/monitoring/policies/outbox-failed-permanently.json">monitoring/policies/outbox-failed-permanently.json</a></td><td>Embedded in the deployment page</td><td><a href="documents.html#deployment">deployment (section 8.1)</a></td></tr>
+</table>
+            </div>
+          </details>
+        </section>
+
+        <footer class="foot">
+          <p>These pages describe the OneNGO application in this repository. Record types and pages follow whatever each organisation has published.</p>
+        </footer>
+      </div>
+    </main>
+  </div>
+  <script src="assets/docs.js"></script>
+</body>
+</html>

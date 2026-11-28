@@ -192,17 +192,6 @@ async function main() {
   await runSql(process.env.DATABASE_URL, consoleSeed);
   console.log('');
   console.log('Database is ready.');
-  console.log('Start each app in its own terminal:');
-  console.log('  npm run dev --workspace @onengo/service-sandbox');
-  console.log('  npm run dev --workspace @onengo/server');
-  console.log('  npm run dev --workspace @onengo/web');
-  console.log('  npm run dev --workspace @onengo-console/server');
-  console.log('Defaults: web 4200, API 8080, console 9090, fixture 8095.');
-  console.log('Pass --port to the API, web app, or console when you need another port.');
-  console.log('The sandbox takes --https-port. Copy the sandbox URLs you want into .env. Empty values keep the real services.');
-  console.log(`The seeded operator ${operatorEmail} is linked to ${issuer}.`);
-  console.log('Set OPERATOR_OIDC_ISSUER to that address to sign in as that operator, or link a real subject when you use a real provider.');
-  console.log('Mail is the gmail connector on the organisation. Leave SMTP_* unset.');
 }
 
 main().catch((error) => fail(error instanceof Error ? error.message : String(error)));

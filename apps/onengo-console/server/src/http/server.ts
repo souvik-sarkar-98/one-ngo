@@ -116,7 +116,8 @@ export function buildOperatorServer(deps: OperatorServerDeps) {
       authTime: verified.identity.authTime!, provider: verified.tokens,
     });
     if (!created) {
-      const refused = new URLSearchParams({ refused: 'unknown', issuer: verified.identity.issuer, subject: verified.identity.subject });
+      const used = await deps.store.temporaryUsed(verified.identity.issuer, verified.identity.subject);
+      const refused = new URLSearchParams({ refused: used ? 'used' : 'unknown', issuer: verified.identity.issuer, subject: verified.identity.subject });
       return reply.redirect(`/sign-in?${refused}`);
     }
     setCookie(reply, created.token);

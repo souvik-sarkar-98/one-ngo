@@ -17,7 +17,10 @@
             "index": "src/index.html",
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
-            "assets": [{ "glob": "**/*", "input": "public" }],
+            "assets": [
+              { "glob": "**/*", "input": "public" },
+              { "glob": "**/*", "input": "generated/guide", "output": "/" }
+            ],
             "styles": [
               { "input": "../../../node_modules/material-icons/iconfont/filled.css", "bundleName": "material-icons", "inject": false },
               { "input": "src/material.scss", "bundleName": "material-theme", "inject": false },

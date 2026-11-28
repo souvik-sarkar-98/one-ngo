@@ -5,182 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>OneNGO user guide</title>
   <meta name="description" content="The OneNGO user guide for users, NGO administrators, and operators." />
-  <!-- The same look as the OneNGO web apps: tokens and base rules from the web kit. -->
+  <!-- The same look as the OneNGO web apps: tokens and base rules from the web kit, then the one stylesheet every doc shares. -->
   <link rel="stylesheet" href="../packages/web-kit/src/styles/base.css" />
-  <style>
-    /* Guide layout, built from the app's shell pieces (app bar, side rail, content column). */
-    body { min-height: 100vh; }
-    .appbar {
-      position: sticky;
-      top: 0;
-      z-index: 30;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      height: var(--bar-height);
-      padding: 0 16px;
-      background: var(--brand);
-      color: var(--brand-fg);
-    }
-    .appbar__name { font-weight: 700; font-size: 1rem; letter-spacing: .02em; }
-    .appbar__title { font-size: .9rem; opacity: .9; border-left: 1px solid var(--bar-on-brand-line); padding-left: 12px; }
-    .shell { display: flex; align-items: flex-start; min-height: calc(100vh - var(--bar-height)); }
-    .rail {
-      position: sticky;
-      top: var(--bar-height);
-      flex: 0 0 240px;
-      height: calc(100vh - var(--bar-height));
-      overflow: auto;
-      padding: 14px 10px;
-      background: var(--card);
-      border-right: 1px solid var(--line);
-      box-sizing: border-box;
-    }
-    .rail__group {
-      margin: 14px 8px 6px;
-      color: var(--brand);
-      font-size: .68rem;
-      font-weight: 700;
-      letter-spacing: .03em;
-      text-transform: uppercase;
-    }
-    .rail__group:first-child { margin-top: 0; }
-    .rail a {
-      display: block;
-      padding: 7px 10px;
-      border-radius: var(--radius);
-      color: var(--muted);
-      font-size: .82rem;
-      text-decoration: none;
-    }
-    .rail a:hover { background: var(--row-hover); color: var(--fg); }
-    .content { flex: 1; min-width: 0; padding: 20px; box-sizing: border-box; }
-    .page { max-width: var(--content-max); margin: 0 auto; }
-    .hero { padding: 18px 20px; margin-bottom: 14px; background: var(--brand-tint); border-color: var(--brand-tint-line); }
-    .hero h1 { font-size: 1.4rem; margin-bottom: 6px; color: var(--brand); }
-    .hero p { margin: 0; color: var(--muted); max-width: 46rem; }
-    .lede { font-size: .95rem; }
-    .switcher { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
-    .switcher button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: var(--brand-fg); }
-    .card > p, .card > ul, .card > ol, .card > table, .card > pre { margin-top: 0; }
-    section.card h2 { color: var(--fg); padding-bottom: 8px; border-bottom: 1px solid var(--divider); }
-    section.card h3 { color: var(--brand); }
-    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 0 14px; }
-    .cards a {
-      display: block;
-      padding: 14px;
-      border-radius: var(--card-radius);
-      border: 1px solid var(--card-border);
-      background: var(--card);
-      color: inherit;
-      text-decoration: none;
-      box-shadow: var(--card-shadow);
-    }
-    .cards a:hover { border-color: var(--brand); }
-    .cards strong { display: block; color: var(--brand); margin-bottom: 4px; }
-    .cards span { color: var(--muted); font-size: .85rem; }
-    .panel-table { margin: 0 0 12px; }
-    .panel-table table { margin: 0; }
-    /* Numbered steps, drawn as the app's tinted chips. */
-    ol.steps { list-style: none; counter-reset: step; padding: 0; margin: 0 0 12px; }
-    ol.steps > li {
-      counter-increment: step;
-      position: relative;
-      padding: 8px 10px 8px 46px;
-      margin-bottom: 6px;
-      border: 1px solid var(--row-line);
-      border-radius: var(--radius);
-      background: var(--card);
-    }
-    ol.steps > li::before {
-      content: counter(step);
-      position: absolute;
-      left: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      background: var(--brand-tint-strong);
-      color: var(--brand);
-      font-size: .8rem;
-      font-weight: 700;
-    }
-    .notice p { margin: 0; }
-    .notice strong { display: block; margin-bottom: 2px; }
-    .scope {
-      display: inline-block;
-      margin-left: 6px;
-      padding: 1px 7px;
-      border-radius: 999px;
-      background: var(--brand-tint-strong);
-      color: var(--brand);
-      font-size: .66rem;
-      font-weight: 700;
-      letter-spacing: .03em;
-      text-transform: uppercase;
-      vertical-align: middle;
-    }
-    pre {
-      padding: 12px 14px;
-      border-radius: var(--radius);
-      background: var(--surface-sunk);
-      border: 1px solid var(--line);
-      font-size: .8rem;
-      line-height: 1.5;
-    }
-    footer.foot { padding: 10px 4px 28px; color: var(--muted); font-size: .8rem; }
-    body[data-audience="users"] [data-for]:not([data-for~="users"]),
-    body[data-audience="admins"] [data-for]:not([data-for~="admins"]),
-    body[data-audience="operators"] [data-for]:not([data-for~="operators"]) { display: none; }
-    /* Phones: the side rail becomes a wrapping strip above the content. */
-    @media (max-width: 759.98px) {
-      .appbar__title { display: none; }
-      .shell { display: block; }
-      .rail { position: static; height: auto; flex: none; border-right: 0; border-bottom: 1px solid var(--line); }
-      .rail__group { display: none; }
-      .rail a { display: inline-block; margin: 2px; }
-      .content { padding: 12px; }
-      .cards { grid-template-columns: 1fr; }
-    }
-    @media print {
-      .appbar, .rail, .switcher { display: none !important; }
-      .content { padding: 0; }
-      body[data-audience] [data-for] { display: block !important; }
-      section.card { break-inside: avoid; box-shadow: none; }
-    }
-    /* Builder reference (merged from the former builder guide). */
-    .b-toc { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 2px 18px; margin: 0 0 14px; }
-    .b-toc h4 { grid-column: 1 / -1; margin: 10px 0 2px; color: var(--brand); font-size: .72rem; letter-spacing: .03em; text-transform: uppercase; }
-    .b-toc a { font-size: .85rem; padding: 2px 0; }
-    .finder { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-sunk); }
-    .finder label { font-weight: 700; white-space: nowrap; }
-    .finder input { flex: 1; font: inherit; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); }
-    .finder output { color: var(--muted); font-size: .85rem; white-space: nowrap; }
-    .builder-ref[hidden], .builder-ref tr[hidden], #b-no-hits[hidden] { display: none !important; }
-    .builder-ref td:first-child { width: 26%; }
-    .builder-ref table.three td:nth-child(2) { width: 12%; }
-    .builder-ref dl.gloss { display: grid; grid-template-columns: 200px 1fr; gap: 6px 16px; margin: 8px 0 18px; }
-    .builder-ref dl.gloss dt { font-weight: 700; }
-    .builder-ref dl.gloss dd { margin: 0; }
-    .builder-ref .legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 16px; }
-    .builder-ref .notice strong { display: block; margin-bottom: 2px; }
-    .k { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .72rem; font-weight: 700; background: var(--badge-bg); color: var(--muted); white-space: nowrap; }
-    .k.btn { background: var(--brand-tint-strong); color: var(--brand); }
-    .k.fld { background: #efe6f7; color: #5a3d7a; }
-    .k.sel { background: #e6edf8; color: #29497a; }
-    .k.tog { background: var(--badge-warn-bg); color: var(--warn); }
-    .k.tab { background: #f3e9dd; color: #6c4a24; }
-    .k.msg { background: var(--badge-bad-bg); color: var(--bad); }
-    @media (max-width: 759.98px) { .builder-ref dl.gloss { grid-template-columns: 1fr; } .builder-ref td:first-child { width: auto; } }
-    @media print { .finder { display: none !important; } .builder-ref[hidden], .builder-ref tr[hidden] { display: block !important; } .builder-ref tr[hidden] { display: table-row !important; } }  </style>
+  <link rel="stylesheet" href="assets/docs.css" />
 </head>
 <body>
+  <!-- Shared arrow heads for every diagram below. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" class="mk" /></marker>
+      <marker id="arr-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" class="mk-ok" /></marker>
+      <marker id="arr-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" class="mk-bad" /></marker>
+    </defs>
+  </svg>
   <header class="appbar">
-    <span class="appbar__name">NGOOne</span>
+    <a class="appbar__name" href="index.html">OneNGO</a>
     <span class="appbar__title">User guide</span>
+    <span class="appbar__spacer"></span>
+    <a class="appbar__link" href="index.html">Home</a>
+    <a class="appbar__link" href="user-guide.html" aria-current="page">User guide</a>
+    <a class="appbar__link" href="developer.html">Developer</a>
+    <a class="appbar__link" href="service-sandbox.html">Sandbox</a>
+    <a class="appbar__link" href="documents.html">Reference</a>
   </header>
 
   <div class="shell">
@@ -202,6 +48,7 @@
       <a data-for="admins" href="#api-keys">API keys</a>
       <a data-for="admins" href="#jobs">Jobs and the audit log</a>
       <a data-for="admins" href="#settings">Organisation settings</a>
+      <a data-for="admins" href="#migrate-data">Move data from an old system</a>
       <a data-for="admins" href="#builder">Builder</a>
       <a data-for="admins" href="#builder-reference">Builder reference</a>
       <div class="rail__group" data-for="operators">Operators</div>
@@ -216,6 +63,26 @@
         <div class="card hero">
           <h1>OneNGO user guide</h1>
           <p class="lede">How to sign in and work with records, how an NGO administrator runs the organisation, and how an operator opens and looks after an organisation.</p>
+          <div class="hero__meta">
+            <span class="pill">Step-by-step guides</span>
+            <span class="pill">Diagrams for every flow</span>
+            <span class="pill">Searchable Builder reference</span>
+            <span class="pill">Printable</span>
+          </div>
+        </div>
+
+        <p class="section-title" id="tasks">What do you want to do?</p>
+        <div class="tasks">
+          <a href="#sign-in" data-for="users admins"><span class="tag">User</span><b>Sign in or reset a password</b><small>Password, email code, passkey, invitation.</small></a>
+          <a href="#inbox" data-for="users admins"><span class="tag">User</span><b>Approve or reject a request</b><small>Decide work waiting in your Inbox.</small></a>
+          <a href="#records" data-for="users admins"><span class="tag">User</span><b>Find, create, or import records</b><small>Search, filter, share, and bulk edit.</small></a>
+          <a href="#people" data-for="admins"><span class="tag admin">Admin</span><b>Invite someone</b><small>Add a person, pick roles, send the link.</small></a>
+          <a href="#setup" data-for="admins"><span class="tag admin">Admin</span><b>Finish organisation setup</b><small>Identity, registrations, financial year, receipts.</small></a>
+          <a href="#migrate-data" data-for="admins"><span class="tag admin">Admin</span><b>Move data from an old system</b><small>Donations and expenses from CSV files.</small></a>
+          <a href="#builder" data-for="admins"><span class="tag admin">Admin</span><b>Change how things work</b><small>Draft, check, and publish in the Builder.</small></a>
+          <a href="#b-trouble" data-for="admins"><span class="tag admin">Admin</span><b>Fix a Builder message</b><small>Common errors and what to do.</small></a>
+          <a href="#onboard" data-for="operators"><span class="tag op">Operator</span><b>Onboard a new organisation</b><small>Validate and provision one request.</small></a>
+          <a href="#lifecycle" data-for="operators"><span class="tag op">Operator</span><b>Suspend, reactivate, or close</b><small>What each action does to people and keys.</small></a>
         </div>
 
         <div class="switcher" role="group" aria-label="Show a part of the guide">
@@ -223,6 +90,12 @@
           <button type="button" class="app-btn app-btn--sm" data-audience="users" aria-pressed="false">Users</button>
           <button type="button" class="app-btn app-btn--sm" data-audience="admins" aria-pressed="false">NGO administrators</button>
           <button type="button" class="app-btn app-btn--sm" data-audience="operators" aria-pressed="false">Operators</button>
+        </div>
+        <div class="toolbar-lite">
+          <button type="button" class="app-btn app-btn--sm" id="fold-all">Collapse all sections</button>
+          <button type="button" class="app-btn app-btn--sm" id="unfold-all">Expand all sections</button>
+          <span class="spacer"></span>
+          <button type="button" class="app-btn app-btn--sm" onclick="window.print()">Print or save as PDF</button>
         </div>
 
         <section class="card" id="start" data-for="users admins operators">
@@ -233,6 +106,44 @@
             <a href="#admin-home"><strong>NGO administrators</strong><span>Invite people, set roles, and finish organisation setup.</span></a>
             <a href="#operator-sign-in"><strong>Operators</strong><span>Open a new organisation and suspend, reactivate, or close one.</span></a>
           </div>
+
+          <figure class="diagram" style="margin-left:0;margin-right:0">
+            <svg viewBox="0 0 880 300" role="img" aria-labelledby="d-big-t d-big-d">
+              <title id="d-big-t">How operators, administrators, and users fit together</title>
+              <desc id="d-big-d">An operator opens an organisation. Inside it, an NGO administrator invites users and gives them roles. Users and administrators work on the organisation's records, people, and money.</desc>
+              <rect class="n" x="20" y="100" width="200" height="104" rx="12" />
+              <text class="t t-b" x="120" y="132" text-anchor="middle">Operator</text>
+              <text class="t-s" x="120" y="152" text-anchor="middle">One NGO Console</text>
+              <text class="t-s" x="120" y="172" text-anchor="middle">Onboard, suspend, close</text>
+              <path class="edge" d="M222 152 H288" />
+              <text class="t-s" x="255" y="140" text-anchor="middle">opens</text>
+
+              <rect class="zone" x="290" y="14" width="574" height="272" rx="18" />
+              <text class="t-brand" x="312" y="42" style="font-size:13px">AN ORGANISATION: its own code and sign-in page</text>
+
+              <rect class="n" x="318" y="64" width="232" height="96" rx="12" />
+              <text class="t t-b" x="434" y="94" text-anchor="middle">NGO administrator</text>
+              <text class="t-s" x="434" y="114" text-anchor="middle">People, roles, settings</text>
+              <text class="t-s" x="434" y="132" text-anchor="middle">Connectors, API keys, Builder</text>
+
+              <rect class="n" x="614" y="64" width="232" height="96" rx="12" />
+              <text class="t t-b" x="730" y="94" text-anchor="middle">Users</text>
+              <text class="t-s" x="730" y="114" text-anchor="middle">Home, Records, Inbox, More</text>
+              <text class="t-s" x="730" y="132" text-anchor="middle">Work within the role they hold</text>
+
+              <path class="edge" d="M552 112 H612" />
+              <text class="t-s" x="582" y="102" text-anchor="middle">invites</text>
+              <text class="t-s" x="582" y="130" text-anchor="middle">+ roles</text>
+
+              <path class="edge edge-d" d="M434 162 V204" />
+              <path class="edge edge-d" d="M730 162 V204" />
+              <rect class="n-ok" x="318" y="206" width="528" height="58" rx="12" />
+              <text class="t t-b" x="582" y="232" text-anchor="middle">The organisation's records, people, and money</text>
+              <text class="t-s" x="582" y="250" text-anchor="middle">One place, shared by everyone, limited by role</text>
+            </svg>
+            <figcaption><b>The big picture.</b> Operators open and look after organisations. Administrators run one organisation. Users do the daily work.</figcaption>
+          </figure>
+
           <div class="panel panel-table">
             <table>
               <caption>The three places people work</caption>
@@ -250,6 +161,19 @@
         <section class="card" id="sign-in" data-for="users admins">
           <h2>Sign in</h2>
           <p>Open the link your administrator sent. It looks like the organisation’s own page, with the organisation’s name and logo when those have been set. You can also start from the general sign-in page and type the organisation code yourself.</p>
+          <p class="section-title" style="margin-left:0">Four ways in. Pick the one that suits you.</p>
+          <div class="cards four">
+            <div class="mode" style="padding:14px;border-radius:var(--card-radius);border:1px solid var(--card-border);background:var(--card)"><strong style="display:block;color:var(--brand);margin-bottom:4px">Password</strong><span style="color:var(--muted);font-size:.85rem">The default. Email and password on the Password tab.</span></div>
+            <div class="mode" style="padding:14px;border-radius:var(--card-radius);border:1px solid var(--card-border);background:var(--card)"><strong style="display:block;color:var(--brand);margin-bottom:4px">Email code</strong><span style="color:var(--muted);font-size:.85rem">A 6-digit code by email. It expires in 10 minutes.</span></div>
+            <div class="mode" style="padding:14px;border-radius:var(--card-radius);border:1px solid var(--card-border);background:var(--card)"><strong style="display:block;color:var(--brand);margin-bottom:4px">Identity provider</strong><span style="color:var(--muted);font-size:.85rem">Only when your organisation has connected one.</span></div>
+            <div class="mode" style="padding:14px;border-radius:var(--card-radius);border:1px solid var(--card-border);background:var(--card)"><strong style="display:block;color:var(--brand);margin-bottom:4px">Passkey</strong><span style="color:var(--muted);font-size:.85rem">Fingerprint, face, or PIN, once saved on a device.</span></div>
+          </div>
+          <div class="flow" aria-label="First visit from an invitation">
+            <div class="fn"><strong>Invitation email</strong>Valid for 7 days. Works once.</div>
+            <div class="fn"><strong>Set a password</strong>At least 10 characters.</div>
+            <div class="fn"><strong>Sign in</strong>Use the password you just set.</div>
+            <div class="fn ok"><strong>Home</strong>Your role decides what you see.</div>
+          </div>
           <h3>With a password</h3>
           <ol class="steps">
             <li>Stay on the Password tab.</li>
@@ -288,6 +212,55 @@
         <section class="card" id="move" data-for="users admins">
           <h2>Move around</h2>
           <p>After sign-in, the bar along the bottom of a phone, or the side on a larger screen, has the places your role allows. The same four places appear on every size.</p>
+          <figure class="diagram" style="margin-left:0;margin-right:0">
+            <svg viewBox="0 0 880 380" role="img" aria-labelledby="d-nav-t d-nav-d">
+              <title id="d-nav-t">The four places, on a phone and on a larger screen</title>
+              <desc id="d-nav-d">On a phone, Home, Records, Inbox, and More are along the bottom. On a larger screen they are in a side rail, with a breadcrumb above the list and records opening in a side panel.</desc>
+              <!-- Phone -->
+              <text class="t t-b" x="135" y="22" text-anchor="middle">On a phone</text>
+              <rect class="n" x="30" y="36" width="210" height="336" rx="26" />
+              <rect class="n-brand" x="44" y="50" width="182" height="30" rx="8" />
+              <text class="t t-w" x="135" y="70" text-anchor="middle" style="font-size:12px;font-weight:700">NGOOne</text>
+              <rect class="ghost" x="48" y="94" width="174" height="46" rx="8" />
+              <rect class="ghost" x="48" y="148" width="174" height="46" rx="8" />
+              <rect class="ghost" x="48" y="202" width="174" height="46" rx="8" />
+              <rect class="ghost" x="48" y="256" width="174" height="46" rx="8" />
+              <line class="line" x1="38" y1="316" x2="232" y2="316" />
+              <text class="t-s" x="68" y="346" text-anchor="middle" style="font-size:11px;font-weight:700;fill:var(--brand)">Home</text>
+              <text class="t-s" x="112" y="346" text-anchor="middle" style="font-size:11px">Records</text>
+              <text class="t-s" x="160" y="346" text-anchor="middle" style="font-size:11px">Inbox</text>
+              <text class="t-s" x="205" y="346" text-anchor="middle" style="font-size:11px">More</text>
+              <circle cx="172" cy="330" r="8" fill="var(--bad)" />
+              <text x="172" y="333.5" text-anchor="middle" style="font-size:10px;font-weight:700;fill:#fff">3</text>
+
+              <!-- Larger screen -->
+              <text class="t t-b" x="560" y="22" text-anchor="middle">On a larger screen</text>
+              <rect class="n" x="270" y="36" width="600" height="336" rx="12" />
+              <path d="M270 48 a12 12 0 0 1 12 -12 H858 a12 12 0 0 1 12 12 V66 H270 Z" class="n-brand" />
+              <text class="t t-w" x="288" y="57" style="font-size:12px;font-weight:700">NGOOne</text>
+              <rect class="ghost" x="270" y="66" width="120" height="306" />
+              <rect x="280" y="80" width="100" height="26" rx="6" fill="var(--brand-tint-strong)" />
+              <text class="t-s" x="292" y="97" style="font-weight:700;fill:var(--brand)">Home</text>
+              <text class="t-s" x="292" y="127">Records</text>
+              <text class="t-s" x="292" y="157">Inbox</text>
+              <circle cx="364" cy="152" r="8" fill="var(--bad)" />
+              <text x="364" y="155.5" text-anchor="middle" style="font-size:10px;font-weight:700;fill:#fff">3</text>
+              <text class="t-s" x="292" y="187">More</text>
+              <text class="t-s" x="408" y="88">Records  &#8250;  Fundraising  &#8250;  Donations</text>
+              <rect class="n" x="406" y="100" width="250" height="40" rx="8" />
+              <rect class="n" x="406" y="148" width="250" height="40" rx="8" />
+              <rect class="n" x="406" y="196" width="250" height="40" rx="8" />
+              <rect class="n" x="406" y="244" width="250" height="40" rx="8" />
+              <rect class="n-ok" x="672" y="96" width="186" height="268" rx="10" />
+              <text class="t t-b" x="684" y="120" style="font-size:13px">A record opens here</text>
+              <text class="t-s" x="684" y="140">in a panel over the list</text>
+              <text class="t-s" x="684" y="168">Approve / Reject at the top</text>
+              <text class="t-s" x="684" y="188">Steps and Edit at the bottom</text>
+              <text class="t-s" x="684" y="216">Close it to return to the</text>
+              <text class="t-s" x="684" y="232">same place in the list</text>
+            </svg>
+            <figcaption><b>Same four places everywhere.</b> Home, Records, Inbox, and More. The red number on Inbox counts approvals waiting for you.</figcaption>
+          </figure>
           <div class="panel panel-table">
             <table>
               <thead><tr><th>Place</th><th>Use it to</th></tr></thead>
@@ -353,6 +326,49 @@
             <li>Fill in what the step asks for. The step also asks for any field that the state it moves to needs.</li>
             <li>Choose the step name.</li>
           </ol>
+          <figure class="diagram" style="margin-left:0;margin-right:0">
+            <svg viewBox="0 76 880 276" role="img" aria-labelledby="d-appr-t d-appr-d">
+              <title id="d-appr-t">What happens when you choose a workflow step</title>
+              <desc id="d-appr-d">If the step does not need approval it is applied at once. If it does, the request waits in Inbox until enough different people approve. A rejection leaves the record as it was.</desc>
+              <rect class="n" x="20" y="108" width="130" height="58" rx="10" />
+              <text class="t t-b" x="85" y="133" text-anchor="middle">Open the</text>
+              <text class="t t-b" x="85" y="151" text-anchor="middle">record</text>
+              <path class="edge" d="M152 137 H186" />
+              <rect class="n" x="188" y="108" width="150" height="58" rx="10" />
+              <text class="t t-b" x="263" y="133" text-anchor="middle">Choose a step</text>
+              <text class="t-s" x="263" y="151" text-anchor="middle">for example Mark as paid</text>
+              <path class="edge" d="M340 137 H372" />
+              <path class="n" d="M450 92 L520 137 L450 182 L380 137 Z" />
+              <text class="t t-b" x="450" y="133" text-anchor="middle">Needs</text>
+              <text class="t t-b" x="450" y="151" text-anchor="middle">approval?</text>
+
+              <path class="edge edge-ok" d="M522 137 H580" />
+              <text class="t-ok" x="551" y="127" text-anchor="middle">No</text>
+              <rect class="n-ok" x="582" y="108" width="170" height="58" rx="10" />
+              <text class="t t-b" x="667" y="133" text-anchor="middle">Applied at once</text>
+              <text class="t-s" x="667" y="151" text-anchor="middle">status changes now</text>
+
+              <path class="edge" d="M450 184 V222" />
+              <text class="t-s" x="460" y="208">Yes</text>
+              <rect class="n-warn" x="365" y="224" width="170" height="58" rx="10" />
+              <text class="t t-b" x="450" y="249" text-anchor="middle">Waits in Inbox</text>
+              <text class="t-s" x="450" y="267" text-anchor="middle">under Approvals</text>
+              <path class="edge" d="M537 253 H600" />
+              <path class="n" d="M670 214 L740 253 L670 292 L600 253 Z" />
+              <text class="t t-b" x="670" y="250" text-anchor="middle">Enough</text>
+              <text class="t t-b" x="670" y="267" text-anchor="middle">approvals?</text>
+              <path class="edge edge-ok" d="M742 253 H776" />
+              <text class="t-ok" x="759" y="243" text-anchor="middle">Yes</text>
+              <rect class="n-ok" x="778" y="224" width="92" height="58" rx="10" />
+              <text class="t t-b" x="824" y="249" text-anchor="middle">Step</text>
+              <text class="t t-b" x="824" y="267" text-anchor="middle">applied</text>
+              <path class="edge edge-bad" d="M670 294 V316" />
+              <text class="t-bad" x="682" y="310">Rejected</text>
+              <rect class="n-bad" x="560" y="318" width="220" height="28" rx="8" />
+              <text class="t t-b" x="670" y="337" text-anchor="middle" style="font-size:12px">Record stays as it was</text>
+            </svg>
+            <figcaption><b>Approvals need different people.</b> You cannot approve your own request, and the step is applied once enough distinct people have approved.</figcaption>
+          </figure>
           <p>If the step needs approval, it is sent to Inbox and waits until enough different people approve it. You cannot approve your own request. If the record changes while the request is open, refresh and try again.</p>
           <div class="notice info"><strong>Receipts</strong><p>A step that issues a receipt tells you the receipt number. Open Receipts on the record, then Print. A voided receipt shows the reason. Anyone who can print can copy a public link. The donor opens that address without an account and sees the same receipt as Print, including the donor name and the signatory kept with that receipt. Revoke public link stops that address. A new link uses a different address.</p></div>
           <p>Other actions on the record, such as sending a reminder, appear when your role allows them and the record is in a state that offers them. The ⋮ menu on a list can run the same actions.</p>
@@ -374,6 +390,14 @@
             <li>Choose whether a matching field updates an existing record, or whether every row creates a new one.</li>
             <li>Check the counts for create, update, and problems. Rows with problems are skipped.</li>
             <li>Decide whether automations should run, then start the import.</li>
+          </ol>
+          <ol class="track" aria-label="The import journey">
+            <li><b>Upload</b>CSV, up to 10 MB and 20,000 rows</li>
+            <li><b>Match</b>Each column to a field</li>
+            <li><b>Choose</b>Update existing or create new</li>
+            <li><b>Check</b>Counts for create, update, problems</li>
+            <li><b>Start</b>Decide on automations</li>
+            <li><b>Review</b>Notification, then failed rows</li>
           </ol>
           <p>You can close the panel and keep working. A notification opens the result. Cancel stops the import before the end. Download the failed rows, fix them, and import that file again. Export downloads the current list, or runs in the background and brings the file in a notification when the list is large.</p>
 
@@ -456,6 +480,14 @@
             <li>Review the receipt numbering and choose I have reviewed the receipt series.</li>
             <li>Give someone besides the administrator a working role, such as Finance, so daily work does not all sit with one account.</li>
           </ol>
+          <ol class="track" aria-label="Setup journey">
+            <li><b>Identity</b>Legal name, email, address, then confirm</li>
+            <li><b>Registrations</b>12A, 80G, FCRA and so on</li>
+            <li><b>Financial year</b>Confirm the current year is open</li>
+            <li><b>Receipts</b>Review the numbering series</li>
+            <li><b>People</b>Give someone else a working role</li>
+            <li class="opt"><b>Email, payments</b>Optional connectors</li>
+          </ol>
           <p>Outgoing email and online payments are optional. Email is sent through the organisation’s connector, through OneNGO’s email service, or not at all until a connector exists. The checklist says which of those is true.</p>
         </section>
 
@@ -482,6 +514,11 @@
         <section class="card" id="roles" data-for="admins">
           <h2>Roles</h2>
           <p>Open a role to see what it allows and who has it. Add active or invited people from that page. Removing someone takes that role away at once. A role marked Requires two-step sign-in tells you that people without an authenticator will be asked about it the next time they sign in. In practice, sign-in stops and tells them to ask an administrator, because there is no setup screen.</p>
+          <div class="flow" aria-label="How permissions reach a person">
+            <div class="fn"><strong>Permissions</strong>One thing a person may do, such as Edit donations.</div>
+            <div class="fn"><strong>Role</strong>A named bundle of permissions, such as Finance.</div>
+            <div class="fn"><strong>Person</strong>Is given one or more roles. Sees and does what those roles allow.</div>
+          </div>
           <div class="notice info"><strong>Where permissions are edited</strong><p>This page shows the result. To change what a role may do, open Builder, then Roles, or follow What each role allows from Administration. Publish the change before it takes effect.</p></div>
         </section>
 
@@ -506,6 +543,12 @@
             <li>Create the key and copy the secret immediately. It is shown once.</li>
             <li>Send it as <code>Authorization: ApiKey &lt;id&gt;.&lt;secret&gt;</code>. The page shows this header when the key is created.</li>
           </ol>
+          <div class="flow" aria-label="Life of an API key">
+            <div class="fn"><strong>Create</strong>Name it and choose the role it acts as.</div>
+            <div class="fn warn"><strong>Copy the secret</strong>Shown once. Store it safely.</div>
+            <div class="fn"><strong>Other system sends it</strong>In the Authorization header.</div>
+            <div class="fn"><strong>Revoke if needed</strong>Every system using it stops at once.</div>
+          </div>
           <div class="notice error"><strong>Revoking a key</strong><p>Revoke stops every system using that key at once. It cannot be undone. Create a new key if the system should keep working.</p></div>
           <p>The API requests per minute limit, per key, is set under Organisation settings.</p>
         </section>
@@ -537,10 +580,259 @@
           </ul>
         </section>
 
+        <section class="card" id="migrate-data" data-for="admins">
+          <h2>Moving donations and expenses from your old system</h2>
+          <p>This part shows how to bring donations and expense claims from your old system into OneNGO, using Administration › Data › Migration. It is written for the person doing the migration. Read all of it before you start, and work through the steps in order. (The design behind the migrator is in <code>docs/documents.html#architecture</code>, Appendix E.)</p>
+
+          <div class="flow" aria-label="Migration at a glance">
+            <div class="fn"><strong>1. Prepare</strong>Export CSV files and tidy the values (Steps 1 and 2).</div>
+            <div class="fn"><strong>2. Configure</strong>Map columns, set the load order, add bills and opening balances (Steps 3 to 6).</div>
+            <div class="fn warn"><strong>3. Check</strong>Safe to repeat as often as you like. Nothing is saved (Step 7).</div>
+            <div class="fn ok"><strong>4. Run and verify</strong>Final. The migration becomes read-only (Steps 8 and 9).</div>
+          </div>
+
+          <h3>What the migration does</h3>
+          <ul>
+            <li>Each donation and each expense claim becomes a record in OneNGO with its own new number, for example <code>DON/2026-27/00001</code> or <code>EXP/2026-27/00001</code>.</li>
+            <li>A <strong>paid</strong> donation or <strong>paid</strong> expense claim is posted to the books at the date it was paid. Donations credit <em>Donations received</em>. Expenses debit the matching expense account (Administration, Programme, Travel or Other).</li>
+            <li>Unpaid items (raised donations, and claims that are draft, submitted, approved or not approved) are loaded as records only. They do not post.</li>
+            <li>Your old receipt numbers are <strong>not</strong> re-issued. OneNGO does not print new receipts for migrated donations.</li>
+            <li>Your old system's numbers are not kept as the record number. Keep the old number in a field you can search, such as <em>Notes</em>.</li>
+            <li>Only the <strong>current financial year</strong> posts to the books. Older records are handled through the opening balances (Step 6).</li>
+          </ul>
+
+          <figure class="diagram" style="margin-left:0;margin-right:0">
+            <svg viewBox="0 0 880 300" role="img" aria-labelledby="d-mig-t d-mig-d">
+              <title id="d-mig-t">What happens to each row you migrate</title>
+              <desc id="d-mig-d">Paid rows in the current financial year create a record and post to the books. Unpaid rows create a record only. Paid rows from earlier years are refused, and their totals go into the opening balances.</desc>
+              <rect class="n" x="20" y="116" width="150" height="62" rx="12" />
+              <text class="t t-b" x="95" y="143" text-anchor="middle">A row in</text>
+              <text class="t t-b" x="95" y="161" text-anchor="middle">your CSV file</text>
+
+              <path class="edge edge-ok" d="M172 134 C 230 134, 230 50, 290 50" />
+              <path class="edge" d="M172 147 H290" />
+              <path class="edge edge-bad" d="M172 160 C 230 160, 230 244, 290 244" />
+
+              <rect class="n-ok" x="292" y="18" width="270" height="64" rx="12" />
+              <text class="t t-b" x="427" y="44" text-anchor="middle">Paid, in the current financial year</text>
+              <text class="t-s" x="427" y="64" text-anchor="middle">Donation or expense claim marked Paid</text>
+              <rect class="n-warn" x="292" y="115" width="270" height="64" rx="12" />
+              <text class="t t-b" x="427" y="141" text-anchor="middle">Not paid yet</text>
+              <text class="t-s" x="427" y="161" text-anchor="middle">Raised, draft, submitted, approved, not approved</text>
+              <rect class="n-bad" x="292" y="212" width="270" height="64" rx="12" />
+              <text class="t t-b" x="427" y="238" text-anchor="middle">Paid, in an earlier year</text>
+              <text class="t-s" x="427" y="258" text-anchor="middle">That year is closed</text>
+
+              <path class="edge edge-ok" d="M564 50 H626" />
+              <path class="edge" d="M564 147 H626" />
+              <path class="edge edge-bad" d="M564 244 H626" />
+              <rect class="n-ok" x="628" y="18" width="242" height="64" rx="12" />
+              <text class="t t-b" x="749" y="44" text-anchor="middle">Record + journal entry</text>
+              <text class="t-s" x="749" y="64" text-anchor="middle">Posted at the date it was paid</text>
+              <rect class="n-warn" x="628" y="115" width="242" height="64" rx="12" />
+              <text class="t t-b" x="749" y="141" text-anchor="middle">Record only</text>
+              <text class="t-s" x="749" y="161" text-anchor="middle">Nothing posts to the books</text>
+              <rect class="n-bad" x="628" y="212" width="242" height="64" rx="12" />
+              <text class="t t-b" x="749" y="238" text-anchor="middle">Refused</text>
+              <text class="t-s" x="749" y="258" text-anchor="middle">Put the total in opening balances (Step 6)</text>
+            </svg>
+            <figcaption><b>Only the current financial year posts to the books.</b> Older paid items are handled through the opening balances.</figcaption>
+          </figure>
+
+          <h3>Before you start</h3>
+          <p>Check each item. If one is missing, the migration stops or refuses rows.</p>
+          <table>
+            <thead><tr><th>You need</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>The <strong>Donations</strong> and <strong>Expenses</strong> modules turned on</td><td>They provide the records, their statuses and their posting rules.</td></tr>
+              <tr><td>The <strong>current financial year</strong> open, starting on its first day (for example 1 April 2026)</td><td>A paid item dated in a year that is not open is refused.</td></tr>
+              <tr><td>The bank account (<code>BANK</code>), cash account (<code>CASH</code>), donation income account (<code>DONATION_INCOME</code>), expense accounts and the opening funds account (<code>OPENING_FUNDS</code>) in your chart</td><td>The posting rules and the opening balances use these codes.</td></tr>
+              <tr><td>The permissions <code>data:migrate</code>, <code>data:migrate:books</code>, <code>data:migrate:state</code>, <code>record:donation:import</code> and <code>record:expenseClaim:import</code></td><td>Your administrator gives these. Without <code>data:migrate:books</code> you cannot enter opening balances. Without <code>data:migrate:state</code> you cannot set Paid, Approved and other statuses.</td></tr>
+              <tr><td>Your old data exported as CSV, one file per table</td><td>The migration reads CSV only.</td></tr>
+              <tr><td>The bills and receipts for expenses, if you want them on the records</td><td>Optional. Upload them in the Attachments section.</td></tr>
+              <tr><td>A test run on a copy of the data, if you can</td><td>Check is safe to repeat. Run is not: once it finishes, the migration is read-only.</td></tr>
+            </tbody>
+          </table>
+          <p><strong>Decide which rows to migrate.</strong> Migrate paid donations and paid expenses from the current financial year (they post to the books). Migrate raised donations and open expense claims from any year if you want to keep them (they do not post). Do <em>not</em> put paid items from earlier years in the migration: they are refused because their year is closed; their totals belong in the opening balances of Step 6.</p>
+
+          <h3>Step 1: Prepare the CSV files</h3>
+          <p>Each file needs <strong>one header row</strong> with the column names. Save each table as its own CSV file and use the same date format throughout.</p>
+          <p>Donations file, for example <code>donations.csv</code>:</p>
+<pre><code>Donation No,Donor Name,Donor Email,Amount,Mode,Paid On,Reference,Receipt No,Status
+D-1001,Asha Rao,asha@example.org,1000,UPI,15/04/2026,UPI-88231,R-2044,Paid
+D-1002,Ravi Kumar,,500,Cash,16/04/2026,,R-2045,Paid
+D-1003,Meena Shah,,700,,,,,Raised</code></pre>
+          <p>Expense claims file, for example <code>expenses.csv</code>:</p>
+<pre><code>Claim No,Purpose,Category,Amount,Spent On,Status,Paid From,Paid On,Reference,Notes
+E-201,Printing of appeal letters,Programme,2400,20/05/2026,Paid,BANK,22/05/2026,NEFT-7781,
+E-202,Auto fare to district office,Travel,850,03/06/2026,Paid,CASH,03/06/2026,,
+E-203,Stationery,Admin,380,10/06/2026,Submitted,,,,
+E-204,Hotel stay,Travel,4200,12/06/2026,Not approved,,,,Outside policy</code></pre>
+          <p>Rules for the values:</p>
+          <ul>
+            <li><strong>Dates:</strong> <code>dd/mm/yyyy</code> (15/04/2026) or <code>yyyy-mm-dd</code> (2026-04-15). Any other format is refused.</li>
+            <li><strong>Amounts:</strong> plain numbers in rupees, such as <code>1000</code> or <code>2400.50</code>.</li>
+            <li><strong>Choices</strong> (Mode, Category): the value or the label, in any capitals. <code>UPI</code>, <code>upi</code> and <code>Cash</code> all work.</li>
+            <li><strong>Paid From:</strong> must be the exact account code <code>BANK</code> or <code>CASH</code>. If your old system says something else (for example <code>Main bank</code>), add a value rule in the Map step (Step 3).</li>
+            <li><strong>Status:</strong> must match one of the statuses in the mapping tables. Anything else is refused.</li>
+          </ul>
+
+          <h3>Step 2: Create the migration and upload the files</h3>
+          <ol class="steps">
+            <li>Go to <strong>Administration › Data › Migration</strong> (<code>/admin/migration</code>).</li>
+            <li>Select <strong>New migration</strong> and give it a name, for example <code>Donations and expenses 2026-27</code>.</li>
+            <li>On the <strong>Files</strong> step, select <strong>Choose CSV files</strong> and add both files. Each file keeps its own columns.</li>
+          </ol>
+
+          <h3>Step 3: Map each file to its record type</h3>
+          <p>On the <strong>Map</strong> step, put the donations file in the <strong>Donation</strong> group and the expenses file in the <strong>Expense claim</strong> group.</p>
+          <p><strong>Donations mapping</strong></p>
+          <table class="three">
+            <thead><tr><th>OneNGO field</th><th>Column in your file</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Old id (the record's key)</td><td><code>Donation No</code></td><td>Required. Must be unique.</td></tr>
+              <tr><td>Donor name</td><td><code>Donor Name</code></td><td>Required.</td></tr>
+              <tr><td>Donor email</td><td><code>Donor Email</code></td><td>Optional.</td></tr>
+              <tr><td>Amount</td><td><code>Amount</code></td><td>Required.</td></tr>
+              <tr><td>Payment method</td><td><code>Mode</code></td><td>Values: UPI, Cash, Bank transfer, Cheque, Online (gateway). Blank for raised donations.</td></tr>
+              <tr><td>Paid on</td><td><code>Paid On</code></td><td>Required for paid donations.</td></tr>
+              <tr><td>Payment reference</td><td><code>Reference</code></td><td>Required for paid UPI donations.</td></tr>
+              <tr><td>Notes</td><td><code>Receipt No</code></td><td>Keeps the old receipt number. OneNGO has no separate receipt-number field for donations.</td></tr>
+              <tr><td>Status</td><td><code>Status</code></td><td>Paid → <strong>Paid</strong>. Raised → <strong>Raised</strong>.</td></tr>
+            </tbody>
+          </table>
+          <p><strong>Expense claims mapping</strong></p>
+          <table class="three">
+            <thead><tr><th>OneNGO field</th><th>Column in your file</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Old id (the record's key)</td><td><code>Claim No</code></td><td>Required. Must be unique.</td></tr>
+              <tr><td>Purpose</td><td><code>Purpose</code></td><td>Required.</td></tr>
+              <tr><td>Category</td><td><code>Category</code></td><td>Required. Values: Administration (or Admin), Programme, Travel, Other.</td></tr>
+              <tr><td>Amount</td><td><code>Amount</code></td><td>Required.</td></tr>
+              <tr><td>Spent on</td><td><code>Spent On</code></td><td>Required.</td></tr>
+              <tr><td>Notes</td><td><code>Notes</code></td><td>Fill it for not-approved claims, to say why.</td></tr>
+              <tr><td>Status</td><td><code>Status</code></td><td>Draft → <strong>Draft</strong>. Submitted → <strong>Submitted</strong>. Approved → <strong>Approved</strong>. Not approved → <strong>Not approved</strong>. Paid → <strong>Paid</strong>.</td></tr>
+              <tr><td>Paid from</td><td><code>Paid From</code></td><td>Required for paid claims. Must be <code>BANK</code> or <code>CASH</code>.</td></tr>
+              <tr><td>Paid on</td><td><code>Paid On</code></td><td>Required for paid claims.</td></tr>
+              <tr><td>Payment reference</td><td><code>Reference</code></td><td>Optional.</td></tr>
+              <tr><td>Reason for going below zero</td><td>(leave empty, or a column you add)</td><td>Only needed if a payment would take the account below zero. See the problems table in Step 7.</td></tr>
+            </tbody>
+          </table>
+          <p><strong>Value rules.</strong> If your file says <code>Main bank</code> where OneNGO expects <code>BANK</code>, open <strong>Transform rules</strong> on that field and add a rule: Source value <code>Main bank</code>, Transform value <code>BANK</code>. Other values stay as they are, so only add rules for the values you need.</p>
+          <p><strong>If a value is refused,</strong> Check shows the row and the column. Fix the value in the CSV, upload the file again, and check again.</p>
+
+          <h3>Step 4: Set the load order</h3>
+          <p>On the <strong>Order</strong> step, put the <strong>donations file above the expenses file</strong>. Files load from top to bottom, and Check follows the same order. If expenses are paid from cash that donations bring in, the donations must load first.</p>
+
+          <h3>Step 5: Attach bills (optional)</h3>
+          <p>On the <strong>Files</strong> step, under <strong>Attachments</strong>, upload the bill images or PDFs. Each expense claim's <em>Bill</em> field takes the file name as it appears in your upload, such as <code>scans/E-201.pdf</code>. Each attachment can be used by one row only, and a bill must be within 5 MB.</p>
+
+          <h3>Step 6: Books (opening balances)</h3>
+          <p>On the <strong>Books</strong> step, enter the balances you had at the start of the current financial year. This is needed whenever a payment could draw on money from earlier years.</p>
+          <ul>
+            <li><strong>Cutover date:</strong> the first day of the current financial year, for example <code>01/04/2026</code>. Any other date is refused.</li>
+            <li><strong>Opening journal:</strong> one line per account. Debit the bank and cash accounts with their balances and credit <code>OPENING_FUNDS</code> for the total. Debits and credits must be equal, or the books are refused.</li>
+            <li><strong>Receipt numbering:</strong> the next number for each receipt series, for example <code>donation-receipt</code> → <code>2046</code> if the highest receipt number used so far is <code>2045</code>.</li>
+          </ul>
+          <p>The books apply <strong>before</strong> any row loads, which is why a paid expense can be paid from the opening cash.</p>
+
+          <h3>Step 7: Check</h3>
+          <p>Select <strong>Check</strong>. Nothing is saved at this step. Check runs every row through the same rules as a normal save, in the load order, and predicts the journal entries each row will post. For each file it shows how many rows are ready, how many have problems, and how many records will be created or updated. Problems show the file, the <strong>row number</strong> and the message; row 1 is the header, so the first data row is row 2. Fix the CSV files, upload them again, and select <strong>Check again</strong> until no problems remain. Check is safe to repeat as often as you like.</p>
+          <table>
+            <thead><tr><th>Message (or part of it)</th><th>What to do</th></tr></thead>
+            <tbody>
+              <tr><td><code>is not a date</code></td><td>Use <code>dd/mm/yyyy</code> or <code>yyyy-mm-dd</code>.</td></tr>
+              <tr><td><code>is not one of the choices</code></td><td>Fix the value, or add a value rule in Transform rules.</td></tr>
+              <tr><td><code>is not open</code> (financial year)</td><td>The row is dated in a year that is closed. Take it out of the file and enter its total in the opening balances.</td></tr>
+              <tr><td><code>Cash in hand has only N available</code> (or the same for <code>Bank account</code>)</td><td>The payment would take the account below zero at that point in the load order. Check the Books step and the order of the files. For a payment that is genuinely allowed, fill <em>Reason for going below zero</em> on that row.</td></tr>
+              <tr><td><code>The entry this row would post is refused</code></td><td>The row's journal entry cannot be posted. The message after the colon says why, usually a missing account (check <em>Paid From</em>) or the financial year.</td></tr>
+              <tr><td><code>no ledger account for this row</code></td><td>A paid claim has no <em>Paid From</em> account. Fill it with <code>BANK</code> or <code>CASH</code>.</td></tr>
+              <tr><td><code>Enter the UPI transaction reference.</code></td><td>A paid UPI donation has no <em>Reference</em>. Add it to the file.</td></tr>
+              <tr><td><code>Records that are Paid cannot be edited.</code></td><td>The file changes a record that is already paid. Paid records are final. Remove the row from the file.</td></tr>
+            </tbody>
+          </table>
+
+          <h3>Step 8: Run</h3>
+          <p>When Check shows no problems, select <strong>Run N rows</strong>. The migration posts the books first, then loads each row in its own transaction. A row that fails is left out and listed; the others still load. You can leave the page; a notice arrives in your inbox when the run finishes. Automations, mail and receipts stay off during the run, so no thank-you letters or receipts are sent. If some rows failed, select <strong>Download failed rows</strong> for that file, correct them in your CSV and load them in a new migration. A finished migration is read-only, so you cannot change its files.</p>
+
+          <h3>Step 9: Check the result</h3>
+          <ol class="steps">
+            <li><strong>Counts:</strong> the donation and expense records should match the <em>created</em> counts in the Run step, plus any rows you knowingly left out.</li>
+            <li><strong>Money:</strong> open the bank and cash statements. Paid donations and paid claims should appear at their paid dates.</li>
+            <li><strong>Reports:</strong> the donation register and expense register for the current year should match your old system's totals for those items.</li>
+            <li><strong>Receipts:</strong> no new receipts were issued. Open a migrated donation and check that <em>Notes</em> shows its old receipt number.</li>
+          </ol>
+          <p>If a total does not match, do not change records by hand. Note the difference and talk to your administrator so the cause can be found first.</p>
+
+          <h3>What the migration does not do</h3>
+          <ul>
+            <li>It does not post donation processing fees. The journal uses the full donation amount.</li>
+            <li>It does not migrate paid items from earlier financial years as journal entries. Enter their totals as opening balances.</li>
+            <li>It does not keep old system numbers as OneNGO record numbers. Keep them in <em>Notes</em> or <em>Payment reference</em>.</li>
+            <li>Migrated claims skip the approval step and the transition checks, such as the bill being attached before submission. Claims you create in OneNGO still need approval in the normal way.</li>
+          </ul>
+
+          <h3>Permissions summary</h3>
+          <table>
+            <thead><tr><th>Permission</th><th>Needed for</th></tr></thead>
+            <tbody>
+              <tr><td><code>data:migrate</code></td><td>Opening the migration, uploading files and mapping them</td></tr>
+              <tr><td><code>data:migrate:books</code></td><td>Entering and applying the opening balances</td></tr>
+              <tr><td><code>data:migrate:state</code></td><td>Loading any file that has a Status column, such as Paid or Approved</td></tr>
+              <tr><td><code>record:donation:import</code> and <code>record:expenseClaim:import</code></td><td>Loading donations and expense claims</td></tr>
+            </tbody>
+          </table>
+        </section>
+
         <section class="card" id="builder" data-for="admins">
           <h2>Builder</h2>
           <p>Builder is where the organisation’s record types, workflows, pages, and roles are defined. Open it from More. You need the setup permission. The home is a directory of groups. Choosing a kind lists those definitions, and choosing one opens it. Theme, layout, translations, access, and modules open their own screens. On a phone you can browse. Edit on a larger screen.</p>
           <p>Changes are drafts until you publish them. A published change is live. You can check a draft, discard it, look at history, and restore an older published version so that it becomes the newest one.</p>
+          <figure class="diagram" style="margin-left:0;margin-right:0">
+            <svg viewBox="0 0 880 270" role="img" aria-labelledby="d-bld-t d-bld-d">
+              <title id="d-bld-t">The life of a Builder change</title>
+              <desc id="d-bld-d">You edit a draft, which saves itself. Check finds problems to fix. Publish makes the change live as a new version. History lets you restore an older version, which becomes the newest. A draft can be discarded at any time.</desc>
+              <rect class="n" x="20" y="40" width="170" height="70" rx="12" />
+              <text class="t t-b" x="105" y="68" text-anchor="middle">Edit the draft</text>
+              <text class="t-s" x="105" y="88" text-anchor="middle">Saves itself. Only people</text>
+              <text class="t-s" x="105" y="102" text-anchor="middle">in the Builder see it.</text>
+              <path class="edge" d="M192 75 H246" />
+              <rect class="n-warn" x="248" y="40" width="160" height="70" rx="12" />
+              <text class="t t-b" x="328" y="68" text-anchor="middle">Check</text>
+              <text class="t-s" x="328" y="88" text-anchor="middle">Errors must be fixed.</text>
+              <text class="t-s" x="328" y="102" text-anchor="middle">Warnings are advice.</text>
+              <path class="edge edge-d" d="M300 38 C 300 6, 130 6, 130 38" />
+              <text class="t-s" x="215" y="33" text-anchor="middle">fix problems</text>
+              <path class="edge" d="M410 75 H464" />
+              <rect class="n" x="466" y="40" width="160" height="70" rx="12" />
+              <text class="t t-b" x="546" y="68" text-anchor="middle">Publish</text>
+              <text class="t-s" x="546" y="88" text-anchor="middle">Creates the next</text>
+              <text class="t-s" x="546" y="102" text-anchor="middle">numbered version.</text>
+              <path class="edge edge-ok" d="M628 75 H684" />
+              <rect class="n-ok" x="686" y="40" width="184" height="70" rx="12" />
+              <text class="t t-b" x="778" y="68" text-anchor="middle">Live for everyone</text>
+              <text class="t-s" x="778" y="88" text-anchor="middle">Users see it straight away.</text>
+              <text class="t-s" x="778" y="102" text-anchor="middle">Reload if it looks stale.</text>
+
+              <path class="edge edge-bad" d="M105 112 V176" />
+              <text class="t-bad" x="117" y="148">Discard draft</text>
+              <rect class="n-bad" x="20" y="178" width="170" height="52" rx="12" />
+              <text class="t t-b" x="105" y="201" text-anchor="middle">Back to the</text>
+              <text class="t t-b" x="105" y="218" text-anchor="middle">published version</text>
+
+              <path class="edge edge-d" d="M778 112 V176" />
+              <rect class="n" x="686" y="178" width="184" height="52" rx="12" />
+              <text class="t t-b" x="778" y="201" text-anchor="middle">History tab</text>
+              <text class="t-s" x="778" y="218" text-anchor="middle">Every version is kept</text>
+              <path class="edge edge-d" d="M684 204 H578" />
+              <rect class="n" x="400" y="178" width="176" height="52" rx="12" />
+              <text class="t t-b" x="488" y="201" text-anchor="middle">Restore this version</text>
+              <text class="t-s" x="488" y="218" text-anchor="middle">Becomes the newest</text>
+              <path class="edge edge-d" d="M488 176 V112" />
+              <text class="t-s" x="500" y="150">goes live at once</text>
+            </svg>
+            <figcaption><b>Nothing you type affects anyone until you publish.</b> Every publish is a version, so you can always see what changed and go back.</figcaption>
+          </figure>
           <p>The <a href="#builder-reference">Builder reference</a> below explains every Builder screen, button, and field in plain words. This section covers only what you need to start.</p>
           <div class="panel panel-table">
             <table>
@@ -697,6 +989,13 @@
 
       <section class="card builder-ref" data-for="admins" id="b-first">
         <h2>Your first set-up, step by step</h2>
+        <div class="flow" aria-label="The order to build and publish things">
+          <div class="fn"><strong>1. Record type</strong>What you keep. Publish this first.</div>
+          <div class="fn"><strong>2. Workflow, list, actions</strong>How it moves, how people browse it, what buttons it has.</div>
+          <div class="fn"><strong>3. Messages and automations</strong>Templates first, then the automation that sends them.</div>
+          <div class="fn"><strong>4. Access</strong>Give each role the permissions it needs.</div>
+          <div class="fn ok"><strong>5. Layout</strong>Put it in the navigation so people can find it.</div>
+        </div>
         <p>This example builds a small "Volunteer shift" register: people sign up for shifts, a coordinator approves them, and the volunteer gets an email. Every Builder module is made the same way.</p>
         <ol class="steps">
           <li><b>Create the record type.</b> In the Builder, open <b>Record types</b> and press <b>New record type</b>. Type the Name "Volunteer shift" and press <b>Create</b>.</li>
@@ -1887,6 +2186,13 @@ daysBetween(record.startDate, today()) days since the start date</code></pre>
             <li>Open Find with that code and confirm the organisation is active and the invitation is sent.</li>
           </ol>
           <p>The same request id with the same contents resumes a request that stopped, or returns the organisation it already made. The same request id with different contents is refused. Do not invent a second id for a retry of the same approved request.</p>
+          <div class="flow" aria-label="Onboarding at a glance">
+            <div class="fn"><strong>Paste</strong>One approved request, with a new request id.</div>
+            <div class="fn warn"><strong>Validate</strong>Nothing is written yet. Fix every field reported.</div>
+            <div class="fn"><strong>Provision</strong>Creates the organisation and its first administrator.</div>
+            <div class="fn"><strong>Copy</strong>The organisation code and the request id.</div>
+            <div class="fn ok"><strong>Find and confirm</strong>Active, and the invitation is sent.</div>
+          </div>
           <h3>What to put in the request</h3>
           <ul>
             <li><code>requestId</code>: 3 to 100 letters, digits, or <code>. _ : -</code>, starting with a letter or digit.</li>
@@ -1935,12 +2241,61 @@ daysBetween(record.startDate, today()) days since the start date</code></pre>
             <li>Read the status again. The request continues from the last step it finished. It does not start a second organisation.</li>
           </ol>
           <p>The steps, in order, are the request, the organisation, its profile, the administrator role, modules, the receipt prefix, the financial year, the administrator, readiness, and active.</p>
+          <ol class="track sm" aria-label="Provisioning steps, in order">
+            <li><b>Request</b></li>
+            <li><b>Organisation</b></li>
+            <li><b>Profile</b></li>
+            <li><b>Admin role</b></li>
+            <li><b>Modules</b></li>
+            <li><b>Receipt prefix</b></li>
+            <li><b>Financial year</b></li>
+            <li><b>Administrator</b></li>
+            <li><b>Readiness</b></li>
+            <li><b>Active</b></li>
+          </ol>
+          <p class="muted" style="margin-top:-6px">A retry continues from the last step that finished, so it never starts a second organisation.</p>
         </section>
 
         <section class="card" id="lifecycle" data-for="operators">
           <h2>Suspend, reactivate, or close</h2>
           <p>Open the organisation by its code. Lifecycle actions appear only when your account includes them. None of these actions deletes the organisation’s records.</p>
           <div class="notice warn"><strong>Enter the reason after the extra sign-in</strong><p>The first click sends you to the identity provider for a fresh check. When you return, type the reason and click the same action again. The reason is not kept across that check. Suspend and close require a reason of at most 500 characters. The reason is stored in the audit.</p></div>
+          <figure class="diagram" style="margin-left:0;margin-right:0">
+            <svg viewBox="0 0 880 290" role="img" aria-labelledby="d-life-t d-life-d">
+              <title id="d-life-t">The life of an organisation</title>
+              <desc id="d-life-d">An onboarded organisation is active. An operator can suspend it and reactivate it. A suspended organisation, or one whose provisioning failed, can be closed. Closing is permanent.</desc>
+              <circle cx="34" cy="96" r="9" class="n-brand" />
+              <path class="edge" d="M45 96 H198" />
+              <text class="t-s" x="122" y="86" text-anchor="middle">Onboard</text>
+              <rect class="n-ok" x="200" y="62" width="150" height="68" rx="14" />
+              <text class="t t-b" x="275" y="92" text-anchor="middle">Active</text>
+              <text class="t-s" x="275" y="112" text-anchor="middle">Members can sign in</text>
+
+              <path class="edge" d="M352 80 H458" />
+              <text class="t-s" x="405" y="72" text-anchor="middle">Suspend + reason</text>
+              <path class="edge edge-ok" d="M458 114 H352" />
+              <text class="t-ok" x="405" y="132" text-anchor="middle">Reactivate</text>
+
+              <rect class="n-warn" x="460" y="62" width="160" height="68" rx="14" />
+              <text class="t t-b" x="540" y="92" text-anchor="middle">Suspended</text>
+              <text class="t-s" x="540" y="112" text-anchor="middle">Sign-in blocked</text>
+
+              <path class="edge edge-bad" d="M622 96 H718" />
+              <text class="t-bad" x="670" y="86" text-anchor="middle">Close + reason</text>
+
+              <rect class="n-dark" x="720" y="62" width="150" height="68" rx="14" />
+              <text class="t t-b t-w" x="795" y="92" text-anchor="middle">Closed</text>
+              <text class="t-s t-w" x="795" y="112" text-anchor="middle" style="opacity:.9">Permanent. Data kept.</text>
+
+              <rect class="n-bad" x="200" y="204" width="190" height="58" rx="14" />
+              <text class="t t-b" x="295" y="229" text-anchor="middle">Provisioning failed</text>
+              <text class="t-s" x="295" y="247" text-anchor="middle">Retry, or close it</text>
+              <path class="edge edge-bad" d="M392 233 H795 V132" />
+              <text class="t-bad" x="560" y="224" text-anchor="middle">Close + reason</text>
+
+              <text class="t-s" x="30" y="170">Suspending ends every session and stops API keys.</text>            </svg>
+            <figcaption><b>No action deletes records.</b> Reactivating does not restore ended sessions or stopped API keys. The administrator creates new keys.</figcaption>
+          </figure>
           <h3>Suspend</h3>
           <p>Only an active organisation can be suspended. Suspension signs every member out, stops the organisation’s API keys, and blocks sign-in. Tell the NGO administrator before you do it, unless the reason is an incident that cannot wait.</p>
           <h3>Reactivate</h3>
@@ -2008,6 +2363,33 @@ daysBetween(record.startDate, today()) days since the start date</code></pre>
         if (none) none.hidden = !q || hits > 0;
       }
       input.addEventListener('input', apply);
-    })();  </script>
+    })();
+
+    // "Step 3: Map each file" gets a number badge.
+    document.querySelectorAll('#migrate-data h3').forEach(function (h) {
+      var m = /^Step (\d+):\s*(.*)$/.exec(h.textContent.trim());
+      if (!m) return;
+      h.textContent = '';
+      var badge = document.createElement('span');
+      badge.className = 'stepno';
+      badge.textContent = 'Step ' + m[1];
+      h.appendChild(badge);
+      h.appendChild(document.createTextNode(' ' + m[2]));
+    });
+
+    // Searching the Builder reference opens any folded section so the hits are visible.
+    (function () {
+      var find = document.getElementById('b-find');
+      if (!find) return;
+      find.addEventListener('input', function () {
+        if (!find.value.trim()) return;
+        document.querySelectorAll('section.card.is-folded').forEach(function (card) {
+          var b = card.querySelector(':scope > h2 > .fold');
+          if (b) b.click();
+        });
+      });
+    })();
+  </script>
+  <script src="assets/docs.js"></script>
 </body>
 </html>

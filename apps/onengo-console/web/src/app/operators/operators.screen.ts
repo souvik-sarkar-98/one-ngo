@@ -55,6 +55,7 @@ const isAction = (value: string): value is OperatorActionContract => (OPERATOR_A
           <a class="line" [routerLink]="['/operators', row.id]">
             <span class="who"><b>{{ row.displayName }}</b><span class="muted">{{ row.actions.length }} {{ row.actions.length === 1 ? 'action' : 'actions' }}@if (row.identities[0]?.subject) { · {{ row.identities[0]?.subject }} }</span></span>
             <span class="badge" [class.ok]="row.status === 'active'" [class.bad]="row.status === 'disabled'">{{ row.status === 'active' ? 'Active' : 'Disabled' }}</span>
+            @if (row.temporary) { <span class="badge">{{ row.firstSignedInAt ? 'Temporary · used' : 'Temporary · not used yet' }}</span> }
           </a>
         } @empty { <p class="muted" style="padding:12px">No operator matches.</p> }
       </div>
@@ -136,6 +137,7 @@ export class OperatorsScreen {
         <div class="kv">
           <div><b>Provider</b><span><code>{{ person.identities[0]?.issuer || '—' }}</code></span></div>
           <div><b>Subject</b><span><code>{{ person.identities[0]?.subject || '—' }}</code></span></div>
+          @if (person.temporary) { <div><b>Sign-in</b><span>Temporary: one sign-in. {{ person.firstSignedInAt ? 'Signed in first on ' + when(person.firstSignedInAt) : 'Not signed in yet.' }}</span></div> }
           @if (person.disabledReason) { <div><b>Disabled</b><span>{{ person.disabledReason }}</span></div> }
         </div>
         @if (mine()) { <p class="notice info">This is your account. You can change other actions, and you cannot remove Manage operators, change your login, or disable yourself.</p> }
@@ -179,6 +181,7 @@ export class OperatorScreen {
   readonly saved = signal<OperatorActionContract[]>([]);
   readonly dirty = computed(() => this.selected().slice().sort().join() !== this.saved().slice().sort().join());
   readonly mine = computed(() => !!this.id() && this.api.session()?.operatorId === this.id());
+  when(value: string): string { return new Date(value).toLocaleString(); }
   readonly error = signal('');
   readonly problems = signal<string[]>([]);
   readonly sheet = signal<'' | 'login' | 'disable'>('');

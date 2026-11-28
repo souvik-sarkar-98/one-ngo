@@ -87,6 +87,9 @@ export interface OperatorAccountContract {
   createdAt: string;
   disabledAt: string | null;
   disabledReason: string | null;
+  /** A temporary account may sign in once; `firstSignedInAt` is set by that sign-in. */
+  temporary: boolean;
+  firstSignedInAt: string | null;
   identities: OperatorIdentityContract[];
   actions: OperatorActionContract[];
 }

@@ -1,5 +1,3 @@
-import { readdirSync, readFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { buildServer } from '@onengo/server/http/server.js';
 import { ALERT, checkMemory, DEFAULT_MEMORY_ALERT_MB } from '@onengo/kernel/observability';
@@ -8,7 +6,6 @@ import { notFound } from '@onengo/kernel/errors';
 import { MemoryLogger } from '@onengo/kernel/observability';
 import { MAX_ATTEMPTS } from '../../../packages/platform/src/infrastructure/outbox/outbox-dispatcher.js';
 import { createWorld, type TestWorld } from '../../support/platform/helpers.js';
-import { MONITORING_DIR } from '../../support/paths.js';
 
 let w: TestWorld;
 const logger = new MemoryLogger();
@@ -100,4 +97,3 @@ describe('alert events', () => {
     ]);
   });
 });
-
